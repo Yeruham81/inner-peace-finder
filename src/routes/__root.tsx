@@ -77,19 +77,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "מטפלים — מציאת מטפל לחרדה לפי בעיה" },
+      {
+        name: "description",
+        content:
+          "פלטפורמה למציאת מטפלים בחרדה לפי סימפטומים ובעיות רגשיות בעברית. חפשו לפי תחושה, קבלו מטפלים מתאימים.",
+      },
+      { property: "og:title", content: "מטפלים — מציאת מטפל לחרדה לפי בעיה" },
+      {
+        property: "og:description",
+        content: "חיפוש מטפלים בעברית לפי בעיה, עיר, אוכלוסייה ושפה.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com",
+      },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap",
       },
     ],
   }),
@@ -101,7 +119,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="he" dir="rtl">
       <head>
         <HeadContent />
       </head>
@@ -118,8 +136,59 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <SiteHeader />
+      <main className="min-h-[calc(100vh-4rem)]">
+        <Outlet />
+      </main>
+      <SiteFooter />
     </QueryClientProvider>
+  );
+}
+
+function SiteHeader() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/85 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <Link to="/" className="flex items-center gap-2">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">
+            מ
+          </span>
+          <span className="text-lg font-semibold tracking-tight text-foreground">
+            מטפלים
+          </span>
+        </Link>
+        <nav className="flex items-center gap-1 text-sm">
+          <Link
+            to="/"
+            className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            בית
+          </Link>
+          <Link
+            to="/problems/$slug"
+            params={{ slug: "anxiety" }}
+            className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            חרדה
+          </Link>
+          <Link
+            to="/search"
+            className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            חיפוש מטפלים
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="border-t border-border bg-surface mt-16">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
+        <p>© {new Date().getFullYear()} מטפלים — שירות מידע בלבד, אינו מהווה ייעוץ רפואי.</p>
+      </div>
+    </footer>
   );
 }
