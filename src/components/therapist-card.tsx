@@ -1,7 +1,25 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import type { ScoredTherapist } from "@/lib/therapists.functions";
+import { track } from "@/lib/analytics";
 
-export function TherapistCard({ t }: { t: ScoredTherapist }) {
+export function TherapistCard({
+  t,
+  rankPosition,
+  pageSource,
+}: {
+  t: ScoredTherapist;
+  rankPosition?: number;
+  pageSource?: string;
+}) {
+  useEffect(() => {
+    track("therapist_card_viewed", {
+      therapist_id: t.id,
+      rank_position: rankPosition ?? null,
+      page_source: pageSource ?? null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t.id]);
   return (
     <Link
       to="/therapists/$slug"

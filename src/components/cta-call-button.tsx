@@ -1,23 +1,41 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { recordCtaClick } from "@/lib/therapists.functions";
+import { useEffect } from "react";
+import { track } from "@/lib/analytics";
 
 export function CtaCallButton({
   therapistId,
   sourceProblemId,
   fallbackPhone,
+  pageSource,
 }: {
   therapistId: string;
   sourceProblemId?: string | null;
   fallbackPhone?: string | null;
+  pageSource?: string | null;
 }) {
   const record = useServerFn(recordCtaClick);
   const [phone, setPhone] = useState<string | null>(fallbackPhone ?? null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    track("cta_shown", {
+      therapist_id: therapistId,
+      problem_id: sourceProblemId ?? null,
+      page_source: pageSource ?? null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [therapistId]);
+
   async function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (loading) return;
     setLoading(true);
+    track("cta_clicked", {
+      therapist_id: therapistId,
+      problem_id: sourceProblemId ?? null,
+      page_source: pageSource ?? null,
+    });
     try {
       const res = await record({
         data: { therapistId, sourceProblemId: sourceProblemId ?? null },
