@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/lib/therapists.functions";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
+import { track } from "@/lib/analytics";
 
 const searchSchema = z.object({
   q: fallback(z.string().trim().max(200), "").default(""),
@@ -70,6 +72,19 @@ function SearchPage() {
   const search = Route.useSearch();
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
   const { data: results } = useSuspenseQuery(resultsQuery(search));
+
+  useEffect(() => {
+    track("search_executed", { page_source: "search" });
+    if (results.length === 0) {
+      track("no_results_returned", { page_source: "search" });
+    } else {
+      track("therapist_results_rendered", {
+        page_source: "search",
+        rank_position: results.length,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.q, search.problem, search.city, search.population, search.language, results.length]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
