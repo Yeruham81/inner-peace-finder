@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          page_source: string | null
+          population_id: string | null
+          problem_id: string | null
+          rank_position: number | null
+          session_id: string
+          therapist_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          page_source?: string | null
+          population_id?: string | null
+          problem_id?: string | null
+          rank_position?: number | null
+          session_id: string
+          therapist_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          page_source?: string | null
+          population_id?: string | null
+          problem_id?: string | null
+          rank_position?: number | null
+          session_id?: string
+          therapist_id?: string | null
+        }
+        Relationships: []
+      }
       cta_clicks: {
         Row: {
           created_at: string
