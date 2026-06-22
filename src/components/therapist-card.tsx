@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { ScoredTherapist } from "@/lib/therapists.functions";
 import { track } from "@/lib/analytics";
 
@@ -12,11 +12,15 @@ export function TherapistCard({
   rankPosition?: number;
   pageSource?: string;
 }) {
+  const viewedRef = useRef(false);
   useEffect(() => {
+    if (viewedRef.current) return;
+    viewedRef.current = true;
     track("therapist_card_viewed", {
       therapist_id: t.id,
       rank_position: rankPosition ?? null,
       page_source: pageSource ?? null,
+      origin: "TherapistCard",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.id]);

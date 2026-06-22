@@ -14,9 +14,35 @@ export type AnalyticsPayload = {
   population_id?: string | null;
   rank_position?: number | null;
   page_source?: string | null;
+  /** Component / call-site origin, debug-only (never written to DB). */
+  origin?: string | null;
 };
 
 const SID_KEY = "mt_sid";
+
+/** Module-level cache so re-renders never regenerate the session id. */
+let cachedSessionId: string | null = null;
+let sessionIdSource: "cookie" | "localStorage" | "fallback-memory" | "ssr" = "ssr";
+
+/** In-memory dedupe map: key -> last fired timestamp (ms). */
+const lastFiredAt = new Map<string, number>();
+const DEDUPE_WINDOWS_MS: Partial<Record<AnalyticsEventName, number>> = {
+  therapist_card_viewed: 5_000,
+};
+
+function isDebug(): boolean {
+  try {
+    if (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_ANALYTICS_DEBUG === "true") {
+      return true;
+    }
+  } catch {}
+  try {
+    if (typeof window !== "undefined" && window.localStorage.getItem("analytics_debug") === "1") {
+      return true;
+    }
+  } catch {}
+  return false;
+}
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -32,22 +58,45 @@ function genId(): string {
 }
 
 export function getSessionId(): string {
+  if (cachedSessionId) return cachedSessionId;
   if (typeof window === "undefined") return "ssr";
   const fromCookie = readCookie(SID_KEY);
-  if (fromCookie) return fromCookie;
+  if (fromCookie) {
+    cachedSessionId = fromCookie;
+    sessionIdSource = "cookie";
+    return fromCookie;
+  }
   try {
     const existing = window.localStorage.getItem(SID_KEY);
-    if (existing) return existing;
+    if (existing) {
+      cachedSessionId = existing;
+      sessionIdSource = "localStorage";
+      // mirror to cookie for the server-side CTA dedupe
+      try {
+        document.cookie = `${SID_KEY}=${encodeURIComponent(existing)}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+      } catch {}
+      return existing;
+    }
     const fresh = genId();
     window.localStorage.setItem(SID_KEY, fresh);
-    // Best-effort cookie so the server-side CTA dedupe sees the same id
     try {
       document.cookie = `${SID_KEY}=${encodeURIComponent(fresh)}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     } catch {}
+    cachedSessionId = fresh;
+    sessionIdSource = "localStorage";
     return fresh;
   } catch {
-    return genId();
+    const fresh = genId();
+    cachedSessionId = fresh;
+    sessionIdSource = "fallback-memory";
+    return fresh;
   }
+}
+
+export function getSessionIdSource() {
+  // Make sure the source is populated even if no one called getSessionId yet.
+  getSessionId();
+  return sessionIdSource;
 }
 
 /**
@@ -56,25 +105,51 @@ export function getSessionId(): string {
 export function track(event: AnalyticsEventName, payload: AnalyticsPayload = {}): void {
   if (typeof window === "undefined") return;
   try {
+    const sessionId = getSessionId();
+
+    // Time-window dedupe (e.g. therapist_card_viewed same therapist within 5s)
+    const window_ms = DEDUPE_WINDOWS_MS[event];
+    if (window_ms) {
+      const key = `${event}|${sessionId}|${payload.therapist_id ?? ""}|${payload.problem_id ?? ""}`;
+      const prev = lastFiredAt.get(key);
+      const now = Date.now();
+      if (prev && now - prev < window_ms) {
+        if (isDebug()) {
+          console.debug("[analytics] DEDUPED", { event, key, sinceMs: now - prev, payload });
+        }
+        return;
+      }
+      lastFiredAt.set(key, now);
+    }
+
     const row = {
       event_name: event,
-      session_id: getSessionId(),
+      session_id: sessionId,
       therapist_id: payload.therapist_id ?? null,
       problem_id: payload.problem_id ?? null,
       population_id: payload.population_id ?? null,
       rank_position: payload.rank_position ?? null,
       page_source: payload.page_source ?? null,
     };
+
+    if (isDebug()) {
+      console.debug("[analytics]", event, {
+        ...row,
+        origin: payload.origin ?? null,
+        sessionIdSource,
+      });
+    }
+
     // Intentionally not awaited
     void supabase
       .from("analytics_events")
       .insert(row)
       .then(({ error }) => {
-        if (error && typeof console !== "undefined") {
+        if (error) {
           console.debug("[analytics] insert failed", error.message);
         }
       });
   } catch (err) {
-    if (typeof console !== "undefined") console.debug("[analytics] threw", err);
+    console.debug("[analytics] threw", err);
   }
 }

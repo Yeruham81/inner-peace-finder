@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import {
@@ -73,14 +73,19 @@ function SearchPage() {
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
   const { data: results } = useSuspenseQuery(resultsQuery(search));
 
+  const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    track("search_executed", { page_source: "search" });
+    const key = JSON.stringify({ ...search, n: results.length });
+    if (lastSearchKeyRef.current === key) return;
+    lastSearchKeyRef.current = key;
+    track("search_executed", { page_source: "search", origin: "SearchPage" });
     if (results.length === 0) {
-      track("no_results_returned", { page_source: "search" });
+      track("no_results_returned", { page_source: "search", origin: "SearchPage" });
     } else {
       track("therapist_results_rendered", {
         page_source: "search",
         rank_position: results.length,
+        origin: "SearchPage",
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
