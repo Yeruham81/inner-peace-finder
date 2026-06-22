@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { recordCtaClick } from "@/lib/therapists.functions";
-import { useEffect } from "react";
 import { track } from "@/lib/analytics";
 
 export function CtaCallButton({
@@ -18,12 +17,18 @@ export function CtaCallButton({
   const record = useServerFn(recordCtaClick);
   const [phone, setPhone] = useState<string | null>(fallbackPhone ?? null);
   const [loading, setLoading] = useState(false);
+  const shownFiredRef = useRef(false);
 
   useEffect(() => {
+    // One cta_shown per mounted CTA instance, regardless of re-renders
+    // or StrictMode double-invocation.
+    if (shownFiredRef.current) return;
+    shownFiredRef.current = true;
     track("cta_shown", {
       therapist_id: therapistId,
       problem_id: sourceProblemId ?? null,
       page_source: pageSource ?? null,
+      origin: "CtaCallButton",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [therapistId]);
@@ -35,6 +40,7 @@ export function CtaCallButton({
       therapist_id: therapistId,
       problem_id: sourceProblemId ?? null,
       page_source: pageSource ?? null,
+      origin: "CtaCallButton",
     });
     try {
       const res = await record({
