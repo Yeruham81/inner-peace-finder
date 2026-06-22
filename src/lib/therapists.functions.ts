@@ -6,11 +6,9 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 function publicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export type ScoredTherapist = {
@@ -52,11 +50,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     const intentProblemIds = new Set<string>();
     let parentAnxietyId: string | null = null;
 
-    const { data: anxietyParent } = await sb
-      .from("problems")
-      .select("id")
-      .eq("slug", "anxiety")
-      .maybeSingle();
+    const { data: anxietyParent } = await sb.from("problems").select("id").eq("slug", "anxiety").maybeSingle();
     parentAnxietyId = anxietyParent?.id ?? null;
 
     if (q.length >= 2) {
@@ -75,11 +69,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // Structured problem filter
     let filterProblemId: string | null = null;
     if (data.problemSlug) {
-      const { data: p } = await sb
-        .from("problems")
-        .select("id")
-        .eq("slug", data.problemSlug)
-        .maybeSingle();
+      const { data: p } = await sb.from("problems").select("id").eq("slug", data.problemSlug).maybeSingle();
       filterProblemId = p?.id ?? null;
       if (filterProblemId) matchedProblemIds.add(filterProblemId);
     }
@@ -96,11 +86,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     }
     let filterLanguageId: string | null = null;
     if (data.languageCode) {
-      const { data: lang } = await sb
-        .from("languages")
-        .select("id")
-        .eq("code", data.languageCode)
-        .maybeSingle();
+      const { data: lang } = await sb.from("languages").select("id").eq("code", data.languageCode).maybeSingle();
       filterLanguageId = lang?.id ?? null;
     }
 
@@ -119,9 +105,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
         .select("therapist_id")
         .eq("population_id", filterPopulationId);
       const popSet = new Set(tps?.map((r) => r.therapist_id) ?? []);
-      candidateIds = candidateIds
-        ? new Set([...candidateIds].filter((id) => popSet.has(id)))
-        : popSet;
+      candidateIds = candidateIds ? new Set([...candidateIds].filter((id) => popSet.has(id))) : popSet;
     }
     if (filterLanguageId) {
       const { data: tls } = await sb
@@ -129,17 +113,13 @@ export const searchTherapists = createServerFn({ method: "POST" })
         .select("therapist_id")
         .eq("language_id", filterLanguageId);
       const langSet = new Set(tls?.map((r) => r.therapist_id) ?? []);
-      candidateIds = candidateIds
-        ? new Set([...candidateIds].filter((id) => langSet.has(id)))
-        : langSet;
+      candidateIds = candidateIds ? new Set([...candidateIds].filter((id) => langSet.has(id))) : langSet;
     }
 
     // 3) Load therapists (filter by candidate set if any; otherwise everyone)
     let tq = sb
       .from("therapists")
-      .select(
-        "id, slug, full_name, professional_title, short_intro, years_experience, city, image_url, verified",
-      );
+      .select("id, slug, full_name, professional_title, short_intro, years_experience, city, image_url, verified");
     if (candidateIds) {
       if (candidateIds.size === 0) return [] as ScoredTherapist[];
       tq = tq.in("id", Array.from(candidateIds));
@@ -152,21 +132,14 @@ export const searchTherapists = createServerFn({ method: "POST" })
     const ids = therapists.map((t) => t.id);
 
     // 4) Load relations for scoring + display
-    const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] =
-      await Promise.all([
-        sb
-          .from("therapist_problems")
-          .select("therapist_id, problem_id, problems(slug, parent_id)")
-          .in("therapist_id", ids),
-        sb
-          .from("therapist_populations")
-          .select("therapist_id, population_groups(slug, name)")
-          .in("therapist_id", ids),
-        sb
-          .from("therapist_languages")
-          .select("therapist_id, languages(code, name)")
-          .in("therapist_id", ids),
-      ]);
+    const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
+      sb
+        .from("therapist_problems")
+        .select("therapist_id, problem_id, problems(slug, parent_id)")
+        .in("therapist_id", ids),
+      sb.from("therapist_populations").select("therapist_id, population_groups(slug, name)").in("therapist_id", ids),
+      sb.from("therapist_languages").select("therapist_id, languages(code, name)").in("therapist_id", ids),
+    ]);
 
     type ProblemJoin = { slug: string; parent_id: string | null } | null;
     const tpByT = new Map<string, { problem_id: string; problem: ProblemJoin }[]>();
@@ -198,8 +171,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
         const isExactSubtype =
           (filterProblemId && tp.problem_id === filterProblemId) ||
           (matchedProblemIds.has(tp.problem_id) && tp.problem?.slug !== "anxiety");
-        const isParentAnxiety =
-          tp.problem_id === parentAnxietyId || tp.problem?.slug === "anxiety";
+        const isParentAnxiety = tp.problem_id === parentAnxietyId || tp.problem?.slug === "anxiety";
         const isIntentMatch = intentProblemIds.has(tp.problem_id);
 
         if (isExactSubtype) {
@@ -212,7 +184,11 @@ export const searchTherapists = createServerFn({ method: "POST" })
       }
 
       const pops = popsByT.get(t.id) ?? [];
-      if (filterPopulationId && pops.some((p) => p)) score += 15;
+      const selectedPopulation = String(filterPopulationId);
+
+      if (selectedPopulation && pops.some((p) => String(p.population_id) === selectedPopulation)) {
+        score += 15;
+      }
 
       if (data.city && t.city === data.city) score += 10;
 
@@ -242,10 +218,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
 export const listProblems = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicClient();
-  const { data, error } = await sb
-    .from("problems")
-    .select("id, name, slug, description, parent_id")
-    .order("name");
+  const { data, error } = await sb.from("problems").select("id, name, slug, description, parent_id").order("name");
   if (error) throw new Error(error.message);
   return data ?? [];
 });
@@ -267,9 +240,7 @@ export const listFilterOptions = createServerFn({ method: "GET" }).handler(async
 });
 
 export const getProblemBySlug = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z.object({ slug: z.string().trim().min(1).max(80) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
   .handler(async ({ data }) => {
     const sb = publicClient();
     const { data: problem } = await sb
@@ -287,42 +258,29 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
   });
 
 export const getTherapistBySlug = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z.object({ slug: z.string().trim().min(1).max(120) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
     const sb = publicClient();
-    const { data: t } = await sb
-      .from("therapists")
-      .select("*")
-      .eq("slug", data.slug)
-      .maybeSingle();
+    const { data: t } = await sb.from("therapists").select("*").eq("slug", data.slug).maybeSingle();
     if (!t) return null;
     const [{ data: tps }, { data: pops }, { data: langs }] = await Promise.all([
-      sb
-        .from("therapist_problems")
-        .select("problems(id, name, slug, parent_id)")
-        .eq("therapist_id", t.id),
-      sb
-        .from("therapist_populations")
-        .select("population_groups(slug, name)")
-        .eq("therapist_id", t.id),
-      sb
-        .from("therapist_languages")
-        .select("languages(code, name)")
-        .eq("therapist_id", t.id),
+      sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
+      sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
+      sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
     ]);
     return {
       ...t,
-      problems: (tps ?? [])
-        .map((r: any) => r.problems)
-        .filter(Boolean) as { id: string; name: string; slug: string; parent_id: string | null }[],
-      populations: (pops ?? [])
-        .map((r: any) => r.population_groups)
-        .filter(Boolean) as { slug: string; name: string }[],
-      languages: (langs ?? [])
-        .map((r: any) => r.languages)
-        .filter(Boolean) as { code: string; name: string }[],
+      problems: (tps ?? []).map((r: any) => r.problems).filter(Boolean) as {
+        id: string;
+        name: string;
+        slug: string;
+        parent_id: string | null;
+      }[],
+      populations: (pops ?? []).map((r: any) => r.population_groups).filter(Boolean) as {
+        slug: string;
+        name: string;
+      }[],
+      languages: (langs ?? []).map((r: any) => r.languages).filter(Boolean) as { code: string; name: string }[],
     };
   });
 
@@ -347,10 +305,7 @@ export const recordCtaClick = createServerFn({ method: "POST" })
     const req = getRequest();
     const headers = req?.headers;
     const userAgent = headers?.get("user-agent") ?? null;
-    const ip =
-      headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      headers?.get("x-real-ip") ||
-      "0.0.0.0";
+    const ip = headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || headers?.get("x-real-ip") || "0.0.0.0";
     const salt = process.env.SUPABASE_PROJECT_ID ?? "salt";
     const ipHash = createHash("sha256").update(`${ip}:${salt}`).digest("hex");
 
