@@ -184,9 +184,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       }
 
       const pops = popsByT.get(t.id) ?? [];
-      const selectedPopulation = String(filterPopulationId);
-
-      if (selectedPopulation && pops.some((p) => String(p.population_id) === selectedPopulation)) {
+      if (data.populationSlug && pops.some((p) => p.slug === data.populationSlug)) {
         score += 15;
       }
 
