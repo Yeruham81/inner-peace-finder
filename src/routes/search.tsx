@@ -131,8 +131,8 @@ function SearchPage() {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {results.map((t) => (
-            <TherapistCard key={t.id} t={t} />
+          {results.map((t, i) => (
+            <TherapistCard key={t.id} t={t} rankPosition={i + 1} pageSource="search" />
           ))}
         </div>
       )}
