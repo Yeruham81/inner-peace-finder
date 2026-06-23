@@ -330,7 +330,7 @@ export const recordCtaClick = createServerFn({ method: "POST" })
       _therapist_id: data.therapistId,
       _session_id: sessionId,
       _cta_id: data.ctaId ?? "primary",
-      _source_problem_id: data.sourceProblemId ?? null,
+      _source_problem_id: data.sourceProblemId ?? undefined,
       _ip_hash: ipHash ?? undefined,
       _user_agent: userAgent ?? undefined,
     });
