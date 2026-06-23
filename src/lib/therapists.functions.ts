@@ -331,8 +331,8 @@ export const recordCtaClick = createServerFn({ method: "POST" })
       _session_id: sessionId,
       _cta_id: data.ctaId ?? "primary",
       _source_problem_id: data.sourceProblemId ?? null,
-      _ip_hash: ipHash,
-      _user_agent: userAgent,
+      _ip_hash: ipHash ?? undefined,
+      _user_agent: userAgent ?? undefined,
     });
     if (rpcErr) throw new Error(rpcErr.message);
     const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
