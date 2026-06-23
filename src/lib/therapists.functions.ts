@@ -291,6 +291,7 @@ export const listAllTherapistSlugs = createServerFn({ method: "GET" }).handler(a
 const CtaSchema = z.object({
   therapistId: z.string().uuid(),
   sourceProblemId: z.string().uuid().nullable().optional(),
+  ctaId: z.string().trim().min(1).max(64).optional(),
 });
 
 /**
@@ -323,28 +324,22 @@ export const recordCtaClick = createServerFn({ method: "POST" })
     if (tErr) throw new Error(tErr.message);
     if (!therapist) throw new Error("Therapist not found");
 
-    // 24h dedupe: only insert a billable record if none exists in last 24h
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: recent } = await supabaseAdmin
-      .from("cta_clicks")
-      .select("id")
-      .eq("therapist_id", data.therapistId)
-      .eq("session_id", sessionId)
-      .gte("created_at", cutoff)
-      .limit(1);
-
-    let billable = false;
-    if (!recent || recent.length === 0) {
-      const { error: insErr } = await supabaseAdmin.from("cta_clicks").insert({
-        therapist_id: data.therapistId,
-        session_id: sessionId,
-        ip_hash: ipHash,
-        user_agent: userAgent,
-        source_problem_id: data.sourceProblemId ?? null,
-      });
-      if (insErr) throw new Error(insErr.message);
-      billable = true;
-    }
-
-    return { phone: therapist.phone, sessionId, billable };
+    // Atomic, DB-enforced idempotency: UNIQUE(session_id, therapist_id, cta_id)
+    // guarantees only the first call ever returns billable=true.
+    const { data: rpcRows, error: rpcErr } = await supabaseAdmin.rpc("record_cta_click", {
+      _therapist_id: data.therapistId,
+      _session_id: sessionId,
+      _cta_id: data.ctaId ?? "primary",
+      _source_problem_id: data.sourceProblemId ?? null,
+      _ip_hash: ipHash,
+      _user_agent: userAgent,
+    });
+    if (rpcErr) throw new Error(rpcErr.message);
+    const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+    return {
+      phone: therapist.phone,
+      sessionId,
+      billable: !!row?.billable,
+      alreadyExists: !!row?.already_exists,
+    };
   });
