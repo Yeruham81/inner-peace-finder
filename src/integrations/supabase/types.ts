@@ -52,7 +52,9 @@ export type Database = {
       }
       cta_clicks: {
         Row: {
+          billable: boolean
           created_at: string
+          cta_id: string
           id: string
           ip_hash: string | null
           session_id: string
@@ -61,7 +63,9 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          billable?: boolean
           created_at?: string
+          cta_id?: string
           id?: string
           ip_hash?: string | null
           session_id: string
@@ -70,7 +74,9 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          billable?: boolean
           created_at?: string
+          cta_id?: string
           id?: string
           ip_hash?: string | null
           session_id?: string
@@ -398,7 +404,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      record_cta_click: {
+        Args: {
+          _cta_id?: string
+          _ip_hash?: string
+          _session_id: string
+          _source_problem_id?: string
+          _therapist_id: string
+          _user_agent?: string
+        }
+        Returns: {
+          already_exists: boolean
+          billable: boolean
+          click_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
