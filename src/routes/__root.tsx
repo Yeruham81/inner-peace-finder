@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AnalyticsDebugPanel } from "@/components/analytics-debug-panel";
 
 function NotFoundComponent() {
   return (
@@ -141,6 +142,7 @@ function RootComponent() {
         <Outlet />
       </main>
       <SiteFooter />
+      <AnalyticsDebugPanel />
     </QueryClientProvider>
   );
 }
