@@ -27,7 +27,7 @@ function renderTherapistMessage(p: LeadPayload): string {
   ];
   if (p.problemName) lines.push(`נושא: ${p.problemName}`);
   if (p.populationName) lines.push(`אוכלוסייה: ${p.populationName}`);
-  lines.push("", "הודעה:", p.payload_message ?? p.message);
+  lines.push("", "הודעה:", p.message);
   return lines.join("\n");
 }
 
