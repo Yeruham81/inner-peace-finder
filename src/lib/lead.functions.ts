@@ -54,7 +54,7 @@ export const createLead = createServerFn({ method: "POST" })
     // 2) Load therapist contact prefs (server-only; phone never returned to client)
     const { data: therapist, error: tErr } = await supabaseAdmin
       .from("therapists")
-      .select("id, full_name, phone, email, preferred_contact_channel, contact_destination")
+      .select("id, full_name, phone, preferred_contact_channel, contact_destination")
       .eq("id", data.therapistId)
       .maybeSingle();
     if (tErr) throw new Error(tErr.message);
@@ -79,10 +79,7 @@ export const createLead = createServerFn({ method: "POST" })
       | "whatsapp"
       | "sms"
       | "email";
-    const destination =
-      therapist.contact_destination ??
-      (channel === "email" ? therapist.email : therapist.phone) ??
-      "";
+    const destination = therapist.contact_destination ?? therapist.phone ?? "";
 
     // 5) Insert lead row
     const { data: leadRow, error: insErr } = await supabaseAdmin
