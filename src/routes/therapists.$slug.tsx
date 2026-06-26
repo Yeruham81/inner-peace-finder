@@ -151,7 +151,11 @@ function TherapistPage() {
                 הקליקו על הכפתור להתחלת שיחה. המטפל יראה את הפנייה.
               </p>
               <div className="mt-4">
-                <CtaCallButton therapistId={t.id} fallbackPhone={t.phone} pageSource="therapist_profile" />
+                <CtaCallButton
+                  therapistId={t.id}
+                  therapistName={t.full_name}
+                  pageSource="therapist_profile"
+                />
               </div>
             </div>
           </aside>
