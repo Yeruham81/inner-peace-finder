@@ -119,6 +119,75 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_events: {
+        Row: {
+          challenge_passed: boolean
+          challenge_presented: string | null
+          created_at: string
+          cta_event_id: string | null
+          delivery_channel: string | null
+          delivery_status: string
+          id: string
+          message: string
+          population_id: string | null
+          problem_id: string | null
+          provider_message_id: string | null
+          session_id: string
+          therapist_id: string
+          visitor_name: string
+          visitor_phone: string
+        }
+        Insert: {
+          challenge_passed?: boolean
+          challenge_presented?: string | null
+          created_at?: string
+          cta_event_id?: string | null
+          delivery_channel?: string | null
+          delivery_status?: string
+          id?: string
+          message: string
+          population_id?: string | null
+          problem_id?: string | null
+          provider_message_id?: string | null
+          session_id: string
+          therapist_id: string
+          visitor_name: string
+          visitor_phone: string
+        }
+        Update: {
+          challenge_passed?: boolean
+          challenge_presented?: string | null
+          created_at?: string
+          cta_event_id?: string | null
+          delivery_channel?: string | null
+          delivery_status?: string
+          id?: string
+          message?: string
+          population_id?: string | null
+          problem_id?: string | null
+          provider_message_id?: string | null
+          session_id?: string
+          therapist_id?: string
+          visitor_name?: string
+          visitor_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_events_cta_event_id_fkey"
+            columns: ["cta_event_id"]
+            isOneToOne: false
+            referencedRelation: "cta_clicks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_events_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       population_groups: {
         Row: {
           id: string
@@ -339,6 +408,7 @@ export type Database = {
       therapists: {
         Row: {
           city: string
+          contact_destination: string | null
           country: string
           created_at: string
           full_description: string | null
@@ -349,6 +419,7 @@ export type Database = {
           license_number: string | null
           longitude: number | null
           phone: string | null
+          preferred_contact_channel: Database["public"]["Enums"]["contact_channel"]
           professional_title: string
           profile_claimed: boolean
           region: string | null
@@ -359,6 +430,7 @@ export type Database = {
         }
         Insert: {
           city: string
+          contact_destination?: string | null
           country?: string
           created_at?: string
           full_description?: string | null
@@ -369,6 +441,7 @@ export type Database = {
           license_number?: string | null
           longitude?: number | null
           phone?: string | null
+          preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
           professional_title: string
           profile_claimed?: boolean
           region?: string | null
@@ -379,6 +452,7 @@ export type Database = {
         }
         Update: {
           city?: string
+          contact_destination?: string | null
           country?: string
           created_at?: string
           full_description?: string | null
@@ -389,6 +463,7 @@ export type Database = {
           license_number?: string | null
           longitude?: number | null
           phone?: string | null
+          preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
           professional_title?: string
           profile_claimed?: boolean
           region?: string | null
@@ -421,7 +496,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      contact_channel: "whatsapp" | "sms" | "email"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -548,6 +623,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      contact_channel: ["whatsapp", "sms", "email"],
+    },
   },
 } as const

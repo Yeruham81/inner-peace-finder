@@ -6,7 +6,10 @@ export type AnalyticsEventName =
   | "therapist_card_viewed"
   | "cta_shown"
   | "cta_clicked"
-  | "no_results_returned";
+  | "no_results_returned"
+  | "anti_spam_passed"
+  | "lead_created"
+  | "lead_delivered";
 
 export type AnalyticsPayload = {
   therapist_id?: string | null;

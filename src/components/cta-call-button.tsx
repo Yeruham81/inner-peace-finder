@@ -1,27 +1,30 @@
-import { useState, useRef, useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { recordCtaClick } from "@/lib/therapists.functions";
+import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
+import { LeadModal } from "@/components/lead-modal";
 
 export function CtaCallButton({
   therapistId,
+  therapistName,
   sourceProblemId,
-  fallbackPhone,
+  sourceProblemName,
+  populationId,
+  populationName,
   pageSource,
 }: {
   therapistId: string;
-  sourceProblemId?: string | null;
+  therapistName: string;
+  /** @deprecated phone is no longer exposed to the client */
   fallbackPhone?: string | null;
+  sourceProblemId?: string | null;
+  sourceProblemName?: string | null;
+  populationId?: string | null;
+  populationName?: string | null;
   pageSource?: string | null;
 }) {
-  const record = useServerFn(recordCtaClick);
-  const [phone, setPhone] = useState<string | null>(fallbackPhone ?? null);
-  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const shownFiredRef = useRef(false);
 
   useEffect(() => {
-    // One cta_shown per mounted CTA instance, regardless of re-renders
-    // or StrictMode double-invocation.
     if (shownFiredRef.current) return;
     shownFiredRef.current = true;
     track("cta_shown", {
@@ -33,41 +36,37 @@ export function CtaCallButton({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [therapistId]);
 
-  async function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
-    if (loading) return;
-    setLoading(true);
+  function handleClick() {
     track("cta_clicked", {
       therapist_id: therapistId,
       problem_id: sourceProblemId ?? null,
       page_source: pageSource ?? null,
       origin: "CtaCallButton",
     });
-    try {
-      const res = await record({
-        data: { therapistId, sourceProblemId: sourceProblemId ?? null },
-      });
-      if (res?.phone) setPhone(res.phone);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-    // navigation happens via anchor href to tel:
-    if (!phone && !fallbackPhone) {
-      e.preventDefault();
-    }
+    setOpen(true);
   }
 
-  const tel = phone ?? fallbackPhone ?? "";
   return (
-    <a
-      href={tel ? `tel:${tel.replace(/[^0-9+]/g, "")}` : "#"}
-      onClick={handleClick}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3.5 text-base font-semibold text-brand-foreground shadow-soft transition-all hover:bg-primary active:scale-[0.99] sm:w-auto"
-    >
-      <span aria-hidden>📞</span>
-      <span>התקשר למטפל</span>
-      {tel && <span className="ltr-num text-sm font-normal opacity-90">{tel}</span>}
-    </a>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3.5 text-base font-semibold text-brand-foreground shadow-soft transition-all hover:bg-primary active:scale-[0.99] sm:w-auto"
+      >
+        <span aria-hidden>✉️</span>
+        <span>פנו אלי</span>
+      </button>
+      <LeadModal
+        open={open}
+        onClose={() => setOpen(false)}
+        therapistId={therapistId}
+        therapistName={therapistName}
+        problemId={sourceProblemId ?? null}
+        problemName={sourceProblemName ?? null}
+        populationId={populationId ?? null}
+        populationName={populationName ?? null}
+        pageSource={pageSource ?? undefined}
+      />
+    </>
   );
 }
