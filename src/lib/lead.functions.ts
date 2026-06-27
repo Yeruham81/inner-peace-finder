@@ -51,6 +51,24 @@ export const createLead = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // 1.5) Cross-therapist velocity limit: max 5 distinct therapists / 15 min / session
+    const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { data: recent, error: rlErr } = await supabaseAdmin
+      .from("lead_events")
+      .select("therapist_id")
+      .eq("session_id", sessionId)
+      .gte("created_at", windowStart);
+    if (rlErr) throw new Error(rlErr.message);
+    const distinct = new Set((recent ?? []).map((r: { therapist_id: string }) => r.therapist_id));
+    if (!distinct.has(data.therapistId) && distinct.size >= 5) {
+      return {
+        ok: false as const,
+        reason: "rate_limit_exceeded" as const,
+        error: "rate_limit_exceeded" as const,
+        message: "שלחתם כבר מספר פניות. נסו שוב בעוד כמה דקות.",
+      };
+    }
+
     // 2) Load therapist contact prefs (server-only; phone never returned to client)
     const { data: therapist, error: tErr } = await supabaseAdmin
       .from("therapists")

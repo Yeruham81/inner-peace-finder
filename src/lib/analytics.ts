@@ -9,7 +9,8 @@ export type AnalyticsEventName =
   | "no_results_returned"
   | "anti_spam_passed"
   | "lead_created"
-  | "lead_delivered";
+  | "lead_delivered"
+  | "lead_rate_limited";
 
 export type AnalyticsPayload = {
   therapist_id?: string | null;
