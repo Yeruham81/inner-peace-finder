@@ -119,6 +119,17 @@ export function LeadModal({
         },
       });
       if (!res.ok) {
+        if ((res as any).reason === "rate_limit_exceeded") {
+          track("lead_rate_limited", {
+            therapist_id: therapistId,
+            page_source: pageSource ?? null,
+          });
+          setError(
+            (res as any).message ?? "שלחתם כבר מספר פניות. נסו שוב בעוד כמה דקות.",
+          );
+          setSubmitting(false);
+          return;
+        }
         setError("האימות נכשל. נסו שוב.");
         setChallenge(makeChallenge());
         setChallengeAnswer("");
