@@ -148,7 +148,7 @@ function TherapistPage() {
             <div className="rounded-2xl border border-border bg-background p-5 shadow-card">
               <p className="text-sm text-muted-foreground">יצירת קשר ישיר</p>
               <p className="mt-1 text-sm text-foreground">
-                הקליקו על הכפתור להתחלת שיחה. המטפל יראה את הפנייה.
+                לשליחת הודעה ישירה
               </p>
               <div className="mt-4">
                 <CtaCallButton
