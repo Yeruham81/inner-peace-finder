@@ -296,6 +296,30 @@ export type Database = {
           },
         ]
       }
+      query_classifications: {
+        Row: {
+          created_at: string
+          id: string
+          normalized_query: string
+          result: Json
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          normalized_query: string
+          result: Json
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          normalized_query?: string
+          result?: Json
+          source?: string
+        }
+        Relationships: []
+      }
       therapist_languages: {
         Row: {
           id: string
