@@ -10,7 +10,9 @@ export type AnalyticsEventName =
   | "anti_spam_passed"
   | "lead_created"
   | "lead_delivered"
-  | "lead_rate_limited";
+  | "lead_rate_limited"
+  | "search_clarification_shown"
+  | "search_clarification_chosen";
 
 export type AnalyticsPayload = {
   therapist_id?: string | null;
@@ -18,6 +20,8 @@ export type AnalyticsPayload = {
   population_id?: string | null;
   rank_position?: number | null;
   page_source?: string | null;
+  /** Problem slug, used for clarification analytics. */
+  problem_slug?: string | null;
   /** Component / call-site origin, debug-only (never written to DB). */
   origin?: string | null;
 };

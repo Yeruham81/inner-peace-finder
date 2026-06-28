@@ -1,11 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import {
   listFilterOptions,
-  searchTherapists,
+  classifyAndSearch,
 } from "@/lib/therapists.functions";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
@@ -28,7 +28,7 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   return queryOptions({
     queryKey: ["search", params],
     queryFn: () =>
-      searchTherapists({
+      classifyAndSearch({
         data: {
           query: params.q || null,
           problemSlug: params.problem || null,
@@ -70,16 +70,21 @@ export const Route = createFileRoute("/search")({
 
 function SearchPage() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
-  const { data: results } = useSuspenseQuery(resultsQuery(search));
+  const { data: pipeline } = useSuspenseQuery(resultsQuery(search));
+  const isClarification = pipeline.mode === "clarification";
+  const results = isClarification ? [] : pipeline.therapists;
 
   const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    const key = JSON.stringify({ ...search, n: results.length });
+    const key = JSON.stringify({ ...search, mode: pipeline.mode, n: results.length });
     if (lastSearchKeyRef.current === key) return;
     lastSearchKeyRef.current = key;
     track("search_executed", { page_source: "search", origin: "SearchPage" });
-    if (results.length === 0) {
+    if (isClarification) {
+      track("search_clarification_shown", { page_source: "search", origin: "SearchPage" });
+    } else if (results.length === 0) {
       track("no_results_returned", { page_source: "search", origin: "SearchPage" });
     } else {
       track("therapist_results_rendered", {
@@ -89,7 +94,7 @@ function SearchPage() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.q, search.problem, search.city, search.population, search.language, results.length]);
+  }, [search.q, search.problem, search.city, search.population, search.language, results.length, pipeline.mode]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -116,12 +121,44 @@ function SearchPage() {
             "כל המטפלים"
           )}
         </h1>
-        <span className="text-sm text-muted-foreground">
-          <span className="ltr-num">{results.length}</span> מטפלים
-        </span>
+        {!isClarification && (
+          <span className="text-sm text-muted-foreground">
+            <span className="ltr-num">{results.length}</span> מטפלים
+          </span>
+        )}
       </div>
 
-      {results.length === 0 ? (
+      {isClarification ? (
+        <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-6 shadow-soft">
+          <p className="text-base font-semibold text-foreground">
+            {pipeline.clarification.question}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            לא הצלחנו לזהות בוודאות את הנושא. בחרו את ההגדרה המתאימה ביותר כדי שנציג מטפלים רלוונטיים.
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {pipeline.clarification.options.map((opt) => (
+              <button
+                key={opt.slug}
+                type="button"
+                onClick={() => {
+                  track("search_clarification_chosen", {
+                    page_source: "search",
+                    problem_slug: opt.slug,
+                  });
+                  navigate({
+                    to: "/search",
+                    search: { ...search, problem: opt.slug },
+                  });
+                }}
+                className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand hover:bg-brand/5"
+              >
+                {opt.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : results.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-border bg-surface p-10 text-center">
           <p className="text-base text-muted-foreground">
             לא נמצאו מטפלים התואמים לחיפוש. נסו לנסח אחרת או להסיר סינונים.
