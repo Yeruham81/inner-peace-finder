@@ -4,6 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+import { normalizeHebrew } from "./hebrew-normalizer";
+import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
+import {
+  buildClarificationPrompt,
+  needsClarification,
+  type ClarificationPrompt,
+} from "./search-clarification";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -287,6 +294,95 @@ export const listAllTherapistSlugs = createServerFn({ method: "GET" }).handler(a
   const { data } = await sb.from("therapists").select("slug");
   return data?.map((r) => r.slug) ?? [];
 });
+
+/* ------------------------------------------------------------------ */
+/* Semantic search pipeline                                           */
+/* ------------------------------------------------------------------ */
+
+export type SearchPipelineResult =
+  | {
+      mode: "results";
+      therapists: ScoredTherapist[];
+      classification: ClassificationResult | null;
+      normalizedQuery: string | null;
+    }
+  | {
+      mode: "clarification";
+      clarification: ClarificationPrompt;
+      classification: ClassificationResult;
+      normalizedQuery: string;
+    };
+
+/**
+ * Future-LLM-ready intake pipeline:
+ *   raw input
+ *   → normalizeHebrew()
+ *   → check query_classifications cache
+ *   → on miss: classifyQuery() (mock today, LLM later) + store
+ *   → confidence eval: if top < 0.65 → return clarification
+ *   → otherwise hand off to the existing ranking engine unchanged
+ *
+ * Ranking logic is intentionally untouched; this only restructures intake.
+ */
+export const classifyAndSearch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => SearchSchema.parse(input))
+  .handler(async ({ data }): Promise<SearchPipelineResult> => {
+    const sb = publicClient();
+    const rawQuery = (data.query ?? "").trim();
+    const normalized = rawQuery ? normalizeHebrew(rawQuery) : "";
+
+    let classification: ClassificationResult | null = null;
+
+    // Only classify when there's a free-text query and the user hasn't
+    // already locked a problem via the structured filter.
+    if (normalized.length >= 2 && !data.problemSlug) {
+      const { data: cached } = await sb
+        .from("query_classifications")
+        .select("result, source")
+        .eq("normalized_query", normalized)
+        .maybeSingle();
+
+      if (cached?.result) {
+        classification = cached.result as ClassificationResult;
+      } else {
+        classification = await classifyQuery(normalized, sb);
+        // Best-effort cache write; never block search on a cache miss.
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin
+            .from("query_classifications")
+            .insert({
+              normalized_query: normalized,
+              result: classification as unknown as Record<string, unknown>,
+              source: classification.source ?? "mock",
+            });
+        } catch {
+          // ignore — cache is an optimization, not a requirement
+        }
+      }
+
+      if (classification && needsClarification(classification.matches)) {
+        const clarification = await buildClarificationPrompt(classification.matches, sb);
+        if (clarification.options.length >= 2) {
+          return {
+            mode: "clarification",
+            clarification,
+            classification,
+            normalizedQuery: normalized,
+          };
+        }
+      }
+    }
+
+    // Confident enough (or no semantic step at all) → existing ranker.
+    const therapists = await searchTherapists({ data });
+    return {
+      mode: "results",
+      therapists,
+      classification,
+      normalizedQuery: normalized || null,
+    };
+  });
 
 const CtaSchema = z.object({
   therapistId: z.string().uuid(),
