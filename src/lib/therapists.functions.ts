@@ -353,7 +353,9 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
             .from("query_classifications")
             .insert({
               normalized_query: normalized,
-              result: classification as unknown as Record<string, unknown>,
+              // ClassificationResult is JSON-serializable; cast through unknown
+              // to satisfy the generated `Json` column type.
+              result: classification as unknown as never,
               source: classification.source ?? "mock",
             });
         } catch {
