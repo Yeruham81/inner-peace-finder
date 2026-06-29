@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { normalizeHebrew } from "./hebrew-normalizer";
+import { lightNormalizeHebrew } from "./hebrew-normalizer";
 import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
 import {
   buildClarificationPrompt,
@@ -329,9 +329,10 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<SearchPipelineResult> => {
     const sb = publicClient();
     const rawQuery = (data.query ?? "").trim();
-    const normalized = rawQuery ? normalizeHebrew(rawQuery) : "";
+    const normalized = rawQuery ? lightNormalizeHebrew(rawQuery) : "";
 
     let classification: ClassificationResult | null = null;
+    let cacheHit = false;
 
     // Only classify when there's a free-text query and the user hasn't
     // already locked a problem via the structured filter.
@@ -344,6 +345,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
 
       if (cached?.result) {
         classification = cached.result as ClassificationResult;
+        cacheHit = true;
       } else {
         classification = await classifyQuery(normalized, sb);
         // Best-effort cache write; never block search on a cache miss.
@@ -366,6 +368,17 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       if (classification && needsClarification(classification.matches)) {
         const clarification = await buildClarificationPrompt(classification.matches, sb);
         if (clarification.options.length >= 2) {
+          await logSemanticSearch({
+            raw_query: rawQuery || null,
+            normalized_query: normalized || null,
+            cache_hit: cacheHit,
+            classifier_source: classification.source ?? null,
+            matches: classification.matches,
+            clarification_shown: true,
+            clarification_selected: false,
+            selected_problem_slug: null,
+            result_count: 0,
+          });
           return {
             mode: "clarification",
             clarification,
@@ -377,7 +390,41 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
     }
 
     // Confident enough (or no semantic step at all) → existing ranker.
-    const therapists = await searchTherapists({ data });
+    let therapists = await searchTherapists({ data });
+
+    // Semantic rank fusion: additive bonus per therapist for each problem slug
+    // that matches a classifier candidate, weighted by classifier confidence.
+    // Existing scoring (exact problem +50, population +15, experience, verified)
+    // is preserved verbatim; this is purely additive.
+    if (classification && classification.matches.length > 0 && therapists.length > 0) {
+      const confBySlug = new Map(classification.matches.map((m) => [m.slug, m.confidence]));
+      therapists = therapists
+        .map((t) => {
+          let bonus = 0;
+          for (const slug of t.matched_problem_slugs) {
+            const c = confBySlug.get(slug);
+            if (c) bonus += Math.round(40 * c); // semantic confidence weight
+          }
+          return bonus > 0 ? { ...t, score: t.score + bonus } : t;
+        })
+        .sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
+    }
+
+    // Was this a "selected after clarification" call?
+    const clarificationSelected = !!data.problemSlug && !!rawQuery;
+
+    await logSemanticSearch({
+      raw_query: rawQuery || null,
+      normalized_query: normalized || null,
+      cache_hit: cacheHit,
+      classifier_source: classification?.source ?? null,
+      matches: classification?.matches ?? [],
+      clarification_shown: false,
+      clarification_selected: clarificationSelected,
+      selected_problem_slug: data.problemSlug ?? null,
+      result_count: therapists.length,
+    });
+
     return {
       mode: "results",
       therapists,
@@ -385,6 +432,34 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       normalizedQuery: normalized || null,
     };
   });
+
+/**
+ * Fire-and-forget log of a semantic-search invocation. Failures are swallowed
+ * so observability never blocks the user-facing search flow.
+ */
+async function logSemanticSearch(row: {
+  raw_query: string | null;
+  normalized_query: string | null;
+  cache_hit: boolean;
+  classifier_source: string | null;
+  matches: unknown;
+  clarification_shown: boolean;
+  clarification_selected: boolean;
+  selected_problem_slug: string | null;
+  result_count: number;
+}) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Table was added in this phase; types regenerate after migration.
+    await (supabaseAdmin as unknown as {
+      from: (t: string) => { insert: (r: unknown) => Promise<unknown> };
+    })
+      .from("semantic_search_logs")
+      .insert(row);
+  } catch {
+    // ignore — observability is best-effort
+  }
+}
 
 const CtaSchema = z.object({
   therapistId: z.string().uuid(),
