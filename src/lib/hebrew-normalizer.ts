@@ -12,18 +12,48 @@
 
 // Nikud + cantillation marks: U+0591..U+05C7
 const NIKUD_RE = /[\u0591-\u05C7]/g;
-// Anything that isn't a letter, number, or whitespace → space
-const PUNCT_RE = /[^\p{L}\p{N}\s]+/gu;
 const WS_RE = /\s+/g;
+// Class of "punctuation noise" we deduplicate / strip at edges.
+// Intentionally narrow: keeps internal letters/digits/whitespace untouched.
+const PUNCT_CLASS = "!?.,;:\\-\\u05BE\\u200E\\u200F\"'`~^*_(){}\\[\\]<>/\\\\|+=";
+const REPEATED_PUNCT_RE = new RegExp(`([${PUNCT_CLASS}])\\1{1,}`, "g");
+const LEADING_PUNCT_RE = new RegExp(`^[${PUNCT_CLASS}\\s]+`);
+const TRAILING_PUNCT_RE = new RegExp(`[${PUNCT_CLASS}\\s]+$`);
+// Any run of 3+ identical chars → 1 (handles Hebrew letters + Latin alike).
+const REPEATED_CHAR_RE = /(.)\1{2,}/gu;
 
 /** Strip vowel points and cantillation. */
 export function stripNikud(input: string): string {
   return input.replace(NIKUD_RE, "");
 }
 
-/** Replace punctuation with spaces and collapse whitespace. */
-export function stripPunctuation(input: string): string {
-  return input.replace(PUNCT_RE, " ").replace(WS_RE, " ").trim();
+/** Collapse runs of whitespace into single spaces and trim. */
+export function normalizeWhitespace(input: string): string {
+  return input.replace(WS_RE, " ").trim();
+}
+
+/**
+ * Collapse repeated punctuation runs to a single char (`!!! → !`, `??? → ?`,
+ * `... → .`) and strip punctuation/whitespace at the start and end of the
+ * string. Internal single-character punctuation is preserved.
+ */
+export function normalizePunctuation(input: string): string {
+  return input
+    .replace(REPEATED_PUNCT_RE, "$1")
+    .replace(LEADING_PUNCT_RE, "")
+    .replace(TRAILING_PUNCT_RE, "");
+}
+
+/**
+ * Collapse runs of 3+ identical consecutive characters down to a single
+ * occurrence. Legitimate double letters (run of exactly 2) are preserved.
+ *
+ *   חרדדדההה → חרדה
+ *   לחוץץץץ  → לחוץ
+ *   בגידדדהה → בגידה
+ */
+export function collapseRepeatedChars(input: string): string {
+  return input.replace(REPEATED_CHAR_RE, "$1");
 }
 
 /**
@@ -51,15 +81,35 @@ export function foldInflections(input: string): string {
 }
 
 /**
- * Full pipeline: nikud → punctuation → lowercase → inflection folding.
- * Deterministic; safe to use as a cache key.
+ * Lightweight normalization pipeline. Order matters and is part of the
+ * contract — changing it would invalidate cached classifications.
+ *
+ *   1. strip nikud
+ *   2. normalize whitespace (trim + collapse)
+ *   3. normalize punctuation (collapse repeats, strip edges)
+ *   4. collapse 3+ char repetitions
+ *   5. lowercase Latin letters
+ *   6. naive feminine/plural folding (unchanged)
+ *
+ * Deterministic, no I/O — safe to use as a cache key.
  */
-export function normalizeHebrew(input: string): string {
+export function lightNormalizeHebrew(input: string): string {
   if (!input) return "";
   let s = input.normalize("NFKC");
   s = stripNikud(s);
-  s = stripPunctuation(s);
+  s = normalizeWhitespace(s);
+  s = normalizePunctuation(s);
+  s = collapseRepeatedChars(s);
   s = s.toLowerCase();
   s = foldInflections(s);
-  return s.replace(WS_RE, " ").trim();
+  return normalizeWhitespace(s);
+}
+
+/**
+ * Backwards-compatible alias. All call sites should keep working; the
+ * upgrade is transparent.
+ * Deterministic; safe to use as a cache key.
+ */
+export function normalizeHebrew(input: string): string {
+  return lightNormalizeHebrew(input);
 }

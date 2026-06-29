@@ -320,6 +320,48 @@ export type Database = {
         }
         Relationships: []
       }
+      semantic_search_logs: {
+        Row: {
+          cache_hit: boolean
+          clarification_selected: boolean
+          clarification_shown: boolean
+          classifier_source: string | null
+          created_at: string
+          id: string
+          matches: Json
+          normalized_query: string | null
+          raw_query: string | null
+          result_count: number
+          selected_problem_slug: string | null
+        }
+        Insert: {
+          cache_hit?: boolean
+          clarification_selected?: boolean
+          clarification_shown?: boolean
+          classifier_source?: string | null
+          created_at?: string
+          id?: string
+          matches?: Json
+          normalized_query?: string | null
+          raw_query?: string | null
+          result_count?: number
+          selected_problem_slug?: string | null
+        }
+        Update: {
+          cache_hit?: boolean
+          clarification_selected?: boolean
+          clarification_shown?: boolean
+          classifier_source?: string | null
+          created_at?: string
+          id?: string
+          matches?: Json
+          normalized_query?: string | null
+          raw_query?: string | null
+          result_count?: number
+          selected_problem_slug?: string | null
+        }
+        Relationships: []
+      }
       therapist_languages: {
         Row: {
           id: string
