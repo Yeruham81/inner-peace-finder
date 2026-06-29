@@ -134,7 +134,9 @@ function SearchPage() {
             {pipeline.clarification.question}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            לא הצלחנו לזהות בוודאות את הנושא. בחרו את ההגדרה המתאימה ביותר כדי שנציג מטפלים רלוונטיים.
+            {pipeline.clarification.reason === "disambiguation"
+              ? "מצאנו כמה כיוונים קרובים. בחרו את המתאים ביותר כדי שנציג מטפלים רלוונטיים."
+              : "לא הצלחנו לזהות בוודאות את הנושא. בחרו את ההגדרה המתאימה ביותר כדי שנציג מטפלים רלוונטיים."}
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {pipeline.clarification.options.map((opt) => (
