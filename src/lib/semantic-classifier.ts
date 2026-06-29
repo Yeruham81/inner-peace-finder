@@ -16,9 +16,10 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { normalizeHebrew } from "./hebrew-normalizer";
+import { lightNormalizeHebrew } from "./hebrew-normalizer";
 
 export type ClassificationMatch = { slug: string; confidence: number };
+export const MAX_MATCHES = 3;
 export type ClassificationResult = {
   matches: ClassificationMatch[];
   /** "mock" | "openai" | "anthropic" | "local" — for observability later. */
@@ -43,7 +44,9 @@ export function createMockClassifier(
 ): SemanticClassifier {
   return {
     async classifyQuery(normalizedQuery: string): Promise<ClassificationResult> {
-      const q = normalizeHebrew(normalizedQuery);
+      // Guard: callers should already pass a normalized string, but normalize
+      // again so cache keys and direct callers behave identically.
+      const q = lightNormalizeHebrew(normalizedQuery);
       if (q.length < 2) return { matches: [], source: "mock" };
 
       const like = `%${q}%`;
@@ -89,7 +92,7 @@ export function createMockClassifier(
         })
         .filter((m): m is ClassificationMatch => !!m)
         .sort((a, b) => b.confidence - a.confidence)
-        .slice(0, 5);
+        .slice(0, MAX_MATCHES);
 
       return { matches, source: "mock" };
     },
