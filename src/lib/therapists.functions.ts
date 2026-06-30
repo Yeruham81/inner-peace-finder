@@ -126,7 +126,10 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // 3) Load therapists (filter by candidate set if any; otherwise everyone)
     let tq = sb
       .from("therapists")
-      .select("id, slug, full_name, professional_title, short_intro, years_experience, city, image_url, verified");
+      .select(
+        "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active",
+      )
+      .eq("is_active", true);
     if (candidateIds) {
       if (candidateIds.size === 0) return [] as ScoredTherapist[];
       tq = tq.in("id", Array.from(candidateIds));
@@ -199,6 +202,12 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
       score += Math.min(20, Math.floor(t.years_experience / 2));
       if (t.verified) score += 5;
+
+      // Phase 3 — additive profile-quality signals (no override of eligibility)
+      if (t.image_url) score += 3;
+      const bioLen = (t.short_intro?.length ?? 0) + (t.full_description?.length ?? 0);
+      if (bioLen >= 400) score += 5;
+      else if (bioLen >= 150) score += 2;
 
       return {
         id: t.id,
@@ -391,6 +400,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
 
     // Confident enough (or no semantic step at all) → existing ranker.
     let therapists = await searchTherapists({ data });
+    const preRankCandidatesCount = therapists.length;
 
     // Semantic rank fusion: additive bonus per therapist for each problem slug
     // that matches a classifier candidate, weighted by classifier confidence.
@@ -410,6 +420,22 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
         .sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
     }
 
+    // ----- Phase 3: Eligibility (hard) gate ---------------------------------
+    // 1) Domain match: if we have classifier matches, every result MUST
+    //    intersect at least one candidate slug (taxonomy-aware via the parent
+    //    "anxiety" handling that searchTherapists already applies).
+    // 2) Population match: enforced upstream by searchTherapists' filter.
+    // 3) Availability: enforced upstream via is_active=true.
+    // 4) Location: soft-hard hybrid — already applied as a hard city filter
+    //    when the user sets one; nothing extra needed here.
+    let filteredTherapistCount = preRankCandidatesCount;
+    if (classification && classification.matches.length > 0) {
+      const allowedSlugs = new Set(classification.matches.map((m) => m.slug));
+      const before = therapists.length;
+      therapists = therapists.filter((t) => t.matched_problem_slugs.some((s) => allowedSlugs.has(s)));
+      filteredTherapistCount = before - therapists.length;
+    }
+
     // Was this a "selected after clarification" call?
     const clarificationSelected = !!data.problemSlug && !!rawQuery;
 
@@ -423,6 +449,9 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       clarification_selected: clarificationSelected,
       selected_problem_slug: data.problemSlug ?? null,
       result_count: therapists.length,
+      pre_rank_candidates_count: preRankCandidatesCount,
+      filtered_therapist_count: filteredTherapistCount,
+      final_results_count: therapists.length,
     });
 
     return {
@@ -447,6 +476,9 @@ async function logSemanticSearch(row: {
   clarification_selected: boolean;
   selected_problem_slug: string | null;
   result_count: number;
+  pre_rank_candidates_count?: number;
+  filtered_therapist_count?: number;
+  final_results_count?: number;
 }) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

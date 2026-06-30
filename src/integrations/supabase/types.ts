@@ -327,9 +327,12 @@ export type Database = {
           clarification_shown: boolean
           classifier_source: string | null
           created_at: string
+          filtered_therapist_count: number | null
+          final_results_count: number | null
           id: string
           matches: Json
           normalized_query: string | null
+          pre_rank_candidates_count: number | null
           raw_query: string | null
           result_count: number
           selected_problem_slug: string | null
@@ -340,9 +343,12 @@ export type Database = {
           clarification_shown?: boolean
           classifier_source?: string | null
           created_at?: string
+          filtered_therapist_count?: number | null
+          final_results_count?: number | null
           id?: string
           matches?: Json
           normalized_query?: string | null
+          pre_rank_candidates_count?: number | null
           raw_query?: string | null
           result_count?: number
           selected_problem_slug?: string | null
@@ -353,9 +359,12 @@ export type Database = {
           clarification_shown?: boolean
           classifier_source?: string | null
           created_at?: string
+          filtered_therapist_count?: number | null
+          final_results_count?: number | null
           id?: string
           matches?: Json
           normalized_query?: string | null
+          pre_rank_candidates_count?: number | null
           raw_query?: string | null
           result_count?: number
           selected_problem_slug?: string | null
@@ -481,6 +490,7 @@ export type Database = {
           full_name: string
           id: string
           image_url: string | null
+          is_active: boolean
           latitude: number | null
           license_number: string | null
           longitude: number | null
@@ -503,6 +513,7 @@ export type Database = {
           full_name: string
           id?: string
           image_url?: string | null
+          is_active?: boolean
           latitude?: number | null
           license_number?: string | null
           longitude?: number | null
@@ -525,6 +536,7 @@ export type Database = {
           full_name?: string
           id?: string
           image_url?: string | null
+          is_active?: boolean
           latitude?: number | null
           license_number?: string | null
           longitude?: number | null
