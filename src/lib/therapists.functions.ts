@@ -126,7 +126,10 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // 3) Load therapists (filter by candidate set if any; otherwise everyone)
     let tq = sb
       .from("therapists")
-      .select("id, slug, full_name, professional_title, short_intro, years_experience, city, image_url, verified");
+      .select(
+        "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active",
+      )
+      .eq("is_active", true);
     if (candidateIds) {
       if (candidateIds.size === 0) return [] as ScoredTherapist[];
       tq = tq.in("id", Array.from(candidateIds));
@@ -199,6 +202,12 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
       score += Math.min(20, Math.floor(t.years_experience / 2));
       if (t.verified) score += 5;
+
+      // Phase 3 — additive profile-quality signals (no override of eligibility)
+      if (t.image_url) score += 3;
+      const bioLen = (t.short_intro?.length ?? 0) + (t.full_description?.length ?? 0);
+      if (bioLen >= 400) score += 5;
+      else if (bioLen >= 150) score += 2;
 
       return {
         id: t.id,
