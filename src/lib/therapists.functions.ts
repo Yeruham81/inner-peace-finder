@@ -511,6 +511,7 @@ async function logSemanticSearch(row: {
   pre_rank_candidates_count?: number;
   filtered_therapist_count?: number;
   final_results_count?: number;
+  avg_semantic_similarity_score?: number | null;
 }) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
