@@ -483,6 +483,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       pre_rank_candidates_count: preRankCandidatesCount,
       filtered_therapist_count: filteredTherapistCount,
       final_results_count: therapists.length,
+      avg_semantic_similarity_score: avgSim,
     });
 
     return {
