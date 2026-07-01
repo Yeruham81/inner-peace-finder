@@ -11,6 +11,12 @@ import {
   needsClarification,
   type ClarificationPrompt,
 } from "./search-clarification";
+import {
+  extractProfileFromBio,
+  parseStoredProfile,
+  semanticSimilarity,
+  type SemanticProfileEntry,
+} from "./therapist-semantic-profile";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -402,38 +408,63 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
     let therapists = await searchTherapists({ data });
     const preRankCandidatesCount = therapists.length;
 
-    // Semantic rank fusion: additive bonus per therapist for each problem slug
-    // that matches a classifier candidate, weighted by classifier confidence.
-    // Existing scoring (exact problem +50, population +15, experience, verified)
-    // is preserved verbatim; this is purely additive.
-    if (classification && classification.matches.length > 0 && therapists.length > 0) {
-      const confBySlug = new Map(classification.matches.map((m) => [m.slug, m.confidence]));
-      therapists = therapists
-        .map((t) => {
-          let bonus = 0;
-          for (const slug of t.matched_problem_slugs) {
-            const c = confBySlug.get(slug);
-            if (c) bonus += Math.round(40 * c); // semantic confidence weight
-          }
-          return bonus > 0 ? { ...t, score: t.score + bonus } : t;
-        })
-        .sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
-    }
+    // ----- Phase 3 (updated): Semantic therapist matching ------------------
+    // Matching is now driven by each therapist's `semantic_profile` — derived
+    // from their bio text — instead of taxonomy-based specialization tags.
+    // Hard filters (population / city / is_active) are still enforced upstream
+    // by `searchTherapists`; here we add:
+    //   1) semantic eligibility (must overlap classifier candidates)
+    //   2) similarity-weighted additive ranking bonus
+    //   3) avg similarity for logging
+    let filteredTherapistCount = 0;
+    let avgSim: number | null = null;
 
-    // ----- Phase 3: Eligibility (hard) gate ---------------------------------
-    // 1) Domain match: if we have classifier matches, every result MUST
-    //    intersect at least one candidate slug (taxonomy-aware via the parent
-    //    "anxiety" handling that searchTherapists already applies).
-    // 2) Population match: enforced upstream by searchTherapists' filter.
-    // 3) Availability: enforced upstream via is_active=true.
-    // 4) Location: soft-hard hybrid — already applied as a hard city filter
-    //    when the user sets one; nothing extra needed here.
-    let filteredTherapistCount = preRankCandidatesCount;
-    if (classification && classification.matches.length > 0) {
-      const allowedSlugs = new Set(classification.matches.map((m) => m.slug));
-      const before = therapists.length;
-      therapists = therapists.filter((t) => t.matched_problem_slugs.some((s) => allowedSlugs.has(s)));
-      filteredTherapistCount = before - therapists.length;
+    if (classification && classification.matches.length > 0 && therapists.length > 0) {
+      // Fetch bio + stored semantic profile for the candidate set.
+      const ids = therapists.map((t) => t.id);
+      const { data: bioRows } = await sb
+        .from("therapists")
+        .select("id, bio_raw, full_description, short_intro, semantic_profile")
+        .in("id", ids);
+
+      const profileByT = new Map<string, SemanticProfileEntry[]>();
+      await Promise.all(
+        (bioRows ?? []).map(async (r) => {
+          const stored = parseStoredProfile(r.semantic_profile as unknown);
+          if (stored.length > 0) {
+            profileByT.set(r.id, stored);
+            return;
+          }
+          const bio = [r.bio_raw, r.full_description, r.short_intro].filter(Boolean).join("\n");
+          const derived = bio ? await extractProfileFromBio(bio, sb) : [];
+          profileByT.set(r.id, derived);
+        }),
+      );
+
+      const sims: number[] = [];
+      const scored = therapists.map((t) => {
+        // Backward compat: if a therapist has neither semantic profile nor
+        // extractable bio, fall back to taxonomy overlap from
+        // matched_problem_slugs so pre-existing seed data still ranks.
+        const profile = profileByT.get(t.id) ?? [];
+        const effective: SemanticProfileEntry[] =
+          profile.length > 0
+            ? profile
+            : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
+        const sim = semanticSimilarity(classification.matches, effective);
+        return { t, sim };
+      });
+
+      // Eligibility gate: any therapist with zero semantic overlap is out.
+      const kept = scored.filter(({ sim }) => sim > 0);
+      filteredTherapistCount = scored.length - kept.length;
+      kept.forEach(({ sim }) => sims.push(sim));
+
+      therapists = kept
+        .map(({ t, sim }) => ({ ...t, score: t.score + Math.round(60 * sim) }))
+        .sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
+
+      avgSim = sims.length ? Number((sims.reduce((a, b) => a + b, 0) / sims.length).toFixed(4)) : 0;
     }
 
     // Was this a "selected after clarification" call?
@@ -452,6 +483,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       pre_rank_candidates_count: preRankCandidatesCount,
       filtered_therapist_count: filteredTherapistCount,
       final_results_count: therapists.length,
+      avg_semantic_similarity_score: avgSim,
     });
 
     return {
@@ -479,6 +511,7 @@ async function logSemanticSearch(row: {
   pre_rank_candidates_count?: number;
   filtered_therapist_count?: number;
   final_results_count?: number;
+  avg_semantic_similarity_score?: number | null;
 }) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

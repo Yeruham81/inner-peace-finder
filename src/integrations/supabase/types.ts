@@ -322,6 +322,7 @@ export type Database = {
       }
       semantic_search_logs: {
         Row: {
+          avg_semantic_similarity_score: number | null
           cache_hit: boolean
           clarification_selected: boolean
           clarification_shown: boolean
@@ -338,6 +339,7 @@ export type Database = {
           selected_problem_slug: string | null
         }
         Insert: {
+          avg_semantic_similarity_score?: number | null
           cache_hit?: boolean
           clarification_selected?: boolean
           clarification_shown?: boolean
@@ -354,6 +356,7 @@ export type Database = {
           selected_problem_slug?: string | null
         }
         Update: {
+          avg_semantic_similarity_score?: number | null
           cache_hit?: boolean
           clarification_selected?: boolean
           clarification_shown?: boolean
@@ -482,6 +485,7 @@ export type Database = {
       }
       therapists: {
         Row: {
+          bio_raw: string | null
           city: string
           contact_destination: string | null
           country: string
@@ -499,12 +503,14 @@ export type Database = {
           professional_title: string
           profile_claimed: boolean
           region: string | null
+          semantic_profile: Json
           short_intro: string | null
           slug: string
           verified: boolean
           years_experience: number
         }
         Insert: {
+          bio_raw?: string | null
           city: string
           contact_destination?: string | null
           country?: string
@@ -522,12 +528,14 @@ export type Database = {
           professional_title: string
           profile_claimed?: boolean
           region?: string | null
+          semantic_profile?: Json
           short_intro?: string | null
           slug: string
           verified?: boolean
           years_experience?: number
         }
         Update: {
+          bio_raw?: string | null
           city?: string
           contact_destination?: string | null
           country?: string
@@ -545,6 +553,7 @@ export type Database = {
           professional_title?: string
           profile_claimed?: boolean
           region?: string | null
+          semantic_profile?: Json
           short_intro?: string | null
           slug?: string
           verified?: boolean
