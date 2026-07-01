@@ -11,6 +11,12 @@ import {
   needsClarification,
   type ClarificationPrompt,
 } from "./search-clarification";
+import {
+  extractProfileFromBio,
+  parseStoredProfile,
+  semanticSimilarity,
+  type SemanticProfileEntry,
+} from "./therapist-semantic-profile";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
