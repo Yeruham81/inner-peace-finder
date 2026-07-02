@@ -449,7 +449,10 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       const ids = therapists.map((t) => t.id);
       const { data: bioRows } = await sb
         .from("therapists")
-        .select("id, bio_raw, full_description, short_intro, semantic_profile")
+        // SOT policy: `full_description` is the ONLY input for semantic
+        // extraction. `short_intro` (UI) and `bio_raw` (staging) are
+        // intentionally NOT read here.
+        .select("id, full_description, semantic_profile")
         .in("id", ids);
 
       const profileByT = new Map<string, SemanticProfileEntry[]>();
@@ -460,8 +463,12 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
             profileByT.set(r.id, stored);
             return;
           }
-          const bio = [r.bio_raw, r.full_description, r.short_intro].filter(Boolean).join("\n");
-          const derived = bio ? await extractProfileFromBio(bio, sb) : [];
+          // No stored profile → derive from full_description ONLY. Empty
+          // full_description means "no extractable data available"; do NOT
+          // fall back to any other field.
+          const derived = r.full_description
+            ? await extractProfileFromBio(r.full_description, sb)
+            : [];
           profileByT.set(r.id, derived);
         }),
       );
