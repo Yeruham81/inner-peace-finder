@@ -4,19 +4,17 @@
  * Returns a future-proof JSON shape:
  *   { matches: [{ slug, confidence }, ...] }
  *
- * Today: MOCK implementation backed by existing problem_aliases /
- * problem_intents / problems.name lookups. The mock simulates LLM behavior
- * (ranked, scored matches) so the rest of the pipeline can be built and
- * tested before any external API is wired in.
+ * Phase 5/6: matching is token-aware and inflection-tolerant so paraphrased
+ * or informal user input still resolves to the canonical problem slug. See
+ * `flexibleHebrewMatch` in ./hebrew-normalizer.
  *
- * Tomorrow: a real provider (OpenAI / Anthropic / local model, called via
- * supabase/functions/classify-query) will replace `mockClassify` without
- * any change to call sites.
+ * Tomorrow: a real provider (LLM) can replace `mockClassify` behind
+ * `classifyQuery` without touching call sites.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { lightNormalizeHebrew } from "./hebrew-normalizer";
+import { flexibleHebrewMatch, lightNormalizeHebrew } from "./hebrew-normalizer";
 
 export type ClassificationMatch = { slug: string; confidence: number };
 export const MAX_MATCHES = 3;
@@ -34,50 +32,57 @@ export interface SemanticClassifier {
 /* Mock implementation                                                */
 /* ------------------------------------------------------------------ */
 
-/**
- * Mock classifier: counts alias / intent / problem-name hits per problem and
- * normalizes the score into a 0..1 confidence. Produces the same JSON shape
- * a real LLM provider will return, so downstream code is provider-agnostic.
- */
-export function createMockClassifier(
-  sb: SupabaseClient<Database>,
-): SemanticClassifier {
+export function createMockClassifier(sb: SupabaseClient<Database>): SemanticClassifier {
   return {
     async classifyQuery(normalizedQuery: string): Promise<ClassificationResult> {
-      // Guard: callers should already pass a normalized string, but normalize
-      // again so cache keys and direct callers behave identically.
       const q = lightNormalizeHebrew(normalizedQuery);
       if (q.length < 2) return { matches: [], source: "mock" };
 
-      const like = `%${q}%`;
-      const [intents, aliases, problems] = await Promise.all([
-        sb.from("problem_intents").select("problem_id").ilike("intent_text", like),
-        sb.from("problem_aliases").select("problem_id").ilike("alias", like),
-        sb.from("problems").select("id, slug").ilike("name", like),
+      // Pull the full vocabulary once. Cheaper than N ILIKE round-trips and
+      // required for flexible (paraphrase / inflection) matching.
+      const [problemsRes, aliasesRes, intentsRes] = await Promise.all([
+        sb.from("problems").select("id, slug, name:name_he"),
+        sb.from("problem_aliases").select("problem_id, alias"),
+        sb.from("problem_intents").select("problem_id, intent_text"),
       ]);
+      const problems = (problemsRes.data ?? []) as Array<{
+        id: string | number;
+        slug: string;
+        name: string | null;
+      }>;
+      const aliases = (aliasesRes.data ?? []) as Array<{
+        problem_id: string | number;
+        alias: string;
+      }>;
+      const intents = (intentsRes.data ?? []) as Array<{
+        problem_id: string | number;
+        intent_text: string;
+      }>;
 
-      // weight: direct problem-name match > alias > intent
+      const slugById = new Map<string, string>();
+      problems.forEach((p) => slugById.set(String(p.id), p.slug));
+
       const scoreByProblemId = new Map<string, number>();
-      const addHit = (id: string, w: number) =>
-        scoreByProblemId.set(id, (scoreByProblemId.get(id) ?? 0) + w);
+      const bump = (id: string | number, w: number) => {
+        const key = String(id);
+        scoreByProblemId.set(key, (scoreByProblemId.get(key) ?? 0) + w);
+      };
 
-      problems.data?.forEach((r) => addHit(r.id, 3));
-      aliases.data?.forEach((r) => addHit(r.problem_id, 2));
-      intents.data?.forEach((r) => addHit(r.problem_id, 1));
+      // weights: direct problem-name > alias > intent
+      problems.forEach((p) => {
+        if (p.name && flexibleHebrewMatch(p.name, q)) bump(p.id, 3);
+      });
+      aliases.forEach((a) => {
+        if (a.alias && flexibleHebrewMatch(a.alias, q)) bump(a.problem_id, 2);
+      });
+      intents.forEach((i) => {
+        if (i.intent_text && flexibleHebrewMatch(i.intent_text, q)) bump(i.problem_id, 1);
+      });
 
       if (scoreByProblemId.size === 0) return { matches: [], source: "mock" };
 
-      // resolve slugs
       const ids = Array.from(scoreByProblemId.keys());
-      const { data: rows } = await sb
-        .from("problems")
-        .select("id, slug")
-        .in("id", ids);
-      const slugById = new Map(rows?.map((r) => [r.id, r.slug]) ?? []);
-
       const maxRaw = Math.max(...scoreByProblemId.values());
-      // Confidence model: top hit gets up to 0.95, scaled by relative weight
-      // and by saturation of evidence (>=3 total hits → full strength).
       const totalHits = Array.from(scoreByProblemId.values()).reduce((a, b) => a + b, 0);
       const saturation = Math.min(1, totalHits / 3);
 
@@ -86,7 +91,7 @@ export function createMockClassifier(
           const raw = scoreByProblemId.get(id) ?? 0;
           const slug = slugById.get(id);
           if (!slug) return null;
-          const rel = raw / maxRaw; // 0..1 vs top hit
+          const rel = raw / maxRaw;
           const confidence = Math.min(0.95, rel * saturation);
           return { slug, confidence: Number(confidence.toFixed(3)) };
         })
@@ -103,17 +108,10 @@ export function createMockClassifier(
 /* Provider switch (future)                                           */
 /* ------------------------------------------------------------------ */
 
-/**
- * Public entry point. Today it always returns the mock; later it will dispatch
- * to OpenAI / Anthropic / local via `supabase/functions/classify-query`.
- */
 export async function classifyQuery(
   normalizedQuery: string,
   sb: SupabaseClient<Database>,
 ): Promise<ClassificationResult> {
-  // TODO(semantic-llm): when an API key is configured, POST to
-  // /functions/v1/classify-query and use that result; fall back to mock on
-  // failure. Keep the return shape identical so callers do not change.
   const mock = createMockClassifier(sb);
   return mock.classifyQuery(normalizedQuery);
 }
