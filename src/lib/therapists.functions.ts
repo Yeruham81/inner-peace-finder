@@ -64,26 +64,27 @@ export const searchTherapists = createServerFn({ method: "POST" })
     let parentAnxietyId: string | null = null;
 
     const { data: anxietyParent } = await sb.from("problems").select("id").eq("slug", "anxiety").maybeSingle();
-    parentAnxietyId = anxietyParent?.id ?? null;
+    parentAnxietyId = anxietyParent?.id !== undefined && anxietyParent?.id !== null ? String(anxietyParent.id) : null;
 
     if (q.length >= 2) {
-      const like = `%${q}%`;
-      const [intents, aliases, problems] = await Promise.all([
-        sb.from("problem_intents").select("problem_id").ilike("intent_text", like),
-        sb.from("problem_aliases").select("problem_id").ilike("alias", like),
-        sb.from("problems").select("id").ilike("name", like),
-      ]);
-      intents.data?.forEach((r) => intentProblemIds.add(r.problem_id));
-      aliases.data?.forEach((r) => matchedProblemIds.add(r.problem_id));
-      problems.data?.forEach((r) => matchedProblemIds.add(r.id));
-      intentProblemIds.forEach((id) => matchedProblemIds.add(id));
+      // Phase 5/6: flexible, token-aware matching against the full vocabulary
+      // — same engine the classifier uses. Avoids strict ILIKE brittleness.
+      const cls = await classifyQuery(q, sb);
+      if (cls.matches.length > 0) {
+        const slugs = cls.matches.map((m) => m.slug);
+        const { data: pRows } = await sb
+          .from("problems")
+          .select("id, slug")
+          .in("slug", slugs);
+        pRows?.forEach((r) => matchedProblemIds.add(String((r as { id: string | number }).id)));
+      }
     }
 
     // Structured problem filter
     let filterProblemId: string | null = null;
     if (data.problemSlug) {
       const { data: p } = await sb.from("problems").select("id").eq("slug", data.problemSlug).maybeSingle();
-      filterProblemId = p?.id ?? null;
+      filterProblemId = p?.id !== undefined && p?.id !== null ? String(p.id) : null;
       if (filterProblemId) matchedProblemIds.add(filterProblemId);
     }
 
@@ -109,7 +110,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       const { data: tps } = await sb
         .from("therapist_problems")
         .select("therapist_id")
-        .in("problem_id", Array.from(matchedProblemIds));
+        .in("problem_id", Array.from(matchedProblemIds) as unknown as string[]);
       candidateIds = new Set(tps?.map((r) => r.therapist_id) ?? []);
     }
     if (filterPopulationId) {
@@ -151,18 +152,39 @@ export const searchTherapists = createServerFn({ method: "POST" })
     const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
       sb
         .from("therapist_problems")
-        .select("therapist_id, problem_id, problems(slug, parent_id)")
+        .select("therapist_id, problem_id")
         .in("therapist_id", ids),
       sb.from("therapist_populations").select("therapist_id, population_groups(slug, name)").in("therapist_id", ids),
       sb.from("therapist_languages").select("therapist_id, languages(code, name)").in("therapist_id", ids),
     ]);
 
+    // Resolve problem details separately — the FK types between
+    // therapist_problems.problem_id and problems.id do not embed cleanly.
     type ProblemJoin = { slug: string; parent_id: string | null } | null;
+    const problemIdsInJoin = Array.from(
+      new Set((tpRows ?? []).map((r) => String(r.problem_id))),
+    );
+    const problemLookup = new Map<string, { slug: string; parent_id: string | null }>();
+    if (problemIdsInJoin.length > 0) {
+      const { data: pRows } = await sb
+        .from("problems")
+        .select("id, slug, parent_id")
+        .in("id", problemIdsInJoin as unknown as number[]);
+      (pRows ?? []).forEach((p) => {
+        const row = p as { id: string | number; slug: string; parent_id: string | number | null };
+        problemLookup.set(String(row.id), {
+          slug: row.slug,
+          parent_id: row.parent_id !== null && row.parent_id !== undefined ? String(row.parent_id) : null,
+        });
+      });
+    }
     const tpByT = new Map<string, { problem_id: string; problem: ProblemJoin }[]>();
-    tpRows?.forEach((r) => {
-      const arr = tpByT.get(r.therapist_id) ?? [];
-      arr.push({ problem_id: r.problem_id, problem: r.problems as ProblemJoin });
-      tpByT.set(r.therapist_id, arr);
+    (tpRows ?? []).forEach((r) => {
+      const key = r.therapist_id;
+      const pid = String(r.problem_id);
+      const arr = tpByT.get(key) ?? [];
+      arr.push({ problem_id: pid, problem: problemLookup.get(pid) ?? null });
+      tpByT.set(key, arr);
     });
     const popsByT = new Map<string, { slug: string; name: string }[]>();
     tpopRows?.forEach((r) => {
@@ -238,7 +260,10 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
 export const listProblems = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicClient();
-  const { data, error } = await sb.from("problems").select("id, name, slug, description, parent_id").order("name");
+  const { data, error } = await sb
+    .from("problems")
+    .select("id, slug, description, parent_id, name:name_he")
+    .order("name_he");
   if (error) throw new Error(error.message);
   return data ?? [];
 });
@@ -265,15 +290,15 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
     const sb = publicClient();
     const { data: problem } = await sb
       .from("problems")
-      .select("id, name, slug, description, parent_id")
+      .select("id, slug, description, parent_id, name:name_he")
       .eq("slug", data.slug)
       .maybeSingle();
     if (!problem) return null;
     const { data: children } = await sb
       .from("problems")
-      .select("id, name, slug, description")
-      .eq("parent_id", problem.id)
-      .order("name");
+      .select("id, slug, description, name:name_he")
+      .eq("parent_id", (problem as { id: string | number }).id as unknown as number)
+      .order("name_he");
     return { ...problem, children: children ?? [] };
   });
 
@@ -424,7 +449,10 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
       const ids = therapists.map((t) => t.id);
       const { data: bioRows } = await sb
         .from("therapists")
-        .select("id, bio_raw, full_description, short_intro, semantic_profile")
+        // SOT policy: `full_description` is the ONLY input for semantic
+        // extraction. `short_intro` (UI) and `bio_raw` (staging) are
+        // intentionally NOT read here.
+        .select("id, full_description, semantic_profile")
         .in("id", ids);
 
       const profileByT = new Map<string, SemanticProfileEntry[]>();
@@ -435,8 +463,12 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
             profileByT.set(r.id, stored);
             return;
           }
-          const bio = [r.bio_raw, r.full_description, r.short_intro].filter(Boolean).join("\n");
-          const derived = bio ? await extractProfileFromBio(bio, sb) : [];
+          // No stored profile → derive from full_description ONLY. Empty
+          // full_description means "no extractable data available"; do NOT
+          // fall back to any other field.
+          const derived = r.full_description
+            ? await extractProfileFromBio(r.full_description, sb)
+            : [];
           profileByT.set(r.id, derived);
         }),
       );

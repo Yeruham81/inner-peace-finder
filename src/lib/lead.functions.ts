@@ -126,8 +126,8 @@ export const createLead = createServerFn({ method: "POST" })
     if (data.sourceProblemId) {
       const { data: p } = await supabaseAdmin
         .from("problems")
-        .select("name")
-        .eq("id", data.sourceProblemId)
+        .select("name:name_he")
+        .eq("id", data.sourceProblemId as unknown as number)
         .maybeSingle();
       problemName = p?.name ?? null;
     }

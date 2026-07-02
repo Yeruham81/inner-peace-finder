@@ -86,13 +86,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "cta_clicks_source_problem_id_fkey"
-            columns: ["source_problem_id"]
-            isOneToOne: false
-            referencedRelation: "problems"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "cta_clicks_therapist_id_fkey"
             columns: ["therapist_id"]
             isOneToOne: false
@@ -212,18 +205,21 @@ export type Database = {
       problem_aliases: {
         Row: {
           alias: string
-          id: string
-          problem_id: string
+          created_at: string | null
+          id: number
+          problem_id: number
         }
         Insert: {
           alias: string
-          id?: string
-          problem_id: string
+          created_at?: string | null
+          id?: number
+          problem_id: number
         }
         Update: {
           alias?: string
-          id?: string
-          problem_id?: string
+          created_at?: string | null
+          id?: number
+          problem_id?: number
         }
         Relationships: [
           {
@@ -251,40 +247,44 @@ export type Database = {
           intent_text?: string
           problem_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "problem_intents_problem_id_fkey"
-            columns: ["problem_id"]
-            isOneToOne: false
-            referencedRelation: "problems"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       problems: {
         Row: {
           created_at: string
           description: string | null
-          id: string
-          name: string
-          parent_id: string | null
+          id: number
+          is_active: boolean
+          name_en: string
+          name_he: string
+          parent_id: number | null
           slug: string
+          sort_order: number
+          updated_at: string
         }
         Insert: {
           created_at?: string
           description?: string | null
-          id?: string
-          name: string
-          parent_id?: string | null
+          id?: number
+          is_active?: boolean
+          name_en: string
+          name_he: string
+          parent_id?: number | null
           slug: string
+          sort_order?: number
+          updated_at?: string
         }
         Update: {
           created_at?: string
           description?: string | null
-          id?: string
-          name?: string
-          parent_id?: string | null
+          id?: number
+          is_active?: boolean
+          name_en?: string
+          name_he?: string
+          parent_id?: number | null
           slug?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -465,13 +465,6 @@ export type Database = {
             columns: ["population_id"]
             isOneToOne: false
             referencedRelation: "population_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "therapist_problems_problem_id_fkey"
-            columns: ["problem_id"]
-            isOneToOne: false
-            referencedRelation: "problems"
             referencedColumns: ["id"]
           },
           {
