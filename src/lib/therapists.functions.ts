@@ -64,26 +64,27 @@ export const searchTherapists = createServerFn({ method: "POST" })
     let parentAnxietyId: string | null = null;
 
     const { data: anxietyParent } = await sb.from("problems").select("id").eq("slug", "anxiety").maybeSingle();
-    parentAnxietyId = anxietyParent?.id ?? null;
+    parentAnxietyId = anxietyParent?.id !== undefined && anxietyParent?.id !== null ? String(anxietyParent.id) : null;
 
     if (q.length >= 2) {
-      const like = `%${q}%`;
-      const [intents, aliases, problems] = await Promise.all([
-        sb.from("problem_intents").select("problem_id").ilike("intent_text", like),
-        sb.from("problem_aliases").select("problem_id").ilike("alias", like),
-        sb.from("problems").select("id").ilike("name", like),
-      ]);
-      intents.data?.forEach((r) => intentProblemIds.add(r.problem_id));
-      aliases.data?.forEach((r) => matchedProblemIds.add(r.problem_id));
-      problems.data?.forEach((r) => matchedProblemIds.add(r.id));
-      intentProblemIds.forEach((id) => matchedProblemIds.add(id));
+      // Phase 5/6: flexible, token-aware matching against the full vocabulary
+      // — same engine the classifier uses. Avoids strict ILIKE brittleness.
+      const cls = await classifyQuery(q, sb);
+      if (cls.matches.length > 0) {
+        const slugs = cls.matches.map((m) => m.slug);
+        const { data: pRows } = await sb
+          .from("problems")
+          .select("id, slug")
+          .in("slug", slugs);
+        pRows?.forEach((r) => matchedProblemIds.add(String((r as { id: string | number }).id)));
+      }
     }
 
     // Structured problem filter
     let filterProblemId: string | null = null;
     if (data.problemSlug) {
       const { data: p } = await sb.from("problems").select("id").eq("slug", data.problemSlug).maybeSingle();
-      filterProblemId = p?.id ?? null;
+      filterProblemId = p?.id !== undefined && p?.id !== null ? String(p.id) : null;
       if (filterProblemId) matchedProblemIds.add(filterProblemId);
     }
 
@@ -109,7 +110,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       const { data: tps } = await sb
         .from("therapist_problems")
         .select("therapist_id")
-        .in("problem_id", Array.from(matchedProblemIds));
+        .in("problem_id", Array.from(matchedProblemIds) as unknown as string[]);
       candidateIds = new Set(tps?.map((r) => r.therapist_id) ?? []);
     }
     if (filterPopulationId) {
