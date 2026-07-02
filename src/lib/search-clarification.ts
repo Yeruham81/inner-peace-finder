@@ -75,7 +75,7 @@ export async function buildClarificationPrompt(
 
   const { data } = await sb
     .from("problems")
-    .select("slug, name")
+    .select("slug, name:name_he")
     .in("slug", top.map((m) => m.slug));
   const nameBySlug = new Map(data?.map((r) => [r.slug, r.name]) ?? []);
 
