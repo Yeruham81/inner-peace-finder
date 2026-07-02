@@ -260,7 +260,10 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
 export const listProblems = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicClient();
-  const { data, error } = await sb.from("problems").select("id, name, slug, description, parent_id").order("name");
+  const { data, error } = await sb
+    .from("problems")
+    .select("id, slug, description, parent_id, name:name_he")
+    .order("name_he");
   if (error) throw new Error(error.message);
   return data ?? [];
 });
@@ -287,15 +290,15 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
     const sb = publicClient();
     const { data: problem } = await sb
       .from("problems")
-      .select("id, name, slug, description, parent_id")
+      .select("id, slug, description, parent_id, name:name_he")
       .eq("slug", data.slug)
       .maybeSingle();
     if (!problem) return null;
     const { data: children } = await sb
       .from("problems")
-      .select("id, name, slug, description")
-      .eq("parent_id", problem.id)
-      .order("name");
+      .select("id, slug, description, name:name_he")
+      .eq("parent_id", (problem as { id: string | number }).id as unknown as number)
+      .order("name_he");
     return { ...problem, children: children ?? [] };
   });
 
