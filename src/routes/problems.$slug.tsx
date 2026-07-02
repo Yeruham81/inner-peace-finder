@@ -85,7 +85,7 @@ function ProblemPage() {
             תתי-קטגוריות
           </h2>
           <div className="flex flex-wrap gap-2">
-            {problem.children.map((c) => (
+            {problem.children.map((c: { id: string | number; slug: string; name: string | null }) => (
               <Link
                 key={c.id}
                 to="/problems/$slug"
