@@ -152,18 +152,39 @@ export const searchTherapists = createServerFn({ method: "POST" })
     const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
       sb
         .from("therapist_problems")
-        .select("therapist_id, problem_id, problems(slug, parent_id)")
+        .select("therapist_id, problem_id")
         .in("therapist_id", ids),
       sb.from("therapist_populations").select("therapist_id, population_groups(slug, name)").in("therapist_id", ids),
       sb.from("therapist_languages").select("therapist_id, languages(code, name)").in("therapist_id", ids),
     ]);
 
+    // Resolve problem details separately — the FK types between
+    // therapist_problems.problem_id and problems.id do not embed cleanly.
     type ProblemJoin = { slug: string; parent_id: string | null } | null;
+    const problemIdsInJoin = Array.from(
+      new Set((tpRows ?? []).map((r) => String(r.problem_id))),
+    );
+    const problemLookup = new Map<string, { slug: string; parent_id: string | null }>();
+    if (problemIdsInJoin.length > 0) {
+      const { data: pRows } = await sb
+        .from("problems")
+        .select("id, slug, parent_id")
+        .in("id", problemIdsInJoin as unknown as number[]);
+      (pRows ?? []).forEach((p) => {
+        const row = p as { id: string | number; slug: string; parent_id: string | number | null };
+        problemLookup.set(String(row.id), {
+          slug: row.slug,
+          parent_id: row.parent_id !== null && row.parent_id !== undefined ? String(row.parent_id) : null,
+        });
+      });
+    }
     const tpByT = new Map<string, { problem_id: string; problem: ProblemJoin }[]>();
-    tpRows?.forEach((r) => {
-      const arr = tpByT.get(r.therapist_id) ?? [];
-      arr.push({ problem_id: r.problem_id, problem: r.problems as ProblemJoin });
-      tpByT.set(r.therapist_id, arr);
+    (tpRows ?? []).forEach((r) => {
+      const key = r.therapist_id;
+      const pid = String(r.problem_id);
+      const arr = tpByT.get(key) ?? [];
+      arr.push({ problem_id: pid, problem: problemLookup.get(pid) ?? null });
+      tpByT.set(key, arr);
     });
     const popsByT = new Map<string, { slug: string; name: string }[]>();
     tpopRows?.forEach((r) => {
