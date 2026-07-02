@@ -113,3 +113,88 @@ export function lightNormalizeHebrew(input: string): string {
 export function normalizeHebrew(input: string): string {
   return lightNormalizeHebrew(input);
 }
+
+/* ------------------------------------------------------------------ */
+/* Token-level utilities (Phase 5–7 recall improvements)              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Common Hebrew one-letter prefixes that attach to nouns/verbs and hurt
+ * naive substring matching (e.g. "בחרדה" vs alias "חרדה", "ולחץ" vs "לחץ").
+ * We only strip when the remaining token is still meaningful (≥3 chars),
+ * to avoid mangling short real words.
+ */
+const HEBREW_PREFIXES = ["ה", "ו", "ב", "כ", "ל", "מ", "ש"] as const;
+
+export function stripHebrewPrefix(token: string): string {
+  if (token.length < 4) return token;
+  const first = token[0];
+  if ((HEBREW_PREFIXES as readonly string[]).includes(first)) {
+    const rest = token.slice(1);
+    if (rest.length >= 3) return rest;
+  }
+  return token;
+}
+
+/**
+ * Split normalized input into a set of "canonical" tokens for flexible
+ * matching. Runs `lightNormalizeHebrew` (nikud, punctuation, plural/feminine
+ * folding) and additionally strips a single Hebrew prefix letter per token.
+ *
+ * Very short tokens (<2 chars) and generic stopwords are dropped so
+ * high-frequency filler doesn't cause false positives.
+ */
+const HEBREW_STOPWORDS = new Set([
+  "אני", "אתה", "את", "הוא", "היא", "אנחנו", "הם", "הן",
+  "של", "עם", "על", "אל", "לא", "כן", "זה", "זו", "יש", "אין",
+  "מה", "מי", "איך", "למה", "כי", "אם", "או", "גם", "רק", "כל",
+  "היה", "היתה", "להיות", "מאוד", "יותר", "פחות", "אבל", "לפני", "אחרי",
+]);
+
+export function tokenizeHebrew(input: string): string[] {
+  const normalized = lightNormalizeHebrew(input);
+  if (!normalized) return [];
+  const out: string[] = [];
+  for (const raw of normalized.split(" ")) {
+    if (!raw || raw.length < 2) continue;
+    const stripped = stripHebrewPrefix(raw);
+    if (stripped.length < 2) continue;
+    if (HEBREW_STOPWORDS.has(stripped) || HEBREW_STOPWORDS.has(raw)) continue;
+    out.push(stripped);
+  }
+  return out;
+}
+
+export function tokenSetHebrew(input: string): Set<string> {
+  return new Set(tokenizeHebrew(input));
+}
+
+/**
+ * Flexible containment for Hebrew: true when the phrase's tokens overlap
+ * the haystack's tokens (any overlap wins) OR when the fully normalized
+ * phrase appears as a substring of the normalized haystack.
+ *
+ * Used by the classifier and by therapist bio extraction so paraphrased /
+ * inflected inputs still hit the canonical vocabulary.
+ */
+export function flexibleHebrewMatch(phrase: string, haystack: string): boolean {
+  const nPhrase = lightNormalizeHebrew(phrase);
+  const nHay = lightNormalizeHebrew(haystack);
+  if (!nPhrase || !nHay) return false;
+  if (nPhrase.length >= 2 && nHay.includes(nPhrase)) return true;
+  const pTokens = tokenizeHebrew(phrase);
+  if (pTokens.length === 0) return false;
+  const hTokens = tokenSetHebrew(haystack);
+  if (hTokens.size === 0) return false;
+  for (const t of pTokens) {
+    if (hTokens.has(t)) return true;
+    // Substring overlap between individual tokens catches shared roots
+    // like "מבחן" / "מבחנים" (already folded), "לחוץ" / "לחץ".
+    if (t.length >= 4) {
+      for (const h of hTokens) {
+        if (h.length >= 4 && (h.includes(t) || t.includes(h))) return true;
+      }
+    }
+  }
+  return false;
+}
