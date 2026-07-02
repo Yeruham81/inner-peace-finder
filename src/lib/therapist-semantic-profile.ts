@@ -1,80 +1,132 @@
 /**
  * Therapist Semantic Profile
  * --------------------------
- * Phase 3 (updated): therapists are matched against a semantic profile
- * derived from their bio text — NOT from taxonomy-based specialization tags.
+ * Contract (Phase 4 — runtime, enforced everywhere):
  *
- * Shape stored in `therapists.semantic_profile` (jsonb):
- *   [{ slug: string, weight: number }]      // weight in 0..1
+ *   semantic_profile: Array<{ slug: string; weight: number }>
  *
- * If the column is empty, we derive it on the fly from `bio_raw` /
- * `full_description` / `short_intro` using the same alias/intent/name lookup
- * the classifier uses. This keeps the system backward-compatible: therapists
- * that were seeded before this phase still match, and any therapist with a
- * written bio is discoverable without any tagging step.
+ * A string-only array (["anxiety", ...]) is forbidden. Any legacy row in
+ * that shape is normalized on read via `parseStoredProfile` (weight → 1.0
+ * default). Missing / invalid weights also default to 1.0. Downstream code
+ * must never rely on the forbidden shape.
+ *
+ * Phase 7 — extraction:
+ *   Extraction is flexible (paraphrase / inflection tolerant) and runs off
+ *   the same alias/intent/name vocabulary as the user-side classifier.
+ *
+ * SOURCE-OF-TRUTH POLICY:
+ *   `full_description` is the ONLY input for semantic extraction.
+ *   `short_intro` is UI-only. `bio_raw` is staging only. Callers must pass
+ *   `full_description`; if it's empty, do not extract.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { lightNormalizeHebrew } from "./hebrew-normalizer";
+import { flexibleHebrewMatch, lightNormalizeHebrew } from "./hebrew-normalizer";
 
 export type SemanticProfileEntry = { slug: string; weight: number };
 
-/** Parse a stored semantic_profile jsonb into a typed array. Tolerant of shape drift. */
+/** Metadata tag for how a therapist's description was produced. */
+export type DescriptionSource = "manual" | "imported" | "llm_generated";
+
+const DEFAULT_WEIGHT = 1.0;
+
+function coerceEntry(item: unknown): SemanticProfileEntry | null {
+  // Forbidden shape: bare string. Normalize into the canonical object shape
+  // rather than crashing — enforces Phase 4 without breaking legacy data.
+  if (typeof item === "string" && item.trim().length > 0) {
+    return { slug: item.trim(), weight: DEFAULT_WEIGHT };
+  }
+  if (!item || typeof item !== "object") return null;
+  const obj = item as { slug?: unknown; weight?: unknown };
+  if (typeof obj.slug !== "string" || obj.slug.length === 0) return null;
+  const w = typeof obj.weight === "number" && obj.weight >= 0 && obj.weight <= 1
+    ? obj.weight
+    : DEFAULT_WEIGHT;
+  return { slug: obj.slug, weight: w };
+}
+
+/**
+ * Normalize any stored semantic_profile payload into the canonical shape.
+ * Tolerates: strict `{slug, weight}[]`, legacy `string[]`, missing weight,
+ * out-of-range weight, and unknown extra fields.
+ */
 export function parseStoredProfile(raw: unknown): SemanticProfileEntry[] {
   if (!Array.isArray(raw)) return [];
   const out: SemanticProfileEntry[] = [];
   for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const slug = (item as { slug?: unknown }).slug;
-    const weight = (item as { weight?: unknown }).weight;
-    if (typeof slug === "string" && slug.length > 0) {
-      const w = typeof weight === "number" && weight >= 0 && weight <= 1 ? weight : 0.5;
-      out.push({ slug, weight: w });
-    }
+    const e = coerceEntry(item);
+    if (e) out.push(e);
   }
   return out;
 }
 
 /**
- * Extract a semantic profile from free-text bio content by matching against
- * the existing problems / aliases / intents vocabulary. Same knowledge base
- * as the user-side classifier, applied to the therapist side.
+ * Serialize back to the canonical JSON contract. Use before writing to the DB
+ * so we never persist the forbidden string-array shape.
+ */
+export function serializeProfile(entries: SemanticProfileEntry[]): SemanticProfileEntry[] {
+  return entries
+    .map((e) => coerceEntry(e))
+    .filter((e): e is SemanticProfileEntry => !!e);
+}
+
+/**
+ * Extract a semantic profile from a therapist's `full_description`.
  *
- * Returns [] when the bio is too short to yield reliable signal.
+ * SOT policy: pass ONLY `full_description`. If empty, returns [] and the
+ * caller must treat the therapist as "no extractable data available" — no
+ * fallback to short_intro / bio_raw is permitted.
+ *
+ * Phase 7: matching uses `flexibleHebrewMatch` so synonyms, plural/gender
+ * variants, common Hebrew prefixes, and paraphrases still hit the canonical
+ * vocabulary.
  */
 export async function extractProfileFromBio(
-  bio: string,
+  fullDescription: string | null | undefined,
   sb: SupabaseClient<Database>,
 ): Promise<SemanticProfileEntry[]> {
-  const normalized = lightNormalizeHebrew(bio || "");
+  const source = (fullDescription ?? "").trim();
+  const normalized = lightNormalizeHebrew(source);
   if (normalized.length < 20) return [];
 
-  // Pull the full vocabulary once and scan the bio locally. This is cheaper
-  // than N ILIKE round-trips and works for a bio of arbitrary length.
-  const [{ data: problems }, { data: aliases }, { data: intents }] = await Promise.all([
-    sb.from("problems").select("id, slug, name"),
+  const [problemsRes, aliasesRes, intentsRes] = await Promise.all([
+    sb.from("problems").select("id, slug, name:name_he"),
     sb.from("problem_aliases").select("problem_id, alias"),
     sb.from("problem_intents").select("problem_id, intent_text"),
   ]);
+  const problems = (problemsRes.data ?? []) as Array<{
+    id: string | number;
+    slug: string;
+    name: string | null;
+  }>;
+  const aliases = (aliasesRes.data ?? []) as Array<{
+    problem_id: string | number;
+    alias: string;
+  }>;
+  const intents = (intentsRes.data ?? []) as Array<{
+    problem_id: string | number;
+    intent_text: string;
+  }>;
 
   const slugById = new Map<string, string>();
-  problems?.forEach((p) => slugById.set(p.id, p.slug));
+  problems.forEach((p) => slugById.set(String(p.id), p.slug));
 
   const rawScore = new Map<string, number>();
-  const bump = (id: string | undefined, w: number) => {
-    if (!id) return;
-    rawScore.set(id, (rawScore.get(id) ?? 0) + w);
+  const bump = (id: string | number, w: number) => {
+    const key = String(id);
+    rawScore.set(key, (rawScore.get(key) ?? 0) + w);
   };
 
-  const contains = (needle: string) => {
-    const n = lightNormalizeHebrew(needle);
-    return n.length >= 2 && normalized.includes(n);
-  };
-
-  problems?.forEach((p) => contains(p.name) && bump(p.id, 3));
-  aliases?.forEach((a) => contains(a.alias) && bump(a.problem_id, 2));
-  intents?.forEach((i) => contains(i.intent_text) && bump(i.problem_id, 1));
+  problems.forEach((p) => {
+    if (p.name && flexibleHebrewMatch(p.name, source)) bump(p.id, 3);
+  });
+  aliases.forEach((a) => {
+    if (a.alias && flexibleHebrewMatch(a.alias, source)) bump(a.problem_id, 2);
+  });
+  intents.forEach((i) => {
+    if (i.intent_text && flexibleHebrewMatch(i.intent_text, source)) bump(i.problem_id, 1);
+  });
 
   if (rawScore.size === 0) return [];
   const max = Math.max(...rawScore.values());
@@ -89,22 +141,25 @@ export async function extractProfileFromBio(
 
 /**
  * Weighted overlap between the user's classifier candidates and a therapist's
- * semantic profile. Returns a similarity score in 0..1.
+ * semantic profile. Returns 0..1.
  *
  *   sim = Σ (userConfidence[slug] * therapistWeight[slug]) / Σ userConfidence
+ *
+ * Accepts any input shape via `parseStoredProfile` for safety at call sites.
  */
 export function semanticSimilarity(
   userMatches: { slug: string; confidence: number }[],
-  therapistProfile: SemanticProfileEntry[],
+  therapistProfile: unknown,
 ): number {
-  if (!userMatches.length || !therapistProfile.length) return 0;
-  const tByslug = new Map(therapistProfile.map((e) => [e.slug, e.weight]));
+  const profile = parseStoredProfile(therapistProfile);
+  if (!userMatches.length || !profile.length) return 0;
+  const tByslug = new Map(profile.map((e) => [e.slug, e.weight]));
   let num = 0;
   let den = 0;
   for (const m of userMatches) {
     den += m.confidence;
     const w = tByslug.get(m.slug);
-    if (w) num += m.confidence * w;
+    if (w !== undefined) num += m.confidence * w;
   }
   if (den === 0) return 0;
   return Number((num / den).toFixed(4));
