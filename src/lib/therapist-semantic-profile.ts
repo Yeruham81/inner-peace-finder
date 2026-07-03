@@ -93,7 +93,7 @@ export async function extractProfileFromBio(
   const [problemsRes, aliasesRes, intentsRes] = await Promise.all([
     sb.from("problems").select("id, slug, name:name_he"),
     sb.from("problem_aliases").select("problem_id, alias"),
-    sb.from("problem_intents").select("problem_id, intent_text"),
+    sb.from("problem_intents").select("problem_slug, intent_text"),
   ]);
   const problems = (problemsRes.data ?? []) as Array<{
     id: string | number;
@@ -104,13 +104,15 @@ export async function extractProfileFromBio(
     problem_id: string | number;
     alias: string;
   }>;
-  const intents = (intentsRes.data ?? []) as Array<{
-    problem_id: string | number;
+  const intents = (intentsRes.data ?? []) as unknown as Array<{
+    problem_slug: string | null;
     intent_text: string;
   }>;
 
   const slugById = new Map<string, string>();
   problems.forEach((p) => slugById.set(String(p.id), p.slug));
+  const idBySlug = new Map<string, string>();
+  problems.forEach((p) => idBySlug.set(p.slug, String(p.id)));
 
   const rawScore = new Map<string, number>();
   const bump = (id: string | number, w: number) => {
@@ -125,7 +127,9 @@ export async function extractProfileFromBio(
     if (a.alias && flexibleHebrewMatch(a.alias, source)) bump(a.problem_id, 2);
   });
   intents.forEach((i) => {
-    if (i.intent_text && flexibleHebrewMatch(i.intent_text, source)) bump(i.problem_id, 1);
+    if (!i.intent_text || !i.problem_slug) return;
+    const pid = idBySlug.get(i.problem_slug);
+    if (pid && flexibleHebrewMatch(i.intent_text, source)) bump(pid, 1);
   });
 
   if (rawScore.size === 0) return [];
