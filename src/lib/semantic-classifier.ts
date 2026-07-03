@@ -14,7 +14,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { flexibleHebrewMatch, lightNormalizeHebrew } from "./hebrew-normalizer";
+import { flexibleHebrewMatch } from "./hebrew-normalizer";
+import { normalizeText as engineNormalize } from "./semantic-engine";
 
 export type ClassificationMatch = { slug: string; confidence: number };
 export const MAX_MATCHES = 3;
@@ -35,7 +36,8 @@ export interface SemanticClassifier {
 export function createMockClassifier(sb: SupabaseClient<Database>): SemanticClassifier {
   return {
     async classifyQuery(normalizedQuery: string): Promise<ClassificationResult> {
-      const q = lightNormalizeHebrew(normalizedQuery);
+      // Phase 9: route normalization through the central engine.
+      const q = engineNormalize(normalizedQuery);
       if (q.length < 2) return { matches: [], source: "mock" };
 
       // Pull the full vocabulary once. Cheaper than N ILIKE round-trips and
@@ -43,7 +45,7 @@ export function createMockClassifier(sb: SupabaseClient<Database>): SemanticClas
       const [problemsRes, aliasesRes, intentsRes] = await Promise.all([
         sb.from("problems").select("id, slug, name:name_he"),
         sb.from("problem_aliases").select("problem_id, alias"),
-        sb.from("problem_intents").select("problem_id, intent_text"),
+        sb.from("problem_intents").select("problem_slug, intent_text"),
       ]);
       const problems = (problemsRes.data ?? []) as Array<{
         id: string | number;
@@ -54,13 +56,15 @@ export function createMockClassifier(sb: SupabaseClient<Database>): SemanticClas
         problem_id: string | number;
         alias: string;
       }>;
-      const intents = (intentsRes.data ?? []) as Array<{
-        problem_id: string | number;
+      const intents = (intentsRes.data ?? []) as unknown as Array<{
+        problem_slug: string | null;
         intent_text: string;
       }>;
 
       const slugById = new Map<string, string>();
       problems.forEach((p) => slugById.set(String(p.id), p.slug));
+      const idBySlug = new Map<string, string>();
+      problems.forEach((p) => idBySlug.set(p.slug, String(p.id)));
 
       const scoreByProblemId = new Map<string, number>();
       const bump = (id: string | number, w: number) => {
@@ -76,7 +80,9 @@ export function createMockClassifier(sb: SupabaseClient<Database>): SemanticClas
         if (a.alias && flexibleHebrewMatch(a.alias, q)) bump(a.problem_id, 2);
       });
       intents.forEach((i) => {
-        if (i.intent_text && flexibleHebrewMatch(i.intent_text, q)) bump(i.problem_id, 1);
+        if (!i.intent_text || !i.problem_slug) return;
+        const pid = idBySlug.get(i.problem_slug);
+        if (pid && flexibleHebrewMatch(i.intent_text, q)) bump(pid, 1);
       });
 
       if (scoreByProblemId.size === 0) return { matches: [], source: "mock" };
