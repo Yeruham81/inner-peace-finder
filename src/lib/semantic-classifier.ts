@@ -14,7 +14,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { flexibleHebrewMatch, lightNormalizeHebrew } from "./hebrew-normalizer";
+import { flexibleHebrewMatch } from "./hebrew-normalizer";
+import { normalizeText as engineNormalize } from "./semantic-engine";
 
 export type ClassificationMatch = { slug: string; confidence: number };
 export const MAX_MATCHES = 3;
@@ -35,7 +36,8 @@ export interface SemanticClassifier {
 export function createMockClassifier(sb: SupabaseClient<Database>): SemanticClassifier {
   return {
     async classifyQuery(normalizedQuery: string): Promise<ClassificationResult> {
-      const q = lightNormalizeHebrew(normalizedQuery);
+      // Phase 9: route normalization through the central engine.
+      const q = engineNormalize(normalizedQuery);
       if (q.length < 2) return { matches: [], source: "mock" };
 
       // Pull the full vocabulary once. Cheaper than N ILIKE round-trips and
