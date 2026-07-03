@@ -235,17 +235,17 @@ export type Database = {
         Row: {
           id: string
           intent_text: string
-          problem_id: string
+          problem_slug: string | null
         }
         Insert: {
           id?: string
           intent_text: string
-          problem_id: string
+          problem_slug?: string | null
         }
         Update: {
           id?: string
           intent_text?: string
-          problem_id?: string
+          problem_slug?: string | null
         }
         Relationships: []
       }
