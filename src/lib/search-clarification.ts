@@ -39,6 +39,33 @@ export type ClarificationPrompt = {
   reason: "low_confidence" | "disambiguation";
 };
 
+/**
+ * Phase 12 — Confidence policy (DEFINITION ONLY, not wired into production).
+ *
+ * Centralizes the decision of what to do when the classifier is not confident
+ * enough to commit to a single problem. Kept side-effect free so it can be
+ * unit-tested and later inserted into the search pipeline without touching
+ * the existing needsClarification / buildClarificationPrompt call sites.
+ *
+ * Actions:
+ *   - "proceed"      → top match is strong, no clarification needed.
+ *   - "disambiguate" → top two are strong but tied (< DISAMBIGUATION_GAP).
+ *   - "clarify"      → top match below CONFIDENCE_THRESHOLD.
+ *   - "abstain"      → no matches at all; caller should ask the user to rephrase.
+ */
+export type LowConfidenceAction = "proceed" | "disambiguate" | "clarify" | "abstain";
+
+export function resolveLowConfidence(
+  matches: ClassificationMatch[],
+): LowConfidenceAction {
+  if (!matches || matches.length === 0) return "abstain";
+  const top = matches[0]?.confidence ?? 0;
+  if (top < CONFIDENCE_THRESHOLD) return "clarify";
+  const second = matches[1]?.confidence ?? 0;
+  if (matches.length >= 2 && top - second < DISAMBIGUATION_GAP) return "disambiguate";
+  return "proceed";
+}
+
 /** True when the top match is too weak to commit to a ranked result set. */
 export function needsClarification(matches: ClassificationMatch[]): boolean {
   if (matches.length < 2) return false; // nothing meaningful to choose between
