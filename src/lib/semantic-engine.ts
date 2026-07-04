@@ -237,7 +237,7 @@ export type LowConfidenceAction = "proceed" | "disambiguate" | "clarify" | "abst
  * Confidence policy — decide what the pipeline should do given the top
  * classification candidates. Pure / side-effect free.
  */
-function resolveLowConfidence(results: SemanticResult[]): LowConfidenceAction {
+export function resolveLowConfidence(results: SemanticResult[]): LowConfidenceAction {
   if (!results || results.length === 0) return "abstain";
   const top = results[0]?.confidence ?? 0;
   if (top < CONFIDENCE_THRESHOLD) return "clarify";
