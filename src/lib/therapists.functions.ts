@@ -4,10 +4,17 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { type ClassificationResult } from "./semantic-classifier";
+import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
 import { SemanticEngine } from "./semantic-engine";
-import { buildClarificationPrompt, needsClarification, type ClarificationPrompt } from "./search-clarification";
-import { parseStoredProfile, type SemanticProfileEntry } from "./therapist-semantic-profile";
+import {
+  buildClarificationPrompt,
+  needsClarification,
+  type ClarificationPrompt,
+} from "./search-clarification";
+import {
+  parseStoredProfile,
+  type SemanticProfileEntry,
+} from "./therapist-semantic-profile";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -60,10 +67,13 @@ export const searchTherapists = createServerFn({ method: "POST" })
     if (q.length >= 2) {
       // Phase 5/6: flexible, token-aware matching against the full vocabulary
       // — same engine the classifier uses. Avoids strict ILIKE brittleness.
-      const cls = await SemanticEngine.classify(q, sb);
+      const cls = await classifyQuery(q, sb);
       if (cls.matches.length > 0) {
         const slugs = cls.matches.map((m) => m.slug);
-        const { data: pRows } = await sb.from("problems").select("id, slug").in("slug", slugs);
+        const { data: pRows } = await sb
+          .from("problems")
+          .select("id, slug")
+          .in("slug", slugs);
         pRows?.forEach((r) => matchedProblemIds.add(String((r as { id: string | number }).id)));
       }
     }
@@ -138,7 +148,10 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
     // 4) Load relations for scoring + display
     const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
-      sb.from("therapist_problems").select("therapist_id, problem_id").in("therapist_id", ids),
+      sb
+        .from("therapist_problems")
+        .select("therapist_id, problem_id")
+        .in("therapist_id", ids),
       sb.from("therapist_populations").select("therapist_id, population_groups(slug, name)").in("therapist_id", ids),
       sb.from("therapist_languages").select("therapist_id, languages(code, name)").in("therapist_id", ids),
     ]);
@@ -146,7 +159,9 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // Resolve problem details separately — the FK types between
     // therapist_problems.problem_id and problems.id do not embed cleanly.
     type ProblemJoin = { slug: string; parent_id: string | null } | null;
-    const problemIdsInJoin = Array.from(new Set((tpRows ?? []).map((r) => String(r.problem_id))));
+    const problemIdsInJoin = Array.from(
+      new Set((tpRows ?? []).map((r) => String(r.problem_id))),
+    );
     const problemLookup = new Map<string, { slug: string; parent_id: string | null }>();
     if (problemIdsInJoin.length > 0) {
       const { data: pRows } = await sb
@@ -370,17 +385,19 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
         classification = cached.result as ClassificationResult;
         cacheHit = true;
       } else {
-        classification = await SemanticEngine.classify(normalized, sb);
+        classification = await classifyQuery(normalized, sb);
         // Best-effort cache write; never block search on a cache miss.
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          await supabaseAdmin.from("query_classifications").insert({
-            normalized_query: normalized,
-            // ClassificationResult is JSON-serializable; cast through unknown
-            // to satisfy the generated `Json` column type.
-            result: classification as unknown as never,
-            source: classification.source ?? "mock",
-          });
+          await supabaseAdmin
+            .from("query_classifications")
+            .insert({
+              normalized_query: normalized,
+              // ClassificationResult is JSON-serializable; cast through unknown
+              // to satisfy the generated `Json` column type.
+              result: classification as unknown as never,
+              source: classification.source ?? "mock",
+            });
         } catch {
           // ignore — cache is an optimization, not a requirement
         }
@@ -447,7 +464,9 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
           // No stored profile → derive from full_description ONLY. Empty
           // full_description means "no extractable data available"; do NOT
           // fall back to any other field.
-          const derived = r.full_description ? await SemanticEngine.extractProfile(r.full_description, sb) : [];
+          const derived = r.full_description
+            ? await SemanticEngine.extractProfile(r.full_description, sb)
+            : [];
           profileByT.set(r.id, derived);
         }),
       );
@@ -459,7 +478,9 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
         // matched_problem_slugs so pre-existing seed data still ranks.
         const profile = profileByT.get(t.id) ?? [];
         const effective: SemanticProfileEntry[] =
-          profile.length > 0 ? profile : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
+          profile.length > 0
+            ? profile
+            : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
         const sim = SemanticEngine.scoreProfiles(classification.matches, effective);
         return { t, sim };
       });
@@ -525,11 +546,9 @@ async function logSemanticSearch(row: {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Table was added in this phase; types regenerate after migration.
-    await (
-      supabaseAdmin as unknown as {
-        from: (t: string) => { insert: (r: unknown) => Promise<unknown> };
-      }
-    )
+    await (supabaseAdmin as unknown as {
+      from: (t: string) => { insert: (r: unknown) => Promise<unknown> };
+    })
       .from("semantic_search_logs")
       .insert(row);
   } catch {
