@@ -47,5 +47,16 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Only the engine and its tests may reach into hebrew-normalizer internals.
+    files: [
+      "src/lib/semantic-engine.ts",
+      "src/lib/hebrew-normalizer.ts",
+      "src/lib/hebrew-normalizer.test.ts",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
   eslintPluginPrettier,
 );
