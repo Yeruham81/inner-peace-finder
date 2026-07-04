@@ -30,6 +30,17 @@ export default tseslint.config(
                 "TanStack Start does not use the Next.js `server-only` package. Rename the module to `*.server.ts` or mark it with `@tanstack/react-start/server-only`.",
             },
           ],
+          patterns: [
+            {
+              group: [
+                "**/hebrew-normalizer",
+                "**/hebrew-normalizer.ts",
+                "@/lib/hebrew-normalizer",
+              ],
+              message:
+                "Phase 16: import semantic helpers via `./semantic-engine` (SemanticEngine). Only semantic-engine.ts and its tests may import hebrew-normalizer directly.",
+            },
+          ],
         },
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
