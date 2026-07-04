@@ -16,6 +16,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { ClassificationMatch } from "./semantic-classifier";
+import {
+  resolveLowConfidence as engineResolveLowConfidence,
+  type LowConfidenceAction as EngineLowConfidenceAction,
+} from "./semantic-engine";
 
 export const CONFIDENCE_THRESHOLD = 0.65;
 /**
@@ -53,17 +57,13 @@ export type ClarificationPrompt = {
  *   - "clarify"      → top match below CONFIDENCE_THRESHOLD.
  *   - "abstain"      → no matches at all; caller should ask the user to rephrase.
  */
-export type LowConfidenceAction = "proceed" | "disambiguate" | "clarify" | "abstain";
-
-export function resolveLowConfidence(
-  matches: ClassificationMatch[],
-): LowConfidenceAction {
-  if (!matches || matches.length === 0) return "abstain";
-  const top = matches[0]?.confidence ?? 0;
-  if (top < CONFIDENCE_THRESHOLD) return "clarify";
-  const second = matches[1]?.confidence ?? 0;
-  if (matches.length >= 2 && top - second < DISAMBIGUATION_GAP) return "disambiguate";
-  return "proceed";
+/**
+ * Phase 15/16: the confidence policy lives in `./semantic-engine`. Kept
+ * re-exported here for backward-compatibility with existing call sites.
+ */
+export type LowConfidenceAction = EngineLowConfidenceAction;
+export function resolveLowConfidence(matches: ClassificationMatch[]): LowConfidenceAction {
+  return engineResolveLowConfidence(matches);
 }
 
 /** True when the top match is too weak to commit to a ranked result set. */

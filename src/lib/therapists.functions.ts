@@ -4,17 +4,15 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { lightNormalizeHebrew } from "./hebrew-normalizer";
 import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
+import { SemanticEngine } from "./semantic-engine";
 import {
   buildClarificationPrompt,
   needsClarification,
   type ClarificationPrompt,
 } from "./search-clarification";
 import {
-  extractProfileFromBio,
   parseStoredProfile,
-  semanticSimilarity,
   type SemanticProfileEntry,
 } from "./therapist-semantic-profile";
 
@@ -369,7 +367,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<SearchPipelineResult> => {
     const sb = publicClient();
     const rawQuery = (data.query ?? "").trim();
-    const normalized = rawQuery ? lightNormalizeHebrew(rawQuery) : "";
+    const normalized = rawQuery ? SemanticEngine.normalize(rawQuery) : "";
 
     let classification: ClassificationResult | null = null;
     let cacheHit = false;
@@ -467,7 +465,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
           // full_description means "no extractable data available"; do NOT
           // fall back to any other field.
           const derived = r.full_description
-            ? await extractProfileFromBio(r.full_description, sb)
+            ? await SemanticEngine.extractProfile(r.full_description, sb)
             : [];
           profileByT.set(r.id, derived);
         }),
@@ -483,7 +481,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
           profile.length > 0
             ? profile
             : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
-        const sim = semanticSimilarity(classification.matches, effective);
+        const sim = SemanticEngine.scoreProfiles(classification.matches, effective);
         return { t, sim };
       });
 
