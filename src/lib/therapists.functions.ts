@@ -4,17 +4,15 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { lightNormalizeHebrew } from "./hebrew-normalizer";
 import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
+import { SemanticEngine } from "./semantic-engine";
 import {
   buildClarificationPrompt,
   needsClarification,
   type ClarificationPrompt,
 } from "./search-clarification";
 import {
-  extractProfileFromBio,
   parseStoredProfile,
-  semanticSimilarity,
   type SemanticProfileEntry,
 } from "./therapist-semantic-profile";
 
