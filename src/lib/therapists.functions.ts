@@ -60,6 +60,11 @@ export const searchTherapists = createServerFn({ method: "POST" })
     const matchedProblemIds = new Set<string>();
     const intentProblemIds = new Set<string>();
     let parentAnxietyId: string | null = null;
+    // Slugs matched by the classifier (or structured problem filter). Used
+    // for semantic_profile (JSONB) based candidate filtering — replaces the
+    // stale `therapist_problems.problem_id` join whose UUIDs no longer
+    // reference `problems.id` (bigint) after the semantic-profile migration.
+    const matchedSlugs = new Set<string>();
 
     const { data: anxietyParent } = await sb.from("problems").select("id").eq("slug", "anxiety").maybeSingle();
     parentAnxietyId = anxietyParent?.id !== undefined && anxietyParent?.id !== null ? String(anxietyParent.id) : null;
@@ -70,6 +75,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       const cls = await classifyQuery(q, sb);
       if (cls.matches.length > 0) {
         const slugs = cls.matches.map((m) => m.slug);
+        slugs.forEach((s) => matchedSlugs.add(s));
         const { data: pRows } = await sb
           .from("problems")
           .select("id, slug")
@@ -81,6 +87,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // Structured problem filter
     let filterProblemId: string | null = null;
     if (data.problemSlug) {
+      matchedSlugs.add(data.problemSlug);
       const { data: p } = await sb.from("problems").select("id").eq("slug", data.problemSlug).maybeSingle();
       filterProblemId = p?.id !== undefined && p?.id !== null ? String(p.id) : null;
       if (filterProblemId) matchedProblemIds.add(filterProblemId);
@@ -102,15 +109,14 @@ export const searchTherapists = createServerFn({ method: "POST" })
       filterLanguageId = lang?.id ?? null;
     }
 
-    // 2) Candidate therapist ids
+    // 2) Candidate therapist ids — semantic_profile (JSONB) driven.
+    //   The legacy `therapist_problems` join is intentionally NOT used for
+    //   candidate selection: its `problem_id` (uuid) no longer references
+    //   `problems.id` (bigint) in the current schema, so it returns 0 rows
+    //   for every classified slug and silently zeroed out all searches.
+    //   Semantic filtering by slug now happens post-load against
+    //   `therapists.semantic_profile` (which is the SOT after Phase 4).
     let candidateIds: Set<string> | null = null;
-    if (matchedProblemIds.size > 0) {
-      const { data: tps } = await sb
-        .from("therapist_problems")
-        .select("therapist_id")
-        .in("problem_id", Array.from(matchedProblemIds) as unknown as string[]);
-      candidateIds = new Set(tps?.map((r) => r.therapist_id) ?? []);
-    }
     if (filterPopulationId) {
       const { data: tps } = await sb
         .from("therapist_populations")
@@ -144,7 +150,21 @@ export const searchTherapists = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!therapists || therapists.length === 0) return [] as ScoredTherapist[];
 
-    const ids = therapists.map((t) => t.id);
+    // Semantic-profile eligibility: keep only therapists whose stored
+    // `semantic_profile` overlaps with any matched slug. Falls back to
+    // "keep all" when we have no slugs to match against (e.g. no query and
+    // no problem filter — the "browse all" case).
+    const eligibleTherapists = matchedSlugs.size === 0
+      ? therapists
+      : therapists.filter((t) => {
+          const profile = parseStoredProfile(
+            (t as unknown as { semantic_profile?: unknown }).semantic_profile,
+          );
+          if (profile.length === 0) return false;
+          return profile.some((e) => matchedSlugs.has(e.slug));
+        });
+    if (eligibleTherapists.length === 0) return [] as ScoredTherapist[];
+    const ids = eligibleTherapists.map((t) => t.id);
 
     // 4) Load relations for scoring + display
     const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
@@ -198,7 +218,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     });
 
     // 5) Score
-    const results: ScoredTherapist[] = therapists.map((t) => {
+    const results: ScoredTherapist[] = eligibleTherapists.map((t) => {
       const tps = tpByT.get(t.id) ?? [];
       let score = 0;
       const matchedSlugs = new Set<string>();
