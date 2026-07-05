@@ -138,7 +138,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     let tq = sb
       .from("therapists")
       .select(
-        "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active",
+        "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active, semantic_profile",
       )
       .eq("is_active", true);
     if (candidateIds) {
