@@ -108,7 +108,7 @@ function Index() {
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         <div className="mb-6 flex items-end justify-between">
           <h2 className="text-xl font-bold text-foreground sm:text-2xl">
-            סוגי חרדה
+            מה מטריד אותך?
           </h2>
           <Link
             to="/problems/$slug"
