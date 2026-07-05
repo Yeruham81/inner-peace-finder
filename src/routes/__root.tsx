@@ -189,7 +189,7 @@ function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface mt-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} Tipulinks— שירות מידע בלבד, אינו מהווה ייעוץ רפואי.</p>
+        <p>© {new Date().getFullYear()} Tipulinks — האתר מספק מידע כללי בלבד ואינו מהווה תחליף לייעוץ רפואי מקצועי</p>
       </div>
     </footer>
   );
