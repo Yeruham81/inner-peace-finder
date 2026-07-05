@@ -55,7 +55,7 @@ export function SearchForm({
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="לדוגמה: פאניקה לפני עבודה, פחד מטיסה, מחשבות טורדניות"
+          placeholder="תארו במילים שלכם את הבעיה, למשל: לחץ לפני מבחן, פחד מטיסה, משבר בזוגיות"
           className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           aria-label="חיפוש לפי בעיה או תחושה"
         />
