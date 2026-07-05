@@ -61,10 +61,10 @@ function Index() {
               תחום מומחיות: חרדה
             </span>
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
-              זקוקים לעזרה?&nbsp;מחפשים טיפול?
+              טיפול טוב מתחיל בהבנת הבעיה
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              תארו את הבעיה בעברית פשוטה ותמצאו את המטפלים המתאימים לכם ביותר
+              מנוע חיפוש חכם שמבין מה אתם צריכים ומחבר אתכם לאנשי המקצוע המתאימים ביותר
             </p>
           </div>
 
