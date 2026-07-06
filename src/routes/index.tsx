@@ -58,7 +58,7 @@ function Index() {
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-surface-elevated px-4 py-1.5 text-xs font-medium text-primary shadow-card">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              תחום מומחיות: חרדה
+              זקוקים לעזרה? הגעתם למקום הנכון!
             </span>
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
               למצוא את הטיפול שמתאים לכם
