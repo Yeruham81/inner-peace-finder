@@ -67,6 +67,17 @@ export const CLASSIFICATION_CASES: SemanticCase[] = [];
  */
 export const PROFILE_EXTRACTION_CASES: SemanticCase[] = [];
 
+/**
+ * Convenience grouping so runners can iterate every higher-level corpus.
+ */
+export const ALL_HIGHER_LEVEL_CORPUSES: ReadonlyArray<{
+  kind: "classify" | "extract-profile";
+  cases: readonly SemanticCase[];
+}> = [
+  { kind: "classify", cases: CLASSIFICATION_CASES },
+  { kind: "extract-profile", cases: PROFILE_EXTRACTION_CASES },
+];
+
 /* ------------------------------------------------------------------ */
 /* Primitive-layer fixtures (Phase 10 — do not modify)                 */
 /* ------------------------------------------------------------------ */
