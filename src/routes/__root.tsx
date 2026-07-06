@@ -153,10 +153,10 @@ function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">
-            מ
+            T
           </span>
           <span className="text-lg font-semibold tracking-tight text-foreground">
-            מטפלים
+            Tipulinks
           </span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">
