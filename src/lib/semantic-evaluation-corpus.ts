@@ -58,14 +58,226 @@ export type SemanticCase = {
 /**
  * Query-classification corpus. Grows in later phases.
  */
-export const CLASSIFICATION_CASES: SemanticCase[] = [];
+export const CLASSIFICATION_CASES: SemanticCase[] = [
+  /* ---------------- direct (baseline control) ---------------- */
+  { input: "חרדה", expected: ["anxiety"], category: "direct", description: "single-word anxiety" },
+  { input: "דיכאון", expected: ["depression"], category: "direct" },
+  { input: "התקפי פאניקה", expected: ["panic"], category: "direct" },
+  { input: "פוסט טראומה", expected: ["ptsd"], category: "direct" },
+  { input: "שחיקה", expected: ["burnout"], category: "direct" },
+  { input: "OCD", expected: ["ocd_compulsions"], category: "direct" },
+  { input: "חרדה חברתית", expected: ["social_anxiety"], category: "direct" },
+  { input: "בעיות זוגיות", expected: ["relationships"], category: "direct" },
+  { input: "משבר בזוגיות", expected: ["couples_conflict"], category: "direct" },
+  { input: "דימוי עצמי נמוך", expected: ["low_self_esteem"], category: "direct" },
+  { input: "טראומה", expected: ["trauma"], category: "direct" },
+  { input: "כעס", expected: ["anger"], category: "direct" },
+  { input: "בדידות", expected: ["loneliness"], category: "direct" },
+  { input: "אבל", expected: ["grief_loss"], category: "direct" },
+  { input: "גירושין", expected: ["divorce"], category: "direct" },
+
+  /* ---------------- natural_language (spoken style) ---------------- */
+  { input: "אני מרגיש שאני לא מצליח לישון בלילות מרוב מחשבות", expected: ["anxiety"], category: "natural_language" },
+  { input: "כבר תקופה שאני לא מוצא עניין בכלום", expected: ["depression"], category: "natural_language" },
+  { input: "אני פוחדת לצאת מהבית ולפגוש אנשים", expected: ["social_anxiety"], category: "natural_language" },
+  { input: "יש לי התקפי חרדה באמצע היום בלי סיבה", expected: ["panic"], category: "natural_language" },
+  { input: "אחרי השירות הצבאי אני חווה פלאשבקים וסיוטים", expected: ["ptsd"], category: "natural_language" },
+  { input: "אני שחוקה לגמרי מהעבודה ולא מצליחה להתאושש", expected: ["burnout"], category: "natural_language" },
+  { input: "אני לא מסתדרת עם בן הזוג שלי כבר חודשים", expected: ["couples_conflict"], category: "natural_language" },
+  { input: "אבא שלי נפטר לפני שנה ואני עדיין לא מתגברת", expected: ["grief_loss"], category: "natural_language" },
+  { input: "אני כל הזמן בודקת אם נעלתי את הדלת ושכבתי את הגז", expected: ["ocd_compulsions"], category: "natural_language" },
+  { input: "אני מרגיש בודד גם כשאני עם אנשים", expected: ["loneliness"], category: "natural_language" },
+  { input: "יש לי בעיה עם אוכל, אני אוכלת ואז מתחרטת", expected: ["eating_body"], category: "natural_language" },
+  { input: "לא מצליח להיות אינטימי עם בת הזוג שלי", expected: ["intimacy_issues"], category: "natural_language", allowLowConfidence: true },
+  { input: "אני כועס על כולם כל הזמן ולא מבין למה", expected: ["anger"], category: "natural_language" },
+  { input: "עוברת גירושין ומרגישה שהעולם מתפרק", expected: ["divorce"], category: "natural_language" },
+  { input: "אני דוחה כל דבר לרגע האחרון ואז זה מתפוצץ לי", expected: ["procrastination"], category: "natural_language" },
+  { input: "מרגיש שאין לי ערך ושכולם טובים ממני", expected: ["low_self_esteem"], category: "natural_language" },
+  { input: "אני מפחדת שיש לי מחלה קשה ורצה כל הזמן לרופאים", expected: ["health_anxiety"], category: "natural_language" },
+  { input: "אני חושבת כל הזמן על המשקל שלי ואיך אני נראית", expected: ["body_image"], category: "natural_language", allowLowConfidence: true },
+  { input: "אחרי הפרידה אני לא מצליח לחזור לעצמי", expected: ["breakup"], category: "natural_language" },
+  { input: "אני מתקשה להורות ולא יודעת איך להתמודד עם הילדים שלי", expected: ["parenting_stress"], category: "natural_language" },
+  { input: "אני מרגישה שאני עומדת להתפרק ולא יכולה יותר", expected: ["emotional_overwhelm"], category: "natural_language", allowLowConfidence: true },
+  { input: "יש לי פחד אימים מטיסות ואני נמנעת מזה", expected: ["anxiety"], category: "natural_language" },
+  { input: "עברתי הטרדה מינית ואני לא מצליחה לתפקד מאז", expected: ["trauma"], category: "natural_language" },
+  { input: "אני מכור לפורנו ולא מצליח להפסיק", expected: ["addiction"], category: "natural_language", allowLowConfidence: true },
+  { input: "אני שותה יותר מדי ואני יודע שזה בעיה", expected: ["substance_use"], category: "natural_language", allowLowConfidence: true },
+
+  /* ---------------- ambiguous ---------------- */
+  { input: "אני מרגיש רע", expected: ["low_mood"], category: "ambiguous", allowLowConfidence: true, notes: "very generic emotional state" },
+  { input: "משהו לא בסדר איתי", expected: [], category: "ambiguous", allowLowConfidence: true },
+  { input: "אני צריך לדבר עם מישהו", expected: [], category: "ambiguous", allowLowConfidence: true },
+  { input: "החיים שלי תקועים", expected: ["life_transitions"], category: "ambiguous", allowLowConfidence: true },
+  { input: "אני לא יודעת מה אני רוצה מהחיים", expected: ["identity_crisis"], category: "ambiguous", allowLowConfidence: true },
+  { input: "אני עייף כל הזמן", expected: ["burnout"], category: "ambiguous", allowLowConfidence: true },
+  { input: "יש לי כאבים בגוף בלי סיבה", expected: ["psychosomatic"], category: "ambiguous", allowLowConfidence: true },
+  { input: "אני מרגיש ריק", expected: ["depression"], category: "ambiguous", allowLowConfidence: true },
+  { input: "אני לא מבינה את עצמי", expected: ["self_identity"], category: "ambiguous", allowLowConfidence: true },
+  { input: "משהו בי שבור", expected: [], category: "ambiguous", allowLowConfidence: true },
+  { input: "אני צריכה עזרה", expected: [], category: "ambiguous", allowLowConfidence: true },
+  { input: "משבר", expected: ["acute_crisis"], category: "ambiguous", allowLowConfidence: true },
+
+  /* ---------------- multiple_domains ---------------- */
+  { input: "אני בלחץ מהעבודה וגם הזוגיות שלי לא טובה", expected: ["burnout", "relationships"], category: "multiple_domains" },
+  { input: "אני לא ישן טוב ואני מרגיש חרדה", expected: ["anxiety"], category: "multiple_domains" },
+  { input: "יש לי פחד מטיסה וגם בעיות בביטחון עצמי", expected: ["anxiety", "low_self_esteem"], category: "multiple_domains" },
+  { input: "דיכאון וחרדה שמלווים אותי מזה שנים", expected: ["depression", "anxiety"], category: "multiple_domains" },
+  { input: "אחרי טראומה מהצבא יש לי גם התקפי פאניקה", expected: ["ptsd", "panic"], category: "multiple_domains" },
+  { input: "אני שותה יותר מדי בגלל הדיכאון", expected: ["substance_use", "depression"], category: "multiple_domains", allowLowConfidence: true },
+  { input: "בעיות אכילה על רקע דימוי גוף נמוך", expected: ["eating_body", "body_image"], category: "multiple_domains", allowLowConfidence: true },
+  { input: "אני כועסת על בן הזוג שלי ומתפרצת על הילדים", expected: ["couples_conflict", "parenting_stress"], category: "multiple_domains" },
+  { input: "עברתי גירושין ומאז אני בדיכאון עמוק", expected: ["divorce", "depression"], category: "multiple_domains" },
+  { input: "אבל על אמא שנפטרה ובדידות קשה", expected: ["grief_loss", "loneliness"], category: "multiple_domains" },
+  { input: "OCD וחרדה שמשתקים אותי בעבודה", expected: ["ocd_compulsions", "anxiety"], category: "multiple_domains" },
+  { input: "בעיות אינטימיות בזוגיות ופחד מקרבה", expected: ["intimacy_issues", "relationships"], category: "multiple_domains", allowLowConfidence: true },
+  { input: "שחיקה בעבודה ומחשבות אובדניות", expected: ["burnout", "depression"], category: "multiple_domains", allowLowConfidence: true },
+  { input: "התמכרות לסמים אחרי טראומה בילדות", expected: ["addiction", "childhood_trauma"], category: "multiple_domains" },
+  { input: "בעיות זוגיות אחרי בגידה, אני לא מצליחה לסמוך יותר", expected: ["couples_conflict", "trust_issues"], category: "multiple_domains", allowLowConfidence: true },
+
+  /* ---------------- slang / conversational ---------------- */
+  { input: "אני אוכל סרטים", expected: ["anxiety"], category: "slang", notes: "Hebrew slang for panic/overthinking", allowLowConfidence: true },
+  { input: "אני גמור נפשית", expected: ["burnout"], category: "slang", allowLowConfidence: true },
+  { input: "אני בלחץ רצח", expected: ["anxiety"], category: "slang", allowLowConfidence: true },
+  { input: "אין לי אוויר כבר", expected: ["emotional_overwhelm"], category: "slang", allowLowConfidence: true },
+  { input: "אני על הפנים", expected: ["depression"], category: "slang", allowLowConfidence: true },
+  { input: "אני בדאון רציני", expected: ["low_mood"], category: "slang", allowLowConfidence: true },
+  { input: "אני מתפרק לחתיכות", expected: ["emotional_overwhelm"], category: "slang", allowLowConfidence: true },
+  { input: "המוח שלי לא נותן לי מנוח", expected: ["intrusive_thoughts"], category: "slang", allowLowConfidence: true },
+  { input: "אני לא סובלת את עצמי", expected: ["low_self_esteem"], category: "slang", allowLowConfidence: true },
+  { input: "עולה לי הלחץ בגלל הכל", expected: ["anxiety"], category: "slang", allowLowConfidence: true },
+  { input: "אני שרוף לגמרי", expected: ["burnout"], category: "slang", allowLowConfidence: true },
+  { input: "אני מתחרפנת", expected: ["anxiety"], category: "slang", allowLowConfidence: true },
+  { input: "אין לי כוח לכלום", expected: ["depression"], category: "slang", allowLowConfidence: true },
+  { input: "אני מרגישה שאני משתגעת", expected: ["anxiety"], category: "slang", allowLowConfidence: true },
+  { input: "אני בקטע של חרדות כל הזמן", expected: ["anxiety"], category: "slang" },
+
+  /* ---------------- typos / noisy input ---------------- */
+  { input: "אנכיי בלחץ", expected: ["anxiety"], category: "typos", allowLowConfidence: true, notes: "swapped letters in אני" },
+  { input: "דכאוווון", expected: ["depression"], category: "typos", allowLowConfidence: true },
+  { input: "fear of flyng", expected: ["anxiety"], category: "typos", allowLowConfidence: true, notes: "English typo" },
+  { input: "חררדה חחברתית", expected: ["social_anxiety"], category: "typos", allowLowConfidence: true },
+  { input: "התקפפפי פאניקה", expected: ["panic"], category: "typos" },
+  { input: "PTSD אחרי טראמה", expected: ["ptsd"], category: "typos", allowLowConfidence: true, notes: "missing letter in טראומה" },
+  { input: "ocd קש מאד", expected: ["ocd_compulsions"], category: "typos", allowLowConfidence: true },
+  { input: "שחיקהה בעבודהה!!!", expected: ["burnout"], category: "typos" },
+  { input: "דיכאון??? חרדה???", expected: ["depression", "anxiety"], category: "typos" },
+  { input: "אני בלחצץץ", expected: ["anxiety"], category: "typos", allowLowConfidence: true },
+  { input: "בעיות זוגייות", expected: ["relationships"], category: "typos", allowLowConfidence: true },
+  { input: "דימוי עצמיי נמוך מאד", expected: ["low_self_esteem"], category: "typos" },
+];
+
+/* ------------------------------------------------------------------ */
+/* Profile extraction corpus (Phase 17B).                              */
+/*                                                                     */
+/* Each `input` is a therapist FULL_DESCRIPTION. `expected` is the set  */
+/* of semantic_profile slugs SemanticEngine.extractProfile() should     */
+/* surface. Default expectation mode is "subset" — the engine may       */
+/* return additional related slugs beyond the required set.             */
+/* ------------------------------------------------------------------ */
 
 /**
  * Therapist profile-extraction corpus. Each `input` is a FULL_DESCRIPTION
  * that the engine's `extractProfile()` should reduce to the expected slug
  * set. Grows in later phases.
  */
-export const PROFILE_EXTRACTION_CASES: SemanticCase[] = [];
+export const PROFILE_EXTRACTION_CASES: SemanticCase[] = [
+  {
+    input: "מטפלת בגישה קוגניטיבית התנהגותית עם ניסיון בטיפול בחרדה חברתית ודיכאון קליני",
+    expected: ["social_anxiety", "depression"],
+    category: "therapist_profile",
+    description: "CBT — social anxiety + depression",
+  },
+  {
+    input: "פסיכולוג קליני מומחה בטיפול בפוסט טראומה וטראומה מורכבת אצל יוצאי צבא",
+    expected: ["ptsd", "complex_trauma"],
+    category: "therapist_profile",
+    description: "trauma specialist — PTSD + complex trauma",
+  },
+  {
+    input: "מטפלת בהתקפי פאניקה, חרדה כללית והפרעת OCD במבוגרים",
+    expected: ["panic", "generalized_anxiety", "ocd_compulsions"],
+    category: "therapist_profile",
+    description: "anxiety-cluster specialist",
+  },
+  {
+    input: "עובד סוציאלי קליני, מלווה מטופלים בדיכאון, שחיקה ומצבי רוח ירודים",
+    expected: ["depression", "burnout", "low_mood"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפלת זוגית ומשפחתית, מתמחה במשברים בזוגיות, בגידות וקונפליקטים בין הורים לילדים",
+    expected: ["couples_conflict", "relationships", "parent_child_conflict"],
+    category: "therapist_profile",
+  },
+  {
+    input: "פסיכותרפיסטית דינמית, עובדת עם מטופלים סביב חרדה, דימוי עצמי נמוך וקשיים במערכות יחסים",
+    expected: ["anxiety", "low_self_esteem", "relationships"],
+    category: "therapist_profile",
+    description: "mixed-domain — anxiety + self-esteem + relationships",
+  },
+  {
+    input: "מומחית בהפרעות אכילה, אכילה בולמוסית ודימוי גוף אצל נשים צעירות",
+    expected: ["eating_body", "binge_eating", "body_image"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפל בגישת EMDR לטראומה, פוסט טראומה וטראומת ילדות",
+    expected: ["trauma", "ptsd", "childhood_trauma"],
+    category: "therapist_profile",
+  },
+  {
+    input: "פסיכולוגית התפתחותית העובדת עם ילדים ונוער סביב ADHD, אוטיזם וקשיי התפתחות",
+    expected: ["adhd", "autism", "childhood_development"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפלת CBT להפרעות חרדה, פוביות, חרדת ביצוע וחרדת בריאות",
+    expected: ["anxiety", "performance_anxiety", "health_anxiety"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מלווה מטופלים בתהליכי אבל, אובדן ושכול לאחר מות בן משפחה",
+    expected: ["grief_loss", "bereavement", "loss"],
+    category: "therapist_profile",
+  },
+  {
+    input: "פסיכולוג המתמחה בהתמכרויות — אלכוהול, סמים והתמכרויות התנהגותיות",
+    expected: ["addiction", "substance_use", "behavioral_addiction"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפלת בנושאי זהות מינית, קשיים מיניים ואינטימיות בזוגיות",
+    expected: ["sexuality_intimacy", "sexual_dysfunction", "intimacy_issues"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפלת גוף-נפש בגישה סומטית לחרדה, טראומה וסימפטומים פסיכוסומטיים",
+    expected: ["somatic", "anxiety", "trauma", "psychosomatic"],
+    category: "therapist_profile",
+  },
+  {
+    input: "יועצת הורית לקשיי הורות, קונפליקטים עם ילדים ושחיקת הורות",
+    expected: ["parenting_stress", "parent_child_conflict", "family_parenting"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפלת בגישה אקזיסטנציאלית, בשאלות של משמעות, זהות ומעברי חיים",
+    expected: ["existential", "self_identity", "life_transitions"],
+    category: "therapist_profile",
+    description: "vague — inference-heavy",
+  },
+  {
+    input: "פסיכולוג ארגוני העוזר למטופלים סביב שחיקה, שינוי קריירה ודחיינות",
+    expected: ["burnout", "career_change", "procrastination"],
+    category: "therapist_profile",
+  },
+  {
+    input: "מטפלת בגישה יונגיאנית העוסקת בבדידות, משבר זהות ומשברי אמצע החיים",
+    expected: ["loneliness", "identity_crisis", "major_life_change"],
+    category: "therapist_profile",
+    description: "vague inference — loneliness + identity",
+  },
+];
 
 /**
  * Convenience grouping so runners can iterate every higher-level corpus.
