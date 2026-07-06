@@ -95,7 +95,7 @@ function Index() {
       {/* Subtypes */}
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-xl font-bold text-foreground sm:text-2xl">מה מטריד אתכם?</h2>
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl">כל הקטגוריות</h2>
           <Link
             to="/problems/$slug"
             params={{ slug: "anxiety" }}
