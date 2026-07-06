@@ -19,13 +19,12 @@ export const Route = createFileRoute("/")({
       { title: "מטפלים לחרדה — חיפוש לפי בעיה ותחושה" },
       {
         name: "description",
-        content:
-          "חפשו מטפלים לחרדה לפי הבעיה שמטרידה אתכם: התקפי פאניקה, חרדה חברתית, פוביות, דאגנות יתר ועוד.",
+        content: "חפשו מטפלים לחרדה לפי הבעיה שמטרידה אתכם: התקפי פאניקה, חרדה חברתית, פוביות, דאגנות יתר ועוד.",
       },
       { property: "og:title", content: "מטפלים לחרדה — חיפוש לפי בעיה" },
       {
         property: "og:description",
-        content: "חפשו לפי תחושה: \"פאניקה לפני עבודה\", \"פחד מטיסה\", \"מחשבות טורדניות\".",
+        content: 'חפשו לפי תחושה: "פאניקה לפני עבודה", "פחד מטיסה", "מחשבות טורדניות".',
       },
     ],
   }),
@@ -63,42 +62,31 @@ function Index() {
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
               כאן תמצאו את הטיפול שמתאים לכם
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+            <p className="mx-auto mt-4 max-w-3xl text-base text-muted-foreground sm:text-lg">
               בעזרת מנוע חיפוש חכם שמבין מה אתם צריכים ומחבר אתכם לאנשי המקצוע המתאימים ביותר
             </p>
           </div>
 
           <div className="mt-8">
-            <SearchForm
-              cities={filters.cities}
-              populations={filters.populations}
-              languages={filters.languages}
-            />
+            <SearchForm cities={filters.cities} populations={filters.populations} languages={filters.languages} />
           </div>
 
           {/* Popular problems */}
           <div className="mt-8">
-            <p className="mb-3 text-center text-sm font-medium text-muted-foreground">
-              חיפושים נפוצים
-            </p>
+            <p className="mb-3 text-center text-sm font-medium text-muted-foreground">חיפושים נפוצים</p>
             <div className="flex flex-wrap justify-center gap-2">
-              {[
-                "פאניקה לפני עבודה",
-                "פחד מטיסה",
-                "מחשבות טורדניות",
-                "חרדה חברתית",
-                "חרדת מבחנים",
-                "שחיקה בעבודה",
-              ].map((term) => (
-                <Link
-                  key={term}
-                  to="/search"
-                  search={{ q: term }}
-                  className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:bg-brand-soft"
-                >
-                  {term}
-                </Link>
-              ))}
+              {["פאניקה לפני עבודה", "פחד מטיסה", "מחשבות טורדניות", "חרדה חברתית", "חרדת מבחנים", "שחיקה בעבודה"].map(
+                (term) => (
+                  <Link
+                    key={term}
+                    to="/search"
+                    search={{ q: term }}
+                    className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:bg-brand-soft"
+                  >
+                    {term}
+                  </Link>
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -107,9 +95,7 @@ function Index() {
       {/* Subtypes */}
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-xl font-bold text-foreground sm:text-2xl">
-            מה מטריד אתכם?
-          </h2>
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl">מה מטריד אתכם?</h2>
           <Link
             to="/problems/$slug"
             params={{ slug: "anxiety" }}
@@ -126,14 +112,8 @@ function Index() {
               params={{ slug: p.slug }}
               className="group rounded-2xl border border-border bg-surface-elevated p-5 shadow-card transition-all hover:border-brand/40 hover:-translate-y-0.5"
             >
-              <h3 className="text-base font-semibold text-foreground group-hover:text-primary">
-                {p.name}
-              </h3>
-              {p.description && (
-                <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-                  {p.description}
-                </p>
-              )}
+              <h3 className="text-base font-semibold text-foreground group-hover:text-primary">{p.name}</h3>
+              {p.description && <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">{p.description}</p>}
             </Link>
           ))}
         </div>
