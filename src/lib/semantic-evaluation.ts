@@ -314,6 +314,50 @@ export type EvaluationSummary = {
   failedCases: EvaluationResult[];
 };
 
+/**
+ * Top-K accuracy report (Phase 17C.1).
+ *
+ * Purely observational — does not alter ranking, scoring, or pass/fail
+ * decisions. Reports how often the FIRST expected slug appears in the
+ * first K predicted slugs (order-sensitive on `actual`, K-tolerant).
+ *
+ * Cases whose `expected` array is empty (deliberate "no-slug" cases such
+ * as ambiguous inputs the engine should abstain on) are excluded from
+ * the denominator so accuracy is not diluted.
+ */
+export type TopKAccuracy = {
+  k: number;
+  hits: number;
+  total: number;
+  accuracy: number;
+};
+
+export function computeTopKAccuracy(
+  results: EvaluationResult[],
+  k: number,
+): TopKAccuracy {
+  let hits = 0;
+  let total = 0;
+  for (const r of results) {
+    const expected = Array.isArray(r.expected) ? (r.expected as string[]) : [];
+    if (expected.length === 0) continue;
+    total += 1;
+    const actual = Array.isArray(r.actual) ? (r.actual as string[]) : [];
+    if (actual.slice(0, k).includes(expected[0])) hits += 1;
+  }
+  return {
+    k,
+    hits,
+    total,
+    accuracy: total === 0 ? 1 : hits / total,
+  };
+}
+
+/** Report Top-1 / Top-3 / Top-5 accuracy — permanent every-run metric. */
+export function computeStandardTopK(results: EvaluationResult[]): TopKAccuracy[] {
+  return [1, 3, 5].map((k) => computeTopKAccuracy(results, k));
+}
+
 export function summarizeEvaluation(results: EvaluationResult[]): EvaluationSummary {
   const passed = results.filter((r) => r.passed).length;
   const total = results.length;
