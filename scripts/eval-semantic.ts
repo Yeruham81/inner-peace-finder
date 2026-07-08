@@ -68,6 +68,31 @@ async function run() {
   const top3 = rows.filter((r) => r.top3).length;
   const top5 = rows.filter((r) => r.top5).length;
 
+  // Mean Reciprocal Rank of the first expected slug in `actual`.
+  const mrrEligible = rows.filter((r) => r.expected.length > 0);
+  const mrr = mrrEligible.reduce((sum, r) => {
+    const idx = r.actual.indexOf(r.expected[0]);
+    return sum + (idx >= 0 ? 1 / (idx + 1) : 0);
+  }, 0) / Math.max(1, mrrEligible.length);
+
+  // Candidate count distribution.
+  const candCounts = rows.map((r) => r.actual.length);
+  const avgCand = candCounts.reduce((a, b) => a + b, 0) / Math.max(1, candCounts.length);
+  const dist = { 0: 0, 1: 0, 2: 0, 3: 0 } as Record<number, number>;
+  for (const c of candCounts) dist[Math.min(3, c)]++;
+
+  // Confidence distribution buckets.
+  const confBuckets: Record<string, number> = { "0.00-0.40": 0, "0.40-0.55": 0, "0.55-0.70": 0, "0.70-0.85": 0, "0.85-1.00": 0 };
+  for (const r of rows) {
+    const c = r.confTop;
+    if (c === 0) confBuckets["0.00-0.40"]++;
+    else if (c < 0.4) confBuckets["0.00-0.40"]++;
+    else if (c < 0.55) confBuckets["0.40-0.55"]++;
+    else if (c < 0.70) confBuckets["0.55-0.70"]++;
+    else if (c < 0.85) confBuckets["0.70-0.85"]++;
+    else confBuckets["0.85-1.00"]++;
+  }
+
   const byCat = new Map<string, { total: number; pass: number; top1: number; top3: number }>();
   for (const r of rows) {
     const b = byCat.get(r.category) ?? { total: 0, pass: 0, top1: 0, top3: 0 };
@@ -85,6 +110,11 @@ async function run() {
   console.log(`Top-1: ${top1}/${total} (${pct(top1, total)})`);
   console.log(`Top-3: ${top3}/${total} (${pct(top3, total)})`);
   console.log(`Top-5: ${top5}/${total} (${pct(top5, total)})  [engine caps at 3]`);
+  console.log(`MRR:   ${mrr.toFixed(3)}`);
+  console.log(`Avg candidates returned: ${avgCand.toFixed(2)}`);
+  console.log(`Candidate count distribution: 0=${dist[0]}  1=${dist[1]}  2=${dist[2]}  3=${dist[3]}`);
+  console.log(`Confidence distribution (top result):`);
+  for (const [k, v] of Object.entries(confBuckets)) console.log(`  ${k}: ${v}`);
   console.log("\nBy category (pass | top1 | top3):");
   for (const [cat, b] of Array.from(byCat.entries()).sort()) {
     console.log(`  ${cat.padEnd(20)} ${b.pass}/${b.total} ${pct(b.pass, b.total).padStart(6)} | top1 ${pct(b.top1, b.total).padStart(6)} | top3 ${pct(b.top3, b.total).padStart(6)}`);
@@ -120,7 +150,7 @@ async function run() {
 
   // JSON summary for later comparison
   const summary = {
-    classification: { total, passed, top1, top3, top5, byCategory: Object.fromEntries(byCat) },
+    classification: { total, passed, top1, top3, top5, mrr, avgCand, candDistribution: dist, confDistribution: confBuckets, byCategory: Object.fromEntries(byCat) },
     profile: { total: profRows.length, passed: pPass, avgExtracted: avgExtra },
   };
   await import("fs/promises").then((fs) => fs.writeFile(process.argv[2] ?? "/tmp/eval.json", JSON.stringify(summary, null, 2)));
