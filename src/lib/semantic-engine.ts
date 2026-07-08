@@ -235,6 +235,26 @@ function scoreEvidenceQuality(
       }
     }
   }
+  // Phase 17C.3 matcher-consistency: yod/vav-tolerant overlap. Mirrors
+  // `flexibleHebrewMatch`'s secondary yv-fold pass so evidence quality
+  // agrees with the matcher's decision on Israeli spelling variants
+  // (e.g. "דיכאון" vs "דכאון", "לחוץ" vs "לחץ"). Weighted at 0.5 to keep
+  // partial-typo evidence conservative.
+  if (overlap === 0) {
+    const stripYv = (s: string) => s.replace(/[יו]/g, "");
+    for (const t of pTokens) {
+      const tf = stripYv(t);
+      if (tf.length < 3) continue;
+      let hit = false;
+      for (const h of qTokenSet) {
+        const hf = stripYv(h);
+        if (hf.length < 3) continue;
+        if (tf === hf) { hit = true; break; }
+        if (tf.length >= 4 && hf.length >= 4 && (hf.includes(tf) || tf.includes(hf))) { hit = true; break; }
+      }
+      if (hit) { overlap += 0.5; break; }
+    }
+  }
   const ratio = overlap / pTokens.length;
   // Never fully drop — instead weight by ratio² so partial matches count
   // only proportionally. This keeps recall (evidence isn't lost) while
