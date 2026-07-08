@@ -93,16 +93,11 @@ const PARENT_OF: Record<string, string> = {
   panic: "anxiety",
   social_anxiety: "anxiety",
   health_anxiety: "anxiety",
-  ocd_compulsions: "anxiety",
-  intrusive_thoughts: "anxiety",
+  intrusive_thoughts: "ocd_compulsions",
   childhood_trauma: "trauma",
   ptsd: "trauma",
   body_image: "eating_body",
   low_mood: "depression",
-  couples_conflict: "relationships",
-  intimacy_issues: "relationships",
-  breakup: "relationships",
-  divorce: "relationships",
 };
 
 /**
@@ -111,7 +106,7 @@ const PARENT_OF: Record<string, string> = {
  * still scores highly (>= ratio) is treated as independent evidence and
  * kept in the output.
  */
-const PARENT_SUPPRESS_RATIO = 0.75;
+const PARENT_SUPPRESS_RATIO = 0.5;
 
 /* ------------------------------------------------------------------ */
 /* Primitive helpers (engine-internal only)                           */
