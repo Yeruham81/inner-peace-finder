@@ -423,7 +423,7 @@ async function extractProfile(
   // Match against the ORIGINAL source (matchesText normalizes internally);
   // this preserves prior extractor behavior of not folding away multi-word
   // aliases at the input side.
-  const scores = scoreAgainstVocabulary(source, vocab);
+  const scores = scoreAgainstVocabularyLegacy(source, vocab);
   if (scores.size === 0) return [];
 
   const max = Math.max(...scores.values());
