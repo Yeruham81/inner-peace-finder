@@ -55,6 +55,60 @@ const DISAMBIGUATION_GAP = 0.12;
 const MAX_MATCHES = 3;
 
 /* ------------------------------------------------------------------ */
+/* Phase 17C.2 — scoring / confidence / suppression tunables          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Specificity multiplier per evidence: a phrase with N whitespace tokens is
+ * scored as `base * (1 + SPECIFICITY_SLOPE * (N-1))`. This rewards multi-
+ * word alias / intent matches (which are inherently more specific) over
+ * single-token generic anchors.
+ */
+const SPECIFICITY_SLOPE = 0.6;
+
+/**
+ * Only the top `EVIDENCE_CAP` per-slug evidences contribute to that slug's
+ * total score. Prevents a slug with many overlapping generic aliases from
+ * outranking a slug with fewer but more discriminating hits.
+ */
+const EVIDENCE_CAP = 3;
+
+/** Confidence saturation constant. `s = score / (score + K)` — smaller K
+ * saturates faster; K=5 puts a single 3-point name match at ~0.375. */
+const CONFIDENCE_K = 5;
+
+/** Confidence output range [MIN, MAX]. Compresses so that "no evidence"
+ * and "perfect evidence" are distinguishable rather than both landing on
+ * the previous saturated 0.95. */
+const CONFIDENCE_MIN = 0.35;
+const CONFIDENCE_MAX = 0.95;
+
+/**
+ * Deterministic child → parent map used by parent-suppression. A child that
+ * outranks its parent in the candidate list suppresses the parent unless
+ * the parent's score is high enough to indicate independent evidence.
+ * Kept intentionally small and conservative to avoid recall regressions.
+ */
+const PARENT_OF: Record<string, string> = {
+  panic: "anxiety",
+  social_anxiety: "anxiety",
+  health_anxiety: "anxiety",
+  intrusive_thoughts: "ocd_compulsions",
+  childhood_trauma: "trauma",
+  ptsd: "trauma",
+  body_image: "eating_body",
+  low_mood: "depression",
+};
+
+/**
+ * If a child ranks above its parent AND the parent's raw score is below
+ * `PARENT_SUPPRESS_RATIO * child.rawScore`, drop the parent. A parent that
+ * still scores highly (>= ratio) is treated as independent evidence and
+ * kept in the output.
+ */
+const PARENT_SUPPRESS_RATIO = 0.5;
+
+/* ------------------------------------------------------------------ */
 /* Primitive helpers (engine-internal only)                           */
 /* ------------------------------------------------------------------ */
 
@@ -114,10 +168,147 @@ async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
 }
 
 /**
- * Canonical scoring pipeline shared by classify() and extractProfile().
- * Returns raw problem-id → weighted score map (before normalization).
+ * Phase 17C.2: rich per-slug evidence. Each entry captures the matched
+ * phrase, its evidence kind, and its token count. Downstream scoring
+ * decides specificity weighting; kept separate from raw aggregation so
+ * `classify()` and `extractProfile()` can share the same collection step
+ * while diverging on aggregation policy later if needed.
  */
-function scoreAgainstVocabulary(text: string, vocab: Vocab): Map<string, number> {
+type Evidence = {
+  kind: "name" | "alias" | "intent";
+  base: number;
+  phrase: string;
+  tokens: number;
+  /** 0..1 quality: how well the phrase actually maps onto the query. */
+  quality: number;
+  /** True if the entire normalized phrase appears verbatim in the query. */
+  full: boolean;
+};
+
+function countTokens(phrase: string): number {
+  const t = phrase.trim();
+  if (!t) return 0;
+  return t.split(/\s+/).length;
+}
+
+/**
+ * Quality score for an evidence phrase against the query. Uses the same
+ * tokenizer as the matcher (stopwords + prefix folding), so it agrees with
+ * `flexibleHebrewMatch` on what counts as a token, and computes:
+ *
+ *   - `full = true` when the entire normalized phrase appears verbatim
+ *     (substring) inside the normalized query. Strongest signal.
+ *   - `quality = overlap / max(1, phraseTokens)` otherwise. Reflects how
+ *     much of the phrase's semantic content is actually present in the
+ *     query — protects against the matcher firing on a single shared
+ *     filler token.
+ *
+ * Returned `quality = 0` means the evidence should be dropped downstream.
+ */
+function scoreEvidenceQuality(
+  phrase: string,
+  nQuery: string,
+  qTokenSet: Set<string>,
+): { quality: number; full: boolean; tokens: number } {
+  const nPhrase = lightNormalizeHebrew(phrase);
+  const pTokens = tokenizeHebrew(phrase);
+  const tokenCount = pTokens.length || countTokens(phrase);
+  if (nPhrase && nPhrase.length >= 2 && nQuery.includes(nPhrase)) {
+    return { quality: 1, full: true, tokens: tokenCount };
+  }
+  if (pTokens.length === 0) {
+    // Phrase tokenized to nothing (all stopwords / too-short). Trust the
+    // matcher's original decision at a low but non-zero quality.
+    return { quality: 0.4, full: false, tokens: tokenCount };
+  }
+  let overlap = 0;
+  for (const t of pTokens) if (qTokenSet.has(t)) overlap++;
+  // Also treat per-token substring overlap as a partial hit (mirrors
+  // `flexibleHebrewMatch`'s fuzzier fallback for ≥4-char tokens). This
+  // recovers typo cases like "דכאון" ↔ "דיכאון" where full-token equality
+  // fails but the shared root is obvious.
+  if (overlap === 0) {
+    for (const t of pTokens) {
+      if (t.length < 4) continue;
+      for (const h of qTokenSet) {
+        if (h.length >= 4 && (h.includes(t) || t.includes(h))) { overlap += 0.5; break; }
+      }
+    }
+  }
+  const ratio = overlap / pTokens.length;
+  // Never fully drop — instead weight by ratio² so partial matches count
+  // only proportionally. This keeps recall (evidence isn't lost) while
+  // sharply penalizing single-token filler overlaps.
+  const quality = ratio > 0 ? Math.max(0.05, ratio * ratio) : 0;
+  return { quality, full: false, tokens: tokenCount };
+}
+
+function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
+  const byId = new Map<string, Evidence[]>();
+  const nQuery = lightNormalizeHebrew(text);
+  const qTokenSet = new Set(tokenizeHebrew(text));
+  const push = (id: string | number, ev: Evidence) => {
+    if (ev.quality < 0.05) return;
+    const key = String(id);
+    const arr = byId.get(key) ?? [];
+    arr.push(ev);
+    byId.set(key, arr);
+  };
+  vocab.problems.forEach((p) => {
+    if (p.name && matchesText(p.name, text)) {
+      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+      push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
+    }
+  });
+  vocab.aliases.forEach((a) => {
+    if (a.alias && matchesText(a.alias, text)) {
+      const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+      push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
+    }
+  });
+  vocab.intents.forEach((i) => {
+    if (!i.intent_text || !i.problem_slug) return;
+    const pid = vocab.idBySlug.get(i.problem_slug);
+    if (pid && matchesText(i.intent_text, text)) {
+      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet);
+      push(pid, { kind: "intent", base: WEIGHT_INTENT, phrase: i.intent_text, ...q });
+    }
+  });
+  return byId;
+}
+
+/** Specificity + quality weighted value of one evidence. */
+function evidenceValue(ev: Evidence): number {
+  const specificity = 1 + SPECIFICITY_SLOPE * Math.max(0, ev.tokens - 1);
+  // Full-phrase substring matches are the strongest possible signal —
+  // give them an additional multiplier so a slug whose ENTIRE alias
+  // appears verbatim in the query dominates slugs matched via token
+  // overlap only.
+  const fullBonus = ev.full ? 1.6 : 1;
+  return ev.base * specificity * ev.quality * fullBonus;
+}
+
+/**
+ * Aggregate per-slug evidence into a single score. Sums the top
+ * `EVIDENCE_CAP` specificity-weighted evidences, with light diminishing
+ * returns on additional evidences beyond the top hit.
+ */
+function aggregateScore(evidences: Evidence[]): number {
+  const values = evidences.map(evidenceValue).sort((a, b) => b - a);
+  let score = 0;
+  for (let i = 0; i < Math.min(values.length, EVIDENCE_CAP); i++) {
+    // Slight decay to prevent piling identical low-specificity aliases.
+    score += values[i] * (i === 0 ? 1 : 1 / (1 + i * 0.5));
+  }
+  return score;
+}
+
+/**
+ * Legacy bump-count scoring kept intact for `extractProfile()` so therapist
+ * profile extraction behavior is identical to the pre-17C.2 pipeline (that
+ * regression suite is out of scope for this phase).
+ */
+function scoreAgainstVocabularyLegacy(text: string, vocab: Vocab): Map<string, number> {
   const raw = new Map<string, number>();
   const bump = (id: string | number, w: number) => {
     const key = String(id);
@@ -137,14 +328,44 @@ function scoreAgainstVocabulary(text: string, vocab: Vocab): Map<string, number>
   return raw;
 }
 
+/**
+ * Parent suppression: if a child concept outranks its parent, and the
+ * parent's raw score is dominated by the child's, drop the parent from
+ * the output. Conservative — only suppresses when the parent is clearly
+ * weaker than the child that already covers it.
+ */
+function applyParentSuppression(
+  ranked: { slug: string; raw: number; confidence: number }[],
+): { slug: string; raw: number; confidence: number }[] {
+  const bySlug = new Map(ranked.map((r) => [r.slug, r]));
+  const drop = new Set<string>();
+  for (let i = 0; i < ranked.length; i++) {
+    const r = ranked[i];
+    const parent = PARENT_OF[r.slug];
+    if (!parent) continue;
+    const p = bySlug.get(parent);
+    if (!p) continue;
+    // Parent must appear later in the list (child ranks above parent).
+    const pIdx = ranked.findIndex((x) => x.slug === parent);
+    if (pIdx <= i) continue;
+    if (p.raw < PARENT_SUPPRESS_RATIO * r.raw) drop.add(parent);
+  }
+  return ranked.filter((r) => !drop.has(r.slug));
+}
+
 /* ------------------------------------------------------------------ */
 /* Public engine API                                                  */
 /* ------------------------------------------------------------------ */
 
 /**
  * Classify a user query into weighted problem candidates.
- * Preserves prior behavior: problem-name > alias > intent, saturation-scaled
- * confidence, top MAX_MATCHES results.
+ *
+ * Phase 17C.2 scoring pipeline:
+ *   1. Collect evidence (name/alias/intent matches) per problem.
+ *   2. Aggregate with specificity weighting + top-N cap.
+ *   3. Calibrate confidence from raw score + query-coverage.
+ *   4. Apply parent → child suppression conservatively.
+ *   5. Return top MAX_MATCHES ordered by confidence.
  */
 async function classify(
   input: string,
@@ -154,25 +375,27 @@ async function classify(
   if (q.length < 2) return [];
 
   const vocab = await fetchVocabulary(sb);
-  const scores = scoreAgainstVocabulary(q, vocab);
-  if (scores.size === 0) return [];
+  const evidence = collectEvidence(q, vocab);
+  if (evidence.size === 0) return [];
 
-  const values = Array.from(scores.values());
-  const maxRaw = Math.max(...values);
-  const total = values.reduce((a, b) => a + b, 0);
-  const saturation = Math.min(1, total / 3);
+  const queryTokens = Math.max(1, countTokens(q));
+  const scored: { slug: string; raw: number; confidence: number }[] = [];
+  for (const [id, list] of evidence) {
+    const slug = vocab.slugById.get(id);
+    if (!slug) continue;
+    const raw = aggregateScore(list);
+    // Coverage: fraction of query tokens spanned by this slug's evidences
+    // (approximate — sum of matched-phrase tokens, capped at queryTokens).
+    const matchedTokens = list.reduce((a, e) => a + e.tokens, 0);
+    const coverage = Math.min(1, matchedTokens / queryTokens);
+    const s = raw / (raw + CONFIDENCE_K); // 0..1
+    const conf = CONFIDENCE_MIN + (CONFIDENCE_MAX - CONFIDENCE_MIN) * s * (0.5 + 0.5 * coverage);
+    scored.push({ slug, raw, confidence: Number(conf.toFixed(3)) });
+  }
 
-  return Array.from(scores.entries())
-    .map(([id, raw]) => {
-      const slug = vocab.slugById.get(id);
-      if (!slug) return null;
-      const rel = raw / maxRaw;
-      const confidence = Math.min(0.95, rel * saturation);
-      return { slug, confidence: Number(confidence.toFixed(3)) };
-    })
-    .filter((m): m is SemanticResult => !!m)
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, MAX_MATCHES);
+  scored.sort((a, b) => b.raw - a.raw || b.confidence - a.confidence);
+  const suppressed = applyParentSuppression(scored);
+  return suppressed.slice(0, MAX_MATCHES).map((r) => ({ slug: r.slug, confidence: r.confidence }));
 }
 
 /**
@@ -195,7 +418,7 @@ async function extractProfile(
   // Match against the ORIGINAL source (matchesText normalizes internally);
   // this preserves prior extractor behavior of not folding away multi-word
   // aliases at the input side.
-  const scores = scoreAgainstVocabulary(source, vocab);
+  const scores = scoreAgainstVocabularyLegacy(source, vocab);
   if (scores.size === 0) return [];
 
   const max = Math.max(...scores.values());
