@@ -21,16 +21,19 @@ describe("lightNormalizeHebrew", () => {
   });
 
   it("collapses internal whitespace runs", () => {
-    expect(lightNormalizeHebrew("   לחץ   וחרדה   ")).toBe("לחץ וחרד");
+    // sofit ץ folds to צ everywhere so "לחץ" and "בלחצץץ" converge.
+    expect(lightNormalizeHebrew("   לחץ   וחרדה   ")).toBe("לחצ וחרד");
   });
 
   it("collapses repeated question marks", () => {
-    expect(lightNormalizeHebrew("דיכאון???")).toBe("דיכאון");
+    expect(lightNormalizeHebrew("דיכאון???")).toBe("דיכאונ");
   });
 
   it("handles combined char-repeat + punctuation noise on multi-token input", () => {
-    // foldInflections checks plural "ות" before "יות", so "בזוגיות" → "בזוגי".
-    expect(lightNormalizeHebrew("בגידדדהה בזוגיות!!!")).toBe("בגידה בזוגי");
+    // 3-repeat collapse + tail-repeat "הה" → "ה" then foldInflections drops
+    // trailing ה. Alias-side "בגידה" also normalizes to "בגיד" so both
+    // sides converge to the same skeleton.
+    expect(lightNormalizeHebrew("בגידדדהה בזוגיות!!!")).toBe("בגיד בזוגי");
   });
 
   it("normalizeHebrew is a back-compat alias for lightNormalizeHebrew", () => {
