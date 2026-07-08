@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { SemanticEngine } from "./src/lib/semantic-engine";
+import { SemanticEngine } from "../src/lib/semantic-engine";
 const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 const [aRes, iRes, pRes] = await Promise.all([
   sb.from("problem_aliases").select("problem_id, alias").limit(2000),
