@@ -184,6 +184,10 @@ type Evidence = {
   base: number;
   phrase: string;
   tokens: number;
+  /** 0..1 quality: how well the phrase actually maps onto the query. */
+  quality: number;
+  /** True if the entire normalized phrase appears verbatim in the query. */
+  full: boolean;
 };
 
 function countTokens(phrase: string): number {
@@ -192,9 +196,49 @@ function countTokens(phrase: string): number {
   return t.split(/\s+/).length;
 }
 
+/**
+ * Quality score for an evidence phrase against the query. Uses the same
+ * tokenizer as the matcher (stopwords + prefix folding), so it agrees with
+ * `flexibleHebrewMatch` on what counts as a token, and computes:
+ *
+ *   - `full = true` when the entire normalized phrase appears verbatim
+ *     (substring) inside the normalized query. Strongest signal.
+ *   - `quality = overlap / max(1, phraseTokens)` otherwise. Reflects how
+ *     much of the phrase's semantic content is actually present in the
+ *     query — protects against the matcher firing on a single shared
+ *     filler token.
+ *
+ * Returned `quality = 0` means the evidence should be dropped downstream.
+ */
+function scoreEvidenceQuality(
+  phrase: string,
+  nQuery: string,
+  qTokenSet: Set<string>,
+): { quality: number; full: boolean; tokens: number } {
+  const nPhrase = lightNormalizeHebrew(phrase);
+  const pTokens = tokenizeHebrew(phrase);
+  const tokenCount = pTokens.length || countTokens(phrase);
+  if (nPhrase && nPhrase.length >= 2 && nQuery.includes(nPhrase)) {
+    return { quality: 1, full: true, tokens: tokenCount };
+  }
+  if (pTokens.length === 0) return { quality: 0, full: false, tokens: tokenCount };
+  let overlap = 0;
+  for (const t of pTokens) if (qTokenSet.has(t)) overlap++;
+  const ratio = overlap / pTokens.length;
+  // Require a meaningful chunk of the phrase to be present. Single-token
+  // phrases must match their one token; two-token phrases need both; longer
+  // phrases need at least 60% of tokens present.
+  const minRatio = pTokens.length === 1 ? 1 : pTokens.length === 2 ? 1 : 0.6;
+  if (ratio < minRatio) return { quality: 0, full: false, tokens: tokenCount };
+  return { quality: ratio, full: false, tokens: tokenCount };
+}
+
 function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const byId = new Map<string, Evidence[]>();
+  const nQuery = lightNormalizeHebrew(text);
+  const qTokenSet = new Set(tokenizeHebrew(text));
   const push = (id: string | number, ev: Evidence) => {
+    if (ev.quality <= 0) return;
     const key = String(id);
     const arr = byId.get(key) ?? [];
     arr.push(ev);
@@ -202,27 +246,36 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
   };
   vocab.problems.forEach((p) => {
     if (p.name && matchesText(p.name, text)) {
-      push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, tokens: countTokens(p.name) });
+      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+      push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
     }
   });
   vocab.aliases.forEach((a) => {
     if (a.alias && matchesText(a.alias, text)) {
-      push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, tokens: countTokens(a.alias) });
+      const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+      push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
     }
   });
   vocab.intents.forEach((i) => {
     if (!i.intent_text || !i.problem_slug) return;
     const pid = vocab.idBySlug.get(i.problem_slug);
     if (pid && matchesText(i.intent_text, text)) {
-      push(pid, { kind: "intent", base: WEIGHT_INTENT, phrase: i.intent_text, tokens: countTokens(i.intent_text) });
+      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet);
+      push(pid, { kind: "intent", base: WEIGHT_INTENT, phrase: i.intent_text, ...q });
     }
   });
   return byId;
 }
 
-/** Specificity-weighted value of one evidence. */
+/** Specificity + quality weighted value of one evidence. */
 function evidenceValue(ev: Evidence): number {
-  return ev.base * (1 + SPECIFICITY_SLOPE * Math.max(0, ev.tokens - 1));
+  const specificity = 1 + SPECIFICITY_SLOPE * Math.max(0, ev.tokens - 1);
+  // Full-phrase substring matches are the strongest possible signal —
+  // give them an additional multiplier so a slug whose ENTIRE alias
+  // appears verbatim in the query dominates slugs matched via token
+  // overlap only.
+  const fullBonus = ev.full ? 1.6 : 1;
+  return ev.base * specificity * ev.quality * fullBonus;
 }
 
 /**
