@@ -221,16 +221,31 @@ function scoreEvidenceQuality(
   if (nPhrase && nPhrase.length >= 2 && nQuery.includes(nPhrase)) {
     return { quality: 1, full: true, tokens: tokenCount };
   }
-  if (pTokens.length === 0) return { quality: 0, full: false, tokens: tokenCount };
+  if (pTokens.length === 0) {
+    // Phrase tokenized to nothing (all stopwords / too-short). Trust the
+    // matcher's original decision at a low but non-zero quality.
+    return { quality: 0.4, full: false, tokens: tokenCount };
+  }
   let overlap = 0;
   for (const t of pTokens) if (qTokenSet.has(t)) overlap++;
+  // Also treat per-token substring overlap as a partial hit (mirrors
+  // `flexibleHebrewMatch`'s fuzzier fallback for ≥4-char tokens). This
+  // recovers typo cases like "דכאון" ↔ "דיכאון" where full-token equality
+  // fails but the shared root is obvious.
+  if (overlap === 0) {
+    for (const t of pTokens) {
+      if (t.length < 4) continue;
+      for (const h of qTokenSet) {
+        if (h.length >= 4 && (h.includes(t) || t.includes(h))) { overlap += 0.5; break; }
+      }
+    }
+  }
   const ratio = overlap / pTokens.length;
-  // Require a meaningful chunk of the phrase to be present. Single-token
-  // phrases must match their one token; two-token phrases need both; longer
-  // phrases need at least 60% of tokens present.
-  const minRatio = pTokens.length === 1 ? 1 : pTokens.length === 2 ? 1 : 0.6;
-  if (ratio < minRatio) return { quality: 0, full: false, tokens: tokenCount };
-  return { quality: ratio, full: false, tokens: tokenCount };
+  // Never fully drop — instead weight by ratio² so partial matches count
+  // only proportionally. This keeps recall (evidence isn't lost) while
+  // sharply penalizing single-token filler overlaps.
+  const quality = ratio > 0 ? Math.max(0.05, ratio * ratio) : 0;
+  return { quality, full: false, tokens: tokenCount };
 }
 
 function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
@@ -238,7 +253,7 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const nQuery = lightNormalizeHebrew(text);
   const qTokenSet = new Set(tokenizeHebrew(text));
   const push = (id: string | number, ev: Evidence) => {
-    if (ev.quality <= 0) return;
+    if (ev.quality < 0.05) return;
     const key = String(id);
     const arr = byId.get(key) ?? [];
     arr.push(ev);
@@ -293,12 +308,29 @@ function aggregateScore(evidences: Evidence[]): number {
   return score;
 }
 
-/** Legacy helper kept for extractProfile parity (raw problem-id → score). */
-function scoreAgainstVocabulary(text: string, vocab: Vocab): Map<string, number> {
-  const ev = collectEvidence(text, vocab);
-  const out = new Map<string, number>();
-  for (const [id, list] of ev) out.set(id, aggregateScore(list));
-  return out;
+/**
+ * Legacy bump-count scoring kept intact for `extractProfile()` so therapist
+ * profile extraction behavior is identical to the pre-17C.2 pipeline (that
+ * regression suite is out of scope for this phase).
+ */
+function scoreAgainstVocabularyLegacy(text: string, vocab: Vocab): Map<string, number> {
+  const raw = new Map<string, number>();
+  const bump = (id: string | number, w: number) => {
+    const key = String(id);
+    raw.set(key, (raw.get(key) ?? 0) + w);
+  };
+  vocab.problems.forEach((p) => {
+    if (p.name && matchesText(p.name, text)) bump(p.id, WEIGHT_PROBLEM_NAME);
+  });
+  vocab.aliases.forEach((a) => {
+    if (a.alias && matchesText(a.alias, text)) bump(a.problem_id, WEIGHT_ALIAS);
+  });
+  vocab.intents.forEach((i) => {
+    if (!i.intent_text || !i.problem_slug) return;
+    const pid = vocab.idBySlug.get(i.problem_slug);
+    if (pid && matchesText(i.intent_text, text)) bump(pid, WEIGHT_INTENT);
+  });
+  return raw;
 }
 
 /**
