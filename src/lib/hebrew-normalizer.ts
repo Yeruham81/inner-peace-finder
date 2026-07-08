@@ -154,7 +154,11 @@ function collapseTailRepeat(input: string): string {
   return input
     .split(" ")
     .map((tok) => {
-      if (isLatinToken(tok) || tok.length < 4) return tok;
+      // Only fire on visibly elongated tokens. Length 4 is far too short —
+      // real words like "בודד" (lonely) end in a legitimate double letter.
+      // With sofit already folded, elongation of a single final letter
+      // ("בלחצץ" → "בלחצצ") lands at length ≥5.
+      if (isLatinToken(tok) || tok.length < 5) return tok;
       const last = tok[tok.length - 1];
       const prev = tok[tok.length - 2];
       if (last === prev) return tok.slice(0, -1);
