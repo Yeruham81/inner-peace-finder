@@ -1,0 +1,1938 @@
+{
+  "baseline": {
+    "source": "phase-17c3",
+    "pass": 0.926,
+    "top1": 0.787,
+    "mrr": 0.867
+  },
+  "totals": {
+    "slugs": 66,
+    "cases": 94,
+    "profile_cases": 18
+  },
+  "slugStats": [
+    {
+      "slug": "anxiety",
+      "aliases": 21,
+      "intents": 12,
+      "expected": 14,
+      "top1": 12,
+      "top3": 12,
+      "timesReturned": 21,
+      "correct": 15,
+      "wrong": 6,
+      "falseNegatives": 2,
+      "avgTopConf": 0.588,
+      "confusedWith": {
+        "intrusive_thoughts": 1,
+        "low_mood": 1,
+        "depression": 1,
+        "relationships": 1,
+        "eating_body": 1,
+        "trust_issues": 1
+      },
+      "health": {
+        "score": 0.6485714285714286,
+        "precision": 0.7142857142857143,
+        "recall": 0.8571428571428571,
+        "uniqueness": 0.4,
+        "penalty": 2
+      }
+    },
+    {
+      "slug": "burnout",
+      "aliases": 15,
+      "intents": 4,
+      "expected": 8,
+      "top1": 6,
+      "top3": 7,
+      "timesReturned": 8,
+      "correct": 7,
+      "wrong": 1,
+      "falseNegatives": 1,
+      "avgTopConf": 0.7293333333333334,
+      "confusedWith": {
+        "anxiety": 1,
+        "couples_conflict": 1,
+        "relationships": 1
+      },
+      "health": {
+        "score": 0.8600000000000001,
+        "precision": 0.875,
+        "recall": 0.875,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "depression",
+      "aliases": 13,
+      "intents": 6,
+      "expected": 8,
+      "top1": 6,
+      "top3": 7,
+      "timesReturned": 21,
+      "correct": 9,
+      "wrong": 12,
+      "falseNegatives": 1,
+      "avgTopConf": 0.5731428571428571,
+      "confusedWith": {
+        "anxiety": 1,
+        "social_anxiety": 1,
+        "panic": 1
+      },
+      "health": {
+        "score": 0.5114285714285716,
+        "precision": 0.42857142857142855,
+        "recall": 0.875,
+        "uniqueness": 0.25,
+        "penalty": 2
+      }
+    },
+    {
+      "slug": "couples_conflict",
+      "aliases": 11,
+      "intents": 4,
+      "expected": 4,
+      "top1": 3,
+      "top3": 4,
+      "timesReturned": 11,
+      "correct": 4,
+      "wrong": 7,
+      "falseNegatives": 0,
+      "avgTopConf": 0.7473333333333333,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5881818181818183,
+        "precision": 0.36363636363636365,
+        "recall": 1,
+        "uniqueness": 0.36363636363636365,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "low_self_esteem",
+      "aliases": 10,
+      "intents": 4,
+      "expected": 4,
+      "top1": 4,
+      "top3": 4,
+      "timesReturned": 7,
+      "correct": 4,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0.7158,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7428571428571429,
+        "precision": 0.5714285714285714,
+        "recall": 1,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "ocd_compulsions",
+      "aliases": 5,
+      "intents": 6,
+      "expected": 4,
+      "top1": 2,
+      "top3": 3,
+      "timesReturned": 5,
+      "correct": 3,
+      "wrong": 2,
+      "falseNegatives": 1,
+      "avgTopConf": 0.44366666666666665,
+      "confusedWith": {
+        "anxiety": 1,
+        "social_anxiety": 1,
+        "panic": 1
+      },
+      "health": {
+        "score": 0.6733333333333333,
+        "precision": 0.6,
+        "recall": 0.75,
+        "uniqueness": 0.6666666666666666,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "ptsd",
+      "aliases": 10,
+      "intents": 5,
+      "expected": 4,
+      "top1": 3,
+      "top3": 4,
+      "timesReturned": 5,
+      "correct": 4,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0.6920000000000001,
+      "confusedWith": {},
+      "health": {
+        "score": 0.8800000000000001,
+        "precision": 0.8,
+        "recall": 1,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "divorce",
+      "aliases": 8,
+      "intents": 3,
+      "expected": 3,
+      "top1": 3,
+      "top3": 3,
+      "timesReturned": 4,
+      "correct": 3,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0.7296666666666667,
+      "confusedWith": {},
+      "health": {
+        "score": 0.8600000000000001,
+        "precision": 0.75,
+        "recall": 1,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "emotional_overwhelm",
+      "aliases": 12,
+      "intents": 4,
+      "expected": 3,
+      "top1": 3,
+      "top3": 3,
+      "timesReturned": 6,
+      "correct": 3,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0.6525,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7142857142857144,
+        "precision": 0.5,
+        "recall": 1,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "grief_loss",
+      "aliases": 16,
+      "intents": 12,
+      "expected": 3,
+      "top1": 2,
+      "top3": 3,
+      "timesReturned": 9,
+      "correct": 3,
+      "wrong": 6,
+      "falseNegatives": 0,
+      "avgTopConf": 0.5886666666666667,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6133333333333333,
+        "precision": 0.3333333333333333,
+        "recall": 1,
+        "uniqueness": 0.4,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "panic",
+      "aliases": 10,
+      "intents": 5,
+      "expected": 3,
+      "top1": 3,
+      "top3": 3,
+      "timesReturned": 9,
+      "correct": 4,
+      "wrong": 5,
+      "falseNegatives": 0,
+      "avgTopConf": 0.7705,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6066666666666667,
+        "precision": 0.4444444444444444,
+        "recall": 1,
+        "uniqueness": 0.4444444444444444,
+        "penalty": 2
+      }
+    },
+    {
+      "slug": "social_anxiety",
+      "aliases": 7,
+      "intents": 4,
+      "expected": 3,
+      "top1": 3,
+      "top3": 3,
+      "timesReturned": 11,
+      "correct": 3,
+      "wrong": 8,
+      "falseNegatives": 0,
+      "avgTopConf": 0.62,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5157575757575759,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "uniqueness": 0.3333333333333333,
+        "penalty": 2
+      }
+    },
+    {
+      "slug": "addiction",
+      "aliases": 5,
+      "intents": 6,
+      "expected": 2,
+      "top1": 0,
+      "top3": 1,
+      "timesReturned": 1,
+      "correct": 1,
+      "wrong": 0,
+      "falseNegatives": 1,
+      "avgTopConf": 0,
+      "confusedWith": {
+        "substance_use": 1,
+        "trauma": 1,
+        "childhood_trauma": 1
+      },
+      "health": {
+        "score": 0.8,
+        "precision": 1,
+        "recall": 0.5,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "anger",
+      "aliases": 10,
+      "intents": 4,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 3,
+      "correct": 2,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0.6635,
+      "confusedWith": {},
+      "health": {
+        "score": 0.8266666666666668,
+        "precision": 0.6666666666666666,
+        "recall": 1,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "eating_body",
+      "aliases": 5,
+      "intents": 6,
+      "expected": 2,
+      "top1": 1,
+      "top3": 2,
+      "timesReturned": 8,
+      "correct": 2,
+      "wrong": 6,
+      "falseNegatives": 0,
+      "avgTopConf": 0.708,
+      "confusedWith": {},
+      "health": {
+        "score": 0.55,
+        "precision": 0.25,
+        "recall": 1,
+        "uniqueness": 0.4,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "intimacy_issues",
+      "aliases": 7,
+      "intents": 3,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 4,
+      "correct": 2,
+      "wrong": 2,
+      "falseNegatives": 0,
+      "avgTopConf": 0.774,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7333333333333334,
+        "precision": 0.5,
+        "recall": 1,
+        "uniqueness": 0.6666666666666666,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "loneliness",
+      "aliases": 10,
+      "intents": 4,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 11,
+      "correct": 3,
+      "wrong": 8,
+      "falseNegatives": 0,
+      "avgTopConf": 0.6809999999999999,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5757575757575758,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "uniqueness": 0.3333333333333333,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "low_mood",
+      "aliases": 10,
+      "intents": 3,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 11,
+      "correct": 2,
+      "wrong": 9,
+      "falseNegatives": 0,
+      "avgTopConf": 0.7324999999999999,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5042657342657343,
+        "precision": 0.18181818181818182,
+        "recall": 1,
+        "uniqueness": 0.3076923076923077,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "relationships",
+      "aliases": 5,
+      "intents": 6,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 9,
+      "correct": 4,
+      "wrong": 5,
+      "falseNegatives": 0,
+      "avgTopConf": 0.5616666666666666,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6066666666666667,
+        "precision": 0.4444444444444444,
+        "recall": 1,
+        "uniqueness": 0.4444444444444444,
+        "penalty": 2
+      }
+    },
+    {
+      "slug": "substance_use",
+      "aliases": 9,
+      "intents": 3,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 4,
+      "correct": 2,
+      "wrong": 2,
+      "falseNegatives": 0,
+      "avgTopConf": 0.654,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7033333333333334,
+        "precision": 0.5,
+        "recall": 1,
+        "uniqueness": 0.6666666666666666,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "trauma",
+      "aliases": 7,
+      "intents": 6,
+      "expected": 2,
+      "top1": 2,
+      "top3": 2,
+      "timesReturned": 5,
+      "correct": 2,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0.5423333333333333,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6442857142857144,
+        "precision": 0.4,
+        "recall": 1,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "acute_crisis",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 1,
+      "top1": 0,
+      "top3": 1,
+      "timesReturned": 1,
+      "correct": 1,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 1,
+        "precision": 1,
+        "recall": 1,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "body_image",
+      "aliases": 7,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 5,
+      "correct": 2,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0.6915,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6742857142857144,
+        "precision": 0.4,
+        "recall": 1,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "breakup",
+      "aliases": 8,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 3,
+      "correct": 1,
+      "wrong": 2,
+      "falseNegatives": 0,
+      "avgTopConf": 0.741,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6666666666666666,
+        "precision": 0.3333333333333333,
+        "recall": 1,
+        "uniqueness": 0.6666666666666666,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "health_anxiety",
+      "aliases": 7,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 2,
+      "correct": 1,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0.749,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7600000000000001,
+        "precision": 0.5,
+        "recall": 1,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "identity_crisis",
+      "aliases": 7,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 8,
+      "correct": 1,
+      "wrong": 7,
+      "falseNegatives": 0,
+      "avgTopConf": 0.6950000000000001,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5227272727272727,
+        "precision": 0.125,
+        "recall": 1,
+        "uniqueness": 0.36363636363636365,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "intrusive_thoughts",
+      "aliases": 6,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 2,
+      "correct": 1,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0.651,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7300000000000001,
+        "precision": 0.5,
+        "recall": 1,
+        "uniqueness": 0.8,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "life_transitions",
+      "aliases": 11,
+      "intents": 7,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 6,
+      "correct": 1,
+      "wrong": 5,
+      "falseNegatives": 0,
+      "avgTopConf": 0.705,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5555555555555556,
+        "precision": 0.16666666666666666,
+        "recall": 1,
+        "uniqueness": 0.4444444444444444,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "parenting_stress",
+      "aliases": 9,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 5,
+      "correct": 2,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0.783,
+      "confusedWith": {},
+      "health": {
+        "score": 0.6742857142857144,
+        "precision": 0.4,
+        "recall": 1,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "procrastination",
+      "aliases": 8,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 2,
+      "correct": 1,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0.754,
+      "confusedWith": {},
+      "health": {
+        "score": 0.7600000000000001,
+        "precision": 0.5,
+        "recall": 1,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "psychosomatic",
+      "aliases": 5,
+      "intents": 3,
+      "expected": 1,
+      "top1": 1,
+      "top3": 1,
+      "timesReturned": 5,
+      "correct": 1,
+      "wrong": 4,
+      "falseNegatives": 0,
+      "avgTopConf": 0.762,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5800000000000001,
+        "precision": 0.2,
+        "recall": 1,
+        "uniqueness": 0.5,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "self_identity",
+      "aliases": 3,
+      "intents": 6,
+      "expected": 1,
+      "top1": 0,
+      "top3": 1,
+      "timesReturned": 6,
+      "correct": 1,
+      "wrong": 5,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.5555555555555556,
+        "precision": 0.16666666666666666,
+        "recall": 1,
+        "uniqueness": 0.4444444444444444,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "adhd",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "anhedonia",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "attachment_issues",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "autism",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "behavioral_addiction",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "bereavement",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "binge_eating",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "burnout_depression",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 5,
+      "correct": 0,
+      "wrong": 5,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.08888888888888889,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.4444444444444444,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "career_change",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "childhood_development",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "childhood_trauma",
+      "aliases": 5,
+      "intents": 3,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 4,
+      "correct": 1,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.1842857142857143,
+        "precision": 0.25,
+        "recall": 0,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 1
+      }
+    },
+    {
+      "slug": "communication_difficulties",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "communication_expression",
+      "aliases": 0,
+      "intents": 1,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "complex_trauma",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 3,
+      "correct": 0,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.11428571428571428,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "compulsions",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "developmental",
+      "aliases": 10,
+      "intents": 5,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 4,
+      "correct": 0,
+      "wrong": 4,
+      "falseNegatives": 0,
+      "avgTopConf": 0.388,
+      "confusedWith": {},
+      "health": {
+        "score": 0.1,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.5,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "emotional_regulation",
+      "aliases": 0,
+      "intents": 1,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "existential",
+      "aliases": 5,
+      "intents": 5,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 3,
+      "correct": 0,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.11428571428571428,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "existential_anxiety",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "family_parenting",
+      "aliases": 0,
+      "intents": 1,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "generalized_anxiety",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "loss",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "major_life_change",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "meaning_crisis",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "neurodiversity",
+      "aliases": 2,
+      "intents": 1,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "parent_child_conflict",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "performance_anxiety",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "performance_functioning",
+      "aliases": 0,
+      "intents": 1,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "sexual_dysfunction",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "sexuality_intimacy",
+      "aliases": 0,
+      "intents": 6,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 3,
+      "correct": 0,
+      "wrong": 3,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.11428571428571428,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.5714285714285714,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "social_belonging",
+      "aliases": 6,
+      "intents": 6,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 4,
+      "correct": 0,
+      "wrong": 4,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.1,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.5,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "social_isolation",
+      "aliases": 0,
+      "intents": 0,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 1,
+      "correct": 0,
+      "wrong": 1,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.16000000000000003,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 0.8,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "somatic",
+      "aliases": 0,
+      "intents": 1,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 0,
+      "correct": 0,
+      "wrong": 0,
+      "falseNegatives": 0,
+      "avgTopConf": 0,
+      "confusedWith": {},
+      "health": {
+        "score": 0.2,
+        "precision": 0,
+        "recall": 0,
+        "uniqueness": 1,
+        "penalty": 0
+      }
+    },
+    {
+      "slug": "trust_issues",
+      "aliases": 6,
+      "intents": 3,
+      "expected": 0,
+      "top1": 0,
+      "top3": 0,
+      "timesReturned": 6,
+      "correct": 1,
+      "wrong": 5,
+      "falseNegatives": 0,
+      "avgTopConf": 0.608,
+      "confusedWith": {},
+      "health": {
+        "score": 0.12555555555555556,
+        "precision": 0.16666666666666666,
+        "recall": 0,
+        "uniqueness": 0.4444444444444444,
+        "penalty": 1
+      }
+    }
+  ],
+  "conflictPairs": [
+    {
+      "a": "anxiety",
+      "b": "depression",
+      "count": 2,
+      "direction": "depression outranks anxiety"
+    },
+    {
+      "a": "anxiety",
+      "b": "intrusive_thoughts",
+      "count": 1,
+      "direction": "intrusive_thoughts outranks anxiety"
+    },
+    {
+      "a": "anxiety",
+      "b": "low_mood",
+      "count": 1,
+      "direction": "low_mood outranks anxiety"
+    },
+    {
+      "a": "burnout",
+      "b": "anxiety",
+      "count": 1,
+      "direction": "anxiety outranks burnout"
+    },
+    {
+      "a": "burnout",
+      "b": "couples_conflict",
+      "count": 1,
+      "direction": "couples_conflict outranks burnout"
+    },
+    {
+      "a": "burnout",
+      "b": "relationships",
+      "count": 1,
+      "direction": "relationships outranks burnout"
+    },
+    {
+      "a": "anxiety",
+      "b": "relationships",
+      "count": 1,
+      "direction": "relationships outranks anxiety"
+    },
+    {
+      "a": "anxiety",
+      "b": "eating_body",
+      "count": 1,
+      "direction": "eating_body outranks anxiety"
+    },
+    {
+      "a": "anxiety",
+      "b": "trust_issues",
+      "count": 1,
+      "direction": "trust_issues outranks anxiety"
+    },
+    {
+      "a": "ocd_compulsions",
+      "b": "anxiety",
+      "count": 1,
+      "direction": "anxiety outranks ocd_compulsions"
+    },
+    {
+      "a": "ocd_compulsions",
+      "b": "social_anxiety",
+      "count": 1,
+      "direction": "social_anxiety outranks ocd_compulsions"
+    },
+    {
+      "a": "ocd_compulsions",
+      "b": "panic",
+      "count": 1,
+      "direction": "panic outranks ocd_compulsions"
+    },
+    {
+      "a": "addiction",
+      "b": "substance_use",
+      "count": 1,
+      "direction": "substance_use outranks addiction"
+    },
+    {
+      "a": "addiction",
+      "b": "trauma",
+      "count": 1,
+      "direction": "trauma outranks addiction"
+    },
+    {
+      "a": "addiction",
+      "b": "childhood_trauma",
+      "count": 1,
+      "direction": "childhood_trauma outranks addiction"
+    },
+    {
+      "a": "depression",
+      "b": "social_anxiety",
+      "count": 1,
+      "direction": "social_anxiety outranks depression"
+    },
+    {
+      "a": "depression",
+      "b": "panic",
+      "count": 1,
+      "direction": "panic outranks depression"
+    }
+  ],
+  "hierarchyHints": [
+    {
+      "parent": "anxiety",
+      "child": "panic",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "anxiety",
+      "child": "social_anxiety",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "anxiety",
+      "child": "health_anxiety",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "ocd_compulsions",
+      "child": "intrusive_thoughts",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "trauma",
+      "child": "childhood_trauma",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "trauma",
+      "child": "ptsd",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "eating_body",
+      "child": "body_image",
+      "evidence": "engine PARENT_OF map"
+    },
+    {
+      "parent": "depression",
+      "child": "low_mood",
+      "evidence": "engine PARENT_OF map"
+    }
+  ],
+  "merges": [
+    {
+      "a": "addiction",
+      "b": "substance_use",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "keep separate"
+    },
+    {
+      "a": "addiction",
+      "b": "behavioral_addiction",
+      "coFire": 0,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"behavioral_addiction\" as alias/child of \"addiction\""
+    },
+    {
+      "a": "grief_loss",
+      "b": "loss",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"loss\" as alias/child of \"grief_loss\""
+    },
+    {
+      "a": "grief_loss",
+      "b": "bereavement",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"bereavement\" as alias/child of \"grief_loss\""
+    },
+    {
+      "a": "burnout",
+      "b": "burnout_depression",
+      "coFire": 2,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"burnout_depression\" as alias/child of \"burnout\""
+    },
+    {
+      "a": "self_identity",
+      "b": "identity_crisis",
+      "coFire": 3,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "parent/child — high co-fire indicates overlapping domain"
+    },
+    {
+      "a": "self_identity",
+      "b": "low_self_esteem",
+      "coFire": 4,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "parent/child — high co-fire indicates overlapping domain"
+    },
+    {
+      "a": "identity_crisis",
+      "b": "low_self_esteem",
+      "coFire": 3,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "parent/child — high co-fire indicates overlapping domain"
+    },
+    {
+      "a": "trauma",
+      "b": "complex_trauma",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"complex_trauma\" as alias/child of \"trauma\""
+    },
+    {
+      "a": "trauma",
+      "b": "childhood_trauma",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"childhood_trauma\" as alias/child of \"trauma\""
+    },
+    {
+      "a": "anxiety",
+      "b": "generalized_anxiety",
+      "coFire": 0,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"generalized_anxiety\" as alias/child of \"anxiety\""
+    },
+    {
+      "a": "depression",
+      "b": "low_mood",
+      "coFire": 6,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "parent/child — high co-fire indicates overlapping domain"
+    },
+    {
+      "a": "eating_body",
+      "b": "binge_eating",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"binge_eating\" as alias/child of \"eating_body\""
+    },
+    {
+      "a": "eating_body",
+      "b": "body_image",
+      "coFire": 2,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "keep separate"
+    },
+    {
+      "a": "life_transitions",
+      "b": "major_life_change",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"major_life_change\" as alias/child of \"life_transitions\""
+    },
+    {
+      "a": "family_parenting",
+      "b": "parenting_stress",
+      "coFire": 1,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "sibling suppression — treat \"family_parenting\" as alias/child of \"parenting_stress\""
+    },
+    {
+      "a": "family_parenting",
+      "b": "parent_child_conflict",
+      "coFire": 0,
+      "jaccardAliasOverlapNote": "n/a (alias text not compared here)",
+      "recommendation": "merge — neither is a corpus target"
+    }
+  ],
+  "umbrella": [
+    {
+      "slug": "communication_expression",
+      "timesReturned": 0,
+      "falsePositives": 0,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": true
+    },
+    {
+      "slug": "neurodiversity",
+      "timesReturned": 0,
+      "falsePositives": 0,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": true
+    },
+    {
+      "slug": "somatic",
+      "timesReturned": 0,
+      "falsePositives": 0,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": true
+    },
+    {
+      "slug": "performance_functioning",
+      "timesReturned": 1,
+      "falsePositives": 1,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": true
+    },
+    {
+      "slug": "emotional_regulation",
+      "timesReturned": 0,
+      "falsePositives": 0,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": true
+    },
+    {
+      "slug": "family_parenting",
+      "timesReturned": 1,
+      "falsePositives": 1,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": true
+    },
+    {
+      "slug": "burnout_depression",
+      "timesReturned": 5,
+      "falsePositives": 5,
+      "expectedTotal": 0,
+      "profileOnlyCandidate": false
+    }
+  ],
+  "multiDomain": [
+    {
+      "input": "אני בלחץ מהעבודה וגם הזוגיות שלי לא טובה",
+      "expected": [
+        "burnout",
+        "relationships"
+      ],
+      "actual": [
+        "anxiety",
+        "couples_conflict",
+        "relationships"
+      ],
+      "classification": "MAX_MATCHES limitation"
+    },
+    {
+      "input": "אני לא ישן טוב ואני מרגיש חרדה",
+      "expected": [
+        "anxiety"
+      ],
+      "actual": [
+        "anxiety",
+        "social_anxiety",
+        "low_mood"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "יש לי פחד מטיסה וגם בעיות בביטחון עצמי",
+      "expected": [
+        "anxiety",
+        "low_self_esteem"
+      ],
+      "actual": [
+        "relationships",
+        "eating_body",
+        "trust_issues"
+      ],
+      "classification": "MAX_MATCHES limitation"
+    },
+    {
+      "input": "דיכאון וחרדה שמלווים אותי מזה שנים",
+      "expected": [
+        "depression",
+        "anxiety"
+      ],
+      "actual": [
+        "anxiety",
+        "depression",
+        "social_anxiety"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "אחרי טראומה מהצבא יש לי גם התקפי פאניקה",
+      "expected": [
+        "ptsd",
+        "panic"
+      ],
+      "actual": [
+        "panic",
+        "trauma",
+        "ptsd"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "אני שותה יותר מדי בגלל הדיכאון",
+      "expected": [
+        "substance_use",
+        "depression"
+      ],
+      "actual": [
+        "substance_use",
+        "depression",
+        "eating_body"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "בעיות אכילה על רקע דימוי גוף נמוך",
+      "expected": [
+        "eating_body",
+        "body_image"
+      ],
+      "actual": [
+        "body_image",
+        "eating_body",
+        "low_self_esteem"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "אני כועסת על בן הזוג שלי ומתפרצת על הילדים",
+      "expected": [
+        "couples_conflict",
+        "parenting_stress"
+      ],
+      "actual": [
+        "couples_conflict",
+        "anger",
+        "parenting_stress"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "עברתי גירושין ומאז אני בדיכאון עמוק",
+      "expected": [
+        "divorce",
+        "depression"
+      ],
+      "actual": [
+        "divorce",
+        "depression",
+        "burnout_depression"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "אבל על אמא שנפטרה ובדידות קשה",
+      "expected": [
+        "grief_loss",
+        "loneliness"
+      ],
+      "actual": [
+        "loneliness",
+        "grief_loss",
+        "breakup"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "OCD וחרדה שמשתקים אותי בעבודה",
+      "expected": [
+        "ocd_compulsions",
+        "anxiety"
+      ],
+      "actual": [
+        "anxiety",
+        "social_anxiety",
+        "panic"
+      ],
+      "classification": "MAX_MATCHES limitation"
+    },
+    {
+      "input": "בעיות אינטימיות בזוגיות ופחד מקרבה",
+      "expected": [
+        "intimacy_issues",
+        "relationships"
+      ],
+      "actual": [
+        "intimacy_issues",
+        "relationships",
+        "couples_conflict"
+      ],
+      "classification": "pass"
+    },
+    {
+      "input": "שחיקה בעבודה ומחשבות אובדניות",
+      "expected": [
+        "burnout",
+        "depression"
+      ],
+      "actual": [
+        "burnout",
+        "loss",
+        "grief_loss"
+      ],
+      "classification": "MAX_MATCHES limitation"
+    },
+    {
+      "input": "התמכרות לסמים אחרי טראומה בילדות",
+      "expected": [
+        "addiction",
+        "childhood_trauma"
+      ],
+      "actual": [
+        "substance_use",
+        "trauma",
+        "childhood_trauma"
+      ],
+      "classification": "MAX_MATCHES limitation"
+    },
+    {
+      "input": "בעיות זוגיות אחרי בגידה, אני לא מצליחה לסמוך יותר",
+      "expected": [
+        "couples_conflict",
+        "trust_issues"
+      ],
+      "actual": [
+        "trust_issues",
+        "relationships",
+        "couples_conflict"
+      ],
+      "classification": "pass"
+    }
+  ]
+}
