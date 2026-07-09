@@ -296,6 +296,36 @@ export type Database = {
           },
         ]
       }
+      professions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name_en: string | null
+          name_he: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_en?: string | null
+          name_he: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_en?: string | null
+          name_he?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       query_classifications: {
         Row: {
           created_at: string
@@ -374,6 +404,33 @@ export type Database = {
         }
         Relationships: []
       }
+      therapist_accounts: {
+        Row: {
+          account_status: Database["public"]["Enums"]["therapist_account_status"]
+          auth_user_id: string
+          created_at: string
+          id: string
+          onboarding_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_status?: Database["public"]["Enums"]["therapist_account_status"]
+          auth_user_id: string
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_status?: Database["public"]["Enums"]["therapist_account_status"]
+          auth_user_id?: string
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       therapist_languages: {
         Row: {
           id: string
@@ -400,6 +457,104 @@ export type Database = {
           },
           {
             foreignKeyName: "therapist_languages_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapist_locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_primary: boolean
+          label: string | null
+          latitude: number | null
+          location_type: Database["public"]["Enums"]["location_type"]
+          longitude: number | null
+          notes: string | null
+          postal_code: string | null
+          region: string | null
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          label?: string | null
+          latitude?: number | null
+          location_type?: Database["public"]["Enums"]["location_type"]
+          longitude?: number | null
+          notes?: string | null
+          postal_code?: string | null
+          region?: string | null
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          label?: string | null
+          latitude?: number | null
+          location_type?: Database["public"]["Enums"]["location_type"]
+          longitude?: number | null
+          notes?: string | null
+          postal_code?: string | null
+          region?: string | null
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_locations_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapist_modalities: {
+        Row: {
+          created_at: string
+          modality_id: string
+          therapist_id: string
+        }
+        Insert: {
+          created_at?: string
+          modality_id: string
+          therapist_id: string
+        }
+        Update: {
+          created_at?: string
+          modality_id?: string
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_modalities_modality_id_fkey"
+            columns: ["modality_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_modalities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_modalities_therapist_id_fkey"
             columns: ["therapist_id"]
             isOneToOne: false
             referencedRelation: "therapists"
@@ -476,6 +631,42 @@ export type Database = {
           },
         ]
       }
+      therapist_professions: {
+        Row: {
+          created_at: string
+          is_primary: boolean
+          profession_id: string
+          therapist_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_primary?: boolean
+          profession_id: string
+          therapist_id: string
+        }
+        Update: {
+          created_at?: string
+          is_primary?: boolean
+          profession_id?: string
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_professions_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_professions_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapists: {
         Row: {
           bio_raw: string | null
@@ -491,6 +682,7 @@ export type Database = {
           latitude: number | null
           license_number: string | null
           longitude: number | null
+          owner_account_id: string | null
           phone: string | null
           preferred_contact_channel: Database["public"]["Enums"]["contact_channel"]
           professional_title: string
@@ -516,6 +708,7 @@ export type Database = {
           latitude?: number | null
           license_number?: string | null
           longitude?: number | null
+          owner_account_id?: string | null
           phone?: string | null
           preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
           professional_title: string
@@ -541,6 +734,7 @@ export type Database = {
           latitude?: number | null
           license_number?: string | null
           longitude?: number | null
+          owner_account_id?: string | null
           phone?: string | null
           preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
           professional_title?: string
@@ -551,6 +745,47 @@ export type Database = {
           slug?: string
           verified?: boolean
           years_experience?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapists_owner_account_id_fkey"
+            columns: ["owner_account_id"]
+            isOneToOne: false
+            referencedRelation: "therapist_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treatment_modalities: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name_en: string | null
+          name_he: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name_en?: string | null
+          name_he: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name_en?: string | null
+          name_he?: string
+          slug?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -577,6 +812,8 @@ export type Database = {
     }
     Enums: {
       contact_channel: "whatsapp" | "sms" | "email"
+      location_type: "clinic" | "home_visit" | "online" | "hospital" | "other"
+      therapist_account_status: "pending" | "active" | "claimed" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -705,6 +942,8 @@ export const Constants = {
   public: {
     Enums: {
       contact_channel: ["whatsapp", "sms", "email"],
+      location_type: ["clinic", "home_visit", "online", "hospital", "other"],
+      therapist_account_status: ["pending", "active", "claimed", "suspended"],
     },
   },
 } as const
