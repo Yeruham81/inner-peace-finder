@@ -7,11 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AnalyticsDebugPanel } from "@/components/analytics-debug-panel";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -148,6 +149,17 @@ function RootComponent() {
 }
 
 function SiteHeader() {
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setSignedIn(!!session);
+      }
+    });
+    return () => { sub.subscription.unsubscribe(); };
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -179,6 +191,22 @@ function SiteHeader() {
           >
             חיפוש מטפלים
           </Link>
+          {signedIn ? (
+            <Link
+              to="/account"
+              className="rounded-md px-3 py-2 font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              החשבון שלי
+            </Link>
+          ) : (
+            <Link
+              to="/auth"
+              search={{ mode: "signin" as const }}
+              className="rounded-md px-3 py-2 font-medium text-brand transition-colors hover:bg-secondary"
+            >
+              כניסת מטפלים
+            </Link>
+          )}
         </nav>
       </div>
     </header>
