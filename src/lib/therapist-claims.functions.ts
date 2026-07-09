@@ -75,7 +75,7 @@ export const submitClaimRequest = createServerFn({ method: "POST" })
         therapist_id: data.therapistId,
         requester_account_id: accountId,
         verification_method: data.verificationMethod ?? null,
-        verification_data: data.verificationData ?? {},
+        verification_data: (data.verificationData ?? {}) as never,
       })
       .select("*")
       .single();
