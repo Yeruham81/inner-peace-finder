@@ -1,0 +1,67 @@
+{
+  "classification": {
+    "total": 94,
+    "passed": 86,
+    "top1": 73,
+    "top3": 83,
+    "top5": 83,
+    "mrr": 0.8574074074074075,
+    "avgCand": 2.702127659574468,
+    "candDistribution": {
+      "0": 0,
+      "1": 8,
+      "2": 12,
+      "3": 74
+    },
+    "confDistribution": {
+      "0.00-0.40": 3,
+      "0.40-0.55": 14,
+      "0.55-0.70": 33,
+      "0.70-0.85": 44,
+      "0.85-1.00": 0
+    },
+    "byCategory": {
+      "direct": {
+        "total": 15,
+        "pass": 15,
+        "top1": 15,
+        "top3": 15
+      },
+      "natural_language": {
+        "total": 25,
+        "pass": 24,
+        "top1": 22,
+        "top3": 24
+      },
+      "ambiguous": {
+        "total": 12,
+        "pass": 11,
+        "top1": 4,
+        "top3": 7
+      },
+      "multiple_domains": {
+        "total": 15,
+        "pass": 10,
+        "top1": 6,
+        "top3": 11
+      },
+      "slang": {
+        "total": 15,
+        "pass": 15,
+        "top1": 15,
+        "top3": 15
+      },
+      "typos": {
+        "total": 12,
+        "pass": 11,
+        "top1": 11,
+        "top3": 11
+      }
+    }
+  },
+  "profile": {
+    "total": 18,
+    "passed": 15,
+    "avgExtracted": 9.222222222222221
+  }
+}
