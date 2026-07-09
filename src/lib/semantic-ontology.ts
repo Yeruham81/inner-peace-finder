@@ -97,22 +97,23 @@ export const PROFILE_ONLY_SLUGS: ReadonlySet<string> = new Set([
  * class it was created to suppress (see 17C.4A §1 precision analysis).
  */
 export const BLOCKED_CLASSIFY_PHRASES: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({
-  low_mood: new Set([
-    "מרגיש רע",      // fires on any negative sentence
-    "מרגישה רע",     // fires on any negative sentence
-    "לא במיטבי",     // over-broad affective term
-  ]),
+  // low_mood: intentionally NOT blocked. Its aliases look generic in
+  // isolation but the corpus shows low_mood requires them for recall
+  // (e.g. "אני מרגיש רע" → low_mood). FPs on low_mood are better
+  // handled by the depression → low_mood parent suppression already
+  // in PARENT_OF (semantic-engine.ts).
   identity_crisis: new Set([
     "אני מחפש את עצמי",   // life-transition phrasing → over-fires
     "אני מחפשת את עצמי",
   ]),
   loneliness: new Set([
-    "אין לי חברים",       // also matches social_belonging aliases
-    "אין לי עם מי לדבר",  // over-broad
+    // "אין לי חברים" / "אין לי עם מי לדבר" left in place — they carry
+    // real loneliness signal in the corpus and only harm precision when
+    // the query is actually about social_belonging (which is now
+    // profile-only and no longer competes at classify time).
   ]),
   social_anxiety: new Set([
     "פחד מאנשים",         // fires on generic "afraid of people"
-    "בושה חברתית",        // fires on any social embarrassment
   ]),
   psychosomatic: new Set([
     "כאב ראש מלחץ",       // short overlap with stress/burnout queries
