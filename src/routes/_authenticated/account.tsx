@@ -69,8 +69,19 @@ function AccountPage() {
         </div>
 
         <div className="mt-8 rounded-lg border border-dashed border-border bg-surface p-4 text-sm text-muted-foreground">
-          עורך הפרופיל, השלמת האונבורדינג, וטופס איסוף הפרופיל של המטפל יגיעו בשלבים הבאים
-          (P2 – שיוך פרופילים, P3 – עורך פרופיל).
+          {account?.owned_therapist_id ? (
+            <span>הפרופיל שלך משויך. עורך הפרופיל יגיע ב-P3.</span>
+          ) : (
+            <>
+              <p>עדיין לא שויך פרופיל מטפל לחשבון. אם קיים פרופיל שלך בפלטפורמה, ניתן לחפש ולבקש שיוך.</p>
+              <Link
+                to="/claim"
+                className="mt-2 inline-block rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:border-brand hover:bg-brand/5"
+              >
+                חיפוש ושיוך פרופיל
+              </Link>
+            </>
+          )}
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">

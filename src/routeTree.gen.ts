@@ -17,6 +17,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
 import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
+import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -58,6 +59,11 @@ const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
   path: '/problems/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedClaimRoute = AuthenticatedClaimRouteImport.update({
+  id: '/claim',
+  path: '/claim',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account': typeof AuthenticatedAccountRoute
+  '/claim': typeof AuthenticatedClaimRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
 }
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account': typeof AuthenticatedAccountRoute
+  '/claim': typeof AuthenticatedClaimRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
+  '/_authenticated/claim': typeof AuthenticatedClaimRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
 }
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sitemap.xml'
     | '/account'
+    | '/claim'
     | '/problems/$slug'
     | '/therapists/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sitemap.xml'
     | '/account'
+    | '/claim'
     | '/problems/$slug'
     | '/therapists/$slug'
   id:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sitemap.xml'
     | '/_authenticated/account'
+    | '/_authenticated/claim'
     | '/problems/$slug'
     | '/therapists/$slug'
   fileRoutesById: FileRoutesById
@@ -199,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProblemsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/claim': {
+      id: '/_authenticated/claim'
+      path: '/claim'
+      fullPath: '/claim'
+      preLoaderRoute: typeof AuthenticatedClaimRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/account': {
       id: '/_authenticated/account'
       path: '/account'
@@ -211,10 +230,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
+  AuthenticatedClaimRoute: typeof AuthenticatedClaimRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
+  AuthenticatedClaimRoute: AuthenticatedClaimRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
