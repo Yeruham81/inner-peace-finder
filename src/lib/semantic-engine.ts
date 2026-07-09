@@ -32,6 +32,12 @@ import {
   parseStoredProfile,
   type SemanticProfileEntry,
 } from "./therapist-semantic-profile";
+import {
+  DEPRECATED_SLUGS,
+  PROFILE_ONLY_SLUGS,
+  buildParentOf,
+  isBlockedForClassify,
+} from "./semantic-ontology";
 
 export type { SemanticProfileEntry };
 
@@ -99,6 +105,13 @@ const PARENT_OF: Record<string, string> = {
   body_image: "eating_body",
   low_mood: "depression",
 };
+
+/**
+ * Phase 17C.4B: combined child → parent map. The engine's own PARENT_OF
+ * stays intact for readability; ontology-driven additions are merged here
+ * via `buildParentOf` so `applyParentSuppression` always sees one table.
+ */
+const PARENT_OF_EFFECTIVE = buildParentOf(PARENT_OF);
 
 /**
  * If a child ranks above its parent AND the parent's raw score is below
@@ -297,6 +310,69 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
   return byId;
 }
 
+/**
+ * Phase 17C.4B — classification-only evidence collection.
+ *
+ * Differs from `collectEvidence` on two axes, both driven by the ontology
+ * migration layer (never destructive to the DB):
+ *
+ *   1. Applies `BLOCKED_CLASSIFY_PHRASES` to skip specific aliases /
+ *      intents that produce documented false positives at classify time.
+ *      The rows remain fully available to `extractProfile()`.
+ *
+ *   2. Applies `DEPRECATED_SLUGS`: evidence collected against a deprecated
+ *      slug is redirected into the canonical replacement slug's bucket
+ *      (e.g. `burnout_depression` → `burnout`). The replacement slug's
+ *      own evidence is then aggregated normally.
+ *
+ * Therapist profile extraction continues to use `collectEvidence` via
+ * `scoreAgainstVocabularyLegacy` and is intentionally not affected.
+ */
+function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evidence[]> {
+  const byId = new Map<string, Evidence[]>();
+  const nQuery = lightNormalizeHebrew(text);
+  const qTokenSet = new Set(tokenizeHebrew(text));
+  const resolveId = (rawId: string | number): string => {
+    const key = String(rawId);
+    const slug = vocab.slugById.get(key);
+    if (!slug) return key;
+    const replacement = DEPRECATED_SLUGS[slug];
+    if (!replacement) return key;
+    const mapped = vocab.idBySlug.get(replacement);
+    return mapped ?? key;
+  };
+  const push = (rawId: string | number, ev: Evidence) => {
+    if (ev.quality < 0.05) return;
+    const key = resolveId(rawId);
+    const arr = byId.get(key) ?? [];
+    arr.push(ev);
+    byId.set(key, arr);
+  };
+  vocab.problems.forEach((p) => {
+    if (p.name && matchesText(p.name, text)) {
+      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+      push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
+    }
+  });
+  vocab.aliases.forEach((a) => {
+    if (!a.alias || !matchesText(a.alias, text)) return;
+    const srcSlug = vocab.slugById.get(String(a.problem_id));
+    if (srcSlug && isBlockedForClassify(srcSlug, a.alias)) return;
+    const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+    push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
+  });
+  vocab.intents.forEach((i) => {
+    if (!i.intent_text || !i.problem_slug) return;
+    if (isBlockedForClassify(i.problem_slug, i.intent_text)) return;
+    const pid = vocab.idBySlug.get(i.problem_slug);
+    if (pid && matchesText(i.intent_text, text)) {
+      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet);
+      push(pid, { kind: "intent", base: WEIGHT_INTENT, phrase: i.intent_text, ...q });
+    }
+  });
+  return byId;
+}
+
 /** Specificity + quality weighted value of one evidence. */
 function evidenceValue(ev: Evidence): number {
   const specificity = 1 + SPECIFICITY_SLOPE * Math.max(0, ev.tokens - 1);
@@ -361,7 +437,7 @@ function applyParentSuppression(
   const drop = new Set<string>();
   for (let i = 0; i < ranked.length; i++) {
     const r = ranked[i];
-    const parent = PARENT_OF[r.slug];
+    const parent = PARENT_OF_EFFECTIVE[r.slug];
     if (!parent) continue;
     const p = bySlug.get(parent);
     if (!p) continue;
@@ -395,7 +471,7 @@ async function classify(
   if (q.length < 2) return [];
 
   const vocab = await fetchVocabulary(sb);
-  const evidence = collectEvidence(q, vocab);
+  const evidence = collectEvidenceForClassify(q, vocab);
   if (evidence.size === 0) return [];
 
   const queryTokens = Math.max(1, countTokens(q));
@@ -403,6 +479,10 @@ async function classify(
   for (const [id, list] of evidence) {
     const slug = vocab.slugById.get(id);
     if (!slug) continue;
+    // Phase 17C.4B: umbrella / trait domains are excluded from classify
+    // output. They remain available for extractProfile() (therapist
+    // tagging) — see semantic-ontology.PROFILE_ONLY_SLUGS.
+    if (PROFILE_ONLY_SLUGS.has(slug)) continue;
     const raw = aggregateScore(list);
     // Coverage: fraction of query tokens spanned by this slug's evidences
     // (approximate — sum of matched-phrase tokens, capped at queryTokens).
