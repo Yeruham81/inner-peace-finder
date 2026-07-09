@@ -7,6 +7,7 @@ import {
   listFilterOptions,
   classifyAndSearch,
 } from "@/lib/therapists.functions";
+import { searchTherapistEntities } from "@/lib/entity-search.functions";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
@@ -40,6 +41,16 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   });
 }
 
+function entityQuery(q: string) {
+  return queryOptions({
+    queryKey: ["entity-search", q],
+    queryFn: () =>
+      q.trim().length >= 2
+        ? searchTherapistEntities({ data: { query: q.trim(), limit: 4 } })
+        : Promise.resolve([]),
+  });
+}
+
 export const Route = createFileRoute("/search")({
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => search,
@@ -47,6 +58,7 @@ export const Route = createFileRoute("/search")({
     await Promise.all([
       context.queryClient.ensureQueryData(filterOptionsQuery),
       context.queryClient.ensureQueryData(resultsQuery(deps)),
+      context.queryClient.ensureQueryData(entityQuery(deps.q)),
     ]);
   },
   head: () => ({
@@ -73,6 +85,7 @@ function SearchPage() {
   const navigate = useNavigate();
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
   const { data: pipeline } = useSuspenseQuery(resultsQuery(search));
+  const { data: entityMatches } = useSuspenseQuery(entityQuery(search.q));
   const isClarification = pipeline.mode === "clarification";
   const results = isClarification ? [] : pipeline.therapists;
 
@@ -127,6 +140,31 @@ function SearchPage() {
           </span>
         )}
       </div>
+
+      {entityMatches && entityMatches.length > 0 && (
+        <section
+          aria-label="התאמות לפי שם"
+          className="mt-4 rounded-2xl border border-border bg-surface p-4"
+        >
+          <p className="text-sm font-semibold text-foreground">התאמות לפי שם או מקצוע</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {entityMatches.map((m) => (
+              <li key={m.id}>
+                <Link
+                  to="/therapists/$slug"
+                  params={{ slug: m.slug }}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground hover:border-brand hover:bg-brand/5"
+                >
+                  <span className="font-medium">{m.full_name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {m.professional_title}{m.city ? ` · ${m.city}` : ""}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {isClarification ? (
         <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-6 shadow-soft">
