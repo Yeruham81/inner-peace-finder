@@ -431,6 +431,120 @@ export type Database = {
         }
         Relationships: []
       }
+      therapist_claim_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requester_account_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["claim_request_status"]
+          therapist_id: string
+          updated_at: string
+          verification_data: Json
+          verification_method: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_account_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["claim_request_status"]
+          therapist_id: string
+          updated_at?: string
+          verification_data?: Json
+          verification_method?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_account_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["claim_request_status"]
+          therapist_id?: string
+          updated_at?: string
+          verification_data?: Json
+          verification_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_claim_requests_requester_account_id_fkey"
+            columns: ["requester_account_id"]
+            isOneToOne: false
+            referencedRelation: "therapist_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_claim_requests_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapist_credentials: {
+        Row: {
+          created_at: string
+          credential_type: string
+          document_url: string | null
+          id: string
+          institution: string | null
+          license_number: string | null
+          profession_id: string | null
+          therapist_id: string
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["credential_verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          credential_type: string
+          document_url?: string | null
+          id?: string
+          institution?: string | null
+          license_number?: string | null
+          profession_id?: string | null
+          therapist_id: string
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["credential_verification_status"]
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          credential_type?: string
+          document_url?: string | null
+          id?: string
+          institution?: string | null
+          license_number?: string | null
+          profession_id?: string | null
+          therapist_id?: string
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["credential_verification_status"]
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_credentials_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_credentials_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapist_languages: {
         Row: {
           id: string
@@ -794,6 +908,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_therapist_claim: {
+        Args: { _claim_id: string; _reviewer: string }
+        Returns: {
+          created_at: string
+          id: string
+          requester_account_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["claim_request_status"]
+          therapist_id: string
+          updated_at: string
+          verification_data: Json
+          verification_method: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "therapist_claim_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       record_cta_click: {
         Args: {
           _cta_id?: string
@@ -811,7 +946,14 @@ export type Database = {
       }
     }
     Enums: {
+      claim_request_status: "pending" | "approved" | "rejected" | "cancelled"
       contact_channel: "whatsapp" | "sms" | "email"
+      credential_verification_status:
+        | "unverified"
+        | "pending_review"
+        | "verified"
+        | "rejected"
+        | "expired"
       location_type: "clinic" | "home_visit" | "online" | "hospital" | "other"
       therapist_account_status: "pending" | "active" | "claimed" | "suspended"
     }
@@ -941,7 +1083,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      claim_request_status: ["pending", "approved", "rejected", "cancelled"],
       contact_channel: ["whatsapp", "sms", "email"],
+      credential_verification_status: [
+        "unverified",
+        "pending_review",
+        "verified",
+        "rejected",
+        "expired",
+      ],
       location_type: ["clinic", "home_visit", "online", "hospital", "other"],
       therapist_account_status: ["pending", "active", "claimed", "suspended"],
     },
