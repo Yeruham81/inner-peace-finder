@@ -5,7 +5,10 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { searchTherapistEntities, type TherapistEntityMatch } from "@/lib/entity-search.functions";
+import {
+  searchStructuredTherapists,
+  type TherapistStructuredResult,
+} from "@/lib/structured-search.functions";
 import {
   submitClaimRequest,
   cancelClaimRequest,
@@ -26,16 +29,16 @@ export const Route = createFileRoute("/_authenticated/claim")({
 
 function ClaimPage() {
   const queryClient = useQueryClient();
-  const searchFn = useServerFn(searchTherapistEntities);
+  const searchFn = useServerFn(searchStructuredTherapists);
   const listFn = useServerFn(listMyClaimRequests);
   const cancelFn = useServerFn(cancelClaimRequest);
 
   const [q, setQ] = useState("");
   const [submittedQ, setSubmittedQ] = useState("");
-  const [selected, setSelected] = useState<TherapistEntityMatch | null>(null);
+  const [selected, setSelected] = useState<TherapistStructuredResult | null>(null);
 
   const results = useQuery({
-    queryKey: ["entity-search", submittedQ],
+    queryKey: ["structured-search", "therapist", submittedQ],
     queryFn: () => searchFn({ data: { query: submittedQ } }),
     enabled: submittedQ.length >= 2,
   });
@@ -137,7 +140,7 @@ function ClaimDialog({
   onClose,
   onSubmitted,
 }: {
-  therapist: TherapistEntityMatch;
+  therapist: TherapistStructuredResult;
   onClose: () => void;
   onSubmitted: () => void;
 }) {
