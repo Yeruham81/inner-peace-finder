@@ -112,9 +112,7 @@ function scoreText(target: string, ql: string): number {
  * Unified structured-entity search. Callers may restrict to specific
  * entity types via `types`; default is all supported types.
  */
-export const searchStructured = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => Schema.parse(input))
-  .handler(async ({ data }): Promise<StructuredResult[]> => {
+async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<StructuredResult[]> {
     const sb = publicClient();
     const q = data.query.trim();
     if (q.length < 2) return [];
@@ -338,7 +336,11 @@ export const searchStructured = createServerFn({ method: "POST" })
     }
 
     return results;
-  });
+}
+
+export const searchStructured = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => Schema.parse(input))
+  .handler(async ({ data }) => runStructuredSearch(data));
 
 /**
  * Convenience wrapper returning only therapist results, preserving the
@@ -348,8 +350,10 @@ export const searchStructured = createServerFn({ method: "POST" })
 export const searchStructuredTherapists = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Schema.parse(input))
   .handler(async ({ data }): Promise<TherapistStructuredResult[]> => {
-    const all = await searchStructured({
-      data: { query: data.query, limit: data.limit, types: ["therapist"] },
+    const all = await runStructuredSearch({
+      query: data.query,
+      limit: data.limit,
+      types: ["therapist"],
     });
     return all.filter((r): r is TherapistStructuredResult => r.type === "therapist");
   });
