@@ -69,8 +69,17 @@ function AccountPage() {
         </div>
 
         {account?.owned_therapist_id ? (
-          <div className="mt-8 rounded-lg border border-dashed border-border bg-surface p-4 text-sm text-muted-foreground">
-            הפרופיל שלך משויך. עורך הפרופיל יגיע בשלב הבא.
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-foreground">הפרופיל שלי</h2>
+            <Link
+              to="/new-profile"
+              className="mt-3 block rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
+            >
+              <div className="text-base font-semibold text-foreground">עריכת פרופיל</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                עדכנו את פרטי הפרופיל, שמרו טיוטה או פרסמו את הפרופיל.
+              </p>
+            </Link>
           </div>
         ) : (
           <div className="mt-8">
