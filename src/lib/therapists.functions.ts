@@ -325,7 +325,13 @@ export const getTherapistBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
     const sb = publicClient();
-    const { data: t } = await sb.from("therapists").select("*").eq("slug", data.slug).maybeSingle();
+    const { data: t } = await sb
+      .from("therapists")
+      .select("*")
+      .eq("slug", data.slug)
+      .eq("is_active", true)
+      .eq("profile_status", "published")
+      .maybeSingle();
     if (!t) return null;
     const [{ data: tps }, { data: pops }, { data: langs }] = await Promise.all([
       sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
