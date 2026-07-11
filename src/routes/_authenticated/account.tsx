@@ -68,21 +68,35 @@ function AccountPage() {
           )}
         </div>
 
-        <div className="mt-8 rounded-lg border border-dashed border-border bg-surface p-4 text-sm text-muted-foreground">
-          {account?.owned_therapist_id ? (
-            <span>הפרופיל שלך משויך. עורך הפרופיל יגיע ב-P3.</span>
-          ) : (
-            <>
-              <p>עדיין לא שויך פרופיל מטפל לחשבון. אם קיים פרופיל שלך בפלטפורמה, ניתן לחפש ולבקש שיוך.</p>
+        {account?.owned_therapist_id ? (
+          <div className="mt-8 rounded-lg border border-dashed border-border bg-surface p-4 text-sm text-muted-foreground">
+            הפרופיל שלך משויך. עורך הפרופיל יגיע בשלב הבא.
+          </div>
+        ) : (
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-foreground">כיצד תרצו להתחיל?</h2>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
               <Link
                 to="/claim"
-                className="mt-2 inline-block rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:border-brand hover:bg-brand/5"
+                className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
               >
-                חיפוש ושיוך פרופיל
+                <div className="text-base font-semibold text-foreground">שיוך פרופיל מטפל קיים</div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  כבר מופיעים באתר? מצאו את הפרופיל שלכם ובצעו אימות בעלות.
+                </p>
               </Link>
-            </>
-          )}
-        </div>
+              <Link
+                to="/new-profile"
+                className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
+              >
+                <div className="text-base font-semibold text-foreground">יצירת פרופיל מטפל חדש</div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  אין לכם עדיין פרופיל? צרו פרופיל מקצועי חדש והתחילו להופיע באתר.
+                </p>
+              </Link>
+            </div>
+          </div>
+        )}
 
         <p className="mt-6 text-xs text-muted-foreground">
           <Link to="/" className="underline">חזרה לעמוד הבית</Link>
