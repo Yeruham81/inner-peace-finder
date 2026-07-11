@@ -140,7 +140,8 @@ export const searchTherapists = createServerFn({ method: "POST" })
       .select(
         "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active, semantic_profile",
       )
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("profile_status", "published");
     if (candidateIds) {
       if (candidateIds.size === 0) return [] as ScoredTherapist[];
       tq = tq.in("id", Array.from(candidateIds));
