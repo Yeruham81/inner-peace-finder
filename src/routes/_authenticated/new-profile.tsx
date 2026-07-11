@@ -141,7 +141,7 @@ function EditorPage() {
         return;
       }
       setMissing(null);
-      toast.success(publish ? "הפרופיל פורסם בהצלחה" : "השינויים נשמרו בהצלחה");
+      toast.success(publish ? "הפרופיל פורסם בהצלחה" : "הפרופיל נשמר.");
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
     },
@@ -154,6 +154,16 @@ function EditorPage() {
 
   const status = profile.data?.profile_status ?? "draft";
   const isEdit = !!profile.data;
+
+  const hasCity = form.primary_city.trim().length > 0;
+  const publishMissing =
+    form.full_name.trim().length < 2 ||
+    !form.gender ||
+    form.profession_ids.length === 0 ||
+    form.full_description.trim().length < DESCRIPTION_MIN ||
+    !form.email.trim() ||
+    !form.phone.trim() ||
+    (!hasCity && !form.online_available);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -346,7 +356,11 @@ function EditorPage() {
               <Button variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate(false)}>
                 {mutation.isPending ? "שומר…" : "שמור טיוטה"}
               </Button>
-              <Button disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
+              <Button
+                disabled={mutation.isPending || publishMissing}
+                title={publishMissing ? "יש להשלים את כל שדות החובה כדי לפרסם" : undefined}
+                onClick={() => mutation.mutate(true)}
+              >
                 {mutation.isPending ? "מפרסם…" : "פרסם פרופיל"}
               </Button>
             </div>
