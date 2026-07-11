@@ -26,10 +26,10 @@ export type ScoredTherapist = {
   id: string;
   slug: string;
   full_name: string;
-  professional_title: string;
+  professional_title: string | null;
   short_intro: string | null;
   years_experience: number;
-  city: string;
+  city: string | null;
   image_url: string | null;
   verified: boolean;
   score: number;
@@ -140,7 +140,8 @@ export const searchTherapists = createServerFn({ method: "POST" })
       .select(
         "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active, semantic_profile",
       )
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("profile_status", "published");
     if (candidateIds) {
       if (candidateIds.size === 0) return [] as ScoredTherapist[];
       tq = tq.in("id", Array.from(candidateIds));
@@ -294,7 +295,7 @@ export const listFilterOptions = createServerFn({ method: "GET" }).handler(async
     sb.from("languages").select("code, name").order("name"),
   ]);
   const citySet = new Set<string>();
-  cities.data?.forEach((r) => citySet.add(r.city));
+  cities.data?.forEach((r) => { if (r.city) citySet.add(r.city); });
   return {
     cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "he")),
     populations: populations.data ?? [],
@@ -324,7 +325,13 @@ export const getTherapistBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
     const sb = publicClient();
-    const { data: t } = await sb.from("therapists").select("*").eq("slug", data.slug).maybeSingle();
+    const { data: t } = await sb
+      .from("therapists")
+      .select("*")
+      .eq("slug", data.slug)
+      .eq("is_active", true)
+      .eq("profile_status", "published")
+      .maybeSingle();
     if (!t) return null;
     const [{ data: tps }, { data: pops }, { data: langs }] = await Promise.all([
       sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),

@@ -847,12 +847,14 @@ export type Database = {
       therapists: {
         Row: {
           bio_raw: string | null
-          city: string
+          city: string | null
           contact_destination: string | null
           country: string
           created_at: string
+          email: string | null
           full_description: string | null
           full_name: string
+          gender: Database["public"]["Enums"]["therapist_gender"] | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -862,8 +864,9 @@ export type Database = {
           owner_account_id: string | null
           phone: string | null
           preferred_contact_channel: Database["public"]["Enums"]["contact_channel"]
-          professional_title: string
+          professional_title: string | null
           profile_claimed: boolean
+          profile_status: Database["public"]["Enums"]["therapist_profile_status"]
           region: string | null
           semantic_profile: Json
           short_intro: string | null
@@ -874,12 +877,14 @@ export type Database = {
         }
         Insert: {
           bio_raw?: string | null
-          city: string
+          city?: string | null
           contact_destination?: string | null
           country?: string
           created_at?: string
+          email?: string | null
           full_description?: string | null
           full_name: string
+          gender?: Database["public"]["Enums"]["therapist_gender"] | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -889,8 +894,9 @@ export type Database = {
           owner_account_id?: string | null
           phone?: string | null
           preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
-          professional_title: string
+          professional_title?: string | null
           profile_claimed?: boolean
+          profile_status?: Database["public"]["Enums"]["therapist_profile_status"]
           region?: string | null
           semantic_profile?: Json
           short_intro?: string | null
@@ -901,12 +907,14 @@ export type Database = {
         }
         Update: {
           bio_raw?: string | null
-          city?: string
+          city?: string | null
           contact_destination?: string | null
           country?: string
           created_at?: string
+          email?: string | null
           full_description?: string | null
           full_name?: string
+          gender?: Database["public"]["Enums"]["therapist_gender"] | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -916,8 +924,9 @@ export type Database = {
           owner_account_id?: string | null
           phone?: string | null
           preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
-          professional_title?: string
+          professional_title?: string | null
           profile_claimed?: boolean
+          profile_status?: Database["public"]["Enums"]["therapist_profile_status"]
           region?: string | null
           semantic_profile?: Json
           short_intro?: string | null
@@ -1057,6 +1066,8 @@ export type Database = {
         | "expired"
       location_type: "clinic" | "home_visit" | "online" | "hospital" | "other"
       therapist_account_status: "pending" | "active" | "claimed" | "suspended"
+      therapist_gender: "male" | "female" | "unspecified"
+      therapist_profile_status: "draft" | "completed" | "published"
       therapist_visibility: "published" | "hidden_by_owner" | "archived"
     }
     CompositeTypes: {
@@ -1203,6 +1214,8 @@ export const Constants = {
       ],
       location_type: ["clinic", "home_visit", "online", "hospital", "other"],
       therapist_account_status: ["pending", "active", "claimed", "suspended"],
+      therapist_gender: ["male", "female", "unspecified"],
+      therapist_profile_status: ["draft", "completed", "published"],
       therapist_visibility: ["published", "hidden_by_owner", "archived"],
     },
   },

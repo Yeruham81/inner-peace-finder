@@ -45,7 +45,7 @@ export type TherapistStructuredResult = {
   id: string;
   slug: string;
   full_name: string;
-  professional_title: string;
+  professional_title: string | null;
   city: string | null;
   image_url: string | null;
   verified: boolean;
@@ -207,6 +207,8 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
       const { data: byName } = await sb
         .from("therapists")
         .select("id, slug, full_name, professional_title, city, image_url, verified")
+        .eq("is_active", true)
+        .eq("profile_status", "published")
         .ilike("full_name", nameLike)
         .limit(limit * 2);
 
@@ -241,6 +243,8 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
         const { data: byStructured } = await sb
           .from("therapists")
           .select("id, slug, full_name, professional_title, city, image_url, verified")
+          .eq("is_active", true)
+          .eq("profile_status", "published")
           .in("id", Array.from(structuredTherapistIds).slice(0, 40));
         for (const r of byStructured ?? []) {
           let field: TherapistStructuredResult["match_field"] = "profession";

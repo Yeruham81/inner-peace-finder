@@ -37,7 +37,7 @@ export type ClaimableTherapist = {
   id: string;
   slug: string;
   full_name: string;
-  professional_title: string;
+  professional_title: string | null;
   city: string | null;
   image_url: string | null;
   is_owned: boolean;
