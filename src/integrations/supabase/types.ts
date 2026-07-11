@@ -181,6 +181,63 @@ export type Database = {
           },
         ]
       }
+      notification_events: {
+        Row: {
+          attempts: number
+          claim_request_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          payload: Json
+          recipient_account_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          claim_request_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_account_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          claim_request_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_account_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_events_claim_request_id_fkey"
+            columns: ["claim_request_id"]
+            isOneToOne: false
+            referencedRelation: "therapist_claim_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_recipient_account_id_fkey"
+            columns: ["recipient_account_id"]
+            isOneToOne: false
+            referencedRelation: "therapist_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       population_groups: {
         Row: {
           id: string
@@ -435,6 +492,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          note: string | null
+          request_type: Database["public"]["Enums"]["claim_request_type"]
           requester_account_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -447,6 +506,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          note?: string | null
+          request_type?: Database["public"]["Enums"]["claim_request_type"]
           requester_account_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -459,6 +520,8 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          note?: string | null
+          request_type?: Database["public"]["Enums"]["claim_request_type"]
           requester_account_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -806,6 +869,7 @@ export type Database = {
           short_intro: string | null
           slug: string
           verified: boolean
+          visibility: Database["public"]["Enums"]["therapist_visibility"]
           years_experience: number
         }
         Insert: {
@@ -832,6 +896,7 @@ export type Database = {
           short_intro?: string | null
           slug: string
           verified?: boolean
+          visibility?: Database["public"]["Enums"]["therapist_visibility"]
           years_experience?: number
         }
         Update: {
@@ -858,6 +923,7 @@ export type Database = {
           short_intro?: string | null
           slug?: string
           verified?: boolean
+          visibility?: Database["public"]["Enums"]["therapist_visibility"]
           years_experience?: number
         }
         Relationships: [
@@ -913,6 +979,8 @@ export type Database = {
         Returns: {
           created_at: string
           id: string
+          note: string | null
+          request_type: Database["public"]["Enums"]["claim_request_type"]
           requester_account_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -943,6 +1011,33 @@ export type Database = {
           billable: boolean
           click_id: string
         }[]
+      }
+      set_claim_request_status: {
+        Args: {
+          _claim_id: string
+          _new_status: Database["public"]["Enums"]["claim_request_status"]
+          _reviewer: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          note: string | null
+          request_type: Database["public"]["Enums"]["claim_request_type"]
+          requester_account_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["claim_request_status"]
+          therapist_id: string
+          updated_at: string
+          verification_data: Json
+          verification_method: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "therapist_claim_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
