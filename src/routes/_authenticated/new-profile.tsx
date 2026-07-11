@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
@@ -201,35 +202,11 @@ function EditorPage() {
               </div>
             </Field>
             <Field label="קישור לתמונה">
-              <Input
-                dir="ltr"
-                placeholder="https://…"
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              />
-              {!form.image_url && form.gender && (
-                <p className="mt-1 text-xs text-muted-foreground">אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.</p>
-              )}
-            </Field>
-          </Section>
-
-          <Section title="פרטי קשר">
-            <Field label="כתובת אימייל *">
-              <Input
-                dir="ltr"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                maxLength={160}
-              />
-            </Field>
-            <Field label="מספר טלפון *">
-              <Input
-                dir="ltr"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                maxLength={40}
+              <TherapistImageUpload
+                therapistId={profile.data?.id ?? null}
+                value={form.image_url || null}
+                onChange={(url) => setForm({ ...form, image_url: url ?? "" })}
+                gender={form.gender}
               />
             </Field>
           </Section>
@@ -341,6 +318,27 @@ function EditorPage() {
               זמינות לטיפול אונליין
             </label>
             <p className="mt-1 text-xs text-muted-foreground">יש למלא מיקום פיזי, או לסמן זמינות אונליין, או שניהם.</p>
+          </Section>
+
+          <Section title="פרטי קשר">
+            <Field label="כתובת אימייל *">
+              <Input
+                dir="ltr"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                maxLength={160}
+              />
+            </Field>
+            <Field label="מספר טלפון *">
+              <Input
+                dir="ltr"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                maxLength={40}
+              />
+            </Field>
           </Section>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">

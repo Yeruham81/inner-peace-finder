@@ -179,8 +179,10 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     if (types.has("location") || types.has("therapist")) {
       const { data: locs } = await sb
         .from("therapist_locations")
-        .select("therapist_id, city, region")
+        .select("therapist_id, city, region, therapists!inner(id, is_active, profile_status)")
         .eq("is_active", true)
+        .eq("therapists.is_active", true)
+        .eq("therapists.profile_status", "published")
         .ilike("city", like)
         .limit(200);
       const cityAgg = new Map<string, { region: string | null; therapists: Set<string> }>();
@@ -288,8 +290,13 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
           .map(async (p) => {
             const { count } = await sb
               .from("therapist_professions")
-              .select("therapist_id", { head: true, count: "exact" })
-              .eq("profession_id", p.id);
+              .select("therapist_id, therapists!inner(id, is_active, profile_status)", {
+                head: true,
+                count: "exact",
+              })
+              .eq("profession_id", p.id)
+              .eq("therapists.is_active", true)
+              .eq("therapists.profile_status", "published");
             const r: ProfessionStructuredResult = {
               type: "profession",
               id: p.id,
@@ -312,8 +319,13 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
           .map(async (m) => {
             const { count } = await sb
               .from("therapist_modalities")
-              .select("therapist_id", { head: true, count: "exact" })
-              .eq("modality_id", m.id);
+              .select("therapist_id, therapists!inner(id, is_active, profile_status)", {
+                head: true,
+                count: "exact",
+              })
+              .eq("modality_id", m.id)
+              .eq("therapists.is_active", true)
+              .eq("therapists.profile_status", "published");
             const r: ModalityStructuredResult = {
               type: "modality",
               id: m.id,
