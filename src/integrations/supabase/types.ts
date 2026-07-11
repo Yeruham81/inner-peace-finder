@@ -946,7 +946,13 @@ export type Database = {
       }
     }
     Enums: {
-      claim_request_status: "pending" | "approved" | "rejected" | "cancelled"
+      claim_request_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "needs_information"
+      claim_request_type: "claim_profile" | "remove_profile"
       contact_channel: "whatsapp" | "sms" | "email"
       credential_verification_status:
         | "unverified"
@@ -956,6 +962,7 @@ export type Database = {
         | "expired"
       location_type: "clinic" | "home_visit" | "online" | "hospital" | "other"
       therapist_account_status: "pending" | "active" | "claimed" | "suspended"
+      therapist_visibility: "published" | "hidden_by_owner" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1083,7 +1090,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      claim_request_status: ["pending", "approved", "rejected", "cancelled"],
+      claim_request_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "needs_information",
+      ],
+      claim_request_type: ["claim_profile", "remove_profile"],
       contact_channel: ["whatsapp", "sms", "email"],
       credential_verification_status: [
         "unverified",
@@ -1094,6 +1108,7 @@ export const Constants = {
       ],
       location_type: ["clinic", "home_visit", "online", "hospital", "other"],
       therapist_account_status: ["pending", "active", "claimed", "suspended"],
+      therapist_visibility: ["published", "hidden_by_owner", "archived"],
     },
   },
 } as const
