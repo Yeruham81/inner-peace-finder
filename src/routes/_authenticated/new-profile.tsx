@@ -5,13 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   DESCRIPTION_MAX,
@@ -26,10 +20,7 @@ import {
 
 export const Route = createFileRoute("/_authenticated/new-profile")({
   head: () => ({
-    meta: [
-      { title: "עורך פרופיל מטפל | Tipulinks" },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
+    meta: [{ title: "עורך פרופיל מטפל | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
   }),
   component: EditorPage,
 });
@@ -203,17 +194,13 @@ function EditorPage() {
                     { v: "unspecified", l: "לא צוין" },
                   ] as { v: Gender; l: string }[]
                 ).map((o) => (
-                  <Chip
-                    key={o.v}
-                    active={form.gender === o.v}
-                    onClick={() => setForm({ ...form, gender: o.v })}
-                  >
+                  <Chip key={o.v} active={form.gender === o.v} onClick={() => setForm({ ...form, gender: o.v })}>
                     {o.l}
                   </Chip>
                 ))}
               </div>
             </Field>
-            <Field label="קישור לתמונה (אופציונלי)">
+            <Field label="קישור לתמונה">
               <Input
                 dir="ltr"
                 placeholder="https://…"
@@ -221,9 +208,7 @@ function EditorPage() {
                 onChange={(e) => setForm({ ...form, image_url: e.target.value })}
               />
               {!form.image_url && form.gender && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.</p>
               )}
             </Field>
           </Section>
@@ -250,7 +235,7 @@ function EditorPage() {
           </Section>
 
           <Section title="מידע מקצועי">
-            <Field label="כותרת מקצועית (אופציונלי)">
+            <Field label="כותרת מקצועית">
               <Input
                 value={form.professional_title}
                 onChange={(e) => setForm({ ...form, professional_title: e.target.value })}
@@ -266,7 +251,7 @@ function EditorPage() {
               />
               <p className="mt-1 text-xs text-muted-foreground">בחרו לפחות מקצוע אחד.</p>
             </Field>
-            <Field label="שנות ניסיון (אופציונלי)">
+            <Field label="שנות ניסיון">
               <Input
                 type="number"
                 inputMode="numeric"
@@ -279,10 +264,7 @@ function EditorPage() {
             </Field>
           </Section>
 
-          <Section
-            title="תיאור מקצועי *"
-            action={<DescriptionHelpDialog />}
-          >
+          <Section title="תיאור מקצועי *" action={<DescriptionHelpDialog />}>
             <textarea
               value={form.full_description}
               onChange={(e) => setForm({ ...form, full_description: e.target.value })}
@@ -303,7 +285,7 @@ function EditorPage() {
             </div>
           </Section>
 
-          <Section title="שיטות טיפול (אופציונלי)">
+          <Section title="שיטות טיפול">
             <MultiChips
               items={(options.data?.modalities ?? []).map((m) => ({ id: m.id, label: m.name_he }))}
               selected={form.modality_ids}
@@ -311,7 +293,7 @@ function EditorPage() {
             />
           </Section>
 
-          <Section title="שפות טיפול (אופציונלי)">
+          <Section title="שפות טיפול">
             <MultiChips
               items={(options.data?.languages ?? []).map((l) => ({ id: l.id, label: l.name }))}
               selected={form.language_ids}
@@ -319,7 +301,7 @@ function EditorPage() {
             />
           </Section>
 
-          <Section title="אוכלוסיות טיפול (אופציונלי)">
+          <Section title="אוכלוסיות טיפול">
             <MultiChips
               items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
               selected={form.population_ids}
@@ -336,14 +318,14 @@ function EditorPage() {
                 maxLength={80}
               />
             </Field>
-            <Field label="אזור (אופציונלי)">
+            <Field label="אזור">
               <Input
                 value={form.primary_region}
                 onChange={(e) => setForm({ ...form, primary_region: e.target.value })}
                 maxLength={80}
               />
             </Field>
-            <Field label="כתובת מלאה (אופציונלי)">
+            <Field label="כתובת מלאה">
               <Input
                 value={form.primary_address}
                 onChange={(e) => setForm({ ...form, primary_address: e.target.value })}
@@ -358,24 +340,15 @@ function EditorPage() {
               />
               זמינות לטיפול אונליין
             </label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              יש למלא מיקום פיזי, או לסמן זמינות אונליין, או שניהם.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">יש למלא מיקום פיזי, או לסמן זמינות אונליין, או שניהם.</p>
           </Section>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                disabled={mutation.isPending}
-                onClick={() => mutation.mutate(false)}
-              >
+              <Button variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate(false)}>
                 {mutation.isPending ? "שומר…" : "שמור טיוטה"}
               </Button>
-              <Button
-                disabled={mutation.isPending}
-                onClick={() => mutation.mutate(true)}
-              >
+              <Button disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
                 {mutation.isPending ? "מפרסם…" : "פרסם פרופיל"}
               </Button>
             </div>
@@ -389,9 +362,7 @@ function EditorPage() {
   );
 }
 
-function Section({
-  title, action, children,
-}: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="grid gap-3">
       <div className="flex items-center justify-between">
@@ -412,9 +383,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Chip({
-  active, onClick, children,
-}: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -431,7 +400,9 @@ function Chip({
 }
 
 function MultiChips({
-  items, selected, onChange,
+  items,
+  selected,
+  onChange,
 }: {
   items: { id: string; label: string }[];
   selected: string[];
@@ -446,9 +417,7 @@ function MultiChips({
           <Chip
             key={it.id}
             active={active}
-            onClick={() =>
-              onChange(active ? selected.filter((x) => x !== it.id) : [...selected, it.id])
-            }
+            onClick={() => onChange(active ? selected.filter((x) => x !== it.id) : [...selected, it.id])}
           >
             {it.label}
           </Chip>
@@ -464,11 +433,7 @@ function StatusBadge({ status }: { status: "draft" | "completed" | "published" }
     completed: { l: "מוכן לפרסום", c: "bg-amber-100 text-amber-800" },
     published: { l: "מפורסם", c: "bg-emerald-100 text-emerald-800" },
   } as const;
-  return (
-    <span className={`rounded-full px-3 py-1 text-xs font-medium ${map[status].c}`}>
-      {map[status].l}
-    </span>
-  );
+  return <span className={`rounded-full px-3 py-1 text-xs font-medium ${map[status].c}`}>{map[status].l}</span>;
 }
 
 function DescriptionHelpDialog() {
@@ -498,9 +463,7 @@ function DescriptionHelpDialog() {
           <p className="text-muted-foreground">
             כתבו באופן טבעי וברור, כך שאנשים יוכלו להבין האם אתם המטפל המתאים עבורם.
           </p>
-          <p className="text-muted-foreground">
-            הימנעו מרשימות ארוכות של מילות מפתח או משפטים כלליים בלי פירוט.
-          </p>
+          <p className="text-muted-foreground">הימנעו מרשימות ארוכות של מילות מפתח או משפטים כלליים בלי פירוט.</p>
         </div>
       </DialogContent>
     </Dialog>
