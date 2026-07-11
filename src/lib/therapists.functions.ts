@@ -26,10 +26,10 @@ export type ScoredTherapist = {
   id: string;
   slug: string;
   full_name: string;
-  professional_title: string;
+  professional_title: string | null;
   short_intro: string | null;
   years_experience: number;
-  city: string;
+  city: string | null;
   image_url: string | null;
   verified: boolean;
   score: number;
@@ -294,7 +294,7 @@ export const listFilterOptions = createServerFn({ method: "GET" }).handler(async
     sb.from("languages").select("code, name").order("name"),
   ]);
   const citySet = new Set<string>();
-  cities.data?.forEach((r) => citySet.add(r.city));
+  cities.data?.forEach((r) => { if (r.city) citySet.add(r.city); });
   return {
     cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "he")),
     populations: populations.data ?? [],
