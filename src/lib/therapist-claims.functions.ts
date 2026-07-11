@@ -2,17 +2,35 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type ClaimStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type ClaimStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "needs_information";
+
+export type ClaimRequestType = "claim_profile" | "remove_profile";
+export type VerificationMethod =
+  | "license_number"
+  | "professional_email"
+  | "manual_review";
 
 export type ClaimRequest = {
   id: string;
   therapist_id: string;
   requester_account_id: string;
   status: ClaimStatus;
+  request_type: ClaimRequestType;
   verification_method: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
   reviewed_at: string | null;
+};
+
+export type ClaimRequestWithTherapist = ClaimRequest & {
+  therapist_full_name: string | null;
+  therapist_slug: string | null;
 };
 
 export type ClaimableTherapist = {
@@ -28,8 +46,16 @@ export type ClaimableTherapist = {
 const IdSchema = z.object({ therapistId: z.string().uuid() });
 const CreateSchema = z.object({
   therapistId: z.string().uuid(),
-  verificationMethod: z.string().max(60).optional(),
-  verificationData: z.record(z.string(), z.unknown()).optional(),
+  requestType: z.enum(["claim_profile", "remove_profile"]),
+  verificationMethod: z.enum([
+    "license_number",
+    "professional_email",
+    "manual_review",
+  ]),
+  licenseNumber: z.string().trim().min(2).max(60).optional(),
+  professionId: z.string().uuid().optional(),
+  professionalEmail: z.string().trim().email().max(120).optional(),
+  note: z.string().trim().max(1000).optional(),
 });
 const CancelSchema = z.object({ claimId: z.string().uuid() });
 
@@ -59,7 +85,16 @@ export const submitClaimRequest = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const accountId = await ensureAccount(supabase, userId);
 
-    // Precondition: profile must be unclaimed. RLS also enforces this.
+    // Method-specific input requirements
+    if (data.verificationMethod === "license_number") {
+      if (!data.licenseNumber) throw new Error("license_number required");
+      if (!data.professionId) throw new Error("profession required");
+    }
+    if (data.verificationMethod === "professional_email" && !data.professionalEmail) {
+      throw new Error("professional_email required");
+    }
+
+    // Precondition: for claim, profile must be unclaimed. RLS enforces on INSERT.
     const { data: t, error: tErr } = await supabase
       .from("therapists")
       .select("id, owner_account_id")
@@ -67,15 +102,24 @@ export const submitClaimRequest = createServerFn({ method: "POST" })
       .maybeSingle();
     if (tErr) throw new Error(tErr.message);
     if (!t) throw new Error("Profile not found");
-    if (t.owner_account_id) throw new Error("Profile is already claimed");
+    if (data.requestType === "claim_profile" && t.owner_account_id) {
+      throw new Error("Profile is already claimed");
+    }
+
+    const verificationData: Record<string, unknown> = {};
+    if (data.licenseNumber) verificationData.license_number = data.licenseNumber;
+    if (data.professionId) verificationData.profession_id = data.professionId;
+    if (data.professionalEmail) verificationData.professional_email = data.professionalEmail;
 
     const { data: row, error } = await supabase
       .from("therapist_claim_requests")
       .insert({
         therapist_id: data.therapistId,
         requester_account_id: accountId,
-        verification_method: data.verificationMethod ?? null,
-        verification_data: (data.verificationData ?? {}) as never,
+        request_type: data.requestType,
+        verification_method: data.verificationMethod,
+        verification_data: verificationData as never,
+        note: data.note ?? null,
       })
       .select("*")
       .single();
@@ -83,12 +127,21 @@ export const submitClaimRequest = createServerFn({ method: "POST" })
       if (error.code === "23505") throw new Error("You already have an open request for this profile");
       throw new Error(error.message);
     }
+
+    // Fire-and-forget notification delivery (queue row was inserted by trigger).
+    try {
+      const { deliverPendingNotifications } = await import("./notifications.server");
+      await deliverPendingNotifications();
+    } catch (e) {
+      console.error("[notifications] deliver failed", e);
+    }
+
     return row as ClaimRequest;
   });
 
 export const listMyClaimRequests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<ClaimRequest[]> => {
+  .handler(async ({ context }): Promise<ClaimRequestWithTherapist[]> => {
     const { supabase, userId } = context;
     const { data: account } = await supabase
       .from("therapist_accounts")
@@ -98,11 +151,18 @@ export const listMyClaimRequests = createServerFn({ method: "GET" })
     if (!account) return [];
     const { data: rows, error } = await supabase
       .from("therapist_claim_requests")
-      .select("*")
+      .select("*, therapists:therapist_id(full_name, slug)")
       .eq("requester_account_id", account.id)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as ClaimRequest[];
+    return (rows ?? []).map((r) => {
+      const t = (r as { therapists: { full_name: string | null; slug: string | null } | null }).therapists;
+      return {
+        ...(r as ClaimRequest),
+        therapist_full_name: t?.full_name ?? null,
+        therapist_slug: t?.slug ?? null,
+      };
+    });
   });
 
 export const cancelClaimRequest = createServerFn({ method: "POST" })
@@ -114,7 +174,7 @@ export const cancelClaimRequest = createServerFn({ method: "POST" })
       .from("therapist_claim_requests")
       .update({ status: "cancelled" })
       .eq("id", data.claimId)
-      .eq("status", "pending")
+      .in("status", ["pending", "needs_information"])
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -142,4 +202,25 @@ export const getClaimableTherapist = createServerFn({ method: "POST" })
       image_url: t.image_url,
       is_owned: !!t.owner_account_id,
     };
+  });
+
+// -----------------------------------------------------------------
+// Public professions listing (used by the license-number form).
+// -----------------------------------------------------------------
+export type ProfessionOption = { id: string; name_he: string; slug: string };
+
+export const listProfessions = createServerFn({ method: "GET" })
+  .handler(async (): Promise<ProfessionOption[]> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
+    );
+    const { data } = await sb
+      .from("professions")
+      .select("id, name_he, slug")
+      .eq("is_active", true)
+      .order("name_he");
+    return (data ?? []) as ProfessionOption[];
   });
