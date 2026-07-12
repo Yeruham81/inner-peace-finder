@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { SemanticEngine } from "./semantic-engine";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -48,6 +49,12 @@ export type SaveResult = {
   missing?: string[];
 };
 
+/** Read-only semantic feedback for the therapist profile editor.
+ *  Deliberately excludes weights / confidence / ranking. */
+export type SemanticFeedback = {
+  domains: { slug: string; name: string }[];
+};
+
 /* ------------------------------------------------------------------ */
 /* Constants + helpers                                                */
 /* ------------------------------------------------------------------ */
@@ -80,13 +87,27 @@ function publicClient() {
 /* ------------------------------------------------------------------ */
 
 const SaveSchema = z.object({
-  full_name: z.string().trim().min(2).max(120),
+  full_name: z
+    .string({
+      required_error: "נא למלא את שדה 'שם מלא' לפני שמירת טיוטה.",
+      invalid_type_error: "שם מלא לא תקין.",
+    })
+    .trim()
+    .min(2, "שם מלא חייב להכיל לפחות 2 תווים.")
+    .max(120, "שם מלא ארוך מדי (עד 120 תווים)."),
   gender: z.enum(["male", "female", "unspecified"]).nullable().optional(),
-  professional_title: z.string().trim().max(160).nullable().optional(),
-  full_description: z.string().trim().max(DESCRIPTION_MAX).nullable().optional(),
-  short_intro: z.string().trim().max(400).nullable().optional(),
-  years_experience: z.number().int().min(0).max(80).nullable().optional(),
-  email: z.string().trim().email().max(160).nullable().optional().or(z.literal("")),
+  professional_title: z.string().trim().max(160, "כותרת מקצועית ארוכה מדי.").nullable().optional(),
+  full_description: z.string().trim().max(DESCRIPTION_MAX, "התיאור המקצועי ארוך מדי.").nullable().optional(),
+  short_intro: z.string().trim().max(400, "תיאור קצר ארוך מדי.").nullable().optional(),
+  years_experience: z.number().int().min(0).max(80, "שנות ניסיון לא תקין.").nullable().optional(),
+  email: z
+    .string()
+    .trim()
+    .email("כתובת אימייל לא תקינה.")
+    .max(160)
+    .nullable()
+    .optional()
+    .or(z.literal("")),
   phone: z.string().trim().max(40).nullable().optional().or(z.literal("")),
   image_url: z.string().trim().max(500).nullable().optional().or(z.literal("")),
   profession_ids: z.array(z.string().uuid()).max(10).default([]),
@@ -101,6 +122,28 @@ const SaveSchema = z.object({
 });
 
 type SaveInput = z.infer<typeof SaveSchema>;
+
+/**
+ * Convert ZodError issues into short, user-friendly Hebrew messages so the
+ * editor never surfaces raw validation output.
+ */
+function friendlyZodMessage(err: z.ZodError): string {
+  const first = err.issues[0];
+  if (!first) return "לא ניתן לשמור — קלט לא תקין.";
+  // Prefer explicit Hebrew messages provided on the schema.
+  if (first.message && !/^String must|^Invalid|^Required$/i.test(first.message)) {
+    return first.message;
+  }
+  const path = String(first.path[0] ?? "");
+  switch (path) {
+    case "full_name":
+      return "נא למלא את שדה 'שם מלא' לפני שמירת טיוטה.";
+    case "email":
+      return "כתובת אימייל לא תקינה.";
+    default:
+      return "לא ניתן לשמור — יש שדה עם ערך לא תקין.";
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Owner account resolution                                           */
@@ -226,7 +269,11 @@ function validateForPublish(input: SaveInput): string[] {
 
 export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => SaveSchema.parse(input))
+  .inputValidator((input: unknown) => {
+    const parsed = SaveSchema.safeParse(input);
+    if (!parsed.success) throw new Error(friendlyZodMessage(parsed.error));
+    return parsed.data;
+  })
   .handler(async ({ data, context }): Promise<SaveResult> => {
     const { supabase, userId } = context;
     const accountId = await resolveAccount(supabase, userId);
@@ -239,7 +286,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     // Load existing profile (if any)
     const { data: existing } = await supabase
       .from("therapists")
-      .select("id, slug")
+      .select("id, slug, visibility, profile_status")
       .eq("owner_account_id", accountId)
       .maybeSingle();
 
@@ -249,7 +296,15 @@ export const saveMyProfile = createServerFn({ method: "POST" })
         ? "completed"
         : "draft";
 
-    const payload = {
+    // Visibility rules (see P3.1 state model):
+    //  - Create: default to 'hidden' (never expose a new row).
+    //  - Draft/complete save on existing row: DO NOT touch visibility.
+    //  - Publish: explicit user action → 'visible'.
+    //  - is_active is a technical filter flag: always true for editable
+    //    rows. Only archival flips it off, and archival is not exposed here.
+    const visibilityForNewRow: "hidden" = "hidden";
+
+    const basePayload: Record<string, unknown> = {
       full_name: data.full_name.trim(),
       gender: data.gender ?? null,
       professional_title: data.professional_title?.trim() || null,
@@ -260,20 +315,19 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       phone: data.phone ? data.phone.trim() : null,
       image_url: data.image_url ? data.image_url.trim() : null,
       profile_status: nextStatus,
-      // Only surface the row publicly when it is published.
-      is_active: nextStatus === "published",
-      visibility: (nextStatus === "published" ? "published" : "hidden_by_owner") as
-        | "published"
-        | "hidden_by_owner",
+      is_active: true,
       city: data.primary_city ? data.primary_city.trim() : null,
       region: data.primary_region ? data.primary_region.trim() : null,
     };
+    if (data.publish) {
+      basePayload.visibility = "visible";
+    }
 
     let therapistId: string;
     if (existing) {
       const { error } = await supabase
         .from("therapists")
-        .update(payload)
+        .update(basePayload)
         .eq("id", existing.id);
       if (error) throw new Error(error.message);
       therapistId = existing.id;
@@ -282,7 +336,8 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       const { data: inserted, error } = await supabase
         .from("therapists")
         .insert({
-          ...payload,
+          ...basePayload,
+          visibility: data.publish ? "visible" : visibilityForNewRow,
           slug,
           owner_account_id: accountId,
           profile_claimed: true,
@@ -350,4 +405,35 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     }
 
     return { therapist_id: therapistId, profile_status: nextStatus };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Semantic feedback (P3.2)                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Read-only view of the treatment domains SemanticEngine recognized in the
+ * therapist's professional description. Never exposes weights, confidence,
+ * or ranking — the panel is transparency, not optimization guidance.
+ */
+export const getSemanticFeedback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ description: z.string().max(DESCRIPTION_MAX).nullable().optional() }).parse(input),
+  )
+  .handler(async ({ data, context }): Promise<SemanticFeedback> => {
+    const desc = (data.description ?? "").trim();
+    if (desc.length < 20) return { domains: [] };
+    const profile = await SemanticEngine.extractProfile(desc, context.supabase);
+    if (profile.length === 0) return { domains: [] };
+    const slugs = profile.map((e) => e.slug);
+    const { data: problems } = await context.supabase
+      .from("problems")
+      .select("slug, name_he")
+      .in("slug", slugs);
+    const bySlug = new Map((problems ?? []).map((p) => [p.slug, p.name_he as string]));
+    // Preserve engine ordering; drop weights before returning.
+    return {
+      domains: profile.map((e) => ({ slug: e.slug, name: bySlug.get(e.slug) ?? e.slug })),
+    };
   });
