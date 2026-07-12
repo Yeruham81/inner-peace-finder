@@ -450,6 +450,86 @@ function StatusBadge({ status }: { status: "draft" | "completed" | "published" }
   return <span className={`rounded-full px-3 py-1 text-xs font-medium ${map[status].c}`}>{map[status].l}</span>;
 }
 
+/**
+ * Convert a raw server error into a short Hebrew message. When the server
+ * returned a stringified ZodError (older payloads), extract the first
+ * issue's message. Otherwise return the message as-is.
+ */
+function friendlyErrorMessage(err: Error): string {
+  const msg = err?.message ?? "";
+  const trimmed = msg.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as { message?: string; path?: (string | number)[] }[];
+      const first = parsed[0];
+      if (first?.path?.[0] === "full_name") {
+        return "נא למלא את שדה 'שם מלא' לפני שמירת טיוטה.";
+      }
+      if (first?.message) return first.message;
+    } catch {
+      // fall through
+    }
+    return "לא ניתן לשמור — קלט לא תקין.";
+  }
+  return msg || "אירעה שגיאה. נסו שוב.";
+}
+
+function SemanticFeedbackPanel({ description }: { description: string }) {
+  const getFeedbackFn = useServerFn(getSemanticFeedback);
+  // Debounce input so we do not thrash the server on every keystroke.
+  const [debounced, setDebounced] = useState(description);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(description), 600);
+    return () => clearTimeout(t);
+  }, [description]);
+
+  const trimmedLen = useMemo(() => debounced.trim().length, [debounced]);
+  const enabled = trimmedLen >= 20;
+  const query = useQuery({
+    queryKey: ["semantic-feedback", debounced.trim()],
+    queryFn: () => getFeedbackFn({ data: { description: debounced } }),
+    enabled,
+    staleTime: 30_000,
+  });
+
+  const domains = query.data?.domains ?? [];
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-surface p-4">
+      <h3 className="text-sm font-semibold text-foreground">תחומי טיפול שזוהו על ידי המערכת</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        המערכת מנתחת את התיאור המקצועי שלך כדי להבין באילו תחומים אתה מטפל. המידע הזה עוזר לחבר בין
+        אנשים שמחפשים עזרה לבין מטפלים מתאימים.
+      </p>
+      <div className="mt-3">
+        {!enabled ? (
+          <p className="text-xs text-muted-foreground">
+            הוסיפו תיאור מקצועי כדי לראות אילו תחומים המערכת מזהה.
+          </p>
+        ) : query.isFetching && domains.length === 0 ? (
+          <p className="text-xs text-muted-foreground">מנתח…</p>
+        ) : domains.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            עדיין לא זוהו תחומי טיפול. ניתן לשפר את התיאור המקצועי כדי לעזור למערכת להבין את תחומי
+            הטיפול שלך.
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {domains.map((d) => (
+              <li
+                key={d.slug}
+                className="rounded-full border border-brand/40 bg-brand/5 px-3 py-1 text-xs text-foreground"
+              >
+                ✓ {d.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DescriptionHelpDialog() {
   return (
     <Dialog>
