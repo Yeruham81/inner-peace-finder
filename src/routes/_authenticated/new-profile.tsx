@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   DESCRIPTION_MIN,
   getEditorOptions,
   getMyProfile,
+  getSemanticFeedback,
   saveMyProfile,
   type EditorOptions,
   type Gender,
@@ -145,7 +146,7 @@ function EditorPage() {
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+      onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
   });
 
   if (profile.isLoading || options.isLoading || !initialized) {
@@ -270,6 +271,7 @@ function EditorPage() {
                 {form.full_description.length} / {DESCRIPTION_MAX}
               </span>
             </div>
+            <SemanticFeedbackPanel description={form.full_description} />
           </Section>
 
           <Section title="שיטות טיפול">
