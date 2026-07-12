@@ -304,7 +304,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     //    rows. Only archival flips it off, and archival is not exposed here.
     const visibilityForNewRow: "hidden" = "hidden";
 
-    const basePayload: Record<string, unknown> = {
+    const basePayload = {
       full_name: data.full_name.trim(),
       gender: data.gender ?? null,
       professional_title: data.professional_title?.trim() || null,
@@ -318,16 +318,14 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       is_active: true,
       city: data.primary_city ? data.primary_city.trim() : null,
       region: data.primary_region ? data.primary_region.trim() : null,
+      ...(data.publish ? { visibility: "visible" as const } : {}),
     };
-    if (data.publish) {
-      basePayload.visibility = "visible";
-    }
 
     let therapistId: string;
     if (existing) {
       const { error } = await supabase
         .from("therapists")
-        .update(basePayload)
+        .update(basePayload as never)
         .eq("id", existing.id);
       if (error) throw new Error(error.message);
       therapistId = existing.id;
@@ -342,7 +340,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
           owner_account_id: accountId,
           profile_claimed: true,
           country: "Israel",
-        })
+        } as never)
         .select("id")
         .single();
       if (error) throw new Error(error.message);
