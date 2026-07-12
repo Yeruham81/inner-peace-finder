@@ -1068,7 +1068,12 @@ export type Database = {
       therapist_account_status: "pending" | "active" | "claimed" | "suspended"
       therapist_gender: "male" | "female" | "unspecified"
       therapist_profile_status: "draft" | "completed" | "published"
-      therapist_visibility: "published" | "hidden_by_owner" | "archived"
+      therapist_visibility:
+        | "published"
+        | "hidden_by_owner"
+        | "archived"
+        | "visible"
+        | "hidden"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1216,7 +1221,13 @@ export const Constants = {
       therapist_account_status: ["pending", "active", "claimed", "suspended"],
       therapist_gender: ["male", "female", "unspecified"],
       therapist_profile_status: ["draft", "completed", "published"],
-      therapist_visibility: ["published", "hidden_by_owner", "archived"],
+      therapist_visibility: [
+        "published",
+        "hidden_by_owner",
+        "archived",
+        "visible",
+        "hidden",
+      ],
     },
   },
 } as const
