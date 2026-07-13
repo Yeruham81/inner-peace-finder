@@ -194,6 +194,14 @@ function EditorPage() {
 
         <div className="mt-6 grid gap-6">
           <Section title="מידע בסיסי">
+            <Field label="תמונה">
+              <TherapistImageUpload
+                therapistId={profile.data?.id ?? null}
+                value={form.image_url || null}
+                onChange={(url) => setForm({ ...form, image_url: url ?? "" })}
+                gender={form.gender}
+              />
+            </Field>
             <Field label="שם מלא *">
               <Input
                 value={form.full_name}
@@ -216,17 +224,9 @@ function EditorPage() {
                 ))}
               </div>
             </Field>
-            <Field label="קישור לתמונה">
-              <TherapistImageUpload
-                therapistId={profile.data?.id ?? null}
-                value={form.image_url || null}
-                onChange={(url) => setForm({ ...form, image_url: url ?? "" })}
-                gender={form.gender}
-              />
-            </Field>
           </Section>
 
-          <Section title="מידע מקצועי">
+          <Section title="פרטים מקצועיים">
             <Field label="כותרת מקצועית">
               <Input
                 value={form.professional_title}
@@ -254,16 +254,30 @@ function EditorPage() {
                 className="max-w-32"
               />
             </Field>
+            <Field label="שפות טיפול">
+              <MultiChips
+                items={(options.data?.languages ?? []).map((l) => ({ id: l.id, label: l.name }))}
+                selected={form.language_ids}
+                onChange={(ids) => setForm({ ...form, language_ids: ids })}
+              />
+            </Field>
           </Section>
 
-          <Section title="תיאור מקצועי *" action={<DescriptionHelpDialog />}>
+          <Section
+            title="קצת עליי, הגישה הטיפולית שלי, המצבים שבהם אני מטפל/ת ולמי אני עוזר/ת *"
+            action={<DescriptionHelpDialog />}
+          >
+            <p className="text-xs text-muted-foreground">
+              כתבו תיאור אישי ומקצועי של עצמכם, של הדרך שבה אתם עובדים ושל הניסיון שלכם. שתפו באילו
+              מצבים, קשיים והתמודדויות אתם מסייעים למטופלים ואילו אנשים פונים אליכם לקבלת טיפול.
+            </p>
             <textarea
               value={form.full_description}
               onChange={(e) => setForm({ ...form, full_description: e.target.value })}
               maxLength={DESCRIPTION_MAX}
               rows={9}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed"
-              placeholder="ספרו על עצמכם — למי אתם מסייעים, עם אילו קשיים אתם עובדים, הגישה הטיפולית שלכם והניסיון שלכם."
+              placeholder="לדוגמה: אני עובד סוציאלי קליני בעל ניסיון בטיפול במבוגרים ובמתבגרים. אני מלווה אנשים המתמודדים עם חרדה, טראומה, משברי חיים וקשיים רגשיים, ומאמין בקשר טיפולי בטוח שמאפשר שינוי והתפתחות."
             />
             <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span>
@@ -286,15 +300,7 @@ function EditorPage() {
             />
           </Section>
 
-          <Section title="שפות טיפול">
-            <MultiChips
-              items={(options.data?.languages ?? []).map((l) => ({ id: l.id, label: l.name }))}
-              selected={form.language_ids}
-              onChange={(ids) => setForm({ ...form, language_ids: ids })}
-            />
-          </Section>
-
-          <Section title="אוכלוסיות טיפול">
+          <Section title="אוכלוסיות מטופלים">
             <MultiChips
               items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
               selected={form.population_ids}
@@ -302,7 +308,21 @@ function EditorPage() {
             />
           </Section>
 
-          <Section title="מיקום וזמינות *">
+          <Section title="השכלה, הכשרה וניסיון מקצועי">
+            <p className="text-xs text-muted-foreground">
+              פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע רלוונטי.
+            </p>
+            <textarea
+              value={form.background}
+              onChange={(e) => setForm({ ...form, background: e.target.value })}
+              maxLength={4000}
+              rows={6}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed"
+              placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב, הכשרה בטיפול דינמי, ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית."
+            />
+          </Section>
+
+          <Section title="מיקום *">
             <Field label="עיר (מיקום פיזי)">
               <Input
                 value={form.primary_city}
