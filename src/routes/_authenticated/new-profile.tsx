@@ -33,6 +33,7 @@ type FormState = {
   professional_title: string;
   full_description: string;
   short_intro: string;
+  background: string;
   years_experience: string;
   email: string;
   phone: string;
@@ -53,6 +54,7 @@ const emptyForm: FormState = {
   professional_title: "",
   full_description: "",
   short_intro: "",
+  background: "",
   years_experience: "",
   email: "",
   phone: "",
@@ -74,6 +76,7 @@ function fromProfile(p: ProfileEditorData): FormState {
     professional_title: p.professional_title ?? "",
     full_description: p.full_description ?? "",
     short_intro: p.short_intro ?? "",
+    background: p.background ?? "",
     years_experience: p.years_experience !== null ? String(p.years_experience) : "",
     email: p.email ?? "",
     phone: p.phone ?? "",
@@ -120,6 +123,7 @@ function EditorPage() {
           professional_title: form.professional_title || null,
           full_description: form.full_description || null,
           short_intro: form.short_intro || null,
+          background: form.background || null,
           years_experience: form.years_experience ? Number(form.years_experience) : null,
           email: form.email || null,
           phone: form.phone || null,
