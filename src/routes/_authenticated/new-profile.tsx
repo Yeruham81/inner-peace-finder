@@ -520,22 +520,22 @@ function SemanticFeedbackPanel({ description }: { description: string }) {
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
-      <h3 className="text-sm font-semibold text-foreground">תחומי טיפול שזוהו על ידי המערכת</h3>
+      <h3 className="text-sm font-semibold text-foreground">
+        תחומי טיפול מרכזיים שעלו מתוך התיאור שלך
+      </h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        המערכת מנתחת את התיאור המקצועי שלך כדי להבין באילו תחומים אתה מטפל. המידע הזה עוזר לחבר בין
-        אנשים שמחפשים עזרה לבין מטפלים מתאימים.
+        המערכת מנתחת את התיאור שלך כדי לזהות אילו תחומי טיפול והתמודדויות ניתן להסיק ממנו.
       </p>
       <div className="mt-3">
         {!enabled ? (
           <p className="text-xs text-muted-foreground">
-            הוסיפו תיאור מקצועי כדי לראות אילו תחומים המערכת מזהה.
+            הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.
           </p>
         ) : query.isFetching && domains.length === 0 ? (
           <p className="text-xs text-muted-foreground">מנתח…</p>
         ) : domains.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            עדיין לא זוהו תחומי טיפול. ניתן לשפר את התיאור המקצועי כדי לעזור למערכת להבין את תחומי
-            הטיפול שלך.
+            עדיין לא זוהו תחומי טיפול. ניתן לשפר את התיאור כדי לעזור למערכת להבין את תחומי הטיפול שלך.
           </p>
         ) : (
           <ul className="flex flex-wrap gap-2">
@@ -568,20 +568,21 @@ function DescriptionHelpDialog() {
       </DialogTrigger>
       <DialogContent dir="rtl" className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>כיצד לכתוב תיאור מקצועי?</DialogTitle>
+          <DialogTitle>כיצד לכתוב את התיאור?</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm text-foreground">
-          <p>מומלץ לכלול:</p>
+          <p>כתבו תיאור אישי, טבעי ומקצועי. מומלץ לכלול:</p>
           <ul className="list-disc space-y-1 pr-5 text-muted-foreground">
-            <li>למי אתם מסייעים</li>
-            <li>עם אילו קשיים או מצבים אתם עובדים</li>
-            <li>הגישה או שיטות הטיפול שלכם</li>
-            <li>ניסיון מקצועי רלוונטי</li>
+            <li>קצת עליכם והגישה הטיפולית שלכם</li>
+            <li>המצבים, הקשיים וההתמודדויות שאתם מסייעים בהם</li>
+            <li>למי אתם עוזרים ואילו אנשים פונים אליכם</li>
           </ul>
           <p className="text-muted-foreground">
-            כתבו באופן טבעי וברור, כך שאנשים יוכלו להבין האם אתם המטפל המתאים עבורם.
+            כתבו באופן טבעי וזורם, כך שאנשים יוכלו להבין אם אתם המטפל המתאים עבורם.
           </p>
-          <p className="text-muted-foreground">הימנעו מרשימות ארוכות של מילות מפתח או משפטים כלליים בלי פירוט.</p>
+          <p className="text-muted-foreground">
+            הימנעו מרשימות של מילות מפתח. פרטי השכלה, הכשרות והסמכות שייכים לשדה "השכלה, הכשרה וניסיון מקצועי".
+          </p>
         </div>
       </DialogContent>
     </Dialog>
