@@ -429,13 +429,42 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
     const profile = await SemanticEngine.extractProfile(desc, context.supabase);
     if (profile.length === 0) return { domains: [] };
     const slugs = profile.map((e) => e.slug);
-    const { data: problems } = await context.supabase
-      .from("problems")
-      .select("slug, name_he")
-      .in("slug", slugs);
-    const bySlug = new Map((problems ?? []).map((p) => [p.slug, p.name_he as string]));
-    // Preserve engine ordering; drop weights before returning.
+    const [problemsRes, aliasesRes] = await Promise.all([
+      context.supabase.from("problems").select("id, slug, name_he").in("slug", slugs),
+      context.supabase.from("problem_aliases").select("problem_id, alias"),
+    ]);
+    const problems = problemsRes.data ?? [];
+    const bySlug = new Map(problems.map((p) => [p.slug, p.name_he as string]));
+    const slugById = new Map(problems.map((p) => [String(p.id), p.slug]));
+    const aliasesBySlug = new Map<string, string[]>();
+    for (const a of aliasesRes.data ?? []) {
+      const slug = slugById.get(String(a.problem_id));
+      if (!slug || !a.alias) continue;
+      const arr = aliasesBySlug.get(slug) ?? [];
+      arr.push(a.alias);
+      aliasesBySlug.set(slug, arr);
+    }
+
+    // P3.2 filter: display only treatment domains that are EXPLICITLY
+    // present in the description — the problem's canonical Hebrew name
+    // or one of its aliases must appear as a full normalized substring
+    // in the text. This suppresses over-expansion from intents and
+    // fuzzy token-overlap matches (methods, populations, generic terms).
+    const nDesc = SemanticEngine.normalize(desc);
+    const isExplicit = (slug: string): boolean => {
+      const name = bySlug.get(slug);
+      const phrases: string[] = [];
+      if (name) phrases.push(name);
+      for (const al of aliasesBySlug.get(slug) ?? []) phrases.push(al);
+      for (const p of phrases) {
+        const n = SemanticEngine.normalize(p);
+        if (n.length >= 2 && nDesc.includes(n)) return true;
+      }
+      return false;
+    };
+
+    const filtered = profile.filter((e) => isExplicit(e.slug)).slice(0, 8);
     return {
-      domains: profile.map((e) => ({ slug: e.slug, name: bySlug.get(e.slug) ?? e.slug })),
+      domains: filtered.map((e) => ({ slug: e.slug, name: bySlug.get(e.slug) ?? e.slug })),
     };
   });
