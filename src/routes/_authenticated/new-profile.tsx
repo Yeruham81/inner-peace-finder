@@ -33,6 +33,7 @@ type FormState = {
   professional_title: string;
   full_description: string;
   short_intro: string;
+  background: string;
   years_experience: string;
   email: string;
   phone: string;
@@ -53,6 +54,7 @@ const emptyForm: FormState = {
   professional_title: "",
   full_description: "",
   short_intro: "",
+  background: "",
   years_experience: "",
   email: "",
   phone: "",
@@ -74,6 +76,7 @@ function fromProfile(p: ProfileEditorData): FormState {
     professional_title: p.professional_title ?? "",
     full_description: p.full_description ?? "",
     short_intro: p.short_intro ?? "",
+    background: p.background ?? "",
     years_experience: p.years_experience !== null ? String(p.years_experience) : "",
     email: p.email ?? "",
     phone: p.phone ?? "",
@@ -120,6 +123,7 @@ function EditorPage() {
           professional_title: form.professional_title || null,
           full_description: form.full_description || null,
           short_intro: form.short_intro || null,
+          background: form.background || null,
           years_experience: form.years_experience ? Number(form.years_experience) : null,
           email: form.email || null,
           phone: form.phone || null,
@@ -190,6 +194,14 @@ function EditorPage() {
 
         <div className="mt-6 grid gap-6">
           <Section title="מידע בסיסי">
+            <Field label="תמונה">
+              <TherapistImageUpload
+                therapistId={profile.data?.id ?? null}
+                value={form.image_url || null}
+                onChange={(url) => setForm({ ...form, image_url: url ?? "" })}
+                gender={form.gender}
+              />
+            </Field>
             <Field label="שם מלא *">
               <Input
                 value={form.full_name}
@@ -212,17 +224,9 @@ function EditorPage() {
                 ))}
               </div>
             </Field>
-            <Field label="קישור לתמונה">
-              <TherapistImageUpload
-                therapistId={profile.data?.id ?? null}
-                value={form.image_url || null}
-                onChange={(url) => setForm({ ...form, image_url: url ?? "" })}
-                gender={form.gender}
-              />
-            </Field>
           </Section>
 
-          <Section title="מידע מקצועי">
+          <Section title="פרטים מקצועיים">
             <Field label="כותרת מקצועית">
               <Input
                 value={form.professional_title}
@@ -250,16 +254,30 @@ function EditorPage() {
                 className="max-w-32"
               />
             </Field>
+            <Field label="שפות טיפול">
+              <MultiChips
+                items={(options.data?.languages ?? []).map((l) => ({ id: l.id, label: l.name }))}
+                selected={form.language_ids}
+                onChange={(ids) => setForm({ ...form, language_ids: ids })}
+              />
+            </Field>
           </Section>
 
-          <Section title="תיאור מקצועי *" action={<DescriptionHelpDialog />}>
+          <Section
+            title="קצת עליי, הגישה הטיפולית שלי, המצבים שבהם אני מטפל/ת ולמי אני עוזר/ת *"
+            action={<DescriptionHelpDialog />}
+          >
+            <p className="text-xs text-muted-foreground">
+              כתבו תיאור אישי ומקצועי של עצמכם, של הדרך שבה אתם עובדים ושל הניסיון שלכם. שתפו באילו
+              מצבים, קשיים והתמודדויות אתם מסייעים למטופלים ואילו אנשים פונים אליכם לקבלת טיפול.
+            </p>
             <textarea
               value={form.full_description}
               onChange={(e) => setForm({ ...form, full_description: e.target.value })}
               maxLength={DESCRIPTION_MAX}
               rows={9}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed"
-              placeholder="ספרו על עצמכם — למי אתם מסייעים, עם אילו קשיים אתם עובדים, הגישה הטיפולית שלכם והניסיון שלכם."
+              placeholder="לדוגמה: אני עובד סוציאלי קליני בעל ניסיון בטיפול במבוגרים ובמתבגרים. אני מלווה אנשים המתמודדים עם חרדה, טראומה, משברי חיים וקשיים רגשיים, ומאמין בקשר טיפולי בטוח שמאפשר שינוי והתפתחות."
             />
             <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span>
@@ -282,15 +300,7 @@ function EditorPage() {
             />
           </Section>
 
-          <Section title="שפות טיפול">
-            <MultiChips
-              items={(options.data?.languages ?? []).map((l) => ({ id: l.id, label: l.name }))}
-              selected={form.language_ids}
-              onChange={(ids) => setForm({ ...form, language_ids: ids })}
-            />
-          </Section>
-
-          <Section title="אוכלוסיות טיפול">
+          <Section title="אוכלוסיות מטופלים">
             <MultiChips
               items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
               selected={form.population_ids}
@@ -298,7 +308,21 @@ function EditorPage() {
             />
           </Section>
 
-          <Section title="מיקום וזמינות *">
+          <Section title="השכלה, הכשרה וניסיון מקצועי">
+            <p className="text-xs text-muted-foreground">
+              פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע רלוונטי.
+            </p>
+            <textarea
+              value={form.background}
+              onChange={(e) => setForm({ ...form, background: e.target.value })}
+              maxLength={4000}
+              rows={6}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed"
+              placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב, הכשרה בטיפול דינמי, ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית."
+            />
+          </Section>
+
+          <Section title="מיקום *">
             <Field label="עיר (מיקום פיזי)">
               <Input
                 value={form.primary_city}
@@ -496,22 +520,22 @@ function SemanticFeedbackPanel({ description }: { description: string }) {
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
-      <h3 className="text-sm font-semibold text-foreground">תחומי טיפול שזוהו על ידי המערכת</h3>
+      <h3 className="text-sm font-semibold text-foreground">
+        תחומי טיפול מרכזיים שעלו מתוך התיאור שלך
+      </h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        המערכת מנתחת את התיאור המקצועי שלך כדי להבין באילו תחומים אתה מטפל. המידע הזה עוזר לחבר בין
-        אנשים שמחפשים עזרה לבין מטפלים מתאימים.
+        המערכת מנתחת את התיאור שלך כדי לזהות אילו תחומי טיפול והתמודדויות ניתן להסיק ממנו.
       </p>
       <div className="mt-3">
         {!enabled ? (
           <p className="text-xs text-muted-foreground">
-            הוסיפו תיאור מקצועי כדי לראות אילו תחומים המערכת מזהה.
+            הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.
           </p>
         ) : query.isFetching && domains.length === 0 ? (
           <p className="text-xs text-muted-foreground">מנתח…</p>
         ) : domains.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            עדיין לא זוהו תחומי טיפול. ניתן לשפר את התיאור המקצועי כדי לעזור למערכת להבין את תחומי
-            הטיפול שלך.
+            עדיין לא זוהו תחומי טיפול. ניתן לשפר את התיאור כדי לעזור למערכת להבין את תחומי הטיפול שלך.
           </p>
         ) : (
           <ul className="flex flex-wrap gap-2">
@@ -544,20 +568,21 @@ function DescriptionHelpDialog() {
       </DialogTrigger>
       <DialogContent dir="rtl" className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>כיצד לכתוב תיאור מקצועי?</DialogTitle>
+          <DialogTitle>כיצד לכתוב את התיאור?</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm text-foreground">
-          <p>מומלץ לכלול:</p>
+          <p>כתבו תיאור אישי, טבעי ומקצועי. מומלץ לכלול:</p>
           <ul className="list-disc space-y-1 pr-5 text-muted-foreground">
-            <li>למי אתם מסייעים</li>
-            <li>עם אילו קשיים או מצבים אתם עובדים</li>
-            <li>הגישה או שיטות הטיפול שלכם</li>
-            <li>ניסיון מקצועי רלוונטי</li>
+            <li>קצת עליכם והגישה הטיפולית שלכם</li>
+            <li>המצבים, הקשיים וההתמודדויות שאתם מסייעים בהם</li>
+            <li>למי אתם עוזרים ואילו אנשים פונים אליכם</li>
           </ul>
           <p className="text-muted-foreground">
-            כתבו באופן טבעי וברור, כך שאנשים יוכלו להבין האם אתם המטפל המתאים עבורם.
+            כתבו באופן טבעי וזורם, כך שאנשים יוכלו להבין אם אתם המטפל המתאים עבורם.
           </p>
-          <p className="text-muted-foreground">הימנעו מרשימות ארוכות של מילות מפתח או משפטים כלליים בלי פירוט.</p>
+          <p className="text-muted-foreground">
+            הימנעו מרשימות של מילות מפתח. פרטי השכלה, הכשרות והסמכות שייכים לשדה "השכלה, הכשרה וניסיון מקצועי".
+          </p>
         </div>
       </DialogContent>
     </Dialog>
