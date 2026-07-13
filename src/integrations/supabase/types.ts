@@ -846,6 +846,7 @@ export type Database = {
       }
       therapists: {
         Row: {
+          background: string | null
           bio_raw: string | null
           city: string | null
           contact_destination: string | null
@@ -876,6 +877,7 @@ export type Database = {
           years_experience: number
         }
         Insert: {
+          background?: string | null
           bio_raw?: string | null
           city?: string | null
           contact_destination?: string | null
@@ -906,6 +908,7 @@ export type Database = {
           years_experience?: number
         }
         Update: {
+          background?: string | null
           bio_raw?: string | null
           city?: string | null
           contact_destination?: string | null
