@@ -459,27 +459,11 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
     //      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
     //   3. `SemanticEngine.matchesText` on the phrase as a whole (shared
     //      token overlap for multi-word aliases like "טיפול זוגי").
-    const nDesc = SemanticEngine.normalize(desc);
-    const stripYv = (s: string) => s.replace(/[יו\s]/g, "");
-    const nDescCompact = stripYv(nDesc);
-    const phraseMatches = (phrase: string): boolean => {
-      if (!phrase) return false;
-      const n = SemanticEngine.normalize(phrase);
-      if (n.length >= 2 && nDesc.includes(n)) return true;
-      const compact = stripYv(n);
-      if (compact.length >= 4 && nDescCompact.includes(compact)) return true;
-      // Multi-word aliases only: single-token phrases already had their
-      // best shot at (1)/(2) above; falling through to token overlap for
-      // a single generic word is exactly the over-expansion we want to
-      // avoid.
-      if (n.includes(" ") && SemanticEngine.matchesText(phrase, desc)) return true;
-      return false;
-    };
     const isExplicit = (slug: string): boolean => {
       const name = bySlug.get(slug);
-      if (name && phraseMatches(name)) return true;
+      if (name && phraseMatchesDescription(name, desc)) return true;
       for (const al of aliasesBySlug.get(slug) ?? []) {
-        if (phraseMatches(al)) return true;
+        if (phraseMatchesDescription(al, desc)) return true;
       }
       return false;
     };
@@ -489,3 +473,35 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
       domains: filtered.map((e) => ({ slug: e.slug, name: bySlug.get(e.slug) ?? e.slug })),
     };
   });
+
+/**
+ * True when `phrase` (a curated problem name or alias) is present in the
+ * therapist's `description` with enough textual evidence to justify
+ * displaying the domain in the read-only Semantic Feedback Panel.
+ *
+ * Layered strict → tolerant so common Hebrew spelling variation is
+ * accepted without opening the door to generic-token over-expansion:
+ *   1. Full normalized substring (exact / plural / feminine folded).
+ *   2. Yod/vav-tolerant substring on the compact skeleton
+ *      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
+ *   3. Multi-word phrases fall through to `SemanticEngine.matchesText`
+ *      so aliases like "טיפול זוגי" still hit when tokens interleave.
+ *      Single-token phrases DO NOT fall through — the token-overlap
+ *      matcher is exactly what would surface unrelated domains from a
+ *      single generic word.
+ *
+ * Intents are intentionally not passed through this function — the caller
+ * only feeds names + aliases, so verbs/statements-of-need cannot promote
+ * a domain on their own.
+ */
+export function phraseMatchesDescription(phrase: string, description: string): boolean {
+  if (!phrase || !description) return false;
+  const nDesc = SemanticEngine.normalize(description);
+  const n = SemanticEngine.normalize(phrase);
+  if (n.length >= 2 && nDesc.includes(n)) return true;
+  const stripYv = (s: string) => s.replace(/[יו\s]/g, "");
+  const compact = stripYv(n);
+  if (compact.length >= 4 && stripYv(nDesc).includes(compact)) return true;
+  if (n.includes(" ") && SemanticEngine.matchesText(phrase, description)) return true;
+  return false;
+}
