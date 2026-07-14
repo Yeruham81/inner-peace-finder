@@ -445,20 +445,41 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
       aliasesBySlug.set(slug, arr);
     }
 
-    // P3.2 filter: display only treatment domains that are EXPLICITLY
-    // present in the description — the problem's canonical Hebrew name
-    // or one of its aliases must appear as a full normalized substring
-    // in the text. This suppresses over-expansion from intents and
-    // fuzzy token-overlap matches (methods, populations, generic terms).
+    // P3.2 filter: display a treatment domain only when the therapist's
+    // description carries direct textual evidence for it — the canonical
+    // Hebrew name or one of the curated aliases must be present. We
+    // deliberately IGNORE intent phrases (verbs/statements-of-need) so a
+    // domain cannot slip in from a generic sentence, method, or population
+    // mention alone.
+    //
+    // Matching is layered from strict → tolerant so precision stays high
+    // while common Hebrew spelling variation is still accepted:
+    //   1. Full normalized substring (exact / plural / feminine folded).
+    //   2. Yod/vav-tolerant substring on the compact skeleton
+    //      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
+    //   3. `SemanticEngine.matchesText` on the phrase as a whole (shared
+    //      token overlap for multi-word aliases like "טיפול זוגי").
     const nDesc = SemanticEngine.normalize(desc);
+    const stripYv = (s: string) => s.replace(/[יו\s]/g, "");
+    const nDescCompact = stripYv(nDesc);
+    const phraseMatches = (phrase: string): boolean => {
+      if (!phrase) return false;
+      const n = SemanticEngine.normalize(phrase);
+      if (n.length >= 2 && nDesc.includes(n)) return true;
+      const compact = stripYv(n);
+      if (compact.length >= 4 && nDescCompact.includes(compact)) return true;
+      // Multi-word aliases only: single-token phrases already had their
+      // best shot at (1)/(2) above; falling through to token overlap for
+      // a single generic word is exactly the over-expansion we want to
+      // avoid.
+      if (n.includes(" ") && SemanticEngine.matchesText(phrase, desc)) return true;
+      return false;
+    };
     const isExplicit = (slug: string): boolean => {
       const name = bySlug.get(slug);
-      const phrases: string[] = [];
-      if (name) phrases.push(name);
-      for (const al of aliasesBySlug.get(slug) ?? []) phrases.push(al);
-      for (const p of phrases) {
-        const n = SemanticEngine.normalize(p);
-        if (n.length >= 2 && nDesc.includes(n)) return true;
+      if (name && phraseMatches(name)) return true;
+      for (const al of aliasesBySlug.get(slug) ?? []) {
+        if (phraseMatches(al)) return true;
       }
       return false;
     };
