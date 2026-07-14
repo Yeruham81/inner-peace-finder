@@ -445,20 +445,25 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
       aliasesBySlug.set(slug, arr);
     }
 
-    // P3.2 filter: display only treatment domains that are EXPLICITLY
-    // present in the description — the problem's canonical Hebrew name
-    // or one of its aliases must appear as a full normalized substring
-    // in the text. This suppresses over-expansion from intents and
-    // fuzzy token-overlap matches (methods, populations, generic terms).
-    const nDesc = SemanticEngine.normalize(desc);
+    // P3.2 filter: display a treatment domain only when the therapist's
+    // description carries direct textual evidence for it — the canonical
+    // Hebrew name or one of the curated aliases must be present. We
+    // deliberately IGNORE intent phrases (verbs/statements-of-need) so a
+    // domain cannot slip in from a generic sentence, method, or population
+    // mention alone.
+    //
+    // Matching is layered from strict → tolerant so precision stays high
+    // while common Hebrew spelling variation is still accepted:
+    //   1. Full normalized substring (exact / plural / feminine folded).
+    //   2. Yod/vav-tolerant substring on the compact skeleton
+    //      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
+    //   3. `SemanticEngine.matchesText` on the phrase as a whole (shared
+    //      token overlap for multi-word aliases like "טיפול זוגי").
     const isExplicit = (slug: string): boolean => {
       const name = bySlug.get(slug);
-      const phrases: string[] = [];
-      if (name) phrases.push(name);
-      for (const al of aliasesBySlug.get(slug) ?? []) phrases.push(al);
-      for (const p of phrases) {
-        const n = SemanticEngine.normalize(p);
-        if (n.length >= 2 && nDesc.includes(n)) return true;
+      if (name && phraseMatchesDescription(name, desc)) return true;
+      for (const al of aliasesBySlug.get(slug) ?? []) {
+        if (phraseMatchesDescription(al, desc)) return true;
       }
       return false;
     };
@@ -468,3 +473,35 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
       domains: filtered.map((e) => ({ slug: e.slug, name: bySlug.get(e.slug) ?? e.slug })),
     };
   });
+
+/**
+ * True when `phrase` (a curated problem name or alias) is present in the
+ * therapist's `description` with enough textual evidence to justify
+ * displaying the domain in the read-only Semantic Feedback Panel.
+ *
+ * Layered strict → tolerant so common Hebrew spelling variation is
+ * accepted without opening the door to generic-token over-expansion:
+ *   1. Full normalized substring (exact / plural / feminine folded).
+ *   2. Yod/vav-tolerant substring on the compact skeleton
+ *      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
+ *   3. Multi-word phrases fall through to `SemanticEngine.matchesText`
+ *      so aliases like "טיפול זוגי" still hit when tokens interleave.
+ *      Single-token phrases DO NOT fall through — the token-overlap
+ *      matcher is exactly what would surface unrelated domains from a
+ *      single generic word.
+ *
+ * Intents are intentionally not passed through this function — the caller
+ * only feeds names + aliases, so verbs/statements-of-need cannot promote
+ * a domain on their own.
+ */
+export function phraseMatchesDescription(phrase: string, description: string): boolean {
+  if (!phrase || !description) return false;
+  const nDesc = SemanticEngine.normalize(description);
+  const n = SemanticEngine.normalize(phrase);
+  if (n.length >= 2 && nDesc.includes(n)) return true;
+  const stripYv = (s: string) => s.replace(/[יו\s]/g, "");
+  const compact = stripYv(n);
+  if (compact.length >= 4 && stripYv(nDesc).includes(compact)) return true;
+  if (n.includes(" ") && SemanticEngine.matchesText(phrase, description)) return true;
+  return false;
+}
