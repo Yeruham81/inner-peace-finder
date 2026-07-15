@@ -122,6 +122,55 @@ const PARENT_OF_EFFECTIVE = buildParentOf(PARENT_OF);
 const PARENT_SUPPRESS_RATIO = 0.5;
 
 /* ------------------------------------------------------------------ */
+/* Extraction precision guards (semantic_profile only)                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * High-frequency generic Hebrew tokens that describe therapy/life in the
+ * abstract but do NOT, on their own, constitute a treatment domain.
+ * A single-token alias/name matching only one of these is dropped during
+ * profile extraction so descriptions like "הבנה עצמית", "מצבי משבר",
+ * "קשר טיפולי" cannot silently create domains such as
+ * "דימוי עצמי נמוך", "משבר בזוגיות", "משבר זהות".
+ *
+ * Multi-word phrases containing these tokens are unaffected — e.g. the
+ * alias "משבר בזוגיות" still fires from a therapist writing about it
+ * explicitly.
+ */
+const EXTRACTION_GENERIC_ANCHORS: ReadonlySet<string> = new Set([
+  "עצמי", "עצמית", "עצמו", "עצמה",
+  "משבר", "משברים",
+  "כאב", "כאבים",
+  "חיים",
+  "חברתי", "חברתית",
+  "התפתחות", "התפתחותי",
+  "זהות",
+  "זוגי", "זוגית",
+  "יחסים",
+  "רגשי", "רגשית",
+  "נפשי", "נפשית",
+  "טיפול", "טיפולי", "טיפולית",
+  "הבנה",
+  "קשר",
+  "צמיחה",
+  "שינוי",
+]);
+
+/**
+ * Minimum quality for a multi-token evidence to justify accepting a
+ * treatment domain during profile extraction. Full-phrase substring hits
+ * bypass this (quality = 1, full = true).
+ */
+const EXTRACTION_MIN_MULTI_TOKEN_QUALITY = 0.6;
+
+/**
+ * Absolute score floor for a slug to enter semantic_profile after
+ * evidence aggregation. Prevents weak leftover evidence from surviving
+ * the acceptance filter simply because its normalized ratio is high.
+ */
+const EXTRACTION_MIN_SCORE = 2.0;
+
+/* ------------------------------------------------------------------ */
 /* Primitive helpers (engine-internal only)                           */
 /* ------------------------------------------------------------------ */
 
@@ -425,6 +474,86 @@ function scoreAgainstVocabularyLegacy(text: string, vocab: Vocab): Map<string, n
 }
 
 /**
+ * Evidence collection for `extractProfile()` — precision-first variant of
+ * `collectEvidence`. Mirrors the classify-time protections and adds
+ * extraction-specific safeguards documented in the module header:
+ *
+ *   1. `DEPRECATED_SLUGS` — evidence for a deprecated slug is redirected
+ *      into its canonical replacement's bucket, matching classify().
+ *   2. `BLOCKED_CLASSIFY_PHRASES` — the same alias/intent phrases that
+ *      are documented as false positives at classify time are also
+ *      unhelpful when tagging a therapist profile, so they are skipped.
+ *   3. Intents (statements of user need) are omitted entirely. A
+ *      therapist bio describes coverage; user-intent phrasing on the
+ *      therapist side is not evidence of a treatment domain.
+ *   4. Single-token evidence whose only token is a generic Hebrew
+ *      anchor (`EXTRACTION_GENERIC_ANCHORS`) is dropped. Multi-word
+ *      phrases that happen to contain such a token are kept.
+ */
+function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evidence[]> {
+  const byId = new Map<string, Evidence[]>();
+  const nQuery = lightNormalizeHebrew(text);
+  const qTokenSet = new Set(tokenizeHebrew(text));
+  const resolveId = (rawId: string | number): string => {
+    const key = String(rawId);
+    const slug = vocab.slugById.get(key);
+    if (!slug) return key;
+    const replacement = DEPRECATED_SLUGS[slug];
+    if (!replacement) return key;
+    const mapped = vocab.idBySlug.get(replacement);
+    return mapped ?? key;
+  };
+  const isGenericSingleToken = (phrase: string): boolean => {
+    const toks = tokenizeHebrew(phrase);
+    if (toks.length !== 1) return false;
+    const raw = phrase.trim().split(/\s+/);
+    if (raw.length !== 1) return false;
+    return EXTRACTION_GENERIC_ANCHORS.has(raw[0]) || EXTRACTION_GENERIC_ANCHORS.has(toks[0]);
+  };
+  const push = (rawId: string | number, ev: Evidence) => {
+    if (ev.quality < 0.05) return;
+    const key = resolveId(rawId);
+    const arr = byId.get(key) ?? [];
+    arr.push(ev);
+    byId.set(key, arr);
+  };
+  vocab.problems.forEach((p) => {
+    if (!p.name) return;
+    if (isGenericSingleToken(p.name)) return;
+    if (!matchesText(p.name, text)) return;
+    const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+    push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
+  });
+  vocab.aliases.forEach((a) => {
+    if (!a.alias) return;
+    if (isGenericSingleToken(a.alias)) return;
+    const srcSlug = vocab.slugById.get(String(a.problem_id));
+    if (srcSlug && isBlockedForClassify(srcSlug, a.alias)) return;
+    if (!matchesText(a.alias, text)) return;
+    const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+    push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
+  });
+  // Intents intentionally skipped — see (3) above.
+  return byId;
+}
+
+/**
+ * True when a slug's aggregated evidence is strong enough to enter the
+ * canonical semantic_profile. Requires at least one anchor:
+ *   - a verbatim full-phrase match (name or alias), OR
+ *   - a multi-token alias/name at ≥ EXTRACTION_MIN_MULTI_TOKEN_QUALITY.
+ * Single-token partial matches never suffice on their own.
+ */
+function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
+  for (const e of evidences) {
+    if (e.kind === "intent") continue;
+    if (e.full) return true;
+    if (e.tokens >= 2 && e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY) return true;
+  }
+  return false;
+}
+
+/**
  * Parent suppression: if a child concept outranks its parent, and the
  * parent's raw score is dominated by the child's, drop the parent from
  * the output. Conservative — only suppresses when the parent is clearly
@@ -515,20 +644,30 @@ async function extractProfile(
   if (normalized.length < 20) return [];
 
   const vocab = await fetchVocabulary(sb);
-  // Match against the ORIGINAL source (matchesText normalizes internally);
-  // this preserves prior extractor behavior of not folding away multi-word
-  // aliases at the input side.
-  const scores = scoreAgainstVocabularyLegacy(source, vocab);
-  if (scores.size === 0) return [];
+  // Precision-first pipeline (see collectEvidenceForExtract +
+  // hasStrongExtractionEvidence). Reuses the same evidence / aggregation
+  // primitives as classify() so scoring is consistent, then applies
+  // extraction-specific acceptance so semantic_profile represents
+  // "domains the therapist describes working with" — not "topics the
+  // text could be associated with".
+  const evidenceMap = collectEvidenceForExtract(source, vocab);
+  if (evidenceMap.size === 0) return [];
 
-  const max = Math.max(...scores.values());
-  const entries: SemanticProfileEntry[] = [];
-  for (const [id, s] of scores) {
+  const scored: { slug: string; score: number }[] = [];
+  for (const [id, list] of evidenceMap) {
     const slug = vocab.slugById.get(id);
     if (!slug) continue;
-    entries.push({ slug, weight: Number((s / max).toFixed(3)) });
+    if (!hasStrongExtractionEvidence(list)) continue;
+    const score = aggregateScore(list);
+    if (score < EXTRACTION_MIN_SCORE) continue;
+    scored.push({ slug, score });
   }
-  return entries.sort((a, b) => b.weight - a.weight);
+  if (scored.length === 0) return [];
+
+  const max = Math.max(...scored.map((s) => s.score));
+  return scored
+    .map((s) => ({ slug: s.slug, weight: Number((s.score / max).toFixed(3)) }))
+    .sort((a, b) => b.weight - a.weight);
 }
 
 /**
