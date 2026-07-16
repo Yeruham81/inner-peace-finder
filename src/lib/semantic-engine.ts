@@ -556,12 +556,20 @@ export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
     if (e.kind === "intent") continue;
     if (e.full) return true;
     if (e.tokens >= 2 && e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY) return true;
-    // CASE 1 — explicit single-token treatment term.
+    // CASE 1 — explicit single-token treatment term. Restores recall
+    // for statements like "טראומה", "דיכאון", "אוטיזם" without
+    // re-enabling weak overlap: generic anchors are rejected (checked
+    // both against the raw single-word phrase and its tokenized form,
+    // since inflection folding may strip suffixes like "עצמי" → "עצם").
     if (e.tokens === 1 && e.quality >= 0.999) {
+      const raw = e.phrase.trim().split(/\s+/);
       const toks = tokenizeHebrew(e.phrase);
       if (toks.length === 1) {
         const t = toks[0];
-        if (t.length >= 3 && !EXTRACTION_GENERIC_ANCHORS.has(t)) return true;
+        const rawIsGeneric =
+          raw.length === 1 && EXTRACTION_GENERIC_ANCHORS.has(raw[0]);
+        const tokIsGeneric = EXTRACTION_GENERIC_ANCHORS.has(t);
+        if (t.length >= 3 && !rawIsGeneric && !tokIsGeneric) return true;
       }
     }
   }
