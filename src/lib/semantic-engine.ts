@@ -542,13 +542,36 @@ function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evid
  * canonical semantic_profile. Requires at least one anchor:
  *   - a verbatim full-phrase match (name or alias), OR
  *   - a multi-token alias/name at ≥ EXTRACTION_MIN_MULTI_TOKEN_QUALITY.
- * Single-token partial matches never suffice on their own.
+ *   - CASE 1 (explicit exact treatment term): a single-token
+ *     name/alias whose only meaningful token appears verbatim in the
+ *     therapist text, is not part of `EXTRACTION_GENERIC_ANCHORS`, and
+ *     is a real content word (length ≥ 3). This restores recall for
+ *     explicit statements like "דיכאון", "חרדה", "טראומה", "אוטיזם"
+ *     without re-enabling weak token overlap: generic anchors and
+ *     partial multi-token overlaps are still rejected.
+ * Weak single-token overlap on generic words never suffices.
  */
-function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
+export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
   for (const e of evidences) {
     if (e.kind === "intent") continue;
     if (e.full) return true;
     if (e.tokens >= 2 && e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY) return true;
+    // CASE 1 — explicit single-token treatment term. Restores recall
+    // for statements like "טראומה", "דיכאון", "אוטיזם" without
+    // re-enabling weak overlap: generic anchors are rejected (checked
+    // both against the raw single-word phrase and its tokenized form,
+    // since inflection folding may strip suffixes like "עצמי" → "עצם").
+    if (e.tokens === 1 && e.quality >= 0.999) {
+      const raw = e.phrase.trim().split(/\s+/);
+      const toks = tokenizeHebrew(e.phrase);
+      if (toks.length === 1) {
+        const t = toks[0];
+        const rawIsGeneric =
+          raw.length === 1 && EXTRACTION_GENERIC_ANCHORS.has(raw[0]);
+        const tokIsGeneric = EXTRACTION_GENERIC_ANCHORS.has(t);
+        if (t.length >= 3 && !rawIsGeneric && !tokIsGeneric) return true;
+      }
+    }
   }
   return false;
 }
