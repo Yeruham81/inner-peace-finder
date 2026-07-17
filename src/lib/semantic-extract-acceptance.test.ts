@@ -19,7 +19,8 @@ describe("hasStrongExtractionEvidence", () => {
   });
 
   it("accepts strong multi-token evidence (quality ≥ 0.6)", () => {
-    expect(hasStrongExtractionEvidence([ev({ phrase: "חרדה חברתית", tokens: 2, quality: 0.7 })])).toBe(true);
+    // Phrase with no generic-anchor tokens ("התקפי", "חרדה" ∉ anchors).
+    expect(hasStrongExtractionEvidence([ev({ phrase: "התקפי חרדה", tokens: 2, quality: 0.7 })])).toBe(true);
   });
 
   it("rejects multi-token evidence when tokens are not proximate", () => {
