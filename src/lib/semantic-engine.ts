@@ -609,9 +609,15 @@ export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
       // easily on incidental co-occurrence of generic therapy words, so
       // they require a verbatim full-phrase hit (handled above via
       // `e.full`) instead of proximity+overlap.
-      const pToks = tokenizeHebrew(e.phrase);
-      const anchors = pToks.filter((t) => EXTRACTION_GENERIC_ANCHORS.has(t)).length;
-      if (anchors * 2 < pToks.length) return true;
+      //
+      // Compare against the raw whitespace-split tokens of the phrase
+      // (not the stemmed tokens) because `EXTRACTION_GENERIC_ANCHORS`
+      // is a set of surface Hebrew words ("משבר", "זהות", "רגשית", …),
+      // while `tokenizeHebrew` may strip stopwords or fold suffixes
+      // ("משבר זהות" → ["שבר"]) which would silently defeat the guard.
+      const rawToks = e.phrase.trim().split(/\s+/).filter(Boolean);
+      const anchors = rawToks.filter((t) => EXTRACTION_GENERIC_ANCHORS.has(t)).length;
+      if (rawToks.length >= 2 && anchors * 2 < rawToks.length) return true;
       // else: anchor-heavy multi-token phrase → require `full` (skip).
     }
     // CASE 1 — explicit single-token treatment term. Restores recall
