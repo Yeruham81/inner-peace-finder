@@ -245,6 +245,14 @@ type Evidence = {
   quality: number;
   /** True if the entire normalized phrase appears verbatim in the query. */
   full: boolean;
+  /**
+   * True when the phrase's tokens appear in the query within a small
+   * proximity window (see `hasProximityMatch`). Used to reject multi-
+   * token evidence where tokens co-occur far apart (e.g. "משבר זהות"
+   * matching "משברים שונים ועבודה על זהות"), which token-set overlap
+   * alone cannot distinguish from a real phrase usage.
+   */
+  proximate: boolean;
 };
 
 function countTokens(phrase: string): number {
@@ -271,17 +279,18 @@ function scoreEvidenceQuality(
   phrase: string,
   nQuery: string,
   qTokenSet: Set<string>,
-): { quality: number; full: boolean; tokens: number } {
+  qTokensOrdered: string[] = [],
+): { quality: number; full: boolean; tokens: number; proximate: boolean } {
   const nPhrase = lightNormalizeHebrew(phrase);
   const pTokens = tokenizeHebrew(phrase);
   const tokenCount = pTokens.length || countTokens(phrase);
   if (nPhrase && nPhrase.length >= 2 && nQuery.includes(nPhrase)) {
-    return { quality: 1, full: true, tokens: tokenCount };
+    return { quality: 1, full: true, tokens: tokenCount, proximate: true };
   }
   if (pTokens.length === 0) {
     // Phrase tokenized to nothing (all stopwords / too-short). Trust the
     // matcher's original decision at a low but non-zero quality.
-    return { quality: 0.4, full: false, tokens: tokenCount };
+    return { quality: 0.4, full: false, tokens: tokenCount, proximate: false };
   }
   let overlap = 0;
   for (const t of pTokens) if (qTokenSet.has(t)) overlap++;
@@ -322,13 +331,45 @@ function scoreEvidenceQuality(
   // only proportionally. This keeps recall (evidence isn't lost) while
   // sharply penalizing single-token filler overlaps.
   const quality = ratio > 0 ? Math.max(0.05, ratio * ratio) : 0;
-  return { quality, full: false, tokens: tokenCount };
+  const proximate =
+    pTokens.length <= 1
+      ? true
+      : hasProximityMatch(pTokens, qTokensOrdered);
+  return { quality, full: false, tokens: tokenCount, proximate };
+}
+
+/**
+ * True when every phrase token appears within a small sliding window of
+ * the ordered query tokens — i.e. the tokens actually occur together, not
+ * merely somewhere in the same text. Uses the same fuzzy equality rule as
+ * `scoreEvidenceQuality`'s overlap fallback (≥4-char substring containment)
+ * so it agrees with the matcher on Israeli spelling variants.
+ *
+ * Window size = `pTokens.length + 2`, allowing one or two intervening
+ * stopwords/conjunctions ("של", "ו-", …) between the phrase's words.
+ */
+function hasProximityMatch(pTokens: string[], qTokens: string[]): boolean {
+  if (pTokens.length === 0 || qTokens.length === 0) return false;
+  const eq = (a: string, b: string): boolean => {
+    if (a === b) return true;
+    if (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a))) return true;
+    return false;
+  };
+  const win = pTokens.length + 2;
+  for (let i = 0; i < qTokens.length; i++) {
+    const slice = qTokens.slice(i, i + win);
+    if (slice.length < pTokens.length) break;
+    const ok = pTokens.every((pt) => slice.some((qt) => eq(pt, qt)));
+    if (ok) return true;
+  }
+  return false;
 }
 
 function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const byId = new Map<string, Evidence[]>();
   const nQuery = lightNormalizeHebrew(text);
-  const qTokenSet = new Set(tokenizeHebrew(text));
+  const qTokensOrdered = tokenizeHebrew(text);
+  const qTokenSet = new Set(qTokensOrdered);
   const push = (id: string | number, ev: Evidence) => {
     if (ev.quality < 0.05) return;
     const key = String(id);
@@ -338,13 +379,13 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
   };
   vocab.problems.forEach((p) => {
     if (p.name && matchesText(p.name, text)) {
-      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet, qTokensOrdered);
       push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
     }
   });
   vocab.aliases.forEach((a) => {
     if (a.alias && matchesText(a.alias, text)) {
-      const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+      const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet, qTokensOrdered);
       push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
     }
   });
@@ -352,7 +393,7 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
     if (!i.intent_text || !i.problem_slug) return;
     const pid = vocab.idBySlug.get(i.problem_slug);
     if (pid && matchesText(i.intent_text, text)) {
-      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet);
+      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet, qTokensOrdered);
       push(pid, { kind: "intent", base: WEIGHT_INTENT, phrase: i.intent_text, ...q });
     }
   });
@@ -380,7 +421,8 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
 function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const byId = new Map<string, Evidence[]>();
   const nQuery = lightNormalizeHebrew(text);
-  const qTokenSet = new Set(tokenizeHebrew(text));
+  const qTokensOrdered = tokenizeHebrew(text);
+  const qTokenSet = new Set(qTokensOrdered);
   const resolveId = (rawId: string | number): string => {
     const key = String(rawId);
     const slug = vocab.slugById.get(key);
@@ -399,7 +441,7 @@ function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evi
   };
   vocab.problems.forEach((p) => {
     if (p.name && matchesText(p.name, text)) {
-      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+      const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet, qTokensOrdered);
       push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
     }
   });
@@ -407,7 +449,7 @@ function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evi
     if (!a.alias || !matchesText(a.alias, text)) return;
     const srcSlug = vocab.slugById.get(String(a.problem_id));
     if (srcSlug && isBlockedForClassify(srcSlug, a.alias)) return;
-    const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+    const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet, qTokensOrdered);
     push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
   });
   vocab.intents.forEach((i) => {
@@ -415,7 +457,7 @@ function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evi
     if (isBlockedForClassify(i.problem_slug, i.intent_text)) return;
     const pid = vocab.idBySlug.get(i.problem_slug);
     if (pid && matchesText(i.intent_text, text)) {
-      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet);
+      const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet, qTokensOrdered);
       push(pid, { kind: "intent", base: WEIGHT_INTENT, phrase: i.intent_text, ...q });
     }
   });
@@ -493,7 +535,8 @@ function scoreAgainstVocabularyLegacy(text: string, vocab: Vocab): Map<string, n
 function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const byId = new Map<string, Evidence[]>();
   const nQuery = lightNormalizeHebrew(text);
-  const qTokenSet = new Set(tokenizeHebrew(text));
+  const qTokensOrdered = tokenizeHebrew(text);
+  const qTokenSet = new Set(qTokensOrdered);
   const resolveId = (rawId: string | number): string => {
     const key = String(rawId);
     const slug = vocab.slugById.get(key);
@@ -521,7 +564,7 @@ function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evid
     if (!p.name) return;
     if (isGenericSingleToken(p.name)) return;
     if (!matchesText(p.name, text)) return;
-    const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet);
+    const q = scoreEvidenceQuality(p.name, nQuery, qTokenSet, qTokensOrdered);
     push(p.id, { kind: "name", base: WEIGHT_PROBLEM_NAME, phrase: p.name, ...q });
   });
   vocab.aliases.forEach((a) => {
@@ -530,7 +573,7 @@ function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evid
     const srcSlug = vocab.slugById.get(String(a.problem_id));
     if (srcSlug && isBlockedForClassify(srcSlug, a.alias)) return;
     if (!matchesText(a.alias, text)) return;
-    const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet);
+    const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet, qTokensOrdered);
     push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
   });
   // Intents intentionally skipped — see (3) above.
@@ -555,7 +598,22 @@ export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
   for (const e of evidences) {
     if (e.kind === "intent") continue;
     if (e.full) return true;
-    if (e.tokens >= 2 && e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY) return true;
+    if (
+      e.tokens >= 2 &&
+      e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY &&
+      e.proximate
+    ) {
+      // Multi-token generic-anchor protection: reject when at least half
+      // of the phrase's meaningful tokens are generic anchors. Such
+      // phrases (e.g. "משבר זהות", "הצפה רגשית", "משבר זוגי") match too
+      // easily on incidental co-occurrence of generic therapy words, so
+      // they require a verbatim full-phrase hit (handled above via
+      // `e.full`) instead of proximity+overlap.
+      const pToks = tokenizeHebrew(e.phrase);
+      const anchors = pToks.filter((t) => EXTRACTION_GENERIC_ANCHORS.has(t)).length;
+      if (anchors * 2 < pToks.length) return true;
+      // else: anchor-heavy multi-token phrase → require `full` (skip).
+    }
     // CASE 1 — explicit single-token treatment term. Restores recall
     // for statements like "טראומה", "דיכאון", "אוטיזם" without
     // re-enabling weak overlap: generic anchors are rejected (checked
