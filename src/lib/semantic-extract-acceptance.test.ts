@@ -9,6 +9,7 @@ const ev = (o: Partial<Ev>): Ev => ({
   tokens: 1,
   quality: 1,
   full: false,
+  proximate: true,
   ...o,
 });
 
@@ -18,7 +19,38 @@ describe("hasStrongExtractionEvidence", () => {
   });
 
   it("accepts strong multi-token evidence (quality ≥ 0.6)", () => {
-    expect(hasStrongExtractionEvidence([ev({ phrase: "חרדה חברתית", tokens: 2, quality: 0.7 })])).toBe(true);
+    // Phrase with no generic-anchor tokens ("התקפי", "חרדה" ∉ anchors).
+    expect(hasStrongExtractionEvidence([ev({ phrase: "התקפי חרדה", tokens: 2, quality: 0.7 })])).toBe(true);
+  });
+
+  it("rejects multi-token evidence when tokens are not proximate", () => {
+    // e.g. "משבר זהות" tokens appear far apart across the description.
+    expect(
+      hasStrongExtractionEvidence([
+        ev({ phrase: "משבר זהות", tokens: 2, quality: 1, proximate: false }),
+      ]),
+    ).toBe(false);
+  });
+
+  it("rejects anchor-heavy multi-token phrases unless full-phrase match", () => {
+    // "משבר זהות" — both tokens are generic anchors → must require `full`.
+    expect(
+      hasStrongExtractionEvidence([
+        ev({ phrase: "משבר זהות", tokens: 2, quality: 1, proximate: true }),
+      ]),
+    ).toBe(false);
+    // "הצפה רגשית" — one of two tokens is a generic anchor → half-or-more.
+    expect(
+      hasStrongExtractionEvidence([
+        ev({ phrase: "הצפה רגשית", tokens: 2, quality: 1, proximate: true }),
+      ]),
+    ).toBe(false);
+    // But a verbatim substring hit still passes.
+    expect(
+      hasStrongExtractionEvidence([
+        ev({ phrase: "משבר זהות", tokens: 2, quality: 1, full: true, proximate: true }),
+      ]),
+    ).toBe(true);
   });
 
   it("rejects weak multi-token overlap (quality < 0.6)", () => {
