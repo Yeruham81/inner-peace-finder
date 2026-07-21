@@ -263,10 +263,7 @@ function EditorPage() {
             </Field>
           </Section>
 
-          <Section
-            title="קצת עליי, הגישה הטיפולית שלי, המצבים שבהם אני מטפל/ת ולמי אני עוזר/ת *"
-            action={<DescriptionHelpDialog />}
-          >
+          <Section title="קצת עליי *" action={<DescriptionHelpDialog />}>
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
                 כתבו תיאור אישי ומקצועי של עצמכם, של דרך העבודה והניסיון שלכם. פרטו באילו מצבים וקשיים אתם מסייעים, עם
