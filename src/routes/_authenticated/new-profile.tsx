@@ -150,7 +150,7 @@ function EditorPage() {
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
     },
-      onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
+    onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
   });
 
   if (profile.isLoading || options.isLoading || !initialized) {
@@ -268,8 +268,11 @@ function EditorPage() {
             action={<DescriptionHelpDialog />}
           >
             <p className="text-xs text-muted-foreground">
-              כתבו תיאור אישי ומקצועי של עצמכם, של הדרך שבה אתם עובדים ושל הניסיון שלכם. שתפו באילו
-              מצבים, קשיים והתמודדויות אתם מסייעים למטופלים ואילו אנשים פונים אליכם לקבלת טיפול.
+              כתבו תיאור אישי ומקצועי של עצמכם, של הדרך שבה אתם עובדים ושל הניסיון שלכם. ציינו במפורש באילו מצבים, קשיים
+              והתמודדויות אתם מסייעים, עם אילו אוכלוסיות אתם עובדים ובאילו תחומים יש לכם ניסיון מיוחד. תיאור מדויק
+              ומפורט יעזור לנו להציג את הפרופיל שלכם לאנשים שמחפשים מענה המתאים לניסיון ולתחומי הטיפול שלכם. מומלץ
+              להימנע מניסוחים כלליים בלבד, כמו „ליווי בתהליכי שינוי” או „טיפול בקשיים רגשיים”, ולפרט ככל האפשר מהם
+              המצבים שבהם אתם מטפלים.
             </p>
             <textarea
               value={form.full_description}
@@ -520,17 +523,13 @@ function SemanticFeedbackPanel({ description }: { description: string }) {
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
-      <h3 className="text-sm font-semibold text-foreground">
-        תחומי טיפול מרכזיים שעלו מתוך התיאור שלך
-      </h3>
+      <h3 className="text-sm font-semibold text-foreground">תחומי טיפול מרכזיים שעלו מתוך התיאור שלך</h3>
       <p className="mt-1 text-xs text-muted-foreground">
         המערכת מנתחת את התיאור שלך כדי לזהות אילו תחומי טיפול והתמודדויות ניתן להסיק ממנו.
       </p>
       <div className="mt-3">
         {!enabled ? (
-          <p className="text-xs text-muted-foreground">
-            הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.
-          </p>
+          <p className="text-xs text-muted-foreground">הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.</p>
         ) : query.isFetching && domains.length === 0 ? (
           <p className="text-xs text-muted-foreground">מנתח…</p>
         ) : domains.length === 0 ? (
