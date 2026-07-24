@@ -1,26 +1,6 @@
 /**
  * Phase Q1 v4 — pure query interpreter.
- *
- * Converts a raw Hebrew query into a fully-typed `InterpretationResult` using
- * ONLY a pre-loaded `Catalog`. This module is deterministic, side-effect
- * free, and has no Supabase / TanStack / React imports so it can be unit
- * tested cheaply against fixtures.
- *
- * Structural rules (see plan Phase Q1 v4):
- *
- *  - Generic request prefixes ("אני מחפש", "רוצה", "צריך", …) are stripped
- *    from the head BEFORE primary-intent detection, so "אני מחפש פסיכולוגית"
- *    resolves its primary intent to "פסיכולוגית".
- *  - Preference markers ("עדיף", "רצוי", "אם אפשר") apply to the next
- *    matched entity and route it to `softPreferences` instead of
- *    `hardFilters`.
- *  - Gender: female is inferred ONLY from an explicit feminine profession
- *    form or the literal word "אישה" / "נשית". "גבר" is the only explicit
- *    male trigger; masculine profession forms are treated as gender-neutral.
- *  - An unrecognized service phrase in the primary slot (e.g.
- *    "מאבחן קשב") yields `intent = "unresolved_service"` and
- *    `unresolvedPrimary = true`, preventing an executor from silently
- *    degrading into a full-city search.
+ * Deterministic, side-effect free. Uses a preloaded Catalog only.
  */
 
 import {
@@ -40,65 +20,30 @@ import type {
   UnresolvedCode,
 } from "./query-interpreter.types";
 
-/** Generic request prefixes — stripped from the front of the query before
- *  primary-intent detection. Order matters: longer phrases first. */
 const GENERIC_PREFIXES: string[] = [
-  "אני מחפש את",
-  "אני מחפש",
-  "אני מחפשת",
-  "אני צריך",
-  "אני צריכה",
-  "אשמח לקבל",
-  "אשמח למצוא",
-  "רוצה למצוא",
-  "רוצה לפגוש",
-  "אני רוצה",
-  "אפשר לקבל",
-  "יש לכם",
-  "יש לך",
-  "מחפש",
-  "מחפשת",
-  "צריך",
-  "צריכה",
-  "רוצה",
-  "מעוניין ב",
-  "מעוניינת ב",
-  "מעוניין",
-  "מעוניינת",
+  "אני מחפש את", "אני מחפש", "אני מחפשת",
+  "אני צריך", "אני צריכה",
+  "אשמח לקבל", "אשמח למצוא",
+  "רוצה למצוא", "רוצה לפגוש", "אני רוצה",
+  "אפשר לקבל", "יש לכם", "יש לך",
+  "מחפש", "מחפשת", "צריך", "צריכה", "רוצה",
+  "מעוניין ב", "מעוניינת ב", "מעוניין", "מעוניינת",
 ];
 
-/** Preference markers — when they appear immediately before a recognized
- *  entity, that entity becomes a soft preference rather than a hard filter. */
 const PREFERENCE_MARKERS: string[] = ["עדיף", "רצוי", "אם אפשר", "כדאי"];
-
-/** Explicit gender triggers (single tokens after normalization). */
 const EXPLICIT_FEMALE_TOKENS = new Set(["אישה", "אשה", "נשית", "מטפלת"]);
 const EXPLICIT_MALE_TOKENS = new Set(["גבר", "זכר"]);
 
-/** Delivery-mode aliases → canonical `location_type` values. */
 const DELIVERY_MODE_ALIASES: Record<string, string> = {
-  אונליין: "online",
-  אונלין: "online",
-  זום: "online",
-  מקוון: "online",
-  "מקוונת": "online",
-  "מרחוק": "online",
-  "פרונטלי": "in_person",
-  "בקליניקה": "in_person",
-  "פנים אל פנים": "in_person",
+  אונליין: "online", אונלין: "online", זום: "online",
+  מקוון: "online", מקוונת: "online", מרחוק: "online",
+  פרונטלי: "in_person", בקליניקה: "in_person",
 };
 
-/** Service phrases we recognize but do NOT (yet) support as structured filters. */
 const UNRECOGNIZED_SERVICE_PHRASES: string[] = [
-  "מאבחן קשב",
-  "אבחון קשב",
-  "אבחון adhd",
-  "אבחון אוטיזם",
-  "אבחון",
+  "מאבחן קשב", "אבחון קשב", "אבחון adhd",
+  "אבחון אוטיזם", "אבחון",
 ];
-
-/** Preserve unknown modality/profession suffix that ends with "ית" – heuristic. */
-const FEMININE_SUFFIX_RE = /(?:ית|ות)$/;
 
 function normalize(raw: string): string {
   return lightNormalizeHebrew(raw).toLowerCase();
@@ -107,7 +52,6 @@ function normalize(raw: string): string {
 function stripGenericPrefix(normalized: string): { head: string; stripped: boolean } {
   let head = normalized;
   let stripped = false;
-  // repeatedly peel prefixes ("אני מחפש רוצה פסיכולוגית" → "פסיכולוגית")
   for (let guard = 0; guard < 4; guard++) {
     let matched = false;
     for (const p of GENERIC_PREFIXES) {
@@ -132,8 +76,10 @@ function tokenBagWithPrefixStripped(text: string): string[] {
   return tokenBag(text).map((t) => stripHebrewPrefix(t));
 }
 
-/** Returns the set of contiguous token spans up to `maxLen` tokens. */
-function* windowsUpTo(tokens: string[], maxLen: number): Iterable<{ start: number; end: number; text: string }> {
+function* windowsUpTo(
+  tokens: string[],
+  maxLen: number,
+): Iterable<{ start: number; end: number; text: string }> {
   for (let start = 0; start < tokens.length; start++) {
     for (let len = 1; len <= maxLen && start + len <= tokens.length; len++) {
       const end = start + len;
@@ -151,7 +97,7 @@ type StructuredHit =
   | { kind: "delivery"; mode: string; start: number; end: number }
   | { kind: "name"; therapistId: string; start: number; end: number };
 
-function normalizeVariant(v: string): string {
+function normVariant(v: string): string {
   return foldSofit(v.toLowerCase().trim());
 }
 
@@ -171,15 +117,14 @@ function buildLookupIndex(catalog: Catalog): {
   const cityByPhrase = new Map<string, string>();
   const nameByPhrase = new Map<string, string>();
   let maxLen = 1;
-  const bump = (phrase: string): number => {
+  const bump = (phrase: string) => {
     const wc = phrase.split(" ").filter(Boolean).length;
     if (wc > maxLen) maxLen = wc;
-    return wc;
   };
   for (const p of catalog.professions) {
-    const fem = new Set(p.feminineVariants.map(normalizeVariant));
+    const fem = new Set(p.feminineVariants.map(normVariant));
     for (const v of p.nameVariants) {
-      const nv = normalizeVariant(v);
+      const nv = normVariant(v);
       if (!nv) continue;
       professionByPhrase.set(nv, { slug: p.slug, feminine: fem.has(nv) });
       bump(nv);
@@ -187,7 +132,7 @@ function buildLookupIndex(catalog: Catalog): {
   }
   for (const m of catalog.modalities) {
     for (const v of m.nameVariants) {
-      const nv = normalizeVariant(v);
+      const nv = normVariant(v);
       if (!nv) continue;
       modalityByPhrase.set(nv, m.slug);
       bump(nv);
@@ -195,7 +140,7 @@ function buildLookupIndex(catalog: Catalog): {
   }
   for (const p of catalog.populations) {
     for (const v of [p.name_he, ...p.aliases]) {
-      const nv = normalizeVariant(v);
+      const nv = normVariant(v);
       if (!nv) continue;
       populationByPhrase.set(nv, p.slug);
       bump(nv);
@@ -203,7 +148,7 @@ function buildLookupIndex(catalog: Catalog): {
   }
   for (const l of catalog.languages) {
     for (const v of [l.name_he, ...l.aliases]) {
-      const nv = normalizeVariant(v);
+      const nv = normVariant(v);
       if (!nv) continue;
       languageByPhrase.set(nv, l.code);
       bump(nv);
@@ -211,47 +156,34 @@ function buildLookupIndex(catalog: Catalog): {
   }
   for (const c of catalog.cities) {
     for (const v of [c.canonical, ...c.aliases]) {
-      const nv = normalizeVariant(v);
+      const nv = normVariant(v);
       if (!nv) continue;
       cityByPhrase.set(nv, c.canonical);
       bump(nv);
     }
   }
-  // Names: only surface full-name matches OR unambiguous first names
-  // (first name held by exactly ONE therapist).
   for (const t of catalog.therapistNames) {
     const full = t.tokens.join(" ");
-    if (full) {
-      nameByPhrase.set(full, t.id);
-      bump(full);
-    }
+    if (full) { nameByPhrase.set(full, t.id); bump(full); }
     const first = t.tokens[0];
     if (first && catalog.firstNameCount.get(first) === 1) {
       nameByPhrase.set(first, t.id);
     }
   }
   return {
-    professionByPhrase,
-    modalityByPhrase,
-    populationByPhrase,
-    languageByPhrase,
-    cityByPhrase,
-    nameByPhrase,
+    professionByPhrase, modalityByPhrase, populationByPhrase,
+    languageByPhrase, cityByPhrase, nameByPhrase,
     maxLen: Math.max(maxLen, 3),
   };
 }
 
-/** Greedy longest-match extraction over the token stream. Consumed spans are
- *  removed from the remainder (for downstream semantic classification). */
-function extractStructured(tokens: string[], idx: ReturnType<typeof buildLookupIndex>): {
-  hits: StructuredHit[];
-  consumedMask: boolean[];
-} {
+function extractStructured(
+  tokens: string[],
+  idx: ReturnType<typeof buildLookupIndex>,
+): { hits: StructuredHit[]; consumedMask: boolean[] } {
   const consumedMask = new Array<boolean>(tokens.length).fill(false);
   const hits: StructuredHit[] = [];
-  // Sort candidate windows longest-first so multi-word phrases win.
-  const spans: { start: number; end: number; text: string }[] = [];
-  for (const w of windowsUpTo(tokens, idx.maxLen)) spans.push(w);
+  const spans = Array.from(windowsUpTo(tokens, idx.maxLen));
   spans.sort((a, b) => b.end - b.start - (a.end - a.start));
   for (const span of spans) {
     if (consumedMask.slice(span.start, span.end).some(Boolean)) continue;
@@ -276,13 +208,8 @@ function extractStructured(tokens: string[], idx: ReturnType<typeof buildLookupI
 
 function hasImmediatePreferenceMarker(tokens: string[], hitStart: number): boolean {
   if (hitStart === 0) return false;
-  // look back up to 3 tokens for a preference marker (single or two-word)
-  const one = tokens[hitStart - 1];
-  if (PREFERENCE_MARKERS.includes(one)) return true;
-  if (hitStart >= 2) {
-    const two = tokens.slice(hitStart - 2, hitStart).join(" ");
-    if (PREFERENCE_MARKERS.includes(two)) return true;
-  }
+  if (PREFERENCE_MARKERS.includes(tokens[hitStart - 1])) return true;
+  if (hitStart >= 2 && PREFERENCE_MARKERS.includes(tokens.slice(hitStart - 2, hitStart).join(" "))) return true;
   return false;
 }
 
@@ -297,15 +224,8 @@ function detectExplicitGender(tokens: string[]): {
   let female = false;
   let male = false;
   tokens.forEach((tok, i) => {
-    if (EXPLICIT_FEMALE_TOKENS.has(tok)) {
-      female = true;
-      evidence.push("explicit_female");
-      consumed.add(i);
-    } else if (EXPLICIT_MALE_TOKENS.has(tok)) {
-      male = true;
-      evidence.push("explicit_male");
-      consumed.add(i);
-    }
+    if (EXPLICIT_FEMALE_TOKENS.has(tok)) { female = true; evidence.push("explicit_female"); consumed.add(i); }
+    else if (EXPLICIT_MALE_TOKENS.has(tok)) { male = true; evidence.push("explicit_male"); consumed.add(i); }
   });
   const conflict = female && male;
   const hard: TherapistGender | null = conflict ? null : female ? "female" : male ? "male" : null;
@@ -316,7 +236,12 @@ function detectUnresolvedService(head: string): string | null {
   const lower = head.trim();
   if (!lower) return null;
   for (const phrase of UNRECOGNIZED_SERVICE_PHRASES) {
-    if (lower === phrase || lower.startsWith(phrase + " ") || lower.endsWith(" " + phrase) || lower.includes(" " + phrase + " ")) {
+    if (
+      lower === phrase ||
+      lower.startsWith(phrase + " ") ||
+      lower.endsWith(" " + phrase) ||
+      lower.includes(" " + phrase + " ")
+    ) {
       return phrase;
     }
   }
@@ -324,11 +249,8 @@ function detectUnresolvedService(head: string): string | null {
 }
 
 function classifyIntent(args: {
-  hasStructured: boolean;
-  hasSemantic: boolean;
-  hasName: boolean;
-  unresolvedPrimary: boolean;
-  hasAnyToken: boolean;
+  hasStructured: boolean; hasSemantic: boolean; hasName: boolean;
+  unresolvedPrimary: boolean; hasAnyToken: boolean;
 }): Intent {
   if (args.unresolvedPrimary) return "unresolved_service";
   if (!args.hasAnyToken) return "unknown";
@@ -339,82 +261,49 @@ function classifyIntent(args: {
   return "unknown";
 }
 
-/**
- * Interpret a raw query.
- *
- * @param raw     Raw Hebrew (or mixed) query as typed by the user.
- * @param catalog Preloaded catalog (see `query-catalog.ts`).
- */
 export function interpretQuery(raw: string, catalog: Catalog): InterpretationResult {
   const normalized = normalize(raw);
   const emptyHard: StructuredFilters = {
-    professionSlugs: [],
-    modalitySlugs: [],
-    populationSlugs: [],
-    languageCodes: [],
-    city: null,
-    therapistGender: null,
+    professionSlugs: [], modalitySlugs: [], populationSlugs: [],
+    languageCodes: [], city: null, therapistGender: null,
   };
   const emptySoft: SoftPreferences = {
-    professionSlugs: [],
-    modalitySlugs: [],
-    populationSlugs: [],
-    languageCodes: [],
-    cities: [],
-    deliveryModes: [],
-    genders: [],
+    professionSlugs: [], modalitySlugs: [], populationSlugs: [],
+    languageCodes: [], cities: [], deliveryModes: [], genders: [],
   };
-
   if (!normalized) {
     return {
-      raw,
-      normalized,
-      intent: "unknown",
-      unresolvedPrimary: false,
-      primaryHead: null,
-      hardFilters: emptyHard,
-      softPreferences: emptySoft,
-      therapistNameIds: [],
-      semanticRemainder: "",
-      genderEvidence: [],
-      unresolvedCodes: ["empty_query"],
+      raw, normalized, intent: "unknown",
+      unresolvedPrimary: false, primaryHead: null,
+      hardFilters: emptyHard, softPreferences: emptySoft,
+      therapistNameIds: [], semanticRemainder: "",
+      genderEvidence: [], unresolvedCodes: ["empty_query"],
     };
   }
 
   const { head: strippedHead } = stripGenericPrefix(normalized);
   const headForIntent = strippedHead || normalized;
-
-  // Detect an unresolved service phrase in the PRIMARY slot.
   const unresolvedPhrase = detectUnresolvedService(headForIntent);
 
-  // Tokenize (light-prefix-stripped) for structured lookup.
   const rawTokens = tokenBag(normalized);
   const tokens = tokenBagWithPrefixStripped(normalized);
   const idx = buildLookupIndex(catalog);
   const { hits, consumedMask } = extractStructured(tokens, idx);
 
-  // Gender detection (uses non-prefix-stripped tokens for exact match).
   const gender = detectExplicitGender(rawTokens);
   for (const i of gender.consumed) consumedMask[i] = true;
 
-  // Feminine profession form → female evidence + hard filter (unless
-  // explicit male already conflicts).
   const hardFilters: StructuredFilters = { ...emptyHard };
   const softPreferences: SoftPreferences = {
-    professionSlugs: [],
-    modalitySlugs: [],
-    populationSlugs: [],
-    languageCodes: [],
-    cities: [],
-    deliveryModes: [],
-    genders: [],
+    professionSlugs: [], modalitySlugs: [], populationSlugs: [],
+    languageCodes: [], cities: [], deliveryModes: [], genders: [],
   };
   const therapistNameIds: string[] = [];
   const genderEvidence: GenderEvidence[] = [...gender.evidence];
   const unresolvedCodes: UnresolvedCode[] = [];
   if (gender.conflict) unresolvedCodes.push("gender_conflict");
 
-  const uniq = <T>(arr: T[]): T[] => Array.from(new Set(arr));
+  const uniq = <T,>(arr: T[]): T[] => Array.from(new Set(arr));
 
   for (const hit of hits) {
     const preferred = hasImmediatePreferenceMarker(tokens, hit.start);
@@ -452,7 +341,6 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
 
   if (gender.hard && !hardFilters.therapistGender) hardFilters.therapistGender = gender.hard;
 
-  // Dedupe.
   hardFilters.professionSlugs = uniq(hardFilters.professionSlugs);
   hardFilters.modalitySlugs = uniq(hardFilters.modalitySlugs);
   hardFilters.populationSlugs = uniq(hardFilters.populationSlugs);
@@ -465,7 +353,6 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   softPreferences.deliveryModes = uniq(softPreferences.deliveryModes);
   softPreferences.genders = uniq(softPreferences.genders);
 
-  // Semantic remainder = un-consumed tokens (original, non-prefix-stripped).
   const remainderTokens = rawTokens.filter((_t, i) => !consumedMask[i]);
   const semanticRemainder = remainderTokens.join(" ");
 
@@ -482,32 +369,18 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   if (unresolvedPrimary) unresolvedCodes.push("unrecognized_service");
 
   const intent = classifyIntent({
-    hasStructured,
-    hasSemantic,
-    hasName,
-    unresolvedPrimary,
-    hasAnyToken: tokens.length > 0,
+    hasStructured, hasSemantic, hasName,
+    unresolvedPrimary, hasAnyToken: tokens.length > 0,
   });
 
   return {
-    raw,
-    normalized,
-    intent,
+    raw, normalized, intent,
     unresolvedPrimary,
     primaryHead: headForIntent || null,
-    hardFilters,
-    softPreferences,
-    therapistNameIds,
-    semanticRemainder,
-    genderEvidence,
-    unresolvedCodes,
+    hardFilters, softPreferences,
+    therapistNameIds, semanticRemainder,
+    genderEvidence, unresolvedCodes,
   };
 }
 
-/** Testing helper — exposed for internal fixtures only. */
-export const __internals = {
-  stripGenericPrefix,
-  detectExplicitGender,
-  detectUnresolvedService,
-  FEMININE_SUFFIX_RE,
-};
+export const __internals = { stripGenericPrefix, detectExplicitGender, detectUnresolvedService };
