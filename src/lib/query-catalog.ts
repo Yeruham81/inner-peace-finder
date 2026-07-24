@@ -59,17 +59,20 @@ export async function loadSearchCatalog(): Promise<Catalog> {
 
   const sb = serverClient();
 
+  const cityQ = applyEligibility(
+    sb
+      .from("therapist_locations")
+      .select("city, therapists!inner(id, is_active, profile_status, visibility)")
+      .eq("is_active", true),
+    "therapists!inner",
+  );
+  const nameQ = applyEligibility(sb.from("therapists").select("id, full_name"));
+
   const [{ data: profs }, { data: mods }, cityRes, nameRes] = await Promise.all([
     sb.from("professions").select("id, slug, name_he, name_en").eq("is_active", true),
     sb.from("treatment_modalities").select("id, slug, name_he, name_en").eq("is_active", true),
-    applyEligibility(
-      sb
-        .from("therapist_locations")
-        .select("city, therapists!inner(id, is_active, profile_status, visibility)")
-        .eq("is_active", true),
-      "therapists!inner",
-    ),
-    applyEligibility(sb.from("therapists").select("id, full_name")),
+    cityQ as unknown as Promise<{ data: Array<{ city: string | null }> | null }>,
+    nameQ as unknown as Promise<{ data: Array<{ id: string; full_name: string }> | null }>,
   ]);
 
   const professions: Profession[] = (profs ?? []).map((p) => {
