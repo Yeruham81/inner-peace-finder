@@ -16,15 +16,20 @@ export const THERAPIST_ELIGIBILITY = {
   visibility: "visible" as Database["public"]["Enums"]["therapist_visibility"],
 };
 
-export function applyEligibility<Q extends { eq: (col: string, val: unknown) => Q }>(
-  builder: Q,
-  path: TherapistPath = "therapists",
-): Q {
+/**
+ * Apply eligibility to a Supabase filter-builder while preserving its full
+ * generic type. Internally we cast to a permissive shape because Supabase's
+ * generated `.eq` signatures require literal-type column names, which cannot
+ * be expressed generically here.
+ */
+export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapists"): Q {
   const prefix = path === "therapists" ? "" : "therapists.";
-  return builder
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const b = builder as any;
+  return b
     .eq(`${prefix}is_active`, THERAPIST_ELIGIBILITY.isActive)
     .eq(`${prefix}profile_status`, THERAPIST_ELIGIBILITY.profileStatus)
-    .eq(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibility);
+    .eq(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibility) as Q;
 }
 
 export function isEligibleRow(row: {
