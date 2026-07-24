@@ -383,4 +383,4 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   };
 }
 
-export const __internals = { stripGenericPrefix, detectExplicitGenderRaw, detectUnresolvedService };
+export const __internals = { stripGenericPrefix, detectExplicitGender, detectUnresolvedService };
