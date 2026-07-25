@@ -6,11 +6,26 @@ import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import {
   listFilterOptions,
   classifyAndSearch,
+  type ScoredTherapist,
 } from "@/lib/therapists.functions";
 import { searchStructuredTherapists } from "@/lib/structured-search.functions";
+import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter.functions";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
+
+/**
+ * DEV-only search-flow switch.
+ *
+ *   ?flow=legacy   → existing `classifyAndSearch` pipeline (default).
+ *   ?flow=unified  → Phase Q1 v4 `unifiedSearch` pipeline.
+ *
+ * The parameter is ONLY honored when `import.meta.env.DEV`. In production
+ * builds any value is coerced to "legacy" — no silent fallback, no way to
+ * opt into the unified pipeline from a shipped page.
+ */
+const FLOW_VALUES = ["legacy", "unified"] as const;
+type FlowValue = (typeof FLOW_VALUES)[number];
 
 const searchSchema = z.object({
   q: fallback(z.string().trim().max(200), "").default(""),
@@ -18,7 +33,13 @@ const searchSchema = z.object({
   city: fallback(z.string().trim().max(80), "").default(""),
   population: fallback(z.string().trim().max(40), "").default(""),
   language: fallback(z.string().trim().max(8), "").default(""),
+  flow: fallback(z.string(), "legacy").default("legacy"),
 });
+
+function resolveFlow(raw: string): FlowValue {
+  if (!import.meta.env.DEV) return "legacy";
+  return (FLOW_VALUES as readonly string[]).includes(raw) ? (raw as FlowValue) : "legacy";
+}
 
 const filterOptionsQuery = queryOptions({
   queryKey: ["filter-options"],
@@ -41,6 +62,16 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   });
 }
 
+function unifiedResultsQuery(q: string) {
+  return queryOptions({
+    queryKey: ["unified-search", q],
+    queryFn: (): Promise<UnifiedSearchResult | null> =>
+      q.trim().length >= 1
+        ? unifiedSearch({ data: { query: q.trim(), limit: 20 } })
+        : Promise.resolve(null),
+  });
+}
+
 function structuredTherapistQuery(q: string) {
   return queryOptions({
     queryKey: ["structured-search", "therapist", q],
@@ -55,11 +86,17 @@ export const Route = createFileRoute("/search")({
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    await Promise.all([
+    const flow = resolveFlow(deps.flow);
+    const promises: Promise<unknown>[] = [
       context.queryClient.ensureQueryData(filterOptionsQuery),
-      context.queryClient.ensureQueryData(resultsQuery(deps)),
       context.queryClient.ensureQueryData(structuredTherapistQuery(deps.q)),
-    ]);
+    ];
+    if (flow === "unified") {
+      promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(deps.q)));
+    } else {
+      promises.push(context.queryClient.ensureQueryData(resultsQuery(deps)));
+    }
+    await Promise.all(promises);
   },
   head: () => ({
     meta: [
@@ -83,15 +120,48 @@ export const Route = createFileRoute("/search")({
 function SearchPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const flow = resolveFlow(search.flow);
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
-  const { data: pipeline } = useSuspenseQuery(resultsQuery(search));
   const { data: structuredMatches } = useSuspenseQuery(structuredTherapistQuery(search.q));
-  const isClarification = pipeline.mode === "clarification";
-  const results = isClarification ? [] : pipeline.therapists;
+  const { data: legacyPipeline } = useSuspenseQuery({
+    ...resultsQuery(search),
+    enabled: flow === "legacy",
+  } as ReturnType<typeof resultsQuery>);
+  const { data: unifiedPipeline } = useSuspenseQuery({
+    ...unifiedResultsQuery(search.q),
+    enabled: flow === "unified",
+  } as ReturnType<typeof unifiedResultsQuery>);
+
+  const isClarification =
+    flow === "legacy" && legacyPipeline?.mode === "clarification";
+  const legacyResults =
+    legacyPipeline && legacyPipeline.mode !== "clarification"
+      ? legacyPipeline.therapists
+      : [];
+  const results: ScoredTherapist[] =
+    flow === "unified"
+      ? (unifiedPipeline?.results ?? []).map((r) => ({
+          id: r.id,
+          slug: r.slug,
+          full_name: r.full_name,
+          professional_title: r.professional_title,
+          short_intro: null,
+          years_experience: r.yearsExperience,
+          city: r.city,
+          image_url: r.image_url,
+          verified: r.verified,
+          score: r.semanticScore,
+          matched_problem_slugs: [],
+          population_names: [],
+          language_names: [],
+        }))
+      : legacyResults;
+  const pipelineMode: string =
+    flow === "unified" ? "unified" : (legacyPipeline?.mode ?? "results");
 
   const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    const key = JSON.stringify({ ...search, mode: pipeline.mode, n: results.length });
+    const key = JSON.stringify({ ...search, mode: pipelineMode, n: results.length });
     if (lastSearchKeyRef.current === key) return;
     lastSearchKeyRef.current = key;
     track("search_executed", { page_source: "search", origin: "SearchPage" });
@@ -107,7 +177,7 @@ function SearchPage() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.q, search.problem, search.city, search.population, search.language, results.length, pipeline.mode]);
+  }, [search.q, search.problem, search.city, search.population, search.language, results.length, pipelineMode]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -166,18 +236,37 @@ function SearchPage() {
         </section>
       )}
 
+      {import.meta.env.DEV && (
+        <div className="mt-4 rounded-md border border-dashed border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-mono">flow={flow}</span>
+          <span className="mx-2">·</span>
+          <button
+            type="button"
+            className="underline hover:text-foreground"
+            onClick={() =>
+              navigate({
+                to: "/search",
+                search: { ...search, flow: flow === "unified" ? "legacy" : "unified" },
+              })
+            }
+          >
+            switch to {flow === "unified" ? "legacy" : "unified"}
+          </button>
+        </div>
+      )}
+
       {isClarification ? (
         <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-6 shadow-soft">
           <p className="text-base font-semibold text-foreground">
-            {pipeline.clarification.question}
+            {legacyPipeline!.clarification.question}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {pipeline.clarification.reason === "disambiguation"
+            {legacyPipeline!.clarification.reason === "disambiguation"
               ? "מצאנו כמה כיוונים קרובים. בחרו את המתאים ביותר כדי שנציג מטפלים רלוונטיים."
               : "לא הצלחנו לזהות בוודאות את הנושא. בחרו את ההגדרה המתאימה ביותר כדי שנציג מטפלים רלוונטיים."}
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {pipeline.clarification.options.map((opt) => (
+            {legacyPipeline!.clarification.options.map((opt) => (
               <button
                 key={opt.slug}
                 type="button"
