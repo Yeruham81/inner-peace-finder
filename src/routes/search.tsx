@@ -133,21 +133,30 @@ function SearchPage() {
 
   const isClarification =
     flow === "legacy" && legacyPipeline?.mode === "clarification";
-  const results =
+  const legacyResults =
+    legacyPipeline && legacyPipeline.mode !== "clarification"
+      ? legacyPipeline.therapists
+      : [];
+  const results: ScoredTherapist[] =
     flow === "unified"
       ? (unifiedPipeline?.results ?? []).map((r) => ({
           id: r.id,
           slug: r.slug,
           full_name: r.full_name,
           professional_title: r.professional_title,
-          image_url: r.image_url,
+          short_intro: null,
+          years_experience: r.yearsExperience,
           city: r.city,
+          image_url: r.image_url,
           verified: r.verified,
+          score: r.semanticScore,
+          matched_problem_slugs: [],
+          population_names: [],
+          language_names: [],
         }))
-      : isClarification
-        ? []
-        : legacyPipeline!.therapists;
-  const pipelineMode: string = flow === "unified" ? "unified" : legacyPipeline!.mode;
+      : legacyResults;
+  const pipelineMode: string =
+    flow === "unified" ? "unified" : (legacyPipeline?.mode ?? "results");
 
   const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
