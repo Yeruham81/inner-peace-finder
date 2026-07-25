@@ -1,13 +1,22 @@
 /**
  * Phase Q1 v4 — pure query interpreter.
  * Deterministic, side-effect free. Uses a preloaded Catalog only.
+ *
+ * All lookup constants (generic prefixes, preference markers, explicit
+ * gender tokens, delivery modes, unresolved services, catalog variants)
+ * are normalized through the SAME pipeline as the user query
+ * (`normalizeForInterpretation`). The pipeline is a subset of
+ * `lightNormalizeHebrew` that intentionally SKIPS `foldInflections` so
+ * gender-bearing suffixes like "אישה" vs "איש" or the feminine
+ * "פסיכולוגית" remain distinguishable.
  */
 
 import {
+  collapseRepeatedChars,
   foldSofit,
-  lightNormalizeHebrew,
-  stripHebrewPrefix,
-  tokenizeHebrew,
+  normalizePunctuation,
+  normalizeWhitespace,
+  stripNikud,
 } from "./hebrew-normalizer";
 import type {
   Catalog,
@@ -20,7 +29,37 @@ import type {
   UnresolvedCode,
 } from "./query-interpreter.types";
 
-const GENERIC_PREFIXES: string[] = [
+/**
+ * Interpretation-time normalization. Mirrors `lightNormalizeHebrew` but
+ * omits `foldInflections`, so that:
+ *   - "אישה" stays "אישה" (does not collapse to "איש").
+ *   - "פסיכולוגית" stays "פסיכולוגית" (feminine form preserved).
+ *   - "מטפלת" stays "מטפלת".
+ * Every constant and every catalog variant is normalized with this
+ * function, so lookups always compare like-to-like.
+ */
+function normalizeForInterpretation(input: string): string {
+  if (!input) return "";
+  let s = input.normalize("NFKC");
+  s = stripNikud(s);
+  s = normalizeWhitespace(s);
+  s = normalizePunctuation(s);
+  s = s.toLowerCase();
+  s = foldSofit(s);
+  s = collapseRepeatedChars(s);
+  return normalizeWhitespace(s);
+}
+
+function normList(items: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const it of items) {
+    const n = normalizeForInterpretation(it);
+    if (n) out.push(n);
+  }
+  return out;
+}
+
+const GENERIC_PREFIXES: string[] = normList([
   "אני מחפש את", "אני מחפש", "אני מחפשת",
   "אני צריך", "אני צריכה",
   "אשמח לקבל", "אשמח למצוא",
@@ -28,25 +67,65 @@ const GENERIC_PREFIXES: string[] = [
   "אפשר לקבל", "יש לכם", "יש לך",
   "מחפש", "מחפשת", "צריך", "צריכה", "רוצה",
   "מעוניין ב", "מעוניינת ב", "מעוניין", "מעוניינת",
-];
+]);
 
-const PREFERENCE_MARKERS: string[] = ["עדיף", "רצוי", "אם אפשר", "כדאי"];
-const EXPLICIT_FEMALE_TOKENS = new Set(["אישה", "אשה", "נשית", "מטפלת"]);
-const EXPLICIT_MALE_TOKENS = new Set(["גבר", "זכר"]);
+const PREFERENCE_MARKERS: string[] = normList(["עדיף", "רצוי", "אם אפשר", "כדאי"]);
+const PREFERENCE_MARKER_SET = new Set(PREFERENCE_MARKERS);
 
-const DELIVERY_MODE_ALIASES: Record<string, string> = {
-  אונליין: "online", אונלין: "online", זום: "online",
-  מקוון: "online", מקוונת: "online", מרחוק: "online",
-  פרונטלי: "in_person", בקליניקה: "in_person",
-};
+const EXPLICIT_FEMALE_TOKENS = new Set(
+  normList(["אישה", "אשה", "נשית", "מטפלת"]),
+);
+const EXPLICIT_MALE_TOKENS = new Set(normList(["גבר", "זכר"]));
 
-const UNRECOGNIZED_SERVICE_PHRASES: string[] = [
+const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
+  const raw: Record<string, string> = {
+    אונליין: "online", אונלין: "online", זום: "online",
+    מקוון: "online", מקוונת: "online", מרחוק: "online",
+    פרונטלי: "in_person", בקליניקה: "in_person",
+  };
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const nk = normalizeForInterpretation(k);
+    if (nk) out[nk] = v;
+  }
+  return out;
+})();
+
+const UNRECOGNIZED_SERVICE_PHRASES: string[] = normList([
   "מאבחן קשב", "אבחון קשב", "אבחון adhd",
   "אבחון אוטיזם", "אבחון",
-];
+]);
 
-function normalize(raw: string): string {
-  return lightNormalizeHebrew(raw).toLowerCase();
+/**
+ * Common Hebrew one-letter prefixes. We attempt fallback prefix stripping
+ * (iteratively, up to 2 letters — e.g. "מהחרדה" → "חרדה") ONLY as a
+ * secondary lookup: the raw normalized token is tried first, so real
+ * words that happen to begin with a prefix letter (e.g. "מטפלת") are
+ * never mangled.
+ */
+const HEBREW_PREFIX_LETTERS = new Set(["ה", "ו", "ב", "כ", "ל", "מ", "ש"]);
+
+function stripOnePrefix(token: string): string | null {
+  if (token.length < 3) return null;
+  if (!HEBREW_PREFIX_LETTERS.has(token[0]!)) return null;
+  const rest = token.slice(1);
+  if (rest.length < 2) return null;
+  return rest;
+}
+
+/** All candidate forms for a single token: raw, then iteratively prefix-stripped. */
+function tokenPrefixVariants(token: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  let cur: string | null = token;
+  for (let i = 0; i < 3 && cur; i++) {
+    if (!seen.has(cur)) {
+      seen.add(cur);
+      out.push(cur);
+    }
+    cur = stripOnePrefix(cur);
+  }
+  return out;
 }
 
 function stripGenericPrefix(normalized: string): { head: string; stripped: boolean } {
@@ -68,12 +147,11 @@ function stripGenericPrefix(normalized: string): { head: string; stripped: boole
   return { head, stripped };
 }
 
-function tokenBag(text: string): string[] {
-  return tokenizeHebrew(text).map((t) => foldSofit(t.toLowerCase()));
-}
-
-function tokenBagWithPrefixStripped(text: string): string[] {
-  return tokenBag(text).map((t) => stripHebrewPrefix(t));
+/** Tokenize an already-normalized string. Preserves prefix letters; the
+ *  extractor tries prefix-stripped fallbacks per span. */
+function tokenizeNormalized(normalized: string): string[] {
+  if (!normalized) return [];
+  return normalized.split(" ").filter((t) => t.length >= 1);
 }
 
 function* windowsUpTo(
@@ -97,9 +175,8 @@ type StructuredHit =
   | { kind: "delivery"; mode: string; start: number; end: number }
   | { kind: "name"; therapistId: string; start: number; end: number };
 
-function normVariant(v: string): string {
-  return foldSofit(v.toLowerCase().trim());
-}
+/** Catalog variants are normalized via the same pipeline as user input. */
+const normVariant = normalizeForInterpretation;
 
 function buildLookupIndex(catalog: Catalog): {
   professionByPhrase: Map<string, { slug: string; feminine: boolean }>;
@@ -163,11 +240,12 @@ function buildLookupIndex(catalog: Catalog): {
     }
   }
   for (const t of catalog.therapistNames) {
-    const full = t.tokens.join(" ");
+    const full = normVariant(t.tokens.join(" "));
     if (full) { nameByPhrase.set(full, t.id); bump(full); }
     const first = t.tokens[0];
     if (first && catalog.firstNameCount.get(first) === 1) {
-      nameByPhrase.set(first, t.id);
+      const nf = normVariant(first);
+      if (nf) nameByPhrase.set(nf, t.id);
     }
   }
   return {
@@ -177,26 +255,55 @@ function buildLookupIndex(catalog: Catalog): {
   };
 }
 
+type LookupIndex = ReturnType<typeof buildLookupIndex>;
+
+function lookupPhrase(
+  idx: LookupIndex,
+  text: string,
+  start: number,
+  end: number,
+): StructuredHit | null {
+  const prof = idx.professionByPhrase.get(text);
+  if (prof) return { kind: "profession", slug: prof.slug, feminine: prof.feminine, start, end };
+  const mod = idx.modalityByPhrase.get(text);
+  if (mod) return { kind: "modality", slug: mod, start, end };
+  const pop = idx.populationByPhrase.get(text);
+  if (pop) return { kind: "population", slug: pop, start, end };
+  const lang = idx.languageByPhrase.get(text);
+  if (lang) return { kind: "language", code: lang, start, end };
+  const city = idx.cityByPhrase.get(text);
+  if (city) return { kind: "city", canonical: city, start, end };
+  const name = idx.nameByPhrase.get(text);
+  if (name) return { kind: "name", therapistId: name, start, end };
+  const del = DELIVERY_MODE_ALIASES[text];
+  if (del) return { kind: "delivery", mode: del, start, end };
+  return null;
+}
+
 function extractStructured(
   tokens: string[],
-  idx: ReturnType<typeof buildLookupIndex>,
+  idx: LookupIndex,
 ): { hits: StructuredHit[]; consumedMask: boolean[] } {
   const consumedMask = new Array<boolean>(tokens.length).fill(false);
   const hits: StructuredHit[] = [];
   const spans = Array.from(windowsUpTo(tokens, idx.maxLen));
+  // Longest spans first, then earliest start — deterministic.
   spans.sort((a, b) => b.end - b.start - (a.end - a.start));
   for (const span of spans) {
     if (consumedMask.slice(span.start, span.end).some(Boolean)) continue;
-    const { text } = span;
     let hit: StructuredHit | null = null;
-    const prof = idx.professionByPhrase.get(text);
-    if (prof) hit = { kind: "profession", slug: prof.slug, feminine: prof.feminine, start: span.start, end: span.end };
-    else if (idx.modalityByPhrase.has(text)) hit = { kind: "modality", slug: idx.modalityByPhrase.get(text)!, start: span.start, end: span.end };
-    else if (idx.populationByPhrase.has(text)) hit = { kind: "population", slug: idx.populationByPhrase.get(text)!, start: span.start, end: span.end };
-    else if (idx.languageByPhrase.has(text)) hit = { kind: "language", code: idx.languageByPhrase.get(text)!, start: span.start, end: span.end };
-    else if (idx.cityByPhrase.has(text)) hit = { kind: "city", canonical: idx.cityByPhrase.get(text)!, start: span.start, end: span.end };
-    else if (idx.nameByPhrase.has(text)) hit = { kind: "name", therapistId: idx.nameByPhrase.get(text)!, start: span.start, end: span.end };
-    else if (DELIVERY_MODE_ALIASES[text]) hit = { kind: "delivery", mode: DELIVERY_MODE_ALIASES[text], start: span.start, end: span.end };
+    // Try candidate phrases: raw first, then iteratively prefix-stripped
+    // versions of the FIRST token (Hebrew prefixes attach to the head of a
+    // noun phrase). This is a fallback only — real words like "מטפלת"
+    // never lose their initial letter because their raw form is tried first
+    // and matches (or fails cleanly) before any strip.
+    const firstToken = tokens[span.start]!;
+    const tail = tokens.slice(span.start + 1, span.end);
+    for (const firstVar of tokenPrefixVariants(firstToken)) {
+      const phrase = tail.length === 0 ? firstVar : `${firstVar} ${tail.join(" ")}`;
+      hit = lookupPhrase(idx, phrase, span.start, span.end);
+      if (hit) break;
+    }
     if (hit) {
       hits.push(hit);
       for (let i = span.start; i < span.end; i++) consumedMask[i] = true;
@@ -208,8 +315,8 @@ function extractStructured(
 
 function hasImmediatePreferenceMarker(tokens: string[], hitStart: number): boolean {
   if (hitStart === 0) return false;
-  if (PREFERENCE_MARKERS.includes(tokens[hitStart - 1])) return true;
-  if (hitStart >= 2 && PREFERENCE_MARKERS.includes(tokens.slice(hitStart - 2, hitStart).join(" "))) return true;
+  if (PREFERENCE_MARKER_SET.has(tokens[hitStart - 1]!)) return true;
+  if (hitStart >= 2 && PREFERENCE_MARKER_SET.has(tokens.slice(hitStart - 2, hitStart).join(" "))) return true;
   return false;
 }
 
@@ -262,7 +369,7 @@ function classifyIntent(args: {
 }
 
 export function interpretQuery(raw: string, catalog: Catalog): InterpretationResult {
-  const normalized = normalize(raw);
+  const normalized = normalizeForInterpretation(raw);
   const emptyHard: StructuredFilters = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
     languageCodes: [], city: null, therapistGender: null,
@@ -285,12 +392,14 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const headForIntent = strippedHead || normalized;
   const unresolvedPhrase = detectUnresolvedService(headForIntent);
 
-  const rawTokens = tokenBag(normalized);
-  const tokens = tokenBagWithPrefixStripped(normalized);
+  // Tokens are derived from the head (with any generic request prefix
+  // stripped) so filler like "אני מחפש" cannot pollute the semantic
+  // remainder or the intent classification.
+  const tokens = tokenizeNormalized(headForIntent);
   const idx = buildLookupIndex(catalog);
   const { hits, consumedMask } = extractStructured(tokens, idx);
 
-  const gender = detectExplicitGender(rawTokens);
+  const gender = detectExplicitGender(tokens);
   for (const i of gender.consumed) consumedMask[i] = true;
 
   const hardFilters: StructuredFilters = { ...emptyHard };
@@ -353,7 +462,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   softPreferences.deliveryModes = uniq(softPreferences.deliveryModes);
   softPreferences.genders = uniq(softPreferences.genders);
 
-  const remainderTokens = rawTokens.filter((_t, i) => !consumedMask[i]);
+  const remainderTokens = tokens.filter((_t, i) => !consumedMask[i]);
   const semanticRemainder = remainderTokens.join(" ");
 
   const hasStructured =
@@ -383,4 +492,10 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   };
 }
 
-export const __internals = { stripGenericPrefix, detectExplicitGender, detectUnresolvedService };
+export const __internals = {
+  normalizeForInterpretation,
+  stripGenericPrefix,
+  detectExplicitGender,
+  detectUnresolvedService,
+  tokenPrefixVariants,
+};
