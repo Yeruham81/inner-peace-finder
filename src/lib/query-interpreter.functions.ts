@@ -119,7 +119,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
   const eligibleIds = async (): Promise<Set<string>> => {
     if (cachedEligible) return cachedEligible;
     const rows = unwrap(
-      await applyEligibility(sb.from("therapists").select("id")) as unknown as Promise<{
+      await applyEligibility(sb.from("therapists").select("id")) as unknown as {
         data: Array<{ id: string }> | null; error: unknown;
       }>,
     );
@@ -137,7 +137,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         await sb
           .from("therapist_professions")
           .select("therapist_id, professions!inner(slug)")
-          .in("professions.slug", slugs) as unknown as Promise<{
+          .in("professions.slug", slugs) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
           }>,
       );
@@ -149,7 +149,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         await sb
           .from("therapist_modalities")
           .select("therapist_id, treatment_modalities!inner(slug)")
-          .in("treatment_modalities.slug", slugs) as unknown as Promise<{
+          .in("treatment_modalities.slug", slugs) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
           }>,
       );
@@ -161,7 +161,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         await sb
           .from("therapist_populations")
           .select("therapist_id, population_groups!inner(slug)")
-          .in("population_groups.slug", slugs) as unknown as Promise<{
+          .in("population_groups.slug", slugs) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
           }>,
       );
@@ -173,7 +173,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         await sb
           .from("therapist_languages")
           .select("therapist_id, languages!inner(code)")
-          .in("languages.code", codes) as unknown as Promise<{
+          .in("languages.code", codes) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
           }>,
       );
@@ -186,7 +186,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .from("therapist_locations")
           .select("therapist_id")
           .eq("is_active", true)
-          .in("city", cities) as unknown as Promise<{
+          .in("city", cities) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
           }>,
       );
@@ -202,7 +202,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .in(
             "location_type",
             modes as Array<Database["public"]["Enums"]["location_type"]>,
-          ) as unknown as Promise<{
+          ) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
           }>,
       );
@@ -212,7 +212,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       const rows = unwrap(
         await applyEligibility(
           sb.from("therapists").select("id").eq("gender", gender),
-        ) as unknown as Promise<{ data: Array<{ id: string }> | null; error: unknown }>,
+        ) as unknown as { data: Array<{ id: string }> | null; error: unknown }>,
       );
       return new Set(rows.map((r) => r.id));
     },
