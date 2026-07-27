@@ -80,6 +80,8 @@ export type StructuredFilters = {
   modalitySlugs: string[];
   populationSlugs: string[];
   languageCodes: string[];
+  /** Canonical `location_type` enum values only. */
+  deliveryModes: string[];
   /** Canonical city string as stored in `therapist_locations.city`. */
   city: string | null;
   therapistGender: TherapistGender | null;
