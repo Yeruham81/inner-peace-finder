@@ -68,12 +68,22 @@ export async function loadSearchCatalog(): Promise<Catalog> {
   );
   const nameQ = applyEligibility(sb.from("therapists").select("id, full_name"));
 
-  const [{ data: profs }, { data: mods }, cityRes, nameRes] = await Promise.all([
+  const [profRes, modRes, popRes, langRes, cityRes, nameRes] = await Promise.all([
     sb.from("professions").select("id, slug, name_he, name_en").eq("is_active", true),
     sb.from("treatment_modalities").select("id, slug, name_he, name_en").eq("is_active", true),
-    cityQ as unknown as Promise<{ data: Array<{ city: string | null }> | null }>,
-    nameQ as unknown as Promise<{ data: Array<{ id: string; full_name: string }> | null }>,
+    sb.from("population_groups").select("id, slug, name"),
+    sb.from("languages").select("id, code, name"),
+    cityQ as unknown as Promise<{ data: Array<{ city: string | null }> | null; error: unknown }>,
+    nameQ as unknown as Promise<{ data: Array<{ id: string; full_name: string }> | null; error: unknown }>,
   ]);
+  // Fail loudly rather than silently returning an empty catalog.
+  for (const r of [profRes, modRes, popRes, langRes, cityRes, nameRes]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = (r as any).error;
+    if (err) throw err;
+  }
+  const profs = profRes.data;
+  const mods = modRes.data;
 
   const professions: Profession[] = (profs ?? []).map((p) => {
     const feminine = feminineFormsFor(p.name_he);
@@ -100,8 +110,32 @@ export async function loadSearchCatalog(): Promise<Catalog> {
     return { id: m.id, slug: m.slug, name_he: m.name_he, nameVariants: Array.from(variants) };
   });
 
-  const populations: PopulationEntry[] = [];
-  const languages: LanguageEntry[] = [];
+  const populations: PopulationEntry[] = (popRes.data ?? []).map(
+    (p: { slug: string; name: string }) => ({
+      slug: p.slug,
+      name_he: p.name,
+      aliases: [p.name, p.slug],
+    }),
+  );
+  // Minimal Hebrew aliases for the most common language names — the DB
+  // stores the English label, so we bootstrap the Hebrew surface forms
+  // here rather than adding schema. Interpretation-only.
+  const HE_LANG_ALIASES: Record<string, string[]> = {
+    he: ["עברית", "עיברית"],
+    en: ["אנגלית", "english"],
+    ru: ["רוסית", "russian"],
+    ar: ["ערבית", "arabic"],
+    fr: ["צרפתית", "french"],
+    es: ["ספרדית", "spanish"],
+    am: ["אמהרית"],
+  };
+  const languages: LanguageEntry[] = (langRes.data ?? []).map(
+    (l: { code: string; name: string }) => ({
+      code: l.code,
+      name_he: l.name,
+      aliases: [l.name, l.code, ...(HE_LANG_ALIASES[l.code.toLowerCase()] ?? [])],
+    }),
+  );
 
   const cityMap = new Map<string, CityEntry>();
   for (const row of (cityRes.data ?? []) as Array<{ city: string | null }>) {
