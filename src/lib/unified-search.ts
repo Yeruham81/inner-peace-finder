@@ -15,6 +15,7 @@ import type {
   SemanticSignal,
   SoftPreferences,
 } from "./query-interpreter.types";
+import type { SemanticProfileEntry } from "./therapist-semantic-profile";
 
 const PREF_CAPS = {
   profession: 2,
@@ -57,6 +58,38 @@ export function computeSemanticScore(
   return { score, overlapCount: overlap };
 }
 
+/**
+ * Weighted semantic score used by the unified executor.
+ *
+ *   semanticScore = Σ over overlap slugs of
+ *                     querySignal.confidence × profileEntry.weight
+ *
+ * `querySignal.confidence` is the canonical SemanticEngine.classify()
+ * output — it already combines matcher weight, specificity, coverage
+ * and calibration. `profileEntry.weight` is the therapist-side stored
+ * weight from `parseStoredProfile`. Both sides contribute; neither is
+ * multiplied twice.
+ */
+export function computeSemanticScoreWithProfile(
+  profile: SemanticProfileEntry[],
+  signals: SemanticSignal[],
+): { score: number; overlapCount: number } {
+  if (signals.length === 0 || profile.length === 0) {
+    return { score: 0, overlapCount: 0 };
+  }
+  const byslug = new Map(profile.map((e) => [e.slug, e.weight]));
+  let score = 0;
+  let overlap = 0;
+  for (const sig of signals) {
+    const w = byslug.get(sig.slug);
+    if (w !== undefined) {
+      score += sig.confidence * w;
+      overlap += 1;
+    }
+  }
+  return { score, overlapCount: overlap };
+}
+
 export type RankedCandidate = CandidateForRanking & { preferenceScore: number };
 
 export function rankCandidates(
@@ -71,7 +104,9 @@ export function rankCandidates(
     if (b.semanticScore !== a.semanticScore) return b.semanticScore - a.semanticScore;
     if (b.preferenceScore !== a.preferenceScore) return b.preferenceScore - a.preferenceScore;
     if (b.qualityScore !== a.qualityScore) return b.qualityScore - a.qualityScore;
-    return b.yearsExperience - a.yearsExperience;
+    if (b.yearsExperience !== a.yearsExperience) return b.yearsExperience - a.yearsExperience;
+    // Deterministic tiebreak so identical-score results are stable.
+    return a.therapistId < b.therapistId ? -1 : a.therapistId > b.therapistId ? 1 : 0;
   });
   return scored;
 }
@@ -84,14 +119,19 @@ export function applySemanticGate<T extends { semanticOverlap: number }>(
   return candidates.filter((c) => c.semanticOverlap > 0);
 }
 
+/**
+ * Non-experience quality signals. Experience appears exclusively in the
+ * `yearsExperience` lexicographic ranking tier — never counted twice.
+ * The `yearsExperience` field is accepted (and ignored) so existing
+ * callers do not need to be rewritten in one pass.
+ */
 export function computeQualityScore(profile: {
-  yearsExperience: number;
+  yearsExperience?: number;
   verified: boolean;
   hasImage: boolean;
   bioLength: number;
 }): number {
   let score = 0;
-  score += Math.min(profile.yearsExperience, 25) * 0.5;
   if (profile.verified) score += 5;
   if (profile.hasImage) score += 2;
   score += Math.min(profile.bioLength / 200, 5);

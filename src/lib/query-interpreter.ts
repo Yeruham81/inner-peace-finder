@@ -81,7 +81,9 @@ const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
   const raw: Record<string, string> = {
     אונליין: "online", אונלין: "online", זום: "online",
     מקוון: "online", מקוונת: "online", מרחוק: "online",
-    פרונטלי: "in_person", בקליניקה: "in_person",
+    // Canonical `location_type` enum values only — no `in_person`.
+    פרונטלי: "clinic", בקליניקה: "clinic", קליניקה: "clinic",
+    "בית": "home_visit", "ביקור בית": "home_visit",
   };
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
@@ -92,8 +94,10 @@ const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
 })();
 
 const UNRECOGNIZED_SERVICE_PHRASES: string[] = normList([
-  "מאבחן קשב", "אבחון קשב", "אבחון adhd",
-  "אבחון אוטיזם", "אבחון",
+  // Deliberately minimal — LLM phase will handle broader coverage.
+  "מאבחן קשב", "אבחון קשב",
+  "הדרכת הורים",
+  "טיפול זוגי",
 ]);
 
 /**
@@ -372,7 +376,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const normalized = normalizeForInterpretation(raw);
   const emptyHard: StructuredFilters = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-    languageCodes: [], city: null, therapistGender: null,
+    languageCodes: [], deliveryModes: [], city: null, therapistGender: null,
   };
   const emptySoft: SoftPreferences = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
@@ -440,7 +444,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
         else softPreferences.cities.push(hit.canonical);
         break;
       case "delivery":
-        softPreferences.deliveryModes.push(hit.mode);
+        (preferred ? softPreferences.deliveryModes : hardFilters.deliveryModes).push(hit.mode);
         break;
       case "name":
         therapistNameIds.push(hit.therapistId);
@@ -448,12 +452,24 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     }
   }
 
-  if (gender.hard && !hardFilters.therapistGender) hardFilters.therapistGender = gender.hard;
+  // Gender resolution:
+  //   - `gender.hard` is the deterministic pick from EXPLICIT_FEMALE/MALE tokens.
+  //   - Feminine profession forms may have already set female on hardFilters.
+  //   - If explicit male evidence collides with a feminine-form profession,
+  //     that is a conflict; drop the filter and record `gender_conflict`.
+  const femFromProfession = genderEvidence.includes("feminine_profession_form");
+  if (gender.hard === "male" && femFromProfession) {
+    hardFilters.therapistGender = null;
+    if (!unresolvedCodes.includes("gender_conflict")) unresolvedCodes.push("gender_conflict");
+  } else if (gender.hard && !hardFilters.therapistGender) {
+    hardFilters.therapistGender = gender.hard;
+  }
 
   hardFilters.professionSlugs = uniq(hardFilters.professionSlugs);
   hardFilters.modalitySlugs = uniq(hardFilters.modalitySlugs);
   hardFilters.populationSlugs = uniq(hardFilters.populationSlugs);
   hardFilters.languageCodes = uniq(hardFilters.languageCodes);
+  hardFilters.deliveryModes = uniq(hardFilters.deliveryModes);
   softPreferences.professionSlugs = uniq(softPreferences.professionSlugs);
   softPreferences.modalitySlugs = uniq(softPreferences.modalitySlugs);
   softPreferences.populationSlugs = uniq(softPreferences.populationSlugs);
@@ -470,11 +486,16 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     hardFilters.modalitySlugs.length > 0 ||
     hardFilters.populationSlugs.length > 0 ||
     hardFilters.languageCodes.length > 0 ||
+    hardFilters.deliveryModes.length > 0 ||
     hardFilters.city !== null ||
     hardFilters.therapistGender !== null;
   const hasName = therapistNameIds.length > 0;
   const hasSemantic = remainderTokens.length > 0;
-  const unresolvedPrimary = Boolean(unresolvedPhrase) && !hasStructured && !hasName;
+  // Unresolved-service guard: an unsupported PRIMARY intent (present at the
+  // head of the stripped query) marks the query unresolved even when a
+  // trailing city/modality would otherwise create a broad structured search.
+  // A therapist-name constraint does override — that path is handled below.
+  const unresolvedPrimary = Boolean(unresolvedPhrase) && !hasName;
   if (unresolvedPrimary) unresolvedCodes.push("unrecognized_service");
 
   const intent = classifyIntent({
