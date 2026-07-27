@@ -121,8 +121,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     const rows = unwrap(
       await applyEligibility(sb.from("therapists").select("id")) as unknown as {
         data: Array<{ id: string }> | null; error: unknown;
-      }>,
-    );
+      },    );
     cachedEligible = new Set(rows.map((r) => r.id));
     return cachedEligible;
   };
@@ -139,8 +138,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .select("therapist_id, professions!inner(slug)")
           .in("professions.slug", slugs) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
-          }>,
-      );
+          },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByModalities(slugs) {
@@ -151,8 +149,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .select("therapist_id, treatment_modalities!inner(slug)")
           .in("treatment_modalities.slug", slugs) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
-          }>,
-      );
+          },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByPopulations(slugs) {
@@ -163,8 +160,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .select("therapist_id, population_groups!inner(slug)")
           .in("population_groups.slug", slugs) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
-          }>,
-      );
+          },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByLanguages(codes) {
@@ -175,8 +171,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .select("therapist_id, languages!inner(code)")
           .in("languages.code", codes) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
-          }>,
-      );
+          },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByCities(cities) {
@@ -188,8 +183,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .eq("is_active", true)
           .in("city", cities) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
-          }>,
-      );
+          },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByDeliveryModes(modes) {
@@ -204,15 +198,14 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
             modes as Array<Database["public"]["Enums"]["location_type"]>,
           ) as unknown as {
             data: Array<{ therapist_id: string }> | null; error: unknown;
-          }>,
-      );
+          },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByGender(gender) {
       const rows = unwrap(
         await applyEligibility(
           sb.from("therapists").select("id").eq("gender", gender),
-        ) as unknown as { data: Array<{ id: string }> | null; error: unknown }>,
+        ) as unknown as { data: Array<{ id: string }> | null; error: unknown },
       );
       return new Set(rows.map((r) => r.id));
     },
