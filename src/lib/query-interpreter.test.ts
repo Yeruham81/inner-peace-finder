@@ -23,11 +23,17 @@ const catalog: Catalog = {
     { id: "m1", slug: "cbt", name_he: "טיפול קוגניטיבי התנהגותי", nameVariants: ["טיפול קוגניטיבי התנהגותי", "cbt"] },
     { id: "m2", slug: "psychodynamic", name_he: "פסיכודינמי", nameVariants: ["פסיכודינמי"] },
   ],
-  populations: [],
-  languages: [],
+  populations: [
+    { slug: "children", name_he: "ילדים", aliases: ["ילדים", "ילד"] },
+  ],
+  languages: [
+    { code: "ru", name_he: "רוסית", aliases: ["רוסית", "russian", "ru"] },
+  ],
   cities: [
     { canonical: "תל אביב", aliases: ["תל אביב", 'ת"א', "תא"] },
     { canonical: "ירושלים", aliases: ["ירושלים"] },
+    { canonical: "חיפה", aliases: ["חיפה", "haifa"] },
+    { canonical: "רחובות", aliases: ["רחובות"] },
   ],
   therapistNames: [{ id: "t1", fullName: "יעל כהן", tokens: ["יעל", "כהן"] }],
   firstNameCount: new Map([["יעל", 1], ["כהן", 1]]),
@@ -95,5 +101,73 @@ describe("interpretQuery", () => {
     const r = interpretQuery("פסיכולוגית עם ניסיון בטראומה", catalog);
     expect(r.semanticRemainder.length).toBeGreaterThan(0);
     expect(r.intent).toBe("hybrid");
+  });
+});
+
+describe("interpretQuery — Q1 mandatory regression cases", () => {
+  it("'פסיכולוג ילדים ברחובות' → profession + population + city (all hard)", () => {
+    const r = interpretQuery("פסיכולוג ילדים ברחובות", catalog);
+    expect(r.hardFilters.professionSlugs).toContain("psychologist");
+    expect(r.hardFilters.populationSlugs).toContain("children");
+    expect(r.hardFilters.city).toBe("רחובות");
+    expect(r.hardFilters.therapistGender).toBeNull();
+  });
+
+  it("'מטפלת דוברת רוסית בחיפה' → female + russian + city", () => {
+    const r = interpretQuery("מטפלת דוברת רוסית בחיפה", catalog);
+    expect(r.hardFilters.therapistGender).toBe("female");
+    expect(r.hardFilters.languageCodes).toContain("ru");
+    expect(r.hardFilters.city).toBe("חיפה");
+  });
+
+  it("'פסיכולוג בחיפה אונליין' → profession + city + canonical delivery mode", () => {
+    const r = interpretQuery("פסיכולוג בחיפה אונליין", catalog);
+    expect(r.hardFilters.professionSlugs).toContain("psychologist");
+    expect(r.hardFilters.city).toBe("חיפה");
+    expect(r.hardFilters.deliveryModes).toContain("online");
+    expect(r.hardFilters.deliveryModes).not.toContain("in_person");
+  });
+
+  it("'עדיף מטפלת ב-CBT בחיפה' → CBT is a soft preference; NO 'עדיף' in semantic remainder", () => {
+    const r = interpretQuery("עדיף מטפלת ב-CBT בחיפה", catalog);
+    expect(r.softPreferences.modalitySlugs).toContain("cbt");
+    expect(r.hardFilters.modalitySlugs).not.toContain("cbt");
+    expect(r.hardFilters.city).toBe("חיפה");
+    expect(r.semanticRemainder.split(/\s+/)).not.toContain("עדיף");
+  });
+
+  it("'פסיכולוגית גבר' → gender conflict; therapistGender = null", () => {
+    const r = interpretQuery("פסיכולוגית גבר", catalog);
+    expect(r.hardFilters.therapistGender).toBeNull();
+    expect(r.unresolvedCodes).toContain("gender_conflict");
+  });
+
+  it("'אני מחפש מאבחן קשב בחיפה' → unresolved_service (primary head)", () => {
+    const r = interpretQuery("אני מחפש מאבחן קשב בחיפה", catalog);
+    expect(r.unresolvedPrimary).toBe(true);
+    expect(r.intent).toBe("unresolved_service");
+    expect(r.unresolvedCodes).toContain("unrecognized_service");
+  });
+
+  it("'אני צריך הדרכת הורים' → unresolved_service", () => {
+    const r = interpretQuery("אני צריך הדרכת הורים", catalog);
+    expect(r.unresolvedPrimary).toBe(true);
+    expect(r.intent).toBe("unresolved_service");
+  });
+
+  it("'אשמח לקבל טיפול זוגי' → unresolved_service", () => {
+    const r = interpretQuery("אשמח לקבל טיפול זוגי", catalog);
+    expect(r.unresolvedPrimary).toBe(true);
+    expect(r.intent).toBe("unresolved_service");
+  });
+
+  it("'קשקושלאמוכר' → unknown intent, no hard filters, no name", () => {
+    const r = interpretQuery("קשקושלאמוכר", catalog);
+    expect(r.hardFilters.professionSlugs).toEqual([]);
+    expect(r.hardFilters.modalitySlugs).toEqual([]);
+    expect(r.hardFilters.city).toBeNull();
+    expect(r.therapistNameIds).toEqual([]);
+    expect(r.semanticRemainder.length).toBeGreaterThan(0);
+    expect(r.intent).toBe("semantic");
   });
 });
