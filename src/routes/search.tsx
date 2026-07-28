@@ -89,11 +89,11 @@ export const Route = createFileRoute("/search")({
     const flow = resolveFlow(deps.flow);
     const promises: Promise<unknown>[] = [
       context.queryClient.ensureQueryData(filterOptionsQuery),
-      context.queryClient.ensureQueryData(structuredTherapistQuery(deps.q)),
     ];
     if (flow === "unified") {
       promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(deps.q)));
     } else {
+      promises.push(context.queryClient.ensureQueryData(structuredTherapistQuery(deps.q)));
       promises.push(context.queryClient.ensureQueryData(resultsQuery(deps)));
     }
     await Promise.all(promises);
@@ -122,7 +122,14 @@ function SearchPage() {
   const navigate = useNavigate();
   const flow = resolveFlow(search.flow);
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
-  const { data: structuredMatches } = useSuspenseQuery(structuredTherapistQuery(search.q));
+  const { data: structuredMatches } = useSuspenseQuery({
+    ...structuredTherapistQuery(search.q),
+    // Structured therapist pills are a LEGACY-only surface. In unified
+    // mode the displayed therapist list must come exclusively from
+    // `executeUnifiedSearch` — never merged, appended, or supplemented
+    // by the parallel structured path.
+    enabled: flow === "legacy",
+  } as ReturnType<typeof structuredTherapistQuery>);
   const { data: legacyPipeline } = useSuspenseQuery({
     ...resultsQuery(search),
     enabled: flow === "legacy",
@@ -211,7 +218,7 @@ function SearchPage() {
         )}
       </div>
 
-      {structuredMatches && structuredMatches.length > 0 && (
+      {flow === "legacy" && structuredMatches && structuredMatches.length > 0 && (
         <section
           aria-label="התאמות לפי שם"
           className="mt-4 rounded-2xl border border-border bg-surface p-4"
