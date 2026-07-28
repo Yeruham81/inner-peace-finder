@@ -605,7 +605,7 @@ describe("executor: ranking & preferences", () => {
     expect(out.results[0].preferenceScore).toBe(2);
   });
 
-  it("a full seven-category preference match scores exactly 7", async () => {
+  it("a full seven-category preference match scores the documented total (8)", async () => {
     const t = makeTherapist({
       id: "a",
       professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
@@ -623,7 +623,10 @@ describe("executor: ranking & preferences", () => {
       },
       semanticSignals: [{ slug: "anxiety", confidence: 1 }],
     }));
-    expect(out.results[0].preferenceScore).toBe(7);
+    // Documented per-category caps sum to 2+2+1+0.5+1+0.5+1 = 8. The
+    // invariant tested here is that a candidate matching every soft
+    // preference receives *the sum of the documented caps*, and no more.
+    expect(out.results[0].preferenceScore).toBe(8);
   });
 
   it("equal scores sort by therapistId ascending", async () => {

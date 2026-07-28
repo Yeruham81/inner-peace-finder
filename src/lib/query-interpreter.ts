@@ -44,6 +44,10 @@ function normalizeForInterpretation(input: string): string {
   s = stripNikud(s);
   s = normalizeWhitespace(s);
   s = normalizePunctuation(s);
+  // Internal hyphens act as a token separator in Hebrew search queries
+  // (e.g. "ב-CBT" → "ב cbt"). Applied to both user input and catalog
+  // variants so both sides stay comparable.
+  s = s.replace(/-/g, " ");
   s = s.toLowerCase();
   s = foldSofit(s);
   s = collapseRepeatedChars(s);
