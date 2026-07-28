@@ -323,8 +323,22 @@ function extractStructured(
 
 function hasImmediatePreferenceMarker(tokens: string[], hitStart: number): boolean {
   if (hitStart === 0) return false;
-  if (PREFERENCE_MARKER_SET.has(tokens[hitStart - 1]!)) return true;
-  if (hitStart >= 2 && PREFERENCE_MARKER_SET.has(tokens.slice(hitStart - 2, hitStart).join(" "))) return true;
+  // Walk back up to 4 tokens. This handles cases where the marker is
+  // separated from its target by a filler token (single-letter Hebrew
+  // prefix like "ב", an explicit-gender token like "מטפלת", or a stray
+  // preposition). A dedicated "consumed" scan is unnecessary here — the
+  // preference marker either exists in that short window or it does not.
+  const back = Math.min(4, hitStart);
+  for (let k = 1; k <= back; k++) {
+    if (PREFERENCE_MARKER_SET.has(tokens[hitStart - k]!)) return true;
+  }
+  // Multi-word markers ("אם אפשר").
+  for (let len = 2; len <= 3; len++) {
+    if (hitStart >= len) {
+      const phrase = tokens.slice(hitStart - len, hitStart).join(" ");
+      if (PREFERENCE_MARKER_SET.has(phrase)) return true;
+    }
+  }
   return false;
 }
 
