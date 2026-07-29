@@ -15,17 +15,19 @@ import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
 
 /**
- * DEV-only search-flow switch.
+ * Search-flow switch.
  *
- *   ?flow=legacy   → existing `classifyAndSearch` pipeline (default).
- *   ?flow=unified  → Phase Q1 v4 `unifiedSearch` pipeline.
+ * Production: ALWAYS "unified". The `?flow=` URL parameter is ignored in
+ * production builds — legacy is not a supported production surface, and
+ * there is no silent fallback from unified to legacy.
  *
- * The parameter is ONLY honored when `import.meta.env.DEV`. In production
- * builds any value is coerced to "legacy" — no silent fallback, no way to
- * opt into the unified pipeline from a shipped page.
+ * Development: `?flow=legacy|unified` is honored for side-by-side
+ * comparison. When the parameter is missing or invalid, DEV defaults to
+ * "legacy" (the pre-Q1 baseline) so the parameter is the ONLY way to
+ * opt into unified locally.
  */
-const FLOW_VALUES = ["legacy", "unified"] as const;
-type FlowValue = (typeof FLOW_VALUES)[number];
+export const FLOW_VALUES = ["legacy", "unified"] as const;
+export type FlowValue = (typeof FLOW_VALUES)[number];
 
 const searchSchema = z.object({
   q: fallback(z.string().trim().max(200), "").default(""),
@@ -36,9 +38,13 @@ const searchSchema = z.object({
   flow: fallback(z.string(), "legacy").default("legacy"),
 });
 
-function resolveFlow(raw: string): FlowValue {
-  if (!import.meta.env.DEV) return "legacy";
+export function resolveFlow(raw: string, opts: { isDev: boolean }): FlowValue {
+  if (!opts.isDev) return "unified";
   return (FLOW_VALUES as readonly string[]).includes(raw) ? (raw as FlowValue) : "legacy";
+}
+
+function resolveFlowFromEnv(raw: string): FlowValue {
+  return resolveFlow(raw, { isDev: import.meta.env.DEV });
 }
 
 const filterOptionsQuery = queryOptions({
