@@ -92,7 +92,7 @@ export const Route = createFileRoute("/search")({
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    const flow = resolveFlow(deps.flow);
+    const flow = resolveFlowFromEnv(deps.flow);
     const promises: Promise<unknown>[] = [
       context.queryClient.ensureQueryData(filterOptionsQuery),
     ];
@@ -126,7 +126,7 @@ export const Route = createFileRoute("/search")({
 function SearchPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const flow = resolveFlow(search.flow);
+  const flow = resolveFlowFromEnv(search.flow);
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
   const { data: structuredMatches } = useSuspenseQuery({
     ...structuredTherapistQuery(search.q),
