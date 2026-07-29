@@ -321,21 +321,36 @@ function extractStructured(
   return { hits, consumedMask };
 }
 
-function hasImmediatePreferenceMarker(tokens: string[], hitStart: number): boolean {
+/**
+ * A preference marker binds to the CLOSEST following entity only. Once a
+ * hit has claimed a marker, later hits do not inherit it. This function
+ * walks backward from `hitStart` up to 4 tokens, stopping as soon as it
+ * crosses into a previously consumed structured span belonging to an
+ * earlier hit — that hit already owns the marker, if any.
+ *
+ * `consumedByPrevHit[i]` must be true only for tokens consumed by a hit
+ * whose end index is ≤ hitStart. Explicit-gender consumption ("מטפלת")
+ * and preference-marker consumption itself are NOT part of that mask,
+ * so the walker can still see markers separated from their target by a
+ * feminine profession form or a stray single-letter Hebrew prefix.
+ */
+function hasImmediatePreferenceMarker(
+  tokens: string[],
+  hitStart: number,
+  consumedByPrevHit: boolean[],
+): boolean {
   if (hitStart === 0) return false;
-  // Walk back up to 4 tokens. This handles cases where the marker is
-  // separated from its target by a filler token (single-letter Hebrew
-  // prefix like "ב", an explicit-gender token like "מטפלת", or a stray
-  // preposition). A dedicated "consumed" scan is unnecessary here — the
-  // preference marker either exists in that short window or it does not.
   const back = Math.min(4, hitStart);
   for (let k = 1; k <= back; k++) {
-    if (PREFERENCE_MARKER_SET.has(tokens[hitStart - k]!)) return true;
+    const i = hitStart - k;
+    if (consumedByPrevHit[i]) return false;
+    if (PREFERENCE_MARKER_SET.has(tokens[i]!)) return true;
   }
-  // Multi-word markers ("אם אפשר").
   for (let len = 2; len <= 3; len++) {
     if (hitStart >= len) {
-      const phrase = tokens.slice(hitStart - len, hitStart).join(" ");
+      const start = hitStart - len;
+      if (consumedByPrevHit.slice(start, hitStart).some(Boolean)) continue;
+      const phrase = tokens.slice(start, hitStart).join(" ");
       if (PREFERENCE_MARKER_SET.has(phrase)) return true;
     }
   }
@@ -472,8 +487,12 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
 
   const uniq = <T,>(arr: T[]): T[] => Array.from(new Set(arr));
 
+  // Track spans consumed by EARLIER hits so the preference-marker walker
+  // never crosses into another hit's territory.
+  const consumedByPrevHit = new Array<boolean>(tokens.length).fill(false);
   for (const hit of hits) {
-    const preferred = hasImmediatePreferenceMarker(tokens, hit.start);
+    const preferred = hasImmediatePreferenceMarker(tokens, hit.start, consumedByPrevHit);
+    for (let k = hit.start; k < hit.end; k++) consumedByPrevHit[k] = true;
     switch (hit.kind) {
       case "profession":
         if (hit.feminine && !gender.conflict) {
