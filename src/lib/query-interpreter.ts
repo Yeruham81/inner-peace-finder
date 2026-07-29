@@ -424,6 +424,42 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const gender = detectExplicitGender(tokens);
   for (const i of gender.consumed) consumedMask[i] = true;
 
+  // Preference markers ("עדיף", "רצוי", ...) are functional cues, never
+  // semantic content. Once we've used them to route a following entity
+  // into softPreferences, mark them consumed so they cannot leak into
+  // semanticRemainder. Multi-word markers are handled by matching the
+  // full phrase and consuming the whole span.
+  for (let i = 0; i < tokens.length; i++) {
+    if (consumedMask[i]) continue;
+    if (PREFERENCE_MARKER_SET.has(tokens[i]!)) {
+      consumedMask[i] = true;
+      continue;
+    }
+    for (let len = 3; len >= 2; len--) {
+      if (i + len > tokens.length) continue;
+      const phrase = tokens.slice(i, i + len).join(" ");
+      if (PREFERENCE_MARKER_SET.has(phrase)) {
+        for (let k = i; k < i + len; k++) consumedMask[k] = true;
+        i += len - 1;
+        break;
+      }
+    }
+  }
+
+  // Structural filler: after `ב-CBT` → `ב cbt`, the stray Hebrew
+  // preposition "ב" precedes a consumed structured hit. It is not a
+  // semantic token and must not leak into the remainder. Same applies
+  // to any single-letter Hebrew prefix immediately adjacent to a
+  // consumed span on either side.
+  for (let i = 0; i < tokens.length; i++) {
+    if (consumedMask[i]) continue;
+    const tok = tokens[i]!;
+    if (tok.length !== 1 || !HEBREW_PREFIX_LETTERS.has(tok)) continue;
+    const nextConsumed = i + 1 < tokens.length && consumedMask[i + 1]!;
+    const prevConsumed = i > 0 && consumedMask[i - 1]!;
+    if (nextConsumed || prevConsumed) consumedMask[i] = true;
+  }
+
   const hardFilters: StructuredFilters = { ...emptyHard };
   const softPreferences: SoftPreferences = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
