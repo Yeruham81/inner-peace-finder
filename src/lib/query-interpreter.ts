@@ -408,7 +408,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const normalized = normalizeForInterpretation(raw);
   const emptyHard: StructuredFilters = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-    languageCodes: [], deliveryModes: [], city: null, therapistGender: null,
+    languageCodes: [], deliveryModes: [], cityNames: [], therapistGender: null,
   };
   const emptySoft: SoftPreferences = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
@@ -435,7 +435,17 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const idx = buildLookupIndex(catalog);
   const { hits, consumedMask } = extractStructured(tokens, idx);
 
-  const gender = detectExplicitGender(tokens);
+  const isProfessionPhraseAt = (start: number, end: number): boolean => {
+    if (start < 0 || end > tokens.length || end <= start) return false;
+    const first = tokens[start]!;
+    const tail = tokens.slice(start + 1, end);
+    for (const firstVar of tokenPrefixVariants(first)) {
+      const phrase = tail.length === 0 ? firstVar : `${firstVar} ${tail.join(" ")}`;
+      if (idx.professionByPhrase.has(phrase)) return true;
+    }
+    return false;
+  };
+  const gender = detectExplicitGender(tokens, isProfessionPhraseAt);
   for (const i of gender.consumed) consumedMask[i] = true;
 
   // Preference markers ("עדיף", "רצוי", ...) are functional cues, never
