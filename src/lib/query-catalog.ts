@@ -5,30 +5,14 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { foldSofit, lightNormalizeHebrew } from "./hebrew-normalizer";
 import { applyEligibility } from "./search-eligibility";
-import type {
-  Catalog,
-  CityEntry,
-  LanguageEntry,
-  Modality,
-  PopulationEntry,
-  Profession,
-  TherapistNameEntry,
-} from "./query-interpreter.types";
+import { buildSearchCatalog, CITY_ALIASES } from "./catalog-builder";
+import type { Catalog } from "./query-interpreter.types";
 
 const TTL_MS = 60_000;
 let cache: { at: number; catalog: Catalog } | null = null;
 
-export const CITY_ALIASES: Record<string, string[]> = {
-  "תל אביב": ['ת"א', "תא", "תל-אביב", "tel aviv", "telaviv"],
-  "תל אביב-יפו": ["תל אביב יפו", "יפו"],
-  "ירושלים": ["jerusalem"],
-  "חיפה": ["haifa"],
-  "באר שבע": ['ב"ש', "beersheba", "beer sheva"],
-  "פתח תקווה": ['פ"ת', "פתח תקוה"],
-  "ראשון לציון": ['ראשל"צ'],
-};
+export { CITY_ALIASES };
 
 function serverClient() {
   return createClient<Database>(
@@ -36,21 +20,6 @@ function serverClient() {
     process.env.SUPABASE_PUBLISHABLE_KEY!,
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
-}
-
-function normVariant(s: string | null | undefined): string {
-  if (!s) return "";
-  return foldSofit(lightNormalizeHebrew(s).toLowerCase()).trim();
-}
-
-function feminineFormsFor(name: string): string[] {
-  const n = name.trim();
-  if (!n) return [];
-  const out = new Set<string>();
-  if (/ג$/.test(n)) out.add(n + "ית");
-  if (/[לץצרדןנ]$/.test(n)) out.add(n + "ת");
-  if (/יועץ$/.test(n)) out.add(n.replace(/יועץ$/, "יועצת"));
-  return Array.from(out);
 }
 
 export async function loadSearchCatalog(): Promise<Catalog> {
@@ -82,92 +51,15 @@ export async function loadSearchCatalog(): Promise<Catalog> {
     const err = (r as any).error;
     if (err) throw err;
   }
-  const profs = profRes.data;
-  const mods = modRes.data;
 
-  const professions: Profession[] = (profs ?? []).map((p) => {
-    const feminine = feminineFormsFor(p.name_he);
-    const variants = new Set<string>();
-    for (const v of [p.name_he, p.name_en ?? "", p.slug, ...feminine]) {
-      const nv = normVariant(v);
-      if (nv) variants.add(nv);
-    }
-    return {
-      id: p.id,
-      slug: p.slug,
-      name_he: p.name_he,
-      nameVariants: Array.from(variants),
-      feminineVariants: feminine.map(normVariant).filter(Boolean),
-    };
+  const catalog = buildSearchCatalog({
+    professions: profRes.data ?? [],
+    modalities: modRes.data ?? [],
+    populations: (popRes.data ?? []) as Array<{ slug: string; name: string }>,
+    languages: (langRes.data ?? []) as Array<{ code: string; name: string }>,
+    cities: (cityRes.data ?? []) as Array<{ city: string | null }>,
+    therapistNames: (nameRes.data ?? []) as Array<{ id: string; full_name: string }>,
   });
-
-  const modalities: Modality[] = (mods ?? []).map((m) => {
-    const variants = new Set<string>();
-    for (const v of [m.name_he, m.name_en ?? "", m.slug]) {
-      const nv = normVariant(v);
-      if (nv) variants.add(nv);
-    }
-    return { id: m.id, slug: m.slug, name_he: m.name_he, nameVariants: Array.from(variants) };
-  });
-
-  const populations: PopulationEntry[] = (popRes.data ?? []).map(
-    (p: { slug: string; name: string }) => ({
-      slug: p.slug,
-      name_he: p.name,
-      aliases: [p.name, p.slug],
-    }),
-  );
-  // Minimal Hebrew aliases for the most common language names — the DB
-  // stores the English label, so we bootstrap the Hebrew surface forms
-  // here rather than adding schema. Interpretation-only.
-  const HE_LANG_ALIASES: Record<string, string[]> = {
-    he: ["עברית", "עיברית"],
-    en: ["אנגלית", "english"],
-    ru: ["רוסית", "russian"],
-    ar: ["ערבית", "arabic"],
-    fr: ["צרפתית", "french"],
-    es: ["ספרדית", "spanish"],
-    am: ["אמהרית"],
-  };
-  const languages: LanguageEntry[] = (langRes.data ?? []).map(
-    (l: { code: string; name: string }) => ({
-      code: l.code,
-      name_he: l.name,
-      aliases: [l.name, l.code, ...(HE_LANG_ALIASES[l.code.toLowerCase()] ?? [])],
-    }),
-  );
-
-  const cityMap = new Map<string, CityEntry>();
-  for (const row of (cityRes.data ?? []) as Array<{ city: string | null }>) {
-    if (!row.city) continue;
-    const canonical = row.city.trim();
-    if (!canonical || cityMap.has(canonical)) continue;
-    const aliases = new Set<string>([normVariant(canonical)]);
-    for (const a of CITY_ALIASES[canonical] ?? []) {
-      const nv = normVariant(a);
-      if (nv) aliases.add(nv);
-    }
-    cityMap.set(canonical, { canonical, aliases: Array.from(aliases) });
-  }
-
-  const therapistNames: TherapistNameEntry[] = [];
-  const firstNameCount = new Map<string, number>();
-  for (const t of (nameRes.data ?? []) as Array<{ id: string; full_name: string }>) {
-    const tokens = normVariant(t.full_name).split(" ").filter(Boolean);
-    if (tokens.length === 0) continue;
-    therapistNames.push({ id: t.id, fullName: t.full_name, tokens });
-    firstNameCount.set(tokens[0], (firstNameCount.get(tokens[0]) ?? 0) + 1);
-  }
-
-  const catalog: Catalog = {
-    professions,
-    modalities,
-    populations,
-    languages,
-    cities: Array.from(cityMap.values()),
-    therapistNames,
-    firstNameCount,
-  };
   cache = { at: now, catalog };
   return catalog;
 }
