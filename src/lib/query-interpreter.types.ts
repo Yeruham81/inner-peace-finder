@@ -82,9 +82,25 @@ export type StructuredFilters = {
   languageCodes: string[];
   /** Canonical `location_type` enum values only. */
   deliveryModes: string[];
-  /** Canonical city string as stored in `therapist_locations.city`. */
-  city: string | null;
+  /** Canonical city strings as stored in `therapist_locations.city`. */
+  cityNames: string[];
   therapistGender: TherapistGender | null;
+};
+
+/** Explicit UI filters, already validated against the canonical catalog. */
+export type ValidatedExplicitFilters = {
+  cityNames: string[];
+  populationSlugs: string[];
+  languageCodes: string[];
+  /** Raw values that did not resolve to a canonical catalog entry. */
+  rejected: Array<{ category: "city" | "population" | "language"; value: string }>;
+};
+
+/** Recorded when an explicit UI filter overrode a query-inferred value. */
+export type FilterConflict = {
+  category: "city" | "population" | "language";
+  inferred: string[];
+  explicit: string[];
 };
 
 export type SoftPreferences = {
@@ -131,6 +147,10 @@ export type TherapistSearchPlan = {
   therapistNameIds: string[];
   /** Executor should short-circuit with this reason when set. */
   emptyReason: null | "unrecognized_query";
+  /** Explicit UI filters folded into `hardFilters` (debug metadata). */
+  explicitFilters?: ValidatedExplicitFilters | null;
+  /** Explicit-vs-inferred conflicts, resolved in favor of the explicit value. */
+  filterConflicts?: FilterConflict[];
 };
 
 /** Minimal candidate row shape used inside pure ranking / preference logic. */

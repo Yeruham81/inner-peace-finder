@@ -44,6 +44,17 @@ const EXPLICIT_FEMALE_TOKENS = new Set(
 );
 const EXPLICIT_MALE_TOKENS = new Set(normList(["גבר", "זכר"]));
 
+/**
+ * Generic therapist nouns. A male token ("גבר"/"זכר") only expresses a
+ * *therapist-gender* request when it is adjacent to one of these or to a
+ * canonical profession phrase ("פסיכולוג גבר", "מטפל גבר"). A standalone
+ * "גבר" describing the patient ("אני גבר שמחפש טיפול") must never filter
+ * therapists by gender.
+ */
+const THERAPIST_NOUNS = new Set(
+  normList(["מטפל", "מטפלת", "מטפלים", "מטפלות", "מטופל"]),
+);
+
 const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
   const raw: Record<string, string> = {
     אונליין: "online", אונלין: "online", זום: "online",
