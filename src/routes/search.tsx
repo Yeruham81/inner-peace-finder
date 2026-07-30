@@ -68,12 +68,31 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   });
 }
 
-function unifiedResultsQuery(q: string) {
+export type UnifiedParams = {
+  q: string;
+  city: string;
+  population: string;
+  language: string;
+};
+
+export function hasUnifiedInput(p: UnifiedParams): boolean {
+  return Boolean(p.q.trim() || p.city.trim() || p.population.trim() || p.language.trim());
+}
+
+function unifiedResultsQuery(p: UnifiedParams) {
   return queryOptions({
-    queryKey: ["unified-search", q],
+    queryKey: ["unified-search", p],
     queryFn: (): Promise<UnifiedSearchResult | null> =>
-      q.trim().length >= 1
-        ? unifiedSearch({ data: { query: q.trim(), limit: 20 } })
+      hasUnifiedInput(p)
+        ? unifiedSearch({
+            data: {
+              query: p.q.trim(),
+              city: p.city.trim(),
+              population: p.population.trim(),
+              language: p.language.trim(),
+              limit: 20,
+            },
+          })
         : Promise.resolve(null),
   });
 }
