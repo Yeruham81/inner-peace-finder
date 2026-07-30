@@ -62,7 +62,9 @@ describe("interpretQuery — modality span + city extraction under multi-city ca
     expect(distinctCount).toBe(1);
     expect(first.softPreferences.modalitySlugs).toContain("cbt");
     expect(first.hardFilters.modalitySlugs).not.toContain("cbt");
-    expect(first.hardFilters.therapistGender).toBe("female");
+    // "עדיף" scopes BOTH the gender and the modality as soft preferences.
+    expect(first.hardFilters.therapistGender).toBe(null);
+    expect(first.softPreferences.genders).toContain("female");
     expect(first.hardFilters.cityNames).toContain("חיפה");
     const remainderTokens = first.semanticRemainder.split(/\s+/).filter(Boolean);
     expect(remainderTokens).not.toContain("עדיף");
