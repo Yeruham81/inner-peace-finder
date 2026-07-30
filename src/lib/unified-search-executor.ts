@@ -140,7 +140,7 @@ export async function executeUnifiedSearch(
   if (hf.modalitySlugs.length) setsToIntersect.push(await repo.idsByModalities(hf.modalitySlugs));
   if (hf.populationSlugs.length) setsToIntersect.push(await repo.idsByPopulations(hf.populationSlugs));
   if (hf.languageCodes.length) setsToIntersect.push(await repo.idsByLanguages(hf.languageCodes));
-  if (hf.city) setsToIntersect.push(await repo.idsByCities([hf.city]));
+  if (hf.cityNames.length) setsToIntersect.push(await repo.idsByCities(hf.cityNames));
   if (hf.deliveryModes.length) setsToIntersect.push(await repo.idsByDeliveryModes(hf.deliveryModes));
   if (hf.therapistGender) setsToIntersect.push(await repo.idsByGender(hf.therapistGender));
 
