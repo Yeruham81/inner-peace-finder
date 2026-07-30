@@ -43,7 +43,7 @@ describe("interpretQuery", () => {
   it("strips generic request prefix before detecting primary intent", () => {
     const r = interpretQuery("אני מחפש פסיכולוגית בתל אביב", catalog);
     expect(r.hardFilters.professionSlugs).toContain("psychologist");
-    expect(r.hardFilters.city).toBe("תל אביב");
+    expect(r.hardFilters.cityNames).toContain("תל אביב");
     expect(r.hardFilters.therapistGender).toBe("female");
     expect(r.genderEvidence).toContain("feminine_profession_form");
     expect(r.intent).toBe("structured");
@@ -109,7 +109,7 @@ describe("interpretQuery — Q1 mandatory regression cases", () => {
     const r = interpretQuery("פסיכולוג ילדים ברחובות", catalog);
     expect(r.hardFilters.professionSlugs).toContain("psychologist");
     expect(r.hardFilters.populationSlugs).toContain("children");
-    expect(r.hardFilters.city).toBe("רחובות");
+    expect(r.hardFilters.cityNames).toContain("רחובות");
     expect(r.hardFilters.therapistGender).toBeNull();
   });
 
@@ -117,13 +117,13 @@ describe("interpretQuery — Q1 mandatory regression cases", () => {
     const r = interpretQuery("מטפלת דוברת רוסית בחיפה", catalog);
     expect(r.hardFilters.therapistGender).toBe("female");
     expect(r.hardFilters.languageCodes).toContain("ru");
-    expect(r.hardFilters.city).toBe("חיפה");
+    expect(r.hardFilters.cityNames).toContain("חיפה");
   });
 
   it("'פסיכולוג בחיפה אונליין' → profession + city + canonical delivery mode", () => {
     const r = interpretQuery("פסיכולוג בחיפה אונליין", catalog);
     expect(r.hardFilters.professionSlugs).toContain("psychologist");
-    expect(r.hardFilters.city).toBe("חיפה");
+    expect(r.hardFilters.cityNames).toContain("חיפה");
     expect(r.hardFilters.deliveryModes).toContain("online");
     expect(r.hardFilters.deliveryModes).not.toContain("in_person");
   });
@@ -167,7 +167,7 @@ describe("interpretQuery — Q1 mandatory regression cases", () => {
     const r = interpretQuery("קשקושלאמוכר", catalog);
     expect(r.hardFilters.professionSlugs).toEqual([]);
     expect(r.hardFilters.modalitySlugs).toEqual([]);
-    expect(r.hardFilters.city).toBeNull();
+    expect(r.hardFilters.cityNames).toEqual([]);
     expect(r.therapistNameIds).toEqual([]);
     expect(r.semanticRemainder.length).toBeGreaterThan(0);
     expect(r.intent).toBe("semantic");

@@ -63,21 +63,21 @@ describe("interpretQuery — modality span + city extraction under multi-city ca
     expect(first.softPreferences.modalitySlugs).toContain("cbt");
     expect(first.hardFilters.modalitySlugs).not.toContain("cbt");
     expect(first.hardFilters.therapistGender).toBe("female");
-    expect(first.hardFilters.city).toBe("חיפה");
+    expect(first.hardFilters.cityNames).toContain("חיפה");
     const remainderTokens = first.semanticRemainder.split(/\s+/).filter(Boolean);
     expect(remainderTokens).not.toContain("עדיף");
     expect(remainderTokens).not.toContain("עדיפ"); // sofit-folded form
     expect(remainderTokens).not.toContain("cbt");
     expect(remainderTokens).not.toContain("ב");
     // Every permutation must agree with the first.
-    for (const r of results) expect(r.hardFilters.city).toBe("חיפה");
+    for (const r of results) expect(r.hardFilters.cityNames).toContain("חיפה");
   });
 
   it("'מטפלת ב-CBT בתל אביב' — CBT hard, תל אביב hard, invariant across permutations", () => {
     const { first, distinctCount } = runAllPermutations("מטפלת ב-CBT בתל אביב");
     expect(distinctCount).toBe(1);
     expect(first.hardFilters.modalitySlugs).toContain("cbt");
-    expect(first.hardFilters.city).toBe("תל אביב");
+    expect(first.hardFilters.cityNames).toContain("תל אביב");
     expect(first.hardFilters.therapistGender).toBe("female");
   });
 
@@ -86,14 +86,14 @@ describe("interpretQuery — modality span + city extraction under multi-city ca
     expect(distinctCount).toBe(1);
     expect(first.hardFilters.professionSlugs).toContain("psychologist");
     expect(first.hardFilters.modalitySlugs).toContain("cbt");
-    expect(first.hardFilters.city).toBe("ירושלים");
+    expect(first.hardFilters.cityNames).toContain("ירושלים");
   });
 
   it("'עדיף CBT ברחובות' — CBT soft, רחובות hard, 'עדיף' consumed", () => {
     const { first, distinctCount } = runAllPermutations("עדיף CBT ברחובות");
     expect(distinctCount).toBe(1);
     expect(first.softPreferences.modalitySlugs).toContain("cbt");
-    expect(first.hardFilters.city).toBe("רחובות");
+    expect(first.hardFilters.cityNames).toContain("רחובות");
     const remainderTokens = first.semanticRemainder.split(/\s+/).filter(Boolean);
     expect(remainderTokens).not.toContain("עדיף");
     expect(remainderTokens).not.toContain("עדיפ");
@@ -103,6 +103,6 @@ describe("interpretQuery — modality span + city extraction under multi-city ca
     const { first, distinctCount } = runAllPermutations("מטפלת ב-CBT בבאר שבע");
     expect(distinctCount).toBe(1);
     expect(first.hardFilters.modalitySlugs).toContain("cbt");
-    expect(first.hardFilters.city).toBe("באר שבע");
+    expect(first.hardFilters.cityNames).toContain("באר שבע");
   });
 });
