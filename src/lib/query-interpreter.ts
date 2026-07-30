@@ -490,22 +490,50 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     languageCodes: [], cities: [], deliveryModes: [], genders: [],
   };
   const therapistNameIds: string[] = [];
-  const genderEvidence: GenderEvidence[] = [...gender.evidence];
+  const genderEvidence: GenderEvidence[] = [];
   const unresolvedCodes: UnresolvedCode[] = [];
-  if (gender.conflict) unresolvedCodes.push("gender_conflict");
 
   const uniq = <T,>(arr: T[]): T[] => Array.from(new Set(arr));
 
-  // Track spans consumed by EARLIER hits so the preference-marker walker
-  // never crosses into another hit's territory.
-  const consumedByPrevHit = new Array<boolean>(tokens.length).fill(false);
+  // Spans consumed by hits that END at or before `start` — the
+  // preference-marker walker must never cross into another hit's
+  // territory.
+  const prevHitMaskFor = (start: number): boolean[] => {
+    const m = new Array<boolean>(tokens.length).fill(false);
+    for (const h of hits) {
+      if (h.end > start) continue;
+      for (let k = h.start; k < h.end; k++) m[k] = true;
+    }
+    return m;
+  };
+
+  // Gender evidence is collected first (as hard/soft candidates) so a
+  // criterion claimed by a preference marker is never ALSO hard.
+  let hardFemale = false;
+  let hardMale = false;
+  let softFemale = false;
+  let softMale = false;
+  const noteGender = (g: TherapistGender, preferred: boolean) => {
+    if (preferred) {
+      if (g === "female") softFemale = true;
+      else softMale = true;
+    } else if (g === "female") hardFemale = true;
+    else hardMale = true;
+  };
+
+  for (const m of gender.mentions) {
+    const preferred = hasImmediatePreferenceMarker(tokens, m.index, prevHitMaskFor(m.index));
+    noteGender(m.gender, preferred);
+    const ev: GenderEvidence = m.gender === "female" ? "explicit_female" : "explicit_male";
+    if (!genderEvidence.includes(ev)) genderEvidence.push(ev);
+  }
+
   for (const hit of hits) {
-    const preferred = hasImmediatePreferenceMarker(tokens, hit.start, consumedByPrevHit);
-    for (let k = hit.start; k < hit.end; k++) consumedByPrevHit[k] = true;
+    const preferred = hasImmediatePreferenceMarker(tokens, hit.start, prevHitMaskFor(hit.start));
     switch (hit.kind) {
       case "profession":
-        if (hit.feminine && !gender.conflict) {
-          if (!hardFilters.therapistGender) hardFilters.therapistGender = "female";
+        if (hit.feminine) {
+          noteGender("female", preferred);
           if (!genderEvidence.includes("feminine_profession_form"))
             genderEvidence.push("feminine_profession_form");
         }
@@ -521,9 +549,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
         (preferred ? softPreferences.languageCodes : hardFilters.languageCodes).push(hit.code);
         break;
       case "city":
-        if (preferred) softPreferences.cities.push(hit.canonical);
-        else if (!hardFilters.city) hardFilters.city = hit.canonical;
-        else softPreferences.cities.push(hit.canonical);
+        (preferred ? softPreferences.cities : hardFilters.cityNames).push(hit.canonical);
         break;
       case "delivery":
         (preferred ? softPreferences.deliveryModes : hardFilters.deliveryModes).push(hit.mode);
@@ -534,17 +560,22 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     }
   }
 
-  // Gender resolution:
-  //   - `gender.hard` is the deterministic pick from EXPLICIT_FEMALE/MALE tokens.
-  //   - Feminine profession forms may have already set female on hardFilters.
-  //   - If explicit male evidence collides with a feminine-form profession,
-  //     that is a conflict; drop the filter and record `gender_conflict`.
-  const femFromProfession = genderEvidence.includes("feminine_profession_form");
-  if (gender.hard === "male" && femFromProfession) {
+  // Gender resolution. Contradictory evidence (in ANY scope) is a
+  // conflict: no hard filter, no soft preference, and a recorded code.
+  const anyFemale = hardFemale || softFemale;
+  const anyMale = hardMale || softMale;
+  if (anyFemale && anyMale) {
     hardFilters.therapistGender = null;
+    softPreferences.genders = [];
     if (!unresolvedCodes.includes("gender_conflict")) unresolvedCodes.push("gender_conflict");
-  } else if (gender.hard && !hardFilters.therapistGender) {
-    hardFilters.therapistGender = gender.hard;
+  } else if (hardFemale) {
+    hardFilters.therapistGender = "female";
+  } else if (hardMale) {
+    hardFilters.therapistGender = "male";
+  } else if (softFemale) {
+    softPreferences.genders.push("female");
+  } else if (softMale) {
+    softPreferences.genders.push("male");
   }
 
   hardFilters.professionSlugs = uniq(hardFilters.professionSlugs);
@@ -552,6 +583,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   hardFilters.populationSlugs = uniq(hardFilters.populationSlugs);
   hardFilters.languageCodes = uniq(hardFilters.languageCodes);
   hardFilters.deliveryModes = uniq(hardFilters.deliveryModes);
+  hardFilters.cityNames = uniq(hardFilters.cityNames);
   softPreferences.professionSlugs = uniq(softPreferences.professionSlugs);
   softPreferences.modalitySlugs = uniq(softPreferences.modalitySlugs);
   softPreferences.populationSlugs = uniq(softPreferences.populationSlugs);
@@ -569,7 +601,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     hardFilters.populationSlugs.length > 0 ||
     hardFilters.languageCodes.length > 0 ||
     hardFilters.deliveryModes.length > 0 ||
-    hardFilters.city !== null ||
+    hardFilters.cityNames.length > 0 ||
     hardFilters.therapistGender !== null;
   const hasName = therapistNameIds.length > 0;
   const hasSemantic = remainderTokens.length > 0;
