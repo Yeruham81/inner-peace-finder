@@ -331,23 +331,48 @@ function hasImmediatePreferenceMarker(
   return false;
 }
 
-function detectExplicitGender(tokens: string[]): {
-  hard: TherapistGender | null;
-  evidence: GenderEvidence[];
-  conflict: boolean;
-  consumed: Set<number>;
-} {
-  const evidence: GenderEvidence[] = [];
+export type GenderMention = { index: number; gender: TherapistGender };
+
+/**
+ * Explicit gender mentions that describe the THERAPIST.
+ *
+ * Female tokens ("אישה", "מטפלת", ...) are accepted standalone.
+ * Male tokens ("גבר", "זכר") require an adjacent therapist noun or a
+ * canonical profession phrase, so a sentence about a male patient
+ * ("אני גבר שמחפש טיפול בחרדה") never becomes a gender filter.
+ */
+function detectExplicitGender(
+  tokens: string[],
+  isProfessionPhraseAt: (start: number, end: number) => boolean,
+): { mentions: GenderMention[]; consumed: Set<number> } {
+  const mentions: GenderMention[] = [];
   const consumed = new Set<number>();
-  let female = false;
-  let male = false;
+
+  const therapistAnchorAt = (i: number): boolean => {
+    if (i < 0 || i >= tokens.length) return false;
+    if (THERAPIST_NOUNS.has(tokens[i]!)) return true;
+    // Canonical profession phrase ending at (or starting from) i.
+    for (let len = 1; len <= 3; len++) {
+      if (i - len + 1 >= 0 && isProfessionPhraseAt(i - len + 1, i + 1)) return true;
+      if (i + len <= tokens.length && isProfessionPhraseAt(i, i + len)) return true;
+    }
+    return false;
+  };
+
   tokens.forEach((tok, i) => {
-    if (EXPLICIT_FEMALE_TOKENS.has(tok)) { female = true; evidence.push("explicit_female"); consumed.add(i); }
-    else if (EXPLICIT_MALE_TOKENS.has(tok)) { male = true; evidence.push("explicit_male"); consumed.add(i); }
+    if (EXPLICIT_FEMALE_TOKENS.has(tok)) {
+      mentions.push({ index: i, gender: "female" });
+      consumed.add(i);
+      return;
+    }
+    if (EXPLICIT_MALE_TOKENS.has(tok)) {
+      if (!therapistAnchorAt(i - 1) && !therapistAnchorAt(i + 1)) return;
+      mentions.push({ index: i, gender: "male" });
+      consumed.add(i);
+    }
   });
-  const conflict = female && male;
-  const hard: TherapistGender | null = conflict ? null : female ? "female" : male ? "male" : null;
-  return { hard, evidence, conflict, consumed };
+
+  return { mentions, consumed };
 }
 
 function detectUnresolvedService(head: string): string | null {
