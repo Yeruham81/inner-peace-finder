@@ -217,6 +217,14 @@ async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
     sb.from("problem_aliases").select("problem_id, alias"),
     sb.from("problem_intents").select("problem_slug, intent_text"),
   ]);
+  // A semantic catalog read failure must NEVER be silently degraded into
+  // "no semantic signals" (which would surface as unrecognized_query or a
+  // generic quality-ranked list). Propagate to the route error boundary.
+  for (const res of [problemsRes, aliasesRes, intentsRes]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = (res as any).error;
+    if (err) throw err;
+  }
   const problems = (problemsRes.data ?? []) as VocabProblem[];
   const aliases = (aliasesRes.data ?? []) as VocabAlias[];
   const intents = (intentsRes.data ?? []) as unknown as VocabIntent[];

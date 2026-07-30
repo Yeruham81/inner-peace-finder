@@ -12,12 +12,9 @@
  */
 
 import {
-  collapseRepeatedChars,
-  foldSofit,
-  normalizePunctuation,
-  normalizeWhitespace,
-  stripNikud,
-} from "./hebrew-normalizer";
+  normalizeForInterpretation,
+  normalizeList as normList,
+} from "./query-normalization";
 import type {
   Catalog,
   GenderEvidence,
@@ -28,40 +25,6 @@ import type {
   TherapistGender,
   UnresolvedCode,
 } from "./query-interpreter.types";
-
-/**
- * Interpretation-time normalization. Mirrors `lightNormalizeHebrew` but
- * omits `foldInflections`, so that:
- *   - "אישה" stays "אישה" (does not collapse to "איש").
- *   - "פסיכולוגית" stays "פסיכולוגית" (feminine form preserved).
- *   - "מטפלת" stays "מטפלת".
- * Every constant and every catalog variant is normalized with this
- * function, so lookups always compare like-to-like.
- */
-function normalizeForInterpretation(input: string): string {
-  if (!input) return "";
-  let s = input.normalize("NFKC");
-  s = stripNikud(s);
-  s = normalizeWhitespace(s);
-  s = normalizePunctuation(s);
-  // Internal hyphens act as a token separator in Hebrew search queries
-  // (e.g. "ב-CBT" → "ב cbt"). Applied to both user input and catalog
-  // variants so both sides stay comparable.
-  s = s.replace(/-/g, " ");
-  s = s.toLowerCase();
-  s = foldSofit(s);
-  s = collapseRepeatedChars(s);
-  return normalizeWhitespace(s);
-}
-
-function normList(items: readonly string[]): string[] {
-  const out: string[] = [];
-  for (const it of items) {
-    const n = normalizeForInterpretation(it);
-    if (n) out.push(n);
-  }
-  return out;
-}
 
 const GENERIC_PREFIXES: string[] = normList([
   "אני מחפש את", "אני מחפש", "אני מחפשת",
@@ -80,6 +43,17 @@ const EXPLICIT_FEMALE_TOKENS = new Set(
   normList(["אישה", "אשה", "נשית", "מטפלת"]),
 );
 const EXPLICIT_MALE_TOKENS = new Set(normList(["גבר", "זכר"]));
+
+/**
+ * Generic therapist nouns. A male token ("גבר"/"זכר") only expresses a
+ * *therapist-gender* request when it is adjacent to one of these or to a
+ * canonical profession phrase ("פסיכולוג גבר", "מטפל גבר"). A standalone
+ * "גבר" describing the patient ("אני גבר שמחפש טיפול") must never filter
+ * therapists by gender.
+ */
+const THERAPIST_NOUNS = new Set(
+  normList(["מטפל", "מטפלת", "מטפלים", "מטפלות", "מטופל"]),
+);
 
 const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
   const raw: Record<string, string> = {
@@ -357,23 +331,48 @@ function hasImmediatePreferenceMarker(
   return false;
 }
 
-function detectExplicitGender(tokens: string[]): {
-  hard: TherapistGender | null;
-  evidence: GenderEvidence[];
-  conflict: boolean;
-  consumed: Set<number>;
-} {
-  const evidence: GenderEvidence[] = [];
+export type GenderMention = { index: number; gender: TherapistGender };
+
+/**
+ * Explicit gender mentions that describe the THERAPIST.
+ *
+ * Female tokens ("אישה", "מטפלת", ...) are accepted standalone.
+ * Male tokens ("גבר", "זכר") require an adjacent therapist noun or a
+ * canonical profession phrase, so a sentence about a male patient
+ * ("אני גבר שמחפש טיפול בחרדה") never becomes a gender filter.
+ */
+function detectExplicitGender(
+  tokens: string[],
+  isProfessionPhraseAt: (start: number, end: number) => boolean,
+): { mentions: GenderMention[]; consumed: Set<number> } {
+  const mentions: GenderMention[] = [];
   const consumed = new Set<number>();
-  let female = false;
-  let male = false;
+
+  const therapistAnchorAt = (i: number): boolean => {
+    if (i < 0 || i >= tokens.length) return false;
+    if (THERAPIST_NOUNS.has(tokens[i]!)) return true;
+    // Canonical profession phrase ending at (or starting from) i.
+    for (let len = 1; len <= 3; len++) {
+      if (i - len + 1 >= 0 && isProfessionPhraseAt(i - len + 1, i + 1)) return true;
+      if (i + len <= tokens.length && isProfessionPhraseAt(i, i + len)) return true;
+    }
+    return false;
+  };
+
   tokens.forEach((tok, i) => {
-    if (EXPLICIT_FEMALE_TOKENS.has(tok)) { female = true; evidence.push("explicit_female"); consumed.add(i); }
-    else if (EXPLICIT_MALE_TOKENS.has(tok)) { male = true; evidence.push("explicit_male"); consumed.add(i); }
+    if (EXPLICIT_FEMALE_TOKENS.has(tok)) {
+      mentions.push({ index: i, gender: "female" });
+      consumed.add(i);
+      return;
+    }
+    if (EXPLICIT_MALE_TOKENS.has(tok)) {
+      if (!therapistAnchorAt(i - 1) && !therapistAnchorAt(i + 1)) return;
+      mentions.push({ index: i, gender: "male" });
+      consumed.add(i);
+    }
   });
-  const conflict = female && male;
-  const hard: TherapistGender | null = conflict ? null : female ? "female" : male ? "male" : null;
-  return { hard, evidence, conflict, consumed };
+
+  return { mentions, consumed };
 }
 
 function detectUnresolvedService(head: string): string | null {
@@ -409,7 +408,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const normalized = normalizeForInterpretation(raw);
   const emptyHard: StructuredFilters = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-    languageCodes: [], deliveryModes: [], city: null, therapistGender: null,
+    languageCodes: [], deliveryModes: [], cityNames: [], therapistGender: null,
   };
   const emptySoft: SoftPreferences = {
     professionSlugs: [], modalitySlugs: [], populationSlugs: [],
@@ -436,7 +435,17 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const idx = buildLookupIndex(catalog);
   const { hits, consumedMask } = extractStructured(tokens, idx);
 
-  const gender = detectExplicitGender(tokens);
+  const isProfessionPhraseAt = (start: number, end: number): boolean => {
+    if (start < 0 || end > tokens.length || end <= start) return false;
+    const first = tokens[start]!;
+    const tail = tokens.slice(start + 1, end);
+    for (const firstVar of tokenPrefixVariants(first)) {
+      const phrase = tail.length === 0 ? firstVar : `${firstVar} ${tail.join(" ")}`;
+      if (idx.professionByPhrase.has(phrase)) return true;
+    }
+    return false;
+  };
+  const gender = detectExplicitGender(tokens, isProfessionPhraseAt);
   for (const i of gender.consumed) consumedMask[i] = true;
 
   // Preference markers ("עדיף", "רצוי", ...) are functional cues, never
@@ -481,22 +490,50 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     languageCodes: [], cities: [], deliveryModes: [], genders: [],
   };
   const therapistNameIds: string[] = [];
-  const genderEvidence: GenderEvidence[] = [...gender.evidence];
+  const genderEvidence: GenderEvidence[] = [];
   const unresolvedCodes: UnresolvedCode[] = [];
-  if (gender.conflict) unresolvedCodes.push("gender_conflict");
 
   const uniq = <T,>(arr: T[]): T[] => Array.from(new Set(arr));
 
-  // Track spans consumed by EARLIER hits so the preference-marker walker
-  // never crosses into another hit's territory.
-  const consumedByPrevHit = new Array<boolean>(tokens.length).fill(false);
+  // Spans consumed by hits that END at or before `start` — the
+  // preference-marker walker must never cross into another hit's
+  // territory.
+  const prevHitMaskFor = (start: number): boolean[] => {
+    const m = new Array<boolean>(tokens.length).fill(false);
+    for (const h of hits) {
+      if (h.end > start) continue;
+      for (let k = h.start; k < h.end; k++) m[k] = true;
+    }
+    return m;
+  };
+
+  // Gender evidence is collected first (as hard/soft candidates) so a
+  // criterion claimed by a preference marker is never ALSO hard.
+  let hardFemale = false;
+  let hardMale = false;
+  let softFemale = false;
+  let softMale = false;
+  const noteGender = (g: TherapistGender, preferred: boolean) => {
+    if (preferred) {
+      if (g === "female") softFemale = true;
+      else softMale = true;
+    } else if (g === "female") hardFemale = true;
+    else hardMale = true;
+  };
+
+  for (const m of gender.mentions) {
+    const preferred = hasImmediatePreferenceMarker(tokens, m.index, prevHitMaskFor(m.index));
+    noteGender(m.gender, preferred);
+    const ev: GenderEvidence = m.gender === "female" ? "explicit_female" : "explicit_male";
+    if (!genderEvidence.includes(ev)) genderEvidence.push(ev);
+  }
+
   for (const hit of hits) {
-    const preferred = hasImmediatePreferenceMarker(tokens, hit.start, consumedByPrevHit);
-    for (let k = hit.start; k < hit.end; k++) consumedByPrevHit[k] = true;
+    const preferred = hasImmediatePreferenceMarker(tokens, hit.start, prevHitMaskFor(hit.start));
     switch (hit.kind) {
       case "profession":
-        if (hit.feminine && !gender.conflict) {
-          if (!hardFilters.therapistGender) hardFilters.therapistGender = "female";
+        if (hit.feminine) {
+          noteGender("female", preferred);
           if (!genderEvidence.includes("feminine_profession_form"))
             genderEvidence.push("feminine_profession_form");
         }
@@ -512,9 +549,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
         (preferred ? softPreferences.languageCodes : hardFilters.languageCodes).push(hit.code);
         break;
       case "city":
-        if (preferred) softPreferences.cities.push(hit.canonical);
-        else if (!hardFilters.city) hardFilters.city = hit.canonical;
-        else softPreferences.cities.push(hit.canonical);
+        (preferred ? softPreferences.cities : hardFilters.cityNames).push(hit.canonical);
         break;
       case "delivery":
         (preferred ? softPreferences.deliveryModes : hardFilters.deliveryModes).push(hit.mode);
@@ -525,17 +560,22 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     }
   }
 
-  // Gender resolution:
-  //   - `gender.hard` is the deterministic pick from EXPLICIT_FEMALE/MALE tokens.
-  //   - Feminine profession forms may have already set female on hardFilters.
-  //   - If explicit male evidence collides with a feminine-form profession,
-  //     that is a conflict; drop the filter and record `gender_conflict`.
-  const femFromProfession = genderEvidence.includes("feminine_profession_form");
-  if (gender.hard === "male" && femFromProfession) {
+  // Gender resolution. Contradictory evidence (in ANY scope) is a
+  // conflict: no hard filter, no soft preference, and a recorded code.
+  const anyFemale = hardFemale || softFemale;
+  const anyMale = hardMale || softMale;
+  if (anyFemale && anyMale) {
     hardFilters.therapistGender = null;
+    softPreferences.genders = [];
     if (!unresolvedCodes.includes("gender_conflict")) unresolvedCodes.push("gender_conflict");
-  } else if (gender.hard && !hardFilters.therapistGender) {
-    hardFilters.therapistGender = gender.hard;
+  } else if (hardFemale) {
+    hardFilters.therapistGender = "female";
+  } else if (hardMale) {
+    hardFilters.therapistGender = "male";
+  } else if (softFemale) {
+    softPreferences.genders.push("female");
+  } else if (softMale) {
+    softPreferences.genders.push("male");
   }
 
   hardFilters.professionSlugs = uniq(hardFilters.professionSlugs);
@@ -543,6 +583,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   hardFilters.populationSlugs = uniq(hardFilters.populationSlugs);
   hardFilters.languageCodes = uniq(hardFilters.languageCodes);
   hardFilters.deliveryModes = uniq(hardFilters.deliveryModes);
+  hardFilters.cityNames = uniq(hardFilters.cityNames);
   softPreferences.professionSlugs = uniq(softPreferences.professionSlugs);
   softPreferences.modalitySlugs = uniq(softPreferences.modalitySlugs);
   softPreferences.populationSlugs = uniq(softPreferences.populationSlugs);
@@ -560,7 +601,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     hardFilters.populationSlugs.length > 0 ||
     hardFilters.languageCodes.length > 0 ||
     hardFilters.deliveryModes.length > 0 ||
-    hardFilters.city !== null ||
+    hardFilters.cityNames.length > 0 ||
     hardFilters.therapistGender !== null;
   const hasName = therapistNameIds.length > 0;
   const hasSemantic = remainderTokens.length > 0;

@@ -20,6 +20,11 @@ import { SemanticEngine } from "./semantic-engine";
 import { parseStoredProfile } from "./therapist-semantic-profile";
 import { loadSearchCatalog } from "./query-catalog";
 import { interpretQuery } from "./query-interpreter";
+import {
+  applyExplicitFilters,
+  validateExplicitFilters,
+  type RawExplicitFilters,
+} from "./explicit-filters";
 import { applyEligibility } from "./search-eligibility";
 import {
   executeUnifiedSearch,
@@ -35,8 +40,15 @@ import type {
 } from "./query-interpreter.types";
 
 const Input = z.object({
-  query: z.string().trim().min(1).max(200),
+  query: z.string().trim().max(200).optional().default(""),
+  city: z.string().trim().max(80).optional().default(""),
+  population: z.string().trim().max(40).optional().default(""),
+  language: z.string().trim().max(8).optional().default(""),
   limit: z.number().int().min(1).max(50).optional(),
+});
+
+const InterpretInput = z.object({
+  query: z.string().trim().min(1).max(200),
 });
 
 function serverClient(): SupabaseClient<Database> {
@@ -76,6 +88,7 @@ function unwrap<T>(res: { data: T | null; error: unknown }): T {
 
 async function buildPlan(
   query: string,
+  explicitRaw: RawExplicitFilters,
   sb: SupabaseClient<Database>,
 ): Promise<{ plan: TherapistSearchPlan; interpretation: InterpretationResult }> {
   const catalog = await loadSearchCatalog();
@@ -85,13 +98,25 @@ async function buildPlan(
     const classified = await SemanticEngine.classify(interpretation.semanticRemainder, sb);
     semanticSignals = classified.map((c) => ({ slug: c.slug, confidence: c.confidence }));
   }
+
+  // Explicit UI filters are canonicalized and folded in as HARD filters.
+  // They are authoritative over anything the query inferred.
+  const explicit = validateExplicitFilters(explicitRaw, catalog);
+  const merged = applyExplicitFilters(
+    interpretation.hardFilters,
+    interpretation.softPreferences,
+    explicit,
+  );
+
   const plan: TherapistSearchPlan = {
     interpretation,
     semanticSignals,
-    hardFilters: interpretation.hardFilters,
-    softPreferences: interpretation.softPreferences,
+    hardFilters: merged.hardFilters,
+    softPreferences: merged.softPreferences,
     therapistNameIds: interpretation.therapistNameIds,
     emptyReason: interpretation.unresolvedPrimary ? "unrecognized_query" : null,
+    explicitFilters: explicit,
+    filterConflicts: merged.conflicts,
   };
   return { plan, interpretation };
 }
@@ -334,16 +359,19 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
   };
 }
 
-async function runUnifiedSearch(query: string, limit: number): Promise<UnifiedSearchResult> {
-  const sb = serverClient();
-  const { plan } = await buildPlan(query, sb);
+export async function runUnifiedSearch(
+  args: { query: string; explicit: RawExplicitFilters; limit: number },
+  client?: SupabaseClient<Database>,
+): Promise<UnifiedSearchResult> {
+  const sb = client ?? serverClient();
+  const { plan } = await buildPlan(args.query, args.explicit, sb);
   const repo = createSupabaseRepo(sb);
-  const out = await executeUnifiedSearch(repo, plan, limit);
+  const out = await executeUnifiedSearch(repo, plan, args.limit);
   return { plan, results: out.results, emptyReason: out.emptyReason };
 }
 
 export const interpretQueryFn = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => Input.parse(input))
+  .inputValidator((input: unknown) => InterpretInput.parse(input))
   .handler(async ({ data }): Promise<InterpretationResult> => {
     const catalog = await loadSearchCatalog();
     return interpretQuery(data.query, catalog);
@@ -352,5 +380,9 @@ export const interpretQueryFn = createServerFn({ method: "POST" })
 export const unifiedSearch = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<UnifiedSearchResult> => {
-    return runUnifiedSearch(data.query, data.limit ?? 20);
+    return runUnifiedSearch({
+      query: data.query,
+      explicit: { city: data.city, population: data.population, language: data.language },
+      limit: data.limit ?? 20,
+    });
   });

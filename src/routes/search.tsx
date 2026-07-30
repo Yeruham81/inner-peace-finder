@@ -68,12 +68,31 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   });
 }
 
-function unifiedResultsQuery(q: string) {
+export type UnifiedParams = {
+  q: string;
+  city: string;
+  population: string;
+  language: string;
+};
+
+export function hasUnifiedInput(p: UnifiedParams): boolean {
+  return Boolean(p.q.trim() || p.city.trim() || p.population.trim() || p.language.trim());
+}
+
+function unifiedResultsQuery(p: UnifiedParams) {
   return queryOptions({
-    queryKey: ["unified-search", q],
+    queryKey: ["unified-search", p],
     queryFn: (): Promise<UnifiedSearchResult | null> =>
-      q.trim().length >= 1
-        ? unifiedSearch({ data: { query: q.trim(), limit: 20 } })
+      hasUnifiedInput(p)
+        ? unifiedSearch({
+            data: {
+              query: p.q.trim(),
+              city: p.city.trim(),
+              population: p.population.trim(),
+              language: p.language.trim(),
+              limit: 20,
+            },
+          })
         : Promise.resolve(null),
   });
 }
@@ -97,7 +116,9 @@ export const Route = createFileRoute("/search")({
       context.queryClient.ensureQueryData(filterOptionsQuery),
     ];
     if (flow === "unified") {
-      promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(deps.q)));
+      promises.push(
+        context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps))),
+      );
     } else {
       promises.push(context.queryClient.ensureQueryData(structuredTherapistQuery(deps.q)));
       promises.push(context.queryClient.ensureQueryData(resultsQuery(deps)));
@@ -123,108 +144,175 @@ export const Route = createFileRoute("/search")({
   notFoundComponent: () => <div className="p-6">לא נמצא</div>,
 });
 
-function SearchPage() {
-  const search = Route.useSearch();
-  const navigate = useNavigate();
-  const flow = resolveFlowFromEnv(search.flow);
-  const { data: filters } = useSuspenseQuery(filterOptionsQuery);
-  const { data: structuredMatches } = useSuspenseQuery({
-    ...structuredTherapistQuery(search.q),
-    // Structured therapist pills are a LEGACY-only surface. In unified
-    // mode the displayed therapist list must come exclusively from
-    // `executeUnifiedSearch` — never merged, appended, or supplemented
-    // by the parallel structured path.
-    enabled: flow === "legacy",
-  } as ReturnType<typeof structuredTherapistQuery>);
-  const { data: legacyPipeline } = useSuspenseQuery({
-    ...resultsQuery(search),
-    enabled: flow === "legacy",
-  } as ReturnType<typeof resultsQuery>);
-  const { data: unifiedPipeline } = useSuspenseQuery({
-    ...unifiedResultsQuery(search.q),
-    enabled: flow === "unified",
-  } as ReturnType<typeof unifiedResultsQuery>);
+type SearchParams = z.infer<typeof searchSchema>;
 
-  const isClarification =
-    flow === "legacy" && legacyPipeline?.mode === "clarification";
-  const legacyResults =
-    legacyPipeline && legacyPipeline.mode !== "clarification"
-      ? legacyPipeline.therapists
-      : [];
-  const results: ScoredTherapist[] =
-    flow === "unified"
-      ? (unifiedPipeline?.results ?? []).map((r) => ({
-          id: r.id,
-          slug: r.slug,
-          full_name: r.full_name,
-          professional_title: r.professional_title,
-          short_intro: null,
-          years_experience: r.yearsExperience,
-          city: r.city,
-          image_url: r.image_url,
-          verified: r.verified,
-          score: r.semanticScore,
-          matched_problem_slugs: [],
-          population_names: [],
-          language_names: [],
-        }))
-      : legacyResults;
-  const pipelineMode: string =
-    flow === "unified" ? "unified" : (legacyPipeline?.mode ?? "results");
+function toUnifiedParams(s: SearchParams): UnifiedParams {
+  return { q: s.q, city: s.city, population: s.population, language: s.language };
+}
 
+/**
+ * Copy for the two distinct empty states the Unified executor reports.
+ * They are NOT interchangeable: one means "we could not understand the
+ * request", the other means "we understood it and nobody matched".
+ */
+export function emptyStateMessage(
+  reason: null | "unrecognized_query" | "no_matching_therapists",
+): { title: string; body: string } {
+  if (reason === "unrecognized_query") {
+    return {
+      title: "לא הצלחנו להבין את הבקשה",
+      body: "לא זיהינו בוודאות מה חיפשתם. נסו לנסח מחדש במילים אחרות, או השתמשו בסינון לפי עיר, אוכלוסייה ושפה.",
+    };
+  }
+  return {
+    title: "לא נמצאו מטפלים מתאימים",
+    body: "הבנו את הבקשה, אך אין כרגע מטפלים גלויים שעונים על כל הקריטריונים. נסו להסיר סינון אחד או יותר.",
+  };
+}
+
+function useSearchAnalytics(args: {
+  search: SearchParams;
+  mode: string;
+  count: number;
+  isClarification: boolean;
+}) {
+  const { search, mode, count, isClarification } = args;
   const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    const key = JSON.stringify({ ...search, mode: pipelineMode, n: results.length });
+    const key = JSON.stringify({ ...search, mode, n: count });
     if (lastSearchKeyRef.current === key) return;
     lastSearchKeyRef.current = key;
     track("search_executed", { page_source: "search", origin: "SearchPage" });
     if (isClarification) {
       track("search_clarification_shown", { page_source: "search", origin: "SearchPage" });
-    } else if (results.length === 0) {
+    } else if (count === 0) {
       track("no_results_returned", { page_source: "search", origin: "SearchPage" });
     } else {
       track("therapist_results_rendered", {
         page_source: "search",
-        rank_position: results.length,
+        rank_position: count,
         origin: "SearchPage",
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.q, search.problem, search.city, search.population, search.language, results.length, pipelineMode]);
+  }, [search.q, search.problem, search.city, search.population, search.language, count, mode]);
+}
+
+function ResultsHeader({ q, count }: { q: string; count: number | null }) {
+  return (
+    <div className="mt-6 flex items-baseline justify-between">
+      <h1 className="text-xl font-bold text-foreground sm:text-2xl">
+        {q ? (
+          <>
+            תוצאות עבור <span className="text-primary">"{q}"</span>
+          </>
+        ) : (
+          "כל המטפלים"
+        )}
+      </h1>
+      {count !== null && (
+        <span className="text-sm text-muted-foreground">
+          <span className="ltr-num">{count}</span> מטפלים
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ResultsGrid({ results }: { results: ScoredTherapist[] }) {
+  return (
+    <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      {results.map((t, i) => (
+        <TherapistCard key={t.id} t={t} rankPosition={i + 1} pageSource="search" />
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({
+  reason,
+}: {
+  reason: null | "unrecognized_query" | "no_matching_therapists";
+}) {
+  const msg = emptyStateMessage(reason);
+  return (
+    <div
+      data-testid="search-empty-state"
+      data-empty-reason={reason ?? "no_matching_therapists"}
+      className="mt-10 rounded-2xl border border-dashed border-border bg-surface p-10 text-center"
+    >
+      <p className="text-base font-semibold text-foreground">{msg.title}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{msg.body}</p>
+      <Link
+        to="/search"
+        search={{}}
+        className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
+      >
+        איפוס חיפוש
+      </Link>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Unified flow (the ONLY production surface)                          */
+/* ------------------------------------------------------------------ */
+
+function UnifiedSearchResults({ search }: { search: SearchParams }) {
+  const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(toUnifiedParams(search)));
+  const results: ScoredTherapist[] = (pipeline?.results ?? []).map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    full_name: r.full_name,
+    professional_title: r.professional_title,
+    short_intro: null,
+    years_experience: r.yearsExperience,
+    city: r.city,
+    image_url: r.image_url,
+    verified: r.verified,
+    score: r.semanticScore,
+    matched_problem_slugs: [],
+    population_names: [],
+    language_names: [],
+  }));
+  useSearchAnalytics({ search, mode: "unified", count: results.length, isClarification: false });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <SearchForm
-        initialQuery={search.q}
-        cities={filters.cities}
-        populations={filters.populations}
-        languages={filters.languages}
-        initialFilters={{
-          city: search.city,
-          population: search.population,
-          language: search.language,
-        }}
-        variant="compact"
-      />
+    <>
+      <ResultsHeader q={search.q} count={results.length} />
+      {results.length === 0 ? (
+        <EmptyState reason={pipeline?.emptyReason ?? "unrecognized_query"} />
+      ) : (
+        <ResultsGrid results={results} />
+      )}
+    </>
+  );
+}
 
-      <div className="mt-6 flex items-baseline justify-between">
-        <h1 className="text-xl font-bold text-foreground sm:text-2xl">
-          {search.q ? (
-            <>
-              תוצאות עבור <span className="text-primary">"{search.q}"</span>
-            </>
-          ) : (
-            "כל המטפלים"
-          )}
-        </h1>
-        {!isClarification && (
-          <span className="text-sm text-muted-foreground">
-            <span className="ltr-num">{results.length}</span> מטפלים
-          </span>
-        )}
-      </div>
+/* ------------------------------------------------------------------ */
+/* Legacy flow — DEV-only comparison surface                           */
+/* ------------------------------------------------------------------ */
 
-      {flow === "legacy" && structuredMatches && structuredMatches.length > 0 && (
+function LegacySearchResults({ search }: { search: SearchParams }) {
+  const navigate = useNavigate();
+  const { data: structuredMatches } = useSuspenseQuery(structuredTherapistQuery(search.q));
+  const { data: legacyPipeline } = useSuspenseQuery(resultsQuery(search));
+
+  const isClarification = legacyPipeline?.mode === "clarification";
+  const results: ScoredTherapist[] =
+    legacyPipeline && legacyPipeline.mode !== "clarification" ? legacyPipeline.therapists : [];
+  useSearchAnalytics({
+    search,
+    mode: legacyPipeline?.mode ?? "results",
+    count: results.length,
+    isClarification,
+  });
+
+  return (
+    <>
+      <ResultsHeader q={search.q} count={isClarification ? null : results.length} />
+
+      {structuredMatches && structuredMatches.length > 0 && (
         <section
           aria-label="התאמות לפי שם"
           className="mt-4 rounded-2xl border border-border bg-surface p-4"
@@ -249,25 +337,6 @@ function SearchPage() {
         </section>
       )}
 
-      {import.meta.env.DEV && (
-        <div className="mt-4 rounded-md border border-dashed border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
-          <span className="font-mono">flow={flow}</span>
-          <span className="mx-2">·</span>
-          <button
-            type="button"
-            className="underline hover:text-foreground"
-            onClick={() =>
-              navigate({
-                to: "/search",
-                search: { ...search, flow: flow === "unified" ? "legacy" : "unified" },
-              })
-            }
-          >
-            switch to {flow === "unified" ? "legacy" : "unified"}
-          </button>
-        </div>
-      )}
-
       {isClarification ? (
         <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-6 shadow-soft">
           <p className="text-base font-semibold text-foreground">
@@ -288,10 +357,7 @@ function SearchPage() {
                     page_source: "search",
                     problem_slug: opt.slug,
                   });
-                  navigate({
-                    to: "/search",
-                    search: { ...search, problem: opt.slug },
-                  });
+                  navigate({ to: "/search", search: { ...search, problem: opt.slug } });
                 }}
                 className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand hover:bg-brand/5"
               >
@@ -301,24 +367,61 @@ function SearchPage() {
           </div>
         </div>
       ) : results.length === 0 ? (
-        <div className="mt-10 rounded-2xl border border-dashed border-border bg-surface p-10 text-center">
-          <p className="text-base text-muted-foreground">
-            לא נמצאו מטפלים התואמים לחיפוש. נסו לנסח אחרת או להסיר סינונים.
-          </p>
-          <Link
-            to="/search"
-            search={{}}
-            className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
-          >
-            איפוס חיפוש
-          </Link>
-        </div>
+        <EmptyState reason="no_matching_therapists" />
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {results.map((t, i) => (
-            <TherapistCard key={t.id} t={t} rankPosition={i + 1} pageSource="search" />
-          ))}
+        <ResultsGrid results={results} />
+      )}
+    </>
+  );
+}
+
+function SearchPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const flow = resolveFlowFromEnv(search.flow);
+  const { data: filters } = useSuspenseQuery(filterOptionsQuery);
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <SearchForm
+        initialQuery={search.q}
+        cities={filters.cities}
+        populations={filters.populations}
+        languages={filters.languages}
+        initialFilters={{
+          city: search.city,
+          population: search.population,
+          language: search.language,
+        }}
+        variant="compact"
+      />
+
+      {import.meta.env.DEV && (
+        <div className="mt-4 rounded-md border border-dashed border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-mono">flow={flow}</span>
+          <span className="mx-2">·</span>
+          <button
+            type="button"
+            className="underline hover:text-foreground"
+            onClick={() =>
+              navigate({
+                to: "/search",
+                search: { ...search, flow: flow === "unified" ? "legacy" : "unified" },
+              })
+            }
+          >
+            switch to {flow === "unified" ? "legacy" : "unified"}
+          </button>
         </div>
+      )}
+
+      {/* Exactly ONE branch is mounted. In production `flow` is always
+          "unified", so the Legacy and structured queries are never
+          instantiated and a failure there cannot affect Unified. */}
+      {flow === "unified" ? (
+        <UnifiedSearchResults search={search} />
+      ) : (
+        <LegacySearchResults search={search} />
       )}
     </div>
   );

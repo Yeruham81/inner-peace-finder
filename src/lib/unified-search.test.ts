@@ -31,13 +31,13 @@ describe("computePreferenceScore", () => {
   it("returns 0 when no preferences match", () => {
     expect(computePreferenceScore(base, emptySoft)).toBe(0);
   });
-  it("is capped per category at documented weights", () => {
+  it("gives at most one point per category (0..7 model)", () => {
     const soft: SoftPreferences = {
       ...emptySoft,
       professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
       cities: ["תל אביב"], deliveryModes: ["online"], genders: ["female"],
     };
-    expect(computePreferenceScore(base, soft)).toBeCloseTo(6.5, 5);
+    expect(computePreferenceScore(base, soft)).toBe(5);
   });
 });
 

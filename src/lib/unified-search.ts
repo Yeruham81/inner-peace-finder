@@ -17,29 +17,27 @@ import type {
 } from "./query-interpreter.types";
 import type { SemanticProfileEntry } from "./therapist-semantic-profile";
 
-const PREF_CAPS = {
-  profession: 2,
-  modality: 2,
-  population: 1,
-  language: 0.5,
-  city: 1,
-  delivery: 0.5,
-  gender: 1,
-} as const;
+/**
+ * Approved 0–7 preference model: each of the seven soft-preference
+ * categories contributes AT MOST one point. Multiple matching values
+ * inside one category still contribute exactly one point. There are no
+ * category-specific weights.
+ */
+export const MAX_PREFERENCE_SCORE = 7;
 
 export function computePreferenceScore(
   candidate: CandidateForRanking,
   soft: SoftPreferences,
 ): number {
-  let score = 0;
-  if (soft.professionSlugs.some((s) => candidate.professionSlugs.includes(s))) score += PREF_CAPS.profession;
-  if (soft.modalitySlugs.some((s) => candidate.modalitySlugs.includes(s))) score += PREF_CAPS.modality;
-  if (soft.populationSlugs.some((s) => candidate.populationSlugs.includes(s))) score += PREF_CAPS.population;
-  if (soft.languageCodes.some((c) => candidate.languageCodes.includes(c))) score += PREF_CAPS.language;
-  if (soft.cities.some((c) => candidate.cities.includes(c))) score += PREF_CAPS.city;
-  if (soft.deliveryModes.some((m) => candidate.deliveryModes.includes(m))) score += PREF_CAPS.delivery;
-  if (candidate.gender && soft.genders.includes(candidate.gender)) score += PREF_CAPS.gender;
-  return score;
+  return (
+    (soft.professionSlugs.some((s) => candidate.professionSlugs.includes(s)) ? 1 : 0) +
+    (soft.modalitySlugs.some((s) => candidate.modalitySlugs.includes(s)) ? 1 : 0) +
+    (soft.populationSlugs.some((s) => candidate.populationSlugs.includes(s)) ? 1 : 0) +
+    (soft.languageCodes.some((c) => candidate.languageCodes.includes(c)) ? 1 : 0) +
+    (soft.cities.some((c) => candidate.cities.includes(c)) ? 1 : 0) +
+    (soft.deliveryModes.some((m) => candidate.deliveryModes.includes(m)) ? 1 : 0) +
+    (candidate.gender && soft.genders.includes(candidate.gender) ? 1 : 0)
+  );
 }
 
 export function computeSemanticScore(
