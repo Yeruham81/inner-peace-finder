@@ -12,12 +12,9 @@
  */
 
 import {
-  collapseRepeatedChars,
-  foldSofit,
-  normalizePunctuation,
-  normalizeWhitespace,
-  stripNikud,
-} from "./hebrew-normalizer";
+  normalizeForInterpretation,
+  normalizeList as normList,
+} from "./query-normalization";
 import type {
   Catalog,
   GenderEvidence,
@@ -28,40 +25,6 @@ import type {
   TherapistGender,
   UnresolvedCode,
 } from "./query-interpreter.types";
-
-/**
- * Interpretation-time normalization. Mirrors `lightNormalizeHebrew` but
- * omits `foldInflections`, so that:
- *   - "אישה" stays "אישה" (does not collapse to "איש").
- *   - "פסיכולוגית" stays "פסיכולוגית" (feminine form preserved).
- *   - "מטפלת" stays "מטפלת".
- * Every constant and every catalog variant is normalized with this
- * function, so lookups always compare like-to-like.
- */
-function normalizeForInterpretation(input: string): string {
-  if (!input) return "";
-  let s = input.normalize("NFKC");
-  s = stripNikud(s);
-  s = normalizeWhitespace(s);
-  s = normalizePunctuation(s);
-  // Internal hyphens act as a token separator in Hebrew search queries
-  // (e.g. "ב-CBT" → "ב cbt"). Applied to both user input and catalog
-  // variants so both sides stay comparable.
-  s = s.replace(/-/g, " ");
-  s = s.toLowerCase();
-  s = foldSofit(s);
-  s = collapseRepeatedChars(s);
-  return normalizeWhitespace(s);
-}
-
-function normList(items: readonly string[]): string[] {
-  const out: string[] = [];
-  for (const it of items) {
-    const n = normalizeForInterpretation(it);
-    if (n) out.push(n);
-  }
-  return out;
-}
 
 const GENERIC_PREFIXES: string[] = normList([
   "אני מחפש את", "אני מחפש", "אני מחפשת",
