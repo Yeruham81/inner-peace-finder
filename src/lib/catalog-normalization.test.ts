@@ -83,6 +83,20 @@ describe("production catalog builder + interpreter", () => {
     expect([...seen][0]).toContain("psychologist");
   });
 
+  it("'עדיף מטפלת ב-CBT בחיפה' on the production catalog → soft gender + soft CBT + hard city", () => {
+    const r = interpretQuery("עדיף מטפלת ב-CBT בחיפה", catalogFrom(PROFESSION_ROWS));
+    expect(r.hardFilters.therapistGender).toBeNull();
+    expect(r.softPreferences.genders).toContain("female");
+    expect(r.softPreferences.modalitySlugs).toContain("cbt");
+    expect(r.hardFilters.modalitySlugs).not.toContain("cbt");
+    expect(r.hardFilters.cityNames).toContain("חיפה");
+    const remainder = r.semanticRemainder.split(/\s+/).filter(Boolean);
+    expect(remainder).not.toContain("עדיף");
+    expect(remainder).not.toContain("עדיפ");
+    expect(remainder).not.toContain("cbt");
+    expect(remainder).not.toContain("ב");
+  });
+
   it("catalog variants are produced by the SAME normalization function as the query", () => {
     const catalog = catalogFrom(PROFESSION_ROWS);
     const psych = catalog.professions.find((p) => p.slug === "psychologist")!;
