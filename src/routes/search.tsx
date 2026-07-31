@@ -79,7 +79,7 @@ export function hasUnifiedInput(p: UnifiedParams): boolean {
   return Boolean(p.q.trim() || p.city.trim() || p.population.trim() || p.language.trim());
 }
 
-function unifiedResultsQuery(p: UnifiedParams) {
+export function unifiedResultsQuery(p: UnifiedParams) {
   return queryOptions({
     queryKey: ["unified-search", p],
     queryFn: (): Promise<UnifiedSearchResult | null> =>
@@ -97,7 +97,7 @@ function unifiedResultsQuery(p: UnifiedParams) {
   });
 }
 
-function structuredTherapistQuery(q: string) {
+export function structuredTherapistQuery(q: string) {
   return queryOptions({
     queryKey: ["structured-search", "therapist", q],
     queryFn: () =>
@@ -146,8 +146,27 @@ export const Route = createFileRoute("/search")({
 
 type SearchParams = z.infer<typeof searchSchema>;
 
-function toUnifiedParams(s: SearchParams): UnifiedParams {
+export function toUnifiedParams(s: SearchParams): UnifiedParams {
   return { q: s.q, city: s.city, population: s.population, language: s.language };
+}
+
+/**
+ * Mounts EXACTLY ONE flow-specific results component. Exported so the
+ * orchestration regression test can render the real switch and prove that
+ * the Legacy queries are never instantiated in production (unified) mode.
+ */
+export function SearchResultsSwitch({
+  flow,
+  search,
+}: {
+  flow: FlowValue;
+  search: SearchParams;
+}) {
+  return flow === "unified" ? (
+    <UnifiedSearchResults search={search} />
+  ) : (
+    <LegacySearchResults search={search} />
+  );
 }
 
 /**
@@ -418,11 +437,7 @@ function SearchPage() {
       {/* Exactly ONE branch is mounted. In production `flow` is always
           "unified", so the Legacy and structured queries are never
           instantiated and a failure there cannot affect Unified. */}
-      {flow === "unified" ? (
-        <UnifiedSearchResults search={search} />
-      ) : (
-        <LegacySearchResults search={search} />
-      )}
+      <SearchResultsSwitch flow={flow} search={search} />
     </div>
   );
 }
