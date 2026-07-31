@@ -91,7 +91,7 @@ async function buildPlan(
   explicitRaw: RawExplicitFilters,
   sb: SupabaseClient<Database>,
 ): Promise<{ plan: TherapistSearchPlan; interpretation: InterpretationResult }> {
-  const catalog = await loadSearchCatalog();
+  const catalog = await loadSearchCatalog(sb);
   const interpretation = interpretQuery(query, catalog);
   let semanticSignals: SemanticSignal[] = [];
   if (interpretation.semanticRemainder.length > 0 && !interpretation.unresolvedPrimary) {

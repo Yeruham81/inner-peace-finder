@@ -22,11 +22,18 @@ function serverClient() {
   );
 }
 
-export async function loadSearchCatalog(): Promise<Catalog> {
+/**
+ * `client` is an injection seam used by the production-path regression
+ * tests. Production callers pass the request-scoped server client so the
+ * catalog and the search share one connection.
+ */
+export async function loadSearchCatalog(
+  client?: ReturnType<typeof serverClient>,
+): Promise<Catalog> {
   const now = Date.now();
   if (cache && now - cache.at < TTL_MS) return cache.catalog;
 
-  const sb = serverClient();
+  const sb = client ?? serverClient();
 
   const cityQ = applyEligibility(
     sb

@@ -502,6 +502,12 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     const m = new Array<boolean>(tokens.length).fill(false);
     for (const h of hits) {
       if (h.end > start) continue;
+      // A feminine profession form ("מטפלת", "פסיכולוגית") is BOTH a
+      // profession hit and a gender cue. It stays transparent to the
+      // preference walker so "עדיף מטפלת ב-CBT" scopes the marker over
+      // the modality too, exactly as it does when the same word is only
+      // a gender mention. Any other hit is opaque and ends the scope.
+      if (h.kind === "profession" && h.feminine) continue;
       for (let k = h.start; k < h.end; k++) m[k] = true;
     }
     return m;
