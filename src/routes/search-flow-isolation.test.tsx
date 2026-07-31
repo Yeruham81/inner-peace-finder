@@ -30,6 +30,13 @@ mock.module("@/lib/structured-search.functions", () => ({
   },
 }));
 
+// The card renders TanStack <Link>, which needs a RouterProvider. Rendering
+// is not the subject here — query orchestration is — so the card is stubbed
+// to a plain node while every query path stays real.
+mock.module("@/components/therapist-card", () => ({
+  TherapistCard: ({ t }: { t: { full_name: string } }) => <div>{t.full_name}</div>,
+}));
+
 mock.module("@/lib/query-interpreter.functions", () => ({
   unifiedSearch: () => {
     calls.push("unifiedSearch");
