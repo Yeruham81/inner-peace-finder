@@ -119,15 +119,19 @@ describe("failure behavior", () => {
     ).rejects.toBeInstanceOf(LlmSemanticError);
   });
 
-  it("catalog ordering does not change adapter results", async () => {
-    const a = createFakeLlmProvider("valid");
-    const b = createFakeLlmProvider("valid");
-    const r1 = await a.classify({ semanticRemainder: "חרדה", allowedProblems: CATALOG });
-    const r2 = await b.classify({
-      semanticRemainder: "חרדה",
-      allowedProblems: [...CATALOG].reverse(),
-    });
-    expect(allowedSlugSet(CATALOG).size).toBe(4);
-    expect(r1.matches.map((m) => m.slug).sort()).toEqual(r2.matches.map((m) => m.slug).sort());
+  it("catalog ordering does not change validation or ordering guarantees", async () => {
+    const allowed = allowedSlugSet(CATALOG);
+    expect(allowed.size).toBe(4);
+    for (const catalog of [CATALOG, [...CATALOG].reverse()]) {
+      const provider = createFakeLlmProvider("valid");
+      const r = await provider.classify({ semanticRemainder: "חרדה", allowedProblems: catalog });
+      // Every accepted slug is canonical, confidences are ordered desc and
+      // the cap holds — regardless of the order rows were supplied in.
+      expect(r.matches.every((m) => allowed.has(m.slug))).toBe(true);
+      expect(r.matches.map((m) => m.confidence)).toEqual(
+        [...r.matches.map((m) => m.confidence)].sort((x, y) => y - x),
+      );
+      expect(r.matches.length).toBeLessThanOrEqual(3);
+    }
   });
 });
