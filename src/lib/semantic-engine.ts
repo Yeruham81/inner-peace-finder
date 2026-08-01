@@ -14,11 +14,12 @@
  *   matching internals from `./hebrew-normalizer`. All other modules must
  *   consume the SemanticEngine API exposed here.
  *
- * Behavioral parity: the classifier + extractor pipelines are identical
- *   normalize → lexical match → alias expansion → intent match →
- *   aggregate → confidence
- * so the deterministic engine can be later shadowed by an LLM adapter with
- * matching semantics.
+ * Authority note (Phase Q2): this deterministic engine is the ONLY semantic
+ * classifier used by production Unified Search. A future LLM provider (see
+ * `llm-semantic-contract` / `llm-semantic-adapter`) is limited to classifying
+ * the unresolved `semanticRemainder` into canonical problem slugs; it does not
+ * replace this engine, does not perform therapist-profile extraction, and does
+ * not control interpretation, filtering, eligibility or ranking.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -59,6 +60,13 @@ const WEIGHT_INTENT = 1;
 const CONFIDENCE_THRESHOLD = 0.65;
 const DISAMBIGUATION_GAP = 0.12;
 const MAX_MATCHES = 3;
+
+/**
+ * Public maximum number of accepted semantic matches. Exposed so any future
+ * semantic provider (see `llm-semantic-contract`) enforces the SAME cap as
+ * this deterministic engine instead of redefining it.
+ */
+export const SEMANTIC_MAX_MATCHES = MAX_MATCHES;
 
 /* ------------------------------------------------------------------ */
 /* Phase 17C.2 — scoring / confidence / suppression tunables          */
@@ -235,6 +243,42 @@ async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
     idBySlug.set(p.slug, String(p.id));
   });
   return { problems, aliases, intents, slugById, idBySlug };
+}
+
+/* ------------------------------------------------------------------ */
+/* Canonical problem catalog (shared with future semantic providers)   */
+/* ------------------------------------------------------------------ */
+
+/** One canonical problem: the slug is the ONLY valid identifier. */
+export type CanonicalProblemEntry = {
+  slug: string;
+  name: string;
+  aliases: string[];
+};
+
+/**
+ * Load the canonical problem catalog through the SAME read the classifier
+ * uses, so no module ever hand-maintains a parallel slug list.
+ *
+ * Database errors propagate (Q1 behavior): a catalog read failure must never
+ * degrade into a valid empty catalog.
+ */
+async function loadCanonicalProblems(
+  sb: SupabaseClient<Database>,
+): Promise<CanonicalProblemEntry[]> {
+  const vocab = await fetchVocabulary(sb);
+  const aliasesById = new Map<string, string[]>();
+  for (const a of vocab.aliases) {
+    const key = String(a.problem_id);
+    const list = aliasesById.get(key) ?? [];
+    list.push(a.alias);
+    aliasesById.set(key, list);
+  }
+  return vocab.problems.map((p) => ({
+    slug: p.slug,
+    name: p.name ?? p.slug,
+    aliases: aliasesById.get(String(p.id)) ?? [],
+  }));
 }
 
 /**
@@ -831,6 +875,7 @@ export const SemanticEngine = {
   extractProfile,
   scoreProfiles,
   resolveLowConfidence,
+  loadCanonicalProblems,
   // primitives / utilities
   normalizeText,
   matchesText,
