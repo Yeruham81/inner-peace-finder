@@ -319,12 +319,16 @@ function hasImmediatePreferenceMarker(
     const i = hitStart - k;
     if (consumedByPrevHit[i]) return false;
     if (PREFERENCE_MARKER_SET.has(tokens[i]!)) return true;
-  }
-  for (let len = 2; len <= 3; len++) {
-    if (hitStart >= len) {
-      const start = hitStart - len;
-      if (consumedByPrevHit.slice(start, hitStart).some(Boolean)) continue;
-      const phrase = tokens.slice(start, hitStart).join(" ");
+    // Multi-token markers ("אם אפשר") stay in scope across the same
+    // transparent tokens (feminine profession forms, filler prefixes)
+    // that single-token markers already cross: test every phrase that
+    // ENDS at this backward position, not only phrases adjacent to the
+    // current hit.
+    for (let len = 2; len <= 3; len++) {
+      const start = i - len + 1;
+      if (start < 0) continue;
+      if (consumedByPrevHit.slice(start, i + 1).some(Boolean)) continue;
+      const phrase = tokens.slice(start, i + 1).join(" ");
       if (PREFERENCE_MARKER_SET.has(phrase)) return true;
     }
   }
