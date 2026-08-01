@@ -28,10 +28,12 @@ describe("LLM isolation", () => {
   });
 
   it("no production module imports the LLM semantic boundary", () => {
-    const offenders = PRODUCTION_FILES.filter((f) => {
-      const src = readFileSync(f, "utf8");
-      return LLM_MODULES.some((m) => src.includes(`llm-semantic`) && src.includes(m));
-    });
+    // Import statements only — documentation comments that name the boundary
+    // are fine (and required by task 10).
+    const importRe = new RegExp(
+      `(?:from|import|require\\()\\s*["'][^"']*(?:${LLM_MODULES.join("|")})["']`,
+    );
+    const offenders = PRODUCTION_FILES.filter((f) => importRe.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
   });
 
