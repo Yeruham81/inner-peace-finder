@@ -874,6 +874,7 @@ export const SemanticEngine = {
   extractProfile,
   scoreProfiles,
   resolveLowConfidence,
+  loadCanonicalProblems,
   // primitives / utilities
   normalizeText,
   matchesText,
