@@ -14,11 +14,12 @@
  *   matching internals from `./hebrew-normalizer`. All other modules must
  *   consume the SemanticEngine API exposed here.
  *
- * Behavioral parity: the classifier + extractor pipelines are identical
- *   normalize → lexical match → alias expansion → intent match →
- *   aggregate → confidence
- * so the deterministic engine can be later shadowed by an LLM adapter with
- * matching semantics.
+ * Authority note (Phase Q2): this deterministic engine is the ONLY semantic
+ * classifier used by production Unified Search. A future LLM provider (see
+ * `llm-semantic-contract` / `llm-semantic-adapter`) is limited to classifying
+ * the unresolved `semanticRemainder` into canonical problem slugs; it does not
+ * replace this engine, does not perform therapist-profile extraction, and does
+ * not control interpretation, filtering, eligibility or ranking.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
