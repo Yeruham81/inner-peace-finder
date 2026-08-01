@@ -244,6 +244,42 @@ async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
   return { problems, aliases, intents, slugById, idBySlug };
 }
 
+/* ------------------------------------------------------------------ */
+/* Canonical problem catalog (shared with future semantic providers)   */
+/* ------------------------------------------------------------------ */
+
+/** One canonical problem: the slug is the ONLY valid identifier. */
+export type CanonicalProblemEntry = {
+  slug: string;
+  name: string;
+  aliases: string[];
+};
+
+/**
+ * Load the canonical problem catalog through the SAME read the classifier
+ * uses, so no module ever hand-maintains a parallel slug list.
+ *
+ * Database errors propagate (Q1 behavior): a catalog read failure must never
+ * degrade into a valid empty catalog.
+ */
+async function loadCanonicalProblems(
+  sb: SupabaseClient<Database>,
+): Promise<CanonicalProblemEntry[]> {
+  const vocab = await fetchVocabulary(sb);
+  const aliasesById = new Map<string, string[]>();
+  for (const a of vocab.aliases) {
+    const key = String(a.problem_id);
+    const list = aliasesById.get(key) ?? [];
+    list.push(a.alias);
+    aliasesById.set(key, list);
+  }
+  return vocab.problems.map((p) => ({
+    slug: p.slug,
+    name: p.name ?? p.slug,
+    aliases: aliasesById.get(String(p.id)) ?? [],
+  }));
+}
+
 /**
  * Phase 17C.2: rich per-slug evidence. Each entry captures the matched
  * phrase, its evidence kind, and its token count. Downstream scoring
