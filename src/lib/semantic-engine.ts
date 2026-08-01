@@ -60,6 +60,13 @@ const CONFIDENCE_THRESHOLD = 0.65;
 const DISAMBIGUATION_GAP = 0.12;
 const MAX_MATCHES = 3;
 
+/**
+ * Public maximum number of accepted semantic matches. Exposed so any future
+ * semantic provider (see `llm-semantic-contract`) enforces the SAME cap as
+ * this deterministic engine instead of redefining it.
+ */
+export const SEMANTIC_MAX_MATCHES = MAX_MATCHES;
+
 /* ------------------------------------------------------------------ */
 /* Phase 17C.2 — scoring / confidence / suppression tunables          */
 /* ------------------------------------------------------------------ */
