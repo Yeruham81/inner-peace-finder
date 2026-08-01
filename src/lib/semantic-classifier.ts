@@ -17,7 +17,12 @@ export const MAX_MATCHES = 3;
 
 export type ClassificationResult = {
   matches: ClassificationMatch[];
-  /** "mock" | "openai" | "anthropic" | "local" — reserved for observability. */
+  /**
+   * Observability tag only. Production semantic classification is always the
+   * deterministic SemanticEngine; a future LLM provider is confined to the
+   * separate `llm-semantic-adapter` boundary (semanticRemainder only) and does
+   * not replace this classifier, the interpreter, or profile extraction.
+   */
   source: string;
 };
 
