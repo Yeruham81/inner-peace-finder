@@ -315,10 +315,15 @@ function Index() {
         </div>
       </section>
 
-      <ExplorerSection eyebrow="חיפוש לפי נושא" title="במה תרצו עזרה?" description="" items={problemDomains} />
+      <ExplorerSection
+        eyebrow="חיפוש לפי נושא"
+        title="באיזה תחום אתם זקוקים לעזרה?"
+        description=""
+        items={problemDomains}
+      />
 
       <ExplorerSection
-        eyebrow="חיפוש לפי קהל"
+        eyebrow="חיפוש לפי אוכלוסייה"
         title="למי מיועד הטיפול?"
         description=""
         items={populationGroups}
