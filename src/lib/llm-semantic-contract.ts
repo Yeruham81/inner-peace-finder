@@ -41,6 +41,18 @@ export type LlmSemanticResult = {
 
 /** Stable, typed failure codes so later server integration can branch. */
 export type LlmSemanticErrorCode =
+  // request / application layer
+  | "invalid_request"
+  | "input_too_large"
+  | "configuration_error"
+  | "catalog_error"
+  // provider transport layer
+  | "provider_rate_limited"
+  | "provider_server_error"
+  | "provider_client_error"
+  | "provider_response_too_large"
+  | "internal_error"
+  // provider payload layer
   | "empty_response"
   | "malformed_response"
   | "invalid_schema"
@@ -76,6 +88,73 @@ export class LlmTimeoutError extends LlmSemanticError {
   }
 }
 
+/** Invalid public request (bad JSON, wrong shape, unsupported fields). */
+export class LlmRequestError extends LlmSemanticError {
+  constructor(message = "invalid request") {
+    super("invalid_request", message);
+    this.name = "LlmRequestError";
+  }
+}
+
+/** Remainder longer than the documented maximum input length. */
+export class LlmInputTooLargeError extends LlmSemanticError {
+  constructor(message = "input too large") {
+    super("input_too_large", message);
+    this.name = "LlmInputTooLargeError";
+  }
+}
+
+/** Missing / invalid server-side provider configuration. Never retried. */
+export class LlmConfigurationError extends LlmSemanticError {
+  constructor(message = "provider configuration error") {
+    super("configuration_error", message);
+    this.name = "LlmConfigurationError";
+  }
+}
+
+/**
+ * Canonical-catalog read failure. A failed catalog read must NEVER be
+ * degraded into a valid empty catalog — it surfaces as this typed error.
+ */
+export class LlmCatalogError extends LlmSemanticError {
+  constructor(message = "canonical catalog error") {
+    super("catalog_error", message);
+    this.name = "LlmCatalogError";
+  }
+}
+
+/** Provider returned HTTP 429. */
+export class LlmRateLimitedError extends LlmSemanticError {
+  constructor(message = "provider rate limited") {
+    super("provider_rate_limited", message);
+    this.name = "LlmRateLimitedError";
+  }
+}
+
+/** Provider returned HTTP 5xx. */
+export class LlmProviderServerError extends LlmSemanticError {
+  constructor(message = "provider server error") {
+    super("provider_server_error", message);
+    this.name = "LlmProviderServerError";
+  }
+}
+
+/** Provider returned a non-retryable 4xx (auth, bad request, ...). */
+export class LlmProviderClientError extends LlmSemanticError {
+  constructor(message = "provider client error") {
+    super("provider_client_error", message);
+    this.name = "LlmProviderClientError";
+  }
+}
+
+/** Provider response exceeded the maximum allowed size. Never retried. */
+export class LlmResponseTooLargeError extends LlmSemanticError {
+  constructor(message = "provider response too large") {
+    super("provider_response_too_large", message);
+    this.name = "LlmResponseTooLargeError";
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Canonical allowed-slug set                                          */
 /* ------------------------------------------------------------------ */
@@ -107,20 +186,61 @@ const matchSchema = z
   })
   .strict();
 
+/**
+ * Provider-facing schema: SEMANTIC FIELDS ONLY.
+ *
+ * `modelVersion` / `promptVersion` are deliberately absent, so a provider
+ * that tries to declare its own provenance is rejected as `invalid_schema`.
+ * Provenance is server-owned and attached only after validation.
+ */
 const responseSchema = z
   .object({
     matches: z.array(matchSchema),
     abstained: z.boolean(),
-    modelVersion: z.string().min(1).optional(),
-    promptVersion: z.string().min(1).optional(),
   })
   .strict();
 
+/**
+ * Provenance used for purely local / offline results (unit tests, offline
+ * evaluation with scripted providers). The server path NEVER uses it: it
+ * always supplies trusted configured values via `ValidateOptions` or
+ * `attachServerProvenance`. The string "unknown" is not used anywhere.
+ */
+export const LOCAL_PROVENANCE = "local-unverified";
+
 export type ValidateOptions = {
-  /** Recorded on the validated result (provider/prompt provenance). */
+  /** Server-owned provenance. Non-empty when supplied. */
   modelVersion?: string;
   promptVersion?: string;
 };
+
+function assertProvenanceValue(value: string | undefined, field: string): string {
+  if (value === undefined) return LOCAL_PROVENANCE;
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new LlmConfigurationError(`${field} must be a non-empty string`);
+  }
+  return value;
+}
+
+/**
+ * Attach trusted, server-owned provenance to an already validated semantic
+ * result. Empty / missing configured values fail with a typed configuration
+ * error rather than producing a successful result with weak provenance.
+ */
+export function attachServerProvenance(
+  core: { matches: LlmSemanticMatch[]; abstained: boolean },
+  provenance: { modelVersion: string; promptVersion: string },
+): LlmSemanticResult {
+  const modelVersion = provenance.modelVersion;
+  const promptVersion = provenance.promptVersion;
+  if (typeof modelVersion !== "string" || modelVersion.trim().length === 0) {
+    throw new LlmConfigurationError("configured modelVersion is missing or empty");
+  }
+  if (typeof promptVersion !== "string" || promptVersion.trim().length === 0) {
+    throw new LlmConfigurationError("promptVersion is missing or empty");
+  }
+  return { matches: core.matches, abstained: core.abstained, modelVersion, promptVersion };
+}
 
 function assertConfidence(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -188,8 +308,8 @@ export function validateLlmSemanticResult(
   return {
     matches: deduped,
     abstained: data.abstained,
-    modelVersion: data.modelVersion ?? opts.modelVersion ?? "unknown",
-    promptVersion: data.promptVersion ?? opts.promptVersion ?? "unknown",
+    modelVersion: assertProvenanceValue(opts.modelVersion, "modelVersion"),
+    promptVersion: assertProvenanceValue(opts.promptVersion, "promptVersion"),
   };
 }
 
