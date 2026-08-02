@@ -9,12 +9,48 @@ const filterOptionsQuery = queryOptions({
   queryFn: () => listFilterOptions(),
 });
 
+type QuickFilterKey = "location" | "language" | "population" | "serviceType";
+
+type QuickFilter = {
+  key: QuickFilterKey;
+  label: string;
+  placeholder: string;
+  options: string[];
+};
+
 type ExplorerItem = {
   id: string;
   name: string;
   description: string;
   problems: string[];
 };
+
+const quickFilters: QuickFilter[] = [
+  {
+    key: "location",
+    label: "אזור או עיר",
+    placeholder: "כל הארץ",
+    options: ["תל אביב", "ירושלים", "חיפה", "באר שבע", "השרון", "השפלה", "הצפון", "הדרום"],
+  },
+  {
+    key: "language",
+    label: "שפת הטיפול",
+    placeholder: "כל השפות",
+    options: ["עברית", "אנגלית", "רוסית", "ערבית", "צרפתית", "ספרדית", "אמהרית", "יידיש"],
+  },
+  {
+    key: "population",
+    label: "למי מיועד הטיפול",
+    placeholder: "כל האוכלוסיות",
+    options: ["ילדים", "בני נוער", "צעירים", "מבוגרים", "הורים", "זוגות", "משפחות", "הגיל השלישי"],
+  },
+  {
+    key: "serviceType",
+    label: "אופן הטיפול",
+    placeholder: "כל האפשרויות",
+    options: ["פגישה בקליניקה", "טיפול אונליין", "ביקור בית", "טיפול קבוצתי"],
+  },
+];
 
 const problemDomains: ExplorerItem[] = [
   {
@@ -286,7 +322,7 @@ function Index() {
 
   return (
     <main dir="rtl" className="min-h-screen bg-background">
-      <section className="relative isolate overflow-hidden border-b border-border/60">
+      <section className="relative overflow-hidden border-b border-border/60">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-brand-soft via-background to-background" />
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-20">
           <div className="text-center">
@@ -296,17 +332,17 @@ function Index() {
             </span>
 
             <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
-              פשוט למצוא את הטיפול שמתאים לכם
+              מצאו את הטיפול שמתאים לכם
             </h1>
 
             <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-              תארו במילים שלכם מה מטריד אתכם, איזה טיפול אתם מחפשים או עם איזה איש מקצוע תרצו ליצור קשר.
+              תארו במילים שלכם מה מטריד אתכם, איזה טיפול אתם מחפשים או עם איזה איש מקצוע תרצו לדבר.
             </p>
           </div>
 
-          <div className="mx-auto mt-8 max-w-4xl">
-            {/* SearchForm owns the four homepage filters; no duplicate filter row is rendered in this file. */}
+          <div className="mx-auto mt-8 max-w-4xl rounded-3xl border border-border bg-surface-elevated p-3 shadow-card sm:p-5">
             <SearchForm cities={filters.cities} populations={filters.populations} languages={filters.languages} />
+            <QuickFilterBar />
           </div>
 
           <p className="mt-4 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
@@ -333,17 +369,118 @@ function Index() {
       <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20">
         <h2 className="text-2xl font-bold text-foreground sm:text-3xl">לא בטוחים מאיפה להתחיל?</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-          אתם לא חייבים לדעת איך קוראים לבעיה שלכם או איזה סוג טיפול עשוי לעזור לכם. פשוט תארו מה מטריד אתכם או איזו
-          עזרה אתם מחפשים, ומנוע החיפוש ימצא לכם את אנשי המקצוע המתאימים ביותר.
-        </p>
-        <div className="mx-auto mt-7 max-w-3xl text-right">
-          <SearchForm variant="compact" />
-        </div>
-        <p className="mx-auto mt-3 max-w-2xl text-xs leading-5 text-muted-foreground sm:text-sm">
-          את כל אפשרויות הסינון הנוספות תוכלו לבחור ולשנות בעמוד התוצאות.
+          אין צורך לדעת מראש מה שם הבעיה או איזה סוג טיפול מתאים. כתבו במילים שלכם מה אתם מרגישים או מחפשים, וטיפולינקס
+          יעזור למקד את האפשרויות.
         </p>
       </section>
     </main>
+  );
+}
+
+function QuickFilterBar() {
+  const [openFilter, setOpenFilter] = useState<QuickFilterKey | null>(null);
+  const [selectedValues, setSelectedValues] = useState<Partial<Record<QuickFilterKey, string>>>({});
+
+  const activeFilter = quickFilters.find((filter) => filter.key === openFilter);
+
+  const selectOption = (key: QuickFilterKey, value: string) => {
+    setSelectedValues((current) => ({ ...current, [key]: value }));
+    setOpenFilter(null);
+  };
+
+  const clearOption = (key: QuickFilterKey) => {
+    setSelectedValues((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
+
+  return (
+    <div className="mt-3 border-t border-border pt-3 sm:mt-4 sm:pt-4">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {quickFilters.map((filter) => {
+          const selectedValue = selectedValues[filter.key];
+          const isOpen = openFilter === filter.key;
+
+          return (
+            <button
+              key={filter.key}
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls="homepage-quick-filter-options"
+              onClick={() => setOpenFilter(isOpen ? null : filter.key)}
+              className={`min-w-0 rounded-2xl border px-3 py-3 text-right transition-all sm:px-4 ${
+                isOpen
+                  ? "border-brand bg-brand-soft shadow-sm"
+                  : selectedValue
+                    ? "border-brand/30 bg-brand-soft/60 hover:border-brand/50"
+                    : "border-border bg-background hover:border-brand/30 hover:bg-brand-soft/40"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-medium text-muted-foreground">{filter.label}</span>
+                  <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">
+                    {selectedValue ?? filter.placeholder}
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={`shrink-0 text-sm text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                >
+                  ⌄
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeFilter && (
+        <div
+          id="homepage-quick-filter-options"
+          className="mt-3 rounded-2xl border border-border bg-background p-3 shadow-sm sm:p-4"
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{activeFilter.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">בחרו אפשרות אחת לצורך ההמחשה</p>
+            </div>
+            {selectedValues[activeFilter.key] && (
+              <button
+                type="button"
+                onClick={() => clearOption(activeFilter.key)}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                ניקוי בחירה
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+            {activeFilter.options.map((option) => {
+              const isSelected = selectedValues[activeFilter.key] === option;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => selectOption(activeFilter.key, option)}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isSelected
+                      ? "border-brand bg-brand-soft text-primary"
+                      : "border-border bg-surface-elevated text-foreground hover:border-brand/30 hover:bg-brand-soft/50"
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -357,6 +494,7 @@ type ExplorerSectionProps = {
 
 function ExplorerSection({ eyebrow, title, description, items, alternate = false }: ExplorerSectionProps) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const activeItem = items.find((item) => item.id === activeItemId);
 
   return (
     <section className={alternate ? "bg-brand-soft/35" : "bg-background"}>
@@ -367,140 +505,62 @@ function ExplorerSection({ eyebrow, title, description, items, alternate = false
           <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
         </div>
 
-        {/* Two cards per row on smaller screens. The active panel is inserted directly below its row. */}
-        <div className="mt-8 lg:hidden">
-          <ExplorerRows
-            items={items}
-            columns={2}
-            activeItemId={activeItemId}
-            onItemClick={(itemId) => setActiveItemId((current) => (current === itemId ? null : itemId))}
-            onClose={() => setActiveItemId(null)}
-          />
+        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {items.map((item) => {
+            const isActive = activeItemId === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-expanded={isActive}
+                onClick={() => setActiveItemId(isActive ? null : item.id)}
+                className={`group min-h-36 rounded-2xl border p-4 text-right shadow-card transition-all sm:min-h-40 sm:p-5 ${
+                  isActive
+                    ? "border-brand bg-brand-soft ring-2 ring-brand/10"
+                    : "border-border bg-surface-elevated hover:-translate-y-0.5 hover:border-brand/35"
+                }`}
+              >
+                <span className="flex h-full flex-col">
+                  <span className="text-base font-bold text-foreground transition-colors group-hover:text-primary sm:text-lg">
+                    {item.name}
+                  </span>
+                  <span className="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground sm:text-sm">
+                    {item.description}
+                  </span>
+                  <span className="mt-auto pt-4 text-xs font-semibold text-primary">
+                    {isActive ? "סגירת הנושאים ↑" : "הצגת נושאים נפוצים ↓"}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Four cards per row on desktop, with the dependent problems immediately below that row. */}
-        <div className="mt-8 hidden lg:block">
-          <ExplorerRows
-            items={items}
-            columns={4}
-            activeItemId={activeItemId}
-            onItemClick={(itemId) => setActiveItemId((current) => (current === itemId ? null : itemId))}
-            onClose={() => setActiveItemId(null)}
-          />
-        </div>
+        {activeItem && (
+          <div className="mt-4 rounded-3xl border border-brand/20 bg-surface-elevated p-4 shadow-card sm:p-6">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+              <div>
+                <p className="text-xs font-semibold text-primary">נושאים נפוצים בתחום</p>
+                <h3 className="mt-1 text-xl font-bold text-foreground">{activeItem.name}</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">לחיצה על נושא תוביל בהמשך לחיפוש ממוקד</p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {activeItem.problems.map((problem) => (
+                <button
+                  key={problem}
+                  type="button"
+                  className="rounded-xl border border-border bg-background px-3 py-3 text-sm font-medium text-foreground transition-all hover:border-brand/35 hover:bg-brand-soft hover:text-primary"
+                >
+                  {problem}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
-}
-
-type ExplorerRowsProps = {
-  items: ExplorerItem[];
-  columns: 2 | 4;
-  activeItemId: string | null;
-  onItemClick: (itemId: string) => void;
-  onClose: () => void;
-};
-
-function ExplorerRows({ items, columns, activeItemId, onItemClick, onClose }: ExplorerRowsProps) {
-  const rows = chunkItems(items, columns);
-
-  return (
-    <div className="space-y-3">
-      {rows.map((row, rowIndex) => {
-        const activeItemInRow = row.find((item) => item.id === activeItemId);
-
-        return (
-          <div key={`${columns}-${rowIndex}`}>
-            <div className={`grid gap-3 ${columns === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
-              {row.map((item) => {
-                const isActive = item.id === activeItemId;
-                const isDimmed = activeItemId !== null && !isActive;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-expanded={isActive}
-                    onClick={() => onItemClick(item.id)}
-                    className={`group relative min-h-36 rounded-2xl border p-4 text-right shadow-card transition-all sm:min-h-40 sm:p-5 ${
-                      isActive
-                        ? "z-10 border-brand bg-brand-soft/70 ring-2 ring-brand/20"
-                        : "border-border bg-surface-elevated hover:-translate-y-0.5 hover:border-brand/35"
-                    } ${isDimmed ? "opacity-45 saturate-50 hover:opacity-75" : "opacity-100"}`}
-                  >
-                    <span className="flex h-full flex-col">
-                      <span
-                        className={`text-base font-bold transition-colors sm:text-lg ${
-                          isActive ? "text-primary" : "text-foreground group-hover:text-primary"
-                        }`}
-                      >
-                        {item.name}
-                      </span>
-                      <span className="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground sm:text-sm">
-                        {item.description}
-                      </span>
-                      <span className="mt-auto pt-4 text-xs font-semibold text-primary">
-                        {isActive ? "הסתרת נושאים ↑" : "הצגת נושאים נפוצים ↓"}
-                      </span>
-                    </span>
-
-                    {isActive && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -bottom-[11px] left-1/2 z-20 h-5 w-5 -translate-x-1/2 rotate-45 border-b border-r border-brand/30 bg-brand-soft"
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {activeItemInRow && <ExplorerProblemPanel item={activeItemInRow} onClose={onClose} />}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: () => void }) {
-  return (
-    <div className="mt-3 rounded-3xl border border-brand/25 bg-brand-soft/35 p-4 shadow-card sm:p-5">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div>
-          <p className="text-xs font-semibold text-primary">נושאים נפוצים בתחום</p>
-          <h3 className="mt-1 text-xl font-bold text-foreground">{item.name}</h3>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-2 self-start text-xs font-medium text-primary hover:underline sm:mt-0 sm:self-auto"
-        >
-          סגירה
-        </button>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {item.problems.map((problem) => (
-          <button
-            key={problem}
-            type="button"
-            className="rounded-xl border border-border bg-surface-elevated px-3 py-3 text-sm font-medium text-foreground transition-all hover:border-brand/35 hover:bg-background hover:text-primary"
-          >
-            {problem}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function chunkItems(items: ExplorerItem[], size: number): ExplorerItem[][] {
-  const rows: ExplorerItem[][] = [];
-
-  for (let index = 0; index < items.length; index += size) {
-    rows.push(items.slice(index, index + size));
-  }
-
-  return rows;
 }
