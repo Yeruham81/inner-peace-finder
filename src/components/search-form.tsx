@@ -28,6 +28,17 @@ const regionOptions: FilterOption[] = [
   { value: "south", label: "דרום" },
 ];
 
+const languageOptions: FilterOption[] = [
+  { value: "he", label: "עברית" },
+  { value: "en", label: "אנגלית" },
+  { value: "ar", label: "ערבית" },
+  { value: "ru", label: "רוסית" },
+  { value: "fr", label: "צרפתית" },
+  { value: "es", label: "ספרדית" },
+  { value: "de", label: "גרמנית" },
+  { value: "am", label: "אמהרית" },
+];
+
 const populationOptions: FilterOption[] = [
   { value: "babies-toddlers", label: "תינוקות ופעוטות" },
   { value: "children", label: "ילדים" },
@@ -123,7 +134,7 @@ export function SearchForm({
         key: "language",
         label: "שפת הטיפול",
         placeholder: "כל השפות",
-        options: languages.map((item) => ({ value: item.code, label: item.name })),
+        options: languageOptions,
         helperText: "בחרו את השפה שבה תרצו לקיים את הטיפול.",
       },
       {
@@ -141,7 +152,7 @@ export function SearchForm({
         helperText: "בחרו את אופן קבלת הטיפול המועדף עליכם.",
       },
     ],
-    [languages],
+    [],
   );
 
   const activeFilter = filters.find((filter) => filter.key === openFilter);
