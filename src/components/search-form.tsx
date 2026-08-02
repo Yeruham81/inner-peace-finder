@@ -28,6 +28,17 @@ const regionOptions: FilterOption[] = [
   { value: "south", label: "דרום" },
 ];
 
+const populationOptions: FilterOption[] = [
+  { value: "babies-toddlers", label: "תינוקות ופעוטות" },
+  { value: "children", label: "ילדים" },
+  { value: "adolescents", label: "בני נוער" },
+  { value: "young-adults", label: "צעירים" },
+  { value: "adults", label: "מבוגרים" },
+  { value: "older-adults", label: "הגיל השלישי" },
+  { value: "couples", label: "זוגות" },
+  { value: "parents-families", label: "הורים ומשפחות" },
+];
+
 const serviceTypeOptions: FilterOption[] = [
   { value: "clinic", label: "פגישה בקליניקה" },
   { value: "online", label: "טיפול אונליין" },
@@ -119,7 +130,7 @@ export function SearchForm({
         key: "population",
         label: "למי מיועד הטיפול",
         placeholder: "כל האוכלוסיות",
-        options: populations.map((item) => ({ value: item.slug, label: item.name })),
+        options: populationOptions,
         helperText: "בחרו את האוכלוסייה שעבורה אתם מחפשים טיפול.",
       },
       {
@@ -130,7 +141,7 @@ export function SearchForm({
         helperText: "בחרו את אופן קבלת הטיפול המועדף עליכם.",
       },
     ],
-    [languages, populations],
+    [languages],
   );
 
   const activeFilter = filters.find((filter) => filter.key === openFilter);
