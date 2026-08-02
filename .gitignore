@@ -1,4 +1,5 @@
 # Logs
+
 logs
 *.log
 npm-debug.log*
@@ -16,11 +17,19 @@ dist-ssr
 .nitro
 *.local
 
+# Environment files
+
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
+
 .wrangler/
 .dev.vars
 
 # Editor directories and files
+
 .vscode/*
 !.vscode/extensions.json
 .idea
