@@ -315,17 +315,12 @@ function Index() {
         </div>
       </section>
 
-      <ExplorerSection
-        eyebrow="חיפוש לפי נושא"
-        title="במה תרצו עזרה?"
-        description="בחרו תחום כדי לראות נושאים נפוצים, או תארו את הצורך שלכם בחיפוש החופשי."
-        items={problemDomains}
-      />
+      <ExplorerSection eyebrow="חיפוש לפי נושא" title="במה תרצו עזרה?" description="" items={problemDomains} />
 
       <ExplorerSection
         eyebrow="חיפוש לפי קהל"
         title="למי מיועד הטיפול?"
-        description="בחרו אוכלוסייה כדי לראות צרכים ונושאים נפוצים שמאפיינים אותה."
+        description=""
         items={populationGroups}
         alternate
       />
