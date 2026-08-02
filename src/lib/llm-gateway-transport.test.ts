@@ -96,10 +96,10 @@ describe("failures", () => {
     expect(
       await codeOf(
         run(async () => {
-          throw new TypeError("fetch failed: secret-key-abc");
+          throw new TypeError("fetch failed");
         }),
       ),
-    ).toBe("provider_network_error".replace("provider_network_error", "provider_error"));
+    ).toBe("provider_error");
   });
 
   it("never leaks the credential in a provider error message", async () => {
