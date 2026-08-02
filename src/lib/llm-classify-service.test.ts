@@ -569,7 +569,7 @@ describe("response and log safety", () => {
     for (const forbidden of [
       SECRET,
       QUERY,
-      "OPENAI-API-Key",
+      "OPENAI-API-KEY",
       "Authorization",
       "Bearer",
       "פחדים",
