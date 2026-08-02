@@ -80,13 +80,7 @@ type SearchFormProps = {
   variant?: "hero" | "compact";
 };
 
-export function SearchForm({
-  initialQuery = "",
-  populations = [],
-  languages = [],
-  initialFilters = {},
-  variant = "hero",
-}: SearchFormProps) {
+export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "hero" }: SearchFormProps) {
   const navigate = useNavigate();
   const [q, setQ] = useState(initialQuery);
   const [openFilter, setOpenFilter] = useState<QuickFilterKey | null>(null);
