@@ -68,7 +68,7 @@ export function SearchForm({
     () => [
       {
         key: "cities",
-        label: "אזור או עיר",
+        label: "אזור",
         placeholder: "כל הארץ",
         options: cities.map((city) => ({ value: city, label: city })),
         multiple: true,
@@ -242,7 +242,9 @@ export function SearchForm({
                 <div>
                   <p className="text-sm font-semibold text-foreground">{activeFilter.label}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {activeFilter.multiple ? "אפשר לבחור כמה ערים או אזורים" : "בחרו אפשרות אחת"}
+                    {activeFilter.multiple
+                      ? "בחרו אזור אחד או יותר. בעמוד התוצאות תוכלו למקד את החיפוש לפי ערים ויישובים"
+                      : "בחרו אפשרות אחת"}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
