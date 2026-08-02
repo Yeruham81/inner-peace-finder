@@ -8,8 +8,8 @@
  *   - `LOVABLE_API_KEY`      — provider credential (server-only secret).
  *   - `LLM_SEMANTIC_MODEL`   — optional model id override.
  *
- * Credentials are read ONLY from server-side secrets. No client-public
- * prefix (`VITE_*`) and no `import.meta.env` access exists in this module,
+ * Credentials are read ONLY from server-side secrets. No client-public env
+ * prefix and no client env access exists in this module,
  * so provider configuration is unreadable from browser code.
  */
 

@@ -634,7 +634,7 @@ describe("response and log safety", () => {
     await classifySemanticRemainder({ semanticRemainder: QUERY }, h.deps);
     const sent = JSON.stringify(h.transport.lastRequest);
     expect(sent).toContain("REMAINDER");
-    for (const forbidden of ["therapist", "userId", "cityNames", "access_token", "email"]) {
+    for (const forbidden of ["therapist_id", "full_name", "userId", "cityNames", "access_token", "email"]) {
       expect(sent.includes(forbidden)).toBe(false);
     }
   });
