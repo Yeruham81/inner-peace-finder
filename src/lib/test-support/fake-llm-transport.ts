@@ -49,7 +49,7 @@ export function createScriptedTransport(steps: ScriptedStep[]): ScriptedTranspor
 export function fakeProviderConfig(overrides: Partial<LlmProviderConfig> = {}): LlmProviderConfig {
   return createProviderConfig({
     providerId: "scripted",
-    endpoint: "https://example.invalid/v1/chat/completions",
+    endpoint: "https://example.invalid/v1/responses",
     model: "fake-model-v9",
     apiKey: "fake-key-not-a-secret",
     ...overrides,
