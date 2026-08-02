@@ -1,12 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
@@ -47,9 +40,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
@@ -159,19 +150,17 @@ function SiteHeader() {
         setSignedIn(!!session);
       }
     });
-    return () => { sub.subscription.unsubscribe(); };
+    return () => {
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">
-            T
-          </span>
-          <span className="text-lg font-semibold tracking-tight text-foreground">
-            Tipulinks
-          </span>
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">T</span>
+          <span className="text-lg font-semibold tracking-tight text-foreground">Tipulinks</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           <Link
@@ -219,7 +208,7 @@ function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface mt-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} Tipulinks — האתר מספק מידע כללי בלבד ואינו מהווה תחליף לייעוץ מקצועי</p>
+        <p>© {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת אנשי מקצוע ואינו מהווה תחליף לייעוץ מקצועי</p>
       </div>
     </footer>
   );
