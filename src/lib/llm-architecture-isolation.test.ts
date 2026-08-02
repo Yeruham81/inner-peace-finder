@@ -8,7 +8,16 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const SRC = join(import.meta.dir, "..");
-const LLM_MODULES = ["llm-semantic-adapter", "llm-semantic-contract", "llm-semantic-prompt"];
+/** Phase 1 pure-local boundary: no network, no credentials, no env access. */
+const PURE_LLM_MODULES = ["llm-semantic-adapter", "llm-semantic-contract", "llm-semantic-prompt"];
+/** Phase 2 server boundary (disconnected from production Unified Search). */
+const SERVER_LLM_MODULES = [
+  "llm-provider-config",
+  "llm-gateway-transport",
+  "llm-classify-service",
+  "llm-semantic-evaluator",
+];
+const LLM_MODULES = [...PURE_LLM_MODULES, ...SERVER_LLM_MODULES];
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -59,12 +68,30 @@ describe("LLM isolation", () => {
   });
 
   it("the LLM boundary contains no network call or credential access", () => {
-    for (const m of LLM_MODULES) {
+    for (const m of PURE_LLM_MODULES) {
       const src = readFileSync(join(SRC, "lib", `${m}.ts`), "utf8");
       expect(src.includes("fetch(")).toBe(false);
       expect(src.includes("process.env")).toBe(false);
       expect(src.includes("import.meta.env")).toBe(false);
       expect(src.toLowerCase().includes("apikey")).toBe(false);
     }
+  });
+
+  it("the server LLM boundary never reads client-public configuration", () => {
+    for (const m of SERVER_LLM_MODULES) {
+      const src = readFileSync(join(SRC, "lib", `${m}.ts`), "utf8");
+      expect(src.includes("import.meta.env")).toBe(false);
+      expect(src.includes("VITE_")).toBe(false);
+      // Secrets are injected as configuration; no module reads process.env.
+      expect(src.includes("process.env")).toBe(false);
+    }
+  });
+
+  it("no client component or route calls the classify-query Edge Function", () => {
+    const offenders = PRODUCTION_FILES.filter((f) => {
+      const src = readFileSync(f, "utf8");
+      return src.includes("classify-query") || src.includes("functions.invoke");
+    });
+    expect(offenders).toEqual([]);
   });
 });
