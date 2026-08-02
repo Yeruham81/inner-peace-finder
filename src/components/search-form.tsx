@@ -1,5 +1,27 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+type QuickFilterKey = "cities" | "language" | "population" | "serviceType";
+
+type FilterOption = {
+  value: string;
+  label: string;
+};
+
+type FilterDefinition = {
+  key: QuickFilterKey;
+  label: string;
+  placeholder: string;
+  options: FilterOption[];
+  multiple?: boolean;
+};
+
+const serviceTypeOptions: FilterOption[] = [
+  { value: "clinic", label: "פגישה בקליניקה" },
+  { value: "online", label: "טיפול אונליין" },
+  { value: "home-visit", label: "ביקור בית" },
+  { value: "group", label: "טיפול קבוצתי" },
+];
 
 export function SearchForm({
   initialQuery = "",
@@ -14,17 +36,66 @@ export function SearchForm({
   populations?: { slug: string; name: string }[];
   languages?: { code: string; name: string }[];
   initialFilters?: {
-    city?: string;
+    city?: string | string[];
+    cities?: string[];
     population?: string;
     language?: string;
+    serviceType?: string;
   };
   variant?: "hero" | "compact";
 }) {
   const navigate = useNavigate();
   const [q, setQ] = useState(initialQuery);
-  const [city, setCity] = useState(initialFilters.city ?? "");
+  const [openFilter, setOpenFilter] = useState<QuickFilterKey | null>(null);
+  const [selectedCities, setSelectedCities] = useState<string[]>(() => {
+    if (initialFilters.cities?.length) return initialFilters.cities;
+    if (Array.isArray(initialFilters.city)) return initialFilters.city;
+    if (typeof initialFilters.city === "string" && initialFilters.city) {
+      return initialFilters.city
+        .split(",")
+        .map((city) => city.trim())
+        .filter(Boolean);
+    }
+    return [];
+  });
   const [population, setPopulation] = useState(initialFilters.population ?? "");
   const [language, setLanguage] = useState(initialFilters.language ?? "");
+  const [serviceType, setServiceType] = useState(initialFilters.serviceType ?? "");
+
+  const isHero = variant === "hero";
+
+  const filters = useMemo<FilterDefinition[]>(
+    () => [
+      {
+        key: "cities",
+        label: "אזור או עיר",
+        placeholder: "כל הארץ",
+        options: cities.map((city) => ({ value: city, label: city })),
+        multiple: true,
+      },
+      {
+        key: "language",
+        label: "שפת הטיפול",
+        placeholder: "כל השפות",
+        options: languages.map((item) => ({ value: item.code, label: item.name })),
+      },
+      {
+        key: "population",
+        label: "למי מיועד הטיפול",
+        placeholder: "כל האוכלוסיות",
+        options: populations.map((item) => ({ value: item.slug, label: item.name })),
+      },
+      {
+        key: "serviceType",
+        label: "אופן הטיפול",
+        placeholder: "כל האפשרויות",
+        options: serviceTypeOptions,
+      },
+    ],
+    [cities, languages, populations],
+  );
+
+  const activeFilter = filters.find((filter) => filter.key === openFilter);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,22 +103,69 @@ export function SearchForm({
       to: "/search",
       search: {
         q: q.trim() || undefined,
-        city: city || undefined,
+        city: selectedCities.length ? selectedCities.join(",") : undefined,
         population: population || undefined,
         language: language || undefined,
       },
     });
   }
 
-  const isHero = variant === "hero";
+  function getSelectedValues(key: QuickFilterKey): string[] {
+    switch (key) {
+      case "cities":
+        return selectedCities;
+      case "language":
+        return language ? [language] : [];
+      case "population":
+        return population ? [population] : [];
+      case "serviceType":
+        return serviceType ? [serviceType] : [];
+    }
+  }
+
+  function getFilterSummary(filter: FilterDefinition): string {
+    const selected = getSelectedValues(filter.key);
+    if (!selected.length) return filter.placeholder;
+
+    const labels = selected
+      .map((value) => filter.options.find((option) => option.value === value)?.label ?? value)
+      .filter(Boolean);
+
+    if (filter.multiple && labels.length > 2) {
+      return `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+    }
+
+    return labels.join(", ");
+  }
+
+  function toggleOption(filter: FilterDefinition, value: string) {
+    if (filter.key === "cities") {
+      setSelectedCities((current) =>
+        current.includes(value) ? current.filter((city) => city !== value) : [...current, value],
+      );
+      return;
+    }
+
+    if (filter.key === "language") setLanguage(value);
+    if (filter.key === "population") setPopulation(value);
+    if (filter.key === "serviceType") setServiceType(value);
+    setOpenFilter(null);
+  }
+
+  function clearFilter(key: QuickFilterKey) {
+    if (key === "cities") setSelectedCities([]);
+    if (key === "language") setLanguage("");
+    if (key === "population") setPopulation("");
+    if (key === "serviceType") setServiceType("");
+  }
 
   return (
     <form
       onSubmit={submit}
       className={
         isHero
-          ? "rounded-3xl bg-surface-elevated p-4 shadow-soft sm:p-6"
-          : "rounded-2xl bg-surface-elevated p-3 shadow-card"
+          ? "rounded-3xl border border-border bg-surface-elevated p-4 shadow-soft sm:p-6"
+          : "rounded-2xl border border-border bg-surface-elevated p-3 shadow-card sm:p-4"
       }
     >
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -56,64 +174,136 @@ export function SearchForm({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="לדוגמה: חרדה לפני עבודה, משבר בזוגיות, פסיכולוגית לנוער בי-ם, מטפל ב-CBT בחיפה וכד'"
-          className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          aria-label="חיפוש לפי בעיה או תחושה"
+          className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          aria-label="חיפוש לפי בעיה, שירות או איש מקצוע"
         />
         <button
           type="submit"
-          className="rounded-xl bg-brand px-6 py-3 text-base font-semibold text-brand-foreground shadow-soft transition-colors hover:bg-primary"
+          className="shrink-0 rounded-xl bg-brand px-6 py-3 text-base font-semibold text-brand-foreground shadow-soft transition-colors hover:bg-primary"
         >
           חיפוש מטפלים
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Select
-          value={city}
-          onChange={setCity}
-          placeholder="כל הערים"
-          options={cities.map((c) => ({ value: c, label: c }))}
-        />
-        <Select
-          value={population}
-          onChange={setPopulation}
-          placeholder="כל האוכלוסיות"
-          options={populations.map((p) => ({ value: p.slug, label: p.name }))}
-        />
-        <Select
-          value={language}
-          onChange={setLanguage}
-          placeholder="כל השפות"
-          options={languages.map((l) => ({ value: l.code, label: l.name }))}
-        />
-      </div>
-    </form>
-  );
-}
+      {isHero && (
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {filters.map((filter) => {
+              const selectedValues = getSelectedValues(filter.key);
+              const isOpen = openFilter === filter.key;
 
-function Select({
-  value,
-  onChange,
-  placeholder,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+              return (
+                <button
+                  key={filter.key}
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls="homepage-filter-options"
+                  onClick={() => setOpenFilter(isOpen ? null : filter.key)}
+                  className={`min-w-0 rounded-2xl border px-3 py-3 text-right transition-all sm:px-4 ${
+                    isOpen
+                      ? "border-brand bg-brand-soft shadow-sm"
+                      : selectedValues.length
+                        ? "border-brand/30 bg-brand-soft/60 hover:border-brand/50"
+                        : "border-border bg-background hover:border-brand/30 hover:bg-brand-soft/40"
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium text-muted-foreground">{filter.label}</span>
+                      <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">
+                        {getFilterSummary(filter)}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {filter.multiple && selectedValues.length > 0 && (
+                        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">
+                          {selectedValues.length}
+                        </span>
+                      )}
+                      <span
+                        aria-hidden="true"
+                        className={`text-sm text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      >
+                        ⌄
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {activeFilter && (
+            <div
+              id="homepage-filter-options"
+              className="mt-3 rounded-2xl border border-border bg-background p-3 shadow-sm sm:p-4"
+            >
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{activeFilter.label}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {activeFilter.multiple ? "אפשר לבחור כמה ערים או אזורים" : "בחרו אפשרות אחת"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {getSelectedValues(activeFilter.key).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => clearFilter(activeFilter.key)}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      ניקוי בחירה
+                    </button>
+                  )}
+                  {activeFilter.multiple && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenFilter(null)}
+                      className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground hover:bg-primary"
+                    >
+                      סיום
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {activeFilter.options.length ? (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                  {activeFilter.options.map((option) => {
+                    const isSelected = getSelectedValues(activeFilter.key).includes(option.value);
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => toggleOption(activeFilter, option.value)}
+                        className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                          isSelected
+                            ? "border-brand bg-brand-soft text-primary"
+                            : "border-border bg-surface-elevated text-foreground hover:border-brand/30 hover:bg-brand-soft/50"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                  האפשרויות יוצגו כאן לאחר טעינת נתוני הסינון.
+                </p>
+              )}
+            </div>
+          )}
+
+          {serviceType && (
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              אופן הטיפול מוצג כעת לצורך המחשת הממשק. החיבור שלו לפרמטרי החיפוש יתווסף יחד עם מסך התוצאות.
+            </p>
+          )}
+        </div>
+      )}
+    </form>
   );
 }
