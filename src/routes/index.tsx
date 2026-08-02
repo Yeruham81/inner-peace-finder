@@ -439,9 +439,6 @@ function ExplorerRows({ items, columns, activeItemId, onItemClick, onClose }: Ex
                       <span className="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground sm:text-sm">
                         {item.description}
                       </span>
-                      <span className="mt-auto pt-4 text-xs font-semibold text-primary">
-                        {isActive ? "הסתרת נושאים ↑" : "הצגת נושאים נפוצים ↓"}
-                      </span>
                     </span>
 
                     {isActive && (
