@@ -1,63 +1,73 @@
 /**
- * Phase Q2.2 — server-side LLM provider configuration boundary.
+ * Phase Q2.2 — server-side OpenAI provider configuration boundary.
  *
- * NOT used by production Unified Search. Only the (disconnected) semantic
- * classification server boundary reads this.
+ * NOT used by production Unified Search. Only the disconnected semantic
+ * classification server boundary reads this configuration.
  *
- * Server-side secret names (values never appear in this repository):
- *   - `LOVABLE_API_KEY`      — provider credential (server-only secret).
- *   - `LLM_SEMANTIC_MODEL`   — optional model id override.
+ * Server-side configuration names:
+ *   - `OPENAI_API_KEY` — OpenAI API credential. Server-side secret only.
+ *   - `OPENAI_MODEL`   — explicit OpenAI model identifier.
  *
- * Credentials are read ONLY from server-side secrets. No client-public env
- * prefix and no client env access exists in this module,
- * so provider configuration is unreadable from browser code.
+ * Both values are mandatory. There is deliberately no fallback model.
+ *
+ * Credentials are read only from server-side configuration. This module does
+ * not read client-public environment variables and must not be imported into
+ * browser code.
  */
 
 import { LlmConfigurationError } from "./llm-semantic-contract";
 
-/** Stable provider identifier used for logging only. */
-export const LLM_PROVIDER_ID = "lovable-ai-gateway";
+/** Stable provider identifier used for operational metadata and logging. */
+export const LLM_PROVIDER_ID = "openai";
 
-/** Provider endpoint (OpenAI-compatible chat completions). */
-export const LLM_PROVIDER_ENDPOINT = "https://ai.gateway.lovable.dev/v1/chat/completions";
+/** Direct OpenAI Responses API endpoint. */
+export const LLM_PROVIDER_ENDPOINT = "https://api.openai.com/v1/responses";
 
-/** Default model id. An explicitly empty override is a configuration error. */
-export const DEFAULT_LLM_SEMANTIC_MODEL = "google/gemini-2.5-flash";
-
-/** Strict provider request timeout (ms). Single central constant. */
+/** Strict provider request timeout in milliseconds. */
 export const LLM_REQUEST_TIMEOUT_MS = 8_000;
 
 /**
- * Maximum accepted provider response size in bytes. The semantic contract is
- * tiny (at most 3 matches), so 16 KiB is already very generous.
+ * Maximum accepted provider response size in bytes.
+ *
+ * The semantic response is intentionally small—at most three matches—so
+ * 16 KiB is already a generous upper limit.
  */
 export const LLM_MAX_RESPONSE_BYTES = 16_384;
 
 /** Maximum accepted `semanticRemainder` length in characters. */
 export const LLM_MAX_REMAINDER_LENGTH = 500;
 
-/** At most one retry → at most two provider attempts per request. */
+/** At most one retry, for a maximum of two provider attempts per request. */
 export const LLM_MAX_PROVIDER_ATTEMPTS = 2;
 
 export type LlmProviderConfig = {
   readonly providerId: string;
   readonly endpoint: string;
-  /** Server-owned model identifier; also used as the result `modelVersion`. */
+
+  /**
+   * Explicit server-owned OpenAI model identifier.
+   * This is also used as the validated result's `modelVersion`.
+   */
   readonly model: string;
+
+  /** Server-side OpenAI API credential. */
   readonly apiKey: string;
+
   readonly timeoutMs: number;
   readonly maxResponseBytes: number;
-  /** Total attempts (1 = no retry, 2 = one retry). Never above 2. */
+
+  /** Total attempts: 1 means no retry; 2 means at most one retry. */
   readonly maxAttempts: number;
-  /** Request strict JSON structured output where the provider supports it. */
+
+  /** Request strict JSON-schema Structured Outputs. */
   readonly structuredOutput: boolean;
 };
 
 export type LlmProviderConfigInput = {
   providerId?: string;
   endpoint?: string;
-  model?: string | undefined;
-  apiKey?: string | undefined;
+  model?: string;
+  apiKey?: string;
   timeoutMs?: number;
   maxResponseBytes?: number;
   maxAttempts?: number;
@@ -68,6 +78,7 @@ function requireNonEmpty(value: string | undefined, field: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new LlmConfigurationError(`${field} is missing or empty`);
   }
+
   return value.trim();
 }
 
@@ -75,18 +86,23 @@ function requireIntInRange(value: number, field: string, min: number, max: numbe
   if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
     throw new LlmConfigurationError(`${field} must be an integer within [${min}, ${max}]`);
   }
+
   return value;
 }
 
 /**
- * Validate an explicit configuration. Tests inject safe fake values here;
- * no real provider configuration is required by tests or builds.
+ * Validate explicit provider configuration.
+ *
+ * Tests may inject safe fake values here, so builds and test runs do not
+ * require real OpenAI credentials or network access.
  */
 export function createProviderConfig(input: LlmProviderConfigInput): LlmProviderConfig {
   const endpoint = requireNonEmpty(input.endpoint ?? LLM_PROVIDER_ENDPOINT, "endpoint");
+
   if (!endpoint.startsWith("https://")) {
     throw new LlmConfigurationError("endpoint must use https");
   }
+
   return {
     providerId: requireNonEmpty(input.providerId ?? LLM_PROVIDER_ID, "providerId"),
     endpoint,
@@ -109,21 +125,26 @@ export function createProviderConfig(input: LlmProviderConfigInput): LlmProvider
   };
 }
 
-/** Read-only environment view. Only server-side secret names are consulted. */
-export type ServerEnv = { get(name: string): string | undefined };
+/** Read-only server environment abstraction used for dependency injection. */
+export type ServerEnv = {
+  get(name: string): string | undefined;
+};
 
 export function envFromRecord(record: Record<string, string | undefined>): ServerEnv {
-  return { get: (name) => record[name] };
+  return {
+    get: (name) => record[name],
+  };
 }
 
 /**
- * Load provider configuration from server-side secrets. Missing credentials
- * or an explicitly empty model override produce a typed configuration error.
+ * Load direct OpenAI configuration from server-side environment values.
+ *
+ * Both `OPENAI_API_KEY` and `OPENAI_MODEL` are mandatory. Missing, empty, or
+ * whitespace-only values produce a typed `LlmConfigurationError`.
  */
 export function loadProviderConfigFromEnv(env: ServerEnv): LlmProviderConfig {
-  const rawModel = env.get("LLM_SEMANTIC_MODEL");
   return createProviderConfig({
-    apiKey: env.get("LOVABLE_API_KEY"),
-    model: rawModel === undefined ? DEFAULT_LLM_SEMANTIC_MODEL : rawModel,
+    apiKey: env.get("OPENAI_API_KEY"),
+    model: env.get("OPENAI_MODEL"),
   });
 }
