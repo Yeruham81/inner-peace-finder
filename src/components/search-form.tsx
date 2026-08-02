@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-type QuickFilterKey = "cities" | "language" | "population" | "serviceType";
+type QuickFilterKey = "regions" | "language" | "population" | "serviceType";
 
 type FilterOption = {
   value: string;
@@ -14,7 +14,19 @@ type FilterDefinition = {
   placeholder: string;
   options: FilterOption[];
   multiple?: boolean;
+  helperText?: string;
 };
+
+const regionOptions: FilterOption[] = [
+  { value: "north", label: "צפון" },
+  { value: "haifa-krayot", label: "חיפה והקריות" },
+  { value: "sharon", label: "השרון" },
+  { value: "tel-aviv-gush-dan", label: "תל אביב וגוש דן" },
+  { value: "center-shfela", label: "מרכז והשפלה" },
+  { value: "jerusalem-area", label: "ירושלים והסביבה" },
+  { value: "judea-samaria", label: "יהודה ושומרון" },
+  { value: "south", label: "דרום" },
+];
 
 const serviceTypeOptions: FilterOption[] = [
   { value: "clinic", label: "פגישה בקליניקה" },
@@ -23,41 +35,63 @@ const serviceTypeOptions: FilterOption[] = [
   { value: "group", label: "טיפול קבוצתי" },
 ];
 
-export function SearchForm({
-  initialQuery = "",
-  cities = [],
-  populations = [],
-  languages = [],
-  initialFilters = {},
-  variant = "hero",
-}: {
+type SearchFormProps = {
   initialQuery?: string;
+
+  // נשמר לצורך תאימות ל-index.tsx הקיים.
+  // בחירת ערים מדויקת תתבצע בהמשך בעמוד התוצאות.
   cities?: string[];
+
   populations?: { slug: string; name: string }[];
   languages?: { code: string; name: string }[];
   initialFilters?: {
+    region?: string | string[];
+    regions?: string[];
+
+    // תמיכה זמנית בפרמטר הישן, עד להוספת region לחוזה החיפוש.
     city?: string | string[];
-    cities?: string[];
+
     population?: string;
     language?: string;
     serviceType?: string;
   };
   variant?: "hero" | "compact";
-}) {
+};
+
+export function SearchForm({
+  initialQuery = "",
+  populations = [],
+  languages = [],
+  initialFilters = {},
+  variant = "hero",
+}: SearchFormProps) {
   const navigate = useNavigate();
   const [q, setQ] = useState(initialQuery);
   const [openFilter, setOpenFilter] = useState<QuickFilterKey | null>(null);
-  const [selectedCities, setSelectedCities] = useState<string[]>(() => {
-    if (initialFilters.cities?.length) return initialFilters.cities;
+
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(() => {
+    if (initialFilters.regions?.length) return initialFilters.regions;
+
+    if (Array.isArray(initialFilters.region)) return initialFilters.region;
+    if (typeof initialFilters.region === "string" && initialFilters.region) {
+      return initialFilters.region
+        .split(",")
+        .map((region) => region.trim())
+        .filter(Boolean);
+    }
+
+    // תאימות לערכים שנשמרו בעבר תחת city.
     if (Array.isArray(initialFilters.city)) return initialFilters.city;
     if (typeof initialFilters.city === "string" && initialFilters.city) {
       return initialFilters.city
         .split(",")
-        .map((city) => city.trim())
+        .map((region) => region.trim())
         .filter(Boolean);
     }
+
     return [];
   });
+
   const [population, setPopulation] = useState(initialFilters.population ?? "");
   const [language, setLanguage] = useState(initialFilters.language ?? "");
   const [serviceType, setServiceType] = useState(initialFilters.serviceType ?? "");
@@ -67,43 +101,52 @@ export function SearchForm({
   const filters = useMemo<FilterDefinition[]>(
     () => [
       {
-        key: "cities",
+        key: "regions",
         label: "אזור",
         placeholder: "כל הארץ",
-        options: cities.map((city) => ({ value: city, label: city })),
+        options: regionOptions,
         multiple: true,
+        helperText: "בחרו אזור אחד או יותר. בעמוד התוצאות תוכלו למקד את החיפוש לפי ערים ויישובים.",
       },
       {
         key: "language",
         label: "שפת הטיפול",
         placeholder: "כל השפות",
         options: languages.map((item) => ({ value: item.code, label: item.name })),
+        helperText: "בחרו את השפה שבה תרצו לקיים את הטיפול.",
       },
       {
         key: "population",
         label: "למי מיועד הטיפול",
         placeholder: "כל האוכלוסיות",
         options: populations.map((item) => ({ value: item.slug, label: item.name })),
+        helperText: "בחרו את האוכלוסייה שעבורה אתם מחפשים טיפול.",
       },
       {
         key: "serviceType",
         label: "אופן הטיפול",
         placeholder: "כל האפשרויות",
         options: serviceTypeOptions,
+        helperText: "בחרו את אופן קבלת הטיפול המועדף עליכם.",
       },
     ],
-    [cities, languages, populations],
+    [languages, populations],
   );
 
   const activeFilter = filters.find((filter) => filter.key === openFilter);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+
     navigate({
       to: "/search",
       search: {
         q: q.trim() || undefined,
-        city: selectedCities.length ? selectedCities.join(",") : undefined,
+
+        // זמני: משתמשים בפרמטר הקיים city כדי לא לשבור את חוזה החיפוש.
+        // בהמשך מומלץ להוסיף region/regions לעמוד התוצאות ולמנוע החיפוש.
+        city: selectedRegions.length ? selectedRegions.join(",") : undefined,
+
         population: population || undefined,
         language: language || undefined,
       },
@@ -112,8 +155,8 @@ export function SearchForm({
 
   function getSelectedValues(key: QuickFilterKey): string[] {
     switch (key) {
-      case "cities":
-        return selectedCities;
+      case "regions":
+        return selectedRegions;
       case "language":
         return language ? [language] : [];
       case "population":
@@ -139,9 +182,9 @@ export function SearchForm({
   }
 
   function toggleOption(filter: FilterDefinition, value: string) {
-    if (filter.key === "cities") {
-      setSelectedCities((current) =>
-        current.includes(value) ? current.filter((city) => city !== value) : [...current, value],
+    if (filter.key === "regions") {
+      setSelectedRegions((current) =>
+        current.includes(value) ? current.filter((region) => region !== value) : [...current, value],
       );
       return;
     }
@@ -149,11 +192,12 @@ export function SearchForm({
     if (filter.key === "language") setLanguage(value);
     if (filter.key === "population") setPopulation(value);
     if (filter.key === "serviceType") setServiceType(value);
+
     setOpenFilter(null);
   }
 
   function clearFilter(key: QuickFilterKey) {
-    if (key === "cities") setSelectedCities([]);
+    if (key === "regions") setSelectedRegions([]);
     if (key === "language") setLanguage("");
     if (key === "population") setPopulation("");
     if (key === "serviceType") setServiceType("");
@@ -177,6 +221,7 @@ export function SearchForm({
           className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           aria-label="חיפוש לפי בעיה, שירות או איש מקצוע"
         />
+
         <button
           type="submit"
           className="shrink-0 rounded-xl bg-brand px-6 py-3 text-base font-semibold text-brand-foreground shadow-soft transition-colors hover:bg-primary"
@@ -214,12 +259,14 @@ export function SearchForm({
                         {getFilterSummary(filter)}
                       </span>
                     </span>
+
                     <span className="flex shrink-0 items-center gap-1.5">
                       {filter.multiple && selectedValues.length > 0 && (
                         <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">
                           {selectedValues.length}
                         </span>
                       )}
+
                       <span
                         aria-hidden="true"
                         className={`text-sm text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -241,13 +288,12 @@ export function SearchForm({
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">{activeFilter.label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {activeFilter.multiple
-                      ? "בחרו אזור אחד או יותר. בעמוד התוצאות תוכלו למקד את החיפוש לפי ערים ויישובים"
-                      : "בחרו אפשרות אחת"}
-                  </p>
+                  {activeFilter.helperText && (
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">{activeFilter.helperText}</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
+
+                <div className="flex shrink-0 items-center gap-3">
                   {getSelectedValues(activeFilter.key).length > 0 && (
                     <button
                       type="button"
@@ -257,6 +303,7 @@ export function SearchForm({
                       ניקוי בחירה
                     </button>
                   )}
+
                   {activeFilter.multiple && (
                     <button
                       type="button"
