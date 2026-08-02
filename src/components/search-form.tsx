@@ -55,7 +55,7 @@ export function SearchForm({
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="לדוגמה: חרדה לפני עבודה, משבר בזוגיות, פסיכולוגית לנוער בר"ג, מטפל ב-CBT בחיפה וכד'"
+          placeholder="לדוגמה: חרדה לפני עבודה, משבר בזוגיות, פסיכולוגית לנוער בחיפה, מטפל ב-CBT בחיפה וכד'"
           className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           aria-label="חיפוש לפי בעיה או תחושה"
         />
