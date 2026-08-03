@@ -178,7 +178,7 @@ function SiteHeader() {
             T
           </span>
 
-          <span className="text-[9px] font-bold uppercase leading-none tracking-wide text-foreground sm:hidden">
+          <span className="text-[11px] font-bold uppercase leading-none tracking-[0.08em] text-foreground sm:hidden">
             TIPULINKS
           </span>
 
