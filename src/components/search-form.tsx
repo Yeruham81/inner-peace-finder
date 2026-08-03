@@ -198,7 +198,7 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
       case "population":
         return population ? [population] : [];
       case "serviceType":
-        return serviceType ? [serviceType] : [];
+  return selectedServiceTypes;
     }
   }
 
