@@ -147,13 +147,16 @@ const navInactiveClass = "text-muted-foreground";
 
 function SiteHeader() {
   const [signedIn, setSignedIn] = useState(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         setSignedIn(!!session);
       }
     });
+
     return () => {
       sub.subscription.unsubscribe();
     };
@@ -161,43 +164,61 @@ function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">T</span>
-          <span className="text-lg font-semibold tracking-tight text-foreground">Tipulinks</span>
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-nowrap items-center gap-2 px-2 sm:px-6">
+        <Link
+          to="/"
+          aria-label="Tipulinks — עמוד הבית"
+          className="flex shrink-0 flex-col items-center justify-center gap-0.5 sm:flex-row sm:gap-2"
+        >
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-brand text-base font-bold text-brand-foreground sm:text-lg">
+            T
+          </span>
+
+          <span className="text-[9px] font-bold uppercase leading-none tracking-wide text-foreground sm:hidden">
+            TIPULINKS
+          </span>
+
+          <span className="hidden text-lg font-semibold tracking-tight text-foreground sm:inline">Tipulinks</span>
         </Link>
-        <nav aria-label="ניווט ראשי" className="flex flex-wrap items-center justify-end gap-1 text-sm">
+
+        <nav
+          aria-label="ניווט ראשי"
+          className="flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-0.5 text-[11px] sm:justify-end sm:gap-1 sm:text-sm"
+        >
           <Link
             to="/"
             activeOptions={{ exact: true }}
             activeProps={{ className: navActiveClass }}
             inactiveProps={{ className: navInactiveClass }}
-            className={navBaseClass}
+            className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
           >
             בית
           </Link>
+
           <Link
             to="/therapy-information"
             activeProps={{ className: navActiveClass }}
             inactiveProps={{ className: navInactiveClass }}
-            className={navBaseClass}
+            className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
           >
             תחומי טיפול
           </Link>
+
           <Link
             to="/for-therapists"
             activeProps={{ className: navActiveClass }}
             inactiveProps={{ className: navInactiveClass }}
-            className={navBaseClass}
+            className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
           >
             מידע למטפלים
           </Link>
+
           {signedIn ? (
             <Link
               to="/account"
               activeProps={{ className: navActiveClass }}
               inactiveProps={{ className: "font-medium text-foreground" }}
-              className={navBaseClass}
+              className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
             >
               החשבון שלי
             </Link>
@@ -207,7 +228,7 @@ function SiteHeader() {
               search={{ mode: "signin" as const }}
               activeProps={{ className: navActiveClass }}
               inactiveProps={{ className: "font-medium text-brand" }}
-              className={navBaseClass}
+              className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
             >
               החשבון שלי
             </Link>
