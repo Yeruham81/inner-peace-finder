@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TherapyInformationRouteImport } from './routes/therapy-information'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ForTherapistsRouteImport } from './routes/for-therapists'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -21,6 +23,11 @@ import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authentic
 import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 
+const TherapyInformationRoute = TherapyInformationRouteImport.update({
+  id: '/therapy-information',
+  path: '/therapy-information',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -34,6 +41,11 @@ const SearchRoute = SearchRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForTherapistsRoute = ForTherapistsRouteImport.update({
+  id: '/for-therapists',
+  path: '/for-therapists',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -79,9 +91,11 @@ const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/for-therapists': typeof ForTherapistsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/therapy-information': typeof TherapyInformationRoute
   '/account': typeof AuthenticatedAccountRoute
   '/claim': typeof AuthenticatedClaimRoute
   '/new-profile': typeof AuthenticatedNewProfileRoute
@@ -91,9 +105,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/for-therapists': typeof ForTherapistsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/therapy-information': typeof TherapyInformationRoute
   '/account': typeof AuthenticatedAccountRoute
   '/claim': typeof AuthenticatedClaimRoute
   '/new-profile': typeof AuthenticatedNewProfileRoute
@@ -105,9 +121,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/for-therapists': typeof ForTherapistsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/therapy-information': typeof TherapyInformationRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/claim': typeof AuthenticatedClaimRoute
   '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
@@ -119,9 +137,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/for-therapists'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/therapy-information'
     | '/account'
     | '/claim'
     | '/new-profile'
@@ -131,9 +151,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/for-therapists'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/therapy-information'
     | '/account'
     | '/claim'
     | '/new-profile'
@@ -144,9 +166,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/for-therapists'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/therapy-information'
     | '/_authenticated/account'
     | '/_authenticated/claim'
     | '/_authenticated/new-profile'
@@ -158,15 +182,24 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ForTherapistsRoute: typeof ForTherapistsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TherapyInformationRoute: typeof TherapyInformationRoute
   ProblemsSlugRoute: typeof ProblemsSlugRoute
   TherapistsSlugRoute: typeof TherapistsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/therapy-information': {
+      id: '/therapy-information'
+      path: '/therapy-information'
+      fullPath: '/therapy-information'
+      preLoaderRoute: typeof TherapyInformationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -186,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/for-therapists': {
+      id: '/for-therapists'
+      path: '/for-therapists'
+      fullPath: '/for-therapists'
+      preLoaderRoute: typeof ForTherapistsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -266,9 +306,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ForTherapistsRoute: ForTherapistsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TherapyInformationRoute: TherapyInformationRoute,
   ProblemsSlugRoute: ProblemsSlugRoute,
   TherapistsSlugRoute: TherapistsSlugRoute,
 }
