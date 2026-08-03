@@ -75,7 +75,8 @@ type SearchFormProps = {
 
     population?: string;
     language?: string;
-    serviceType?: string;
+    serviceType?: string | string[];
+serviceTypes?: string[];
   };
   variant?: "hero" | "compact";
 };
@@ -110,7 +111,24 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
 
   const [population, setPopulation] = useState(initialFilters.population ?? "");
   const [language, setLanguage] = useState(initialFilters.language ?? "");
-  const [serviceType, setServiceType] = useState(initialFilters.serviceType ?? "");
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>(() => {
+  if (initialFilters.serviceTypes?.length) {
+    return initialFilters.serviceTypes;
+  }
+
+  if (Array.isArray(initialFilters.serviceType)) {
+    return initialFilters.serviceType;
+  }
+
+  if (typeof initialFilters.serviceType === "string" && initialFilters.serviceType) {
+    return initialFilters.serviceType
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+});
 
   const isHero = variant === "hero";
 
@@ -139,12 +157,14 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
         helperText: "בחרו את האוכלוסייה שעבורה אתם מחפשים טיפול.",
       },
       {
-        key: "serviceType",
-        label: "אופן הטיפול",
-        placeholder: "כל האפשרויות",
-        options: serviceTypeOptions,
-        helperText: "בחרו את אופן קבלת הטיפול המועדף עליכם.",
-      },
+        {
+  key: "serviceType",
+  label: "אופן הטיפול",
+  placeholder: "כל האפשרויות",
+  options: serviceTypeOptions,
+  multiple: true,
+  helperText: "בחרו אפשרות אחת או יותר לקבלת הטיפול.",
+},
     ],
     [],
   );
