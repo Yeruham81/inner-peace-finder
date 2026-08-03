@@ -800,6 +800,7 @@ function ProfessionSelector({
   if (professions.length === 0) {
     return <p className="text-xs text-muted-foreground">אין מקצועות זמינים לבחירה.</p>;
   }
+
   const renderCategoryCard = (category: CategoryWithItems, layoutId: string) => {
     const isOpen = activeCategoryId === category.id;
     const selectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
@@ -813,7 +814,7 @@ function ProfessionSelector({
         aria-controls={`profession-category-${layoutId}-${category.id}`}
         disabled={isEmpty}
         onClick={() => setActiveCategoryId(isOpen ? null : category.id)}
-        className={`group flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`group flex h-14 items-center justify-between gap-2 overflow-hidden rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:h-12 ${
           isOpen
             ? "border-brand bg-brand/10 shadow-sm ring-1 ring-brand/20"
             : selectedCount > 0
@@ -821,9 +822,11 @@ function ProfessionSelector({
               : "border-brand/30 bg-brand-soft hover:border-brand/60"
         }`}
       >
-        <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground">
-          {category.title}
-          {selectedCount > 0 && <span className="mr-1 text-brand">({selectedCount})</span>}
+        <span className="min-w-0 flex-1">
+          <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground md:line-clamp-1">
+            {category.title}
+            {selectedCount > 0 && <span className="mr-1 whitespace-nowrap text-brand">({selectedCount})</span>}
+          </span>
         </span>
 
         <span
@@ -839,6 +842,7 @@ function ProfessionSelector({
       </button>
     );
   };
+
   const renderCategoryPanel = (category: CategoryWithItems, layoutId: string) => {
     const categorySelectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
 
@@ -926,37 +930,12 @@ function ProfessionSelector({
 
   return (
     <div>
-      <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
-        <div className="min-w-0">
-          <div>
-            <div className="text-sm font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.
-            </p>
-          </div>
-
-          <div className="mt-3 flex items-start gap-2" aria-label="המקצועות שנבחרו">
-            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-              {selectedProfessions.map((profession) => (
-                <button
-                  key={profession.id}
-                  type="button"
-                  onClick={() => toggleProfession(profession.id)}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
-                  aria-label={`הסרת ${profession.name_he}`}
-                >
-                  <span>{profession.name_he}</span>
-                  <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
-                    ×
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
-              {totalSelectedLabel}
-            </span>
-          </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_8rem] sm:gap-4">
+        <div className="min-w-0 text-right">
+          <div className="text-sm font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.
+          </p>
         </div>
 
         <Field label="שנות ניסיון">
@@ -972,8 +951,33 @@ function ProfessionSelector({
         </Field>
       </div>
 
-      <div className="mt-4 space-y-3 sm:hidden">{renderCategoryRows(2, "mobile")}</div>
-      <div className="mt-4 hidden space-y-3 sm:block">{renderCategoryRows(3, "desktop")}</div>
+      {selectedProfessions.length > 0 && (
+        <div className="mt-3 flex items-start gap-2" aria-label="המקצועות שנבחרו">
+          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+            {selectedProfessions.map((profession) => (
+              <button
+                key={profession.id}
+                type="button"
+                onClick={() => toggleProfession(profession.id)}
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                aria-label={`הסרת ${profession.name_he}`}
+              >
+                <span>{profession.name_he}</span>
+                <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+                  ×
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+            {totalSelectedLabel}
+          </span>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "mobile")}</div>
+      <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "desktop")}</div>
     </div>
   );
 }
