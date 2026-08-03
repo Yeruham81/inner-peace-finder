@@ -76,7 +76,7 @@ type SearchFormProps = {
     population?: string;
     language?: string;
     serviceType?: string | string[];
-serviceTypes?: string[];
+    serviceTypes?: string[];
   };
   variant?: "hero" | "compact";
 };
@@ -112,23 +112,23 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
   const [population, setPopulation] = useState(initialFilters.population ?? "");
   const [language, setLanguage] = useState(initialFilters.language ?? "");
   const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>(() => {
-  if (initialFilters.serviceTypes?.length) {
-    return initialFilters.serviceTypes;
-  }
+    if (initialFilters.serviceTypes?.length) {
+      return initialFilters.serviceTypes;
+    }
 
-  if (Array.isArray(initialFilters.serviceType)) {
-    return initialFilters.serviceType;
-  }
+    if (Array.isArray(initialFilters.serviceType)) {
+      return initialFilters.serviceType;
+    }
 
-  if (typeof initialFilters.serviceType === "string" && initialFilters.serviceType) {
-    return initialFilters.serviceType
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-  }
+    if (typeof initialFilters.serviceType === "string" && initialFilters.serviceType) {
+      return initialFilters.serviceType
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+    }
 
-  return [];
-});
+    return [];
+  });
 
   const isHero = variant === "hero";
 
@@ -197,7 +197,7 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
       case "population":
         return population ? [population] : [];
       case "serviceType":
-  return selectedServiceTypes;
+        return selectedServiceTypes;
     }
   }
 
@@ -227,15 +227,13 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
     if (filter.key === "language") setLanguage(value);
     if (filter.key === "population") setPopulation(value);
     if (filter.key === "serviceType") {
-  setSelectedServiceTypes((current) =>
-    current.includes(value)
-      ? current.filter((serviceType) => serviceType !== value)
-      : [...current, value],
-  );
-  return;
-}
+      setSelectedServiceTypes((current) =>
+        current.includes(value) ? current.filter((serviceType) => serviceType !== value) : [...current, value],
+      );
+      return;
+    }
 
-setOpenFilter(null);
+    setOpenFilter(null);
   }
 
   function clearFilter(key: QuickFilterKey) {
@@ -325,7 +323,7 @@ setOpenFilter(null);
           {activeFilter && (
             <div
               id="homepage-filter-options"
-              className="mt-3 rounded-2xl border border-border bg-background p-3 shadow-sm sm:p-4"
+              className="mt-3 rounded-3xl border border-brand/25 bg-brand-soft/35 p-3 shadow-card backdrop-blur-sm sm:p-4"
             >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
@@ -389,10 +387,10 @@ setOpenFilter(null);
           )}
 
           {selectedServiceTypes.length > 0 && (
-  <p className="mt-3 text-xs leading-5 text-muted-foreground">
-    אפשר לבחור כמה אופני טיפול. החיבור שלהם לתוצאות החיפוש יתווסף יחד עם מסך התוצאות.
-  </p>
-)}
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              אפשר לבחור כמה אופני טיפול. החיבור שלהם לתוצאות החיפוש יתווסף יחד עם מסך התוצאות.
+            </p>
+          )}
         </div>
       )}
     </form>
