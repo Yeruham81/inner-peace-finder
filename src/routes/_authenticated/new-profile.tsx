@@ -939,26 +939,21 @@ function ProfessionSelector({
     <div>
       <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <div className="text-sm font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full border border-brand/30 bg-brand/5 px-3 py-1 text-xs font-medium text-foreground">
-              {totalSelectedLabel}
-            </span>
+          <div>
+            <div className="text-sm font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.
+            </p>
           </div>
 
-          {selectedProfessions.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2" aria-label="המקצועות שנבחרו">
+          <div className="mt-3 flex items-start gap-2" aria-label="המקצועות שנבחרו">
+            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
               {selectedProfessions.map((profession) => (
                 <button
                   key={profession.id}
                   type="button"
                   onClick={() => toggleProfession(profession.id)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 py-1 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                  className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   aria-label={`הסרת ${profession.name_he}`}
                 >
                   <span>{profession.name_he}</span>
@@ -968,7 +963,11 @@ function ProfessionSelector({
                 </button>
               ))}
             </div>
-          )}
+
+            <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+              {totalSelectedLabel}
+            </span>
+          </div>
         </div>
 
         <Field label="שנות ניסיון">
