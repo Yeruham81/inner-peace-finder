@@ -293,7 +293,14 @@ function Index() {
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
 
   return (
-    <main dir="rtl" className="min-h-screen bg-background">
+    <main
+      dir="rtl"
+      className="min-h-screen"
+      style={{
+        background:
+          "linear-gradient(180deg, hsl(var(--brand-soft)) 0%, hsl(var(--background)) 24%, hsl(var(--brand-soft) / 0.55) 48%, hsl(var(--background)) 72%, hsl(var(--primary) / 0.08) 100%)",
+      }}
+    >
       <section className="relative isolate overflow-hidden border-b border-border/60">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-brand-soft via-background to-background" />
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-20">
