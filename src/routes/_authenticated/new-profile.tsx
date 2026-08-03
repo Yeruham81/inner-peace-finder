@@ -156,7 +156,7 @@ function EditorPage() {
 
   if (profile.isLoading || options.isLoading || !initialized) {
     return (
-      <className="min-h-screen bg-brand-soft">
+      <div className="min-h-screen bg-brand-soft">
         <div className="mx-auto max-w-4xl px-4 py-10 text-sm text-muted-foreground">טוען…</div>
       </div>
     );
@@ -180,7 +180,7 @@ function EditorPage() {
     (!hasCity && !form.online_available);
 
   return (
-    <className="min-h-screen bg-brand-soft">
+    <div className="min-h-screen bg-brand-soft">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
         <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
