@@ -70,6 +70,130 @@ const emptyForm: FormState = {
   online_available: false,
 };
 
+type ProfessionOption = {
+  id: string;
+  name_he: string;
+};
+
+type ProfessionCategoryDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  professionNames: readonly string[];
+};
+
+const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
+  {
+    id: "emotional-therapy",
+    title: "טיפול רגשי ופסיכותרפיה",
+    description: "טיפול רגשי, פסיכותרפיה ופסיכואנליזה",
+    professionNames: [
+      "מטפל",
+      "מטפל רגשי",
+      "פסיכותרפיסט",
+      "פסיכותרפיסט קוגניטיבי-התנהגותי",
+      "פסיכותרפיסט גופני",
+      "פסיכואנליטיקאי",
+      "יועץ טיפולי",
+      "מקצוע טיפולי אחר",
+      "תחום טיפולי אחר",
+    ],
+  },
+  {
+    id: "psychology-psychiatry",
+    title: "פסיכולוגיה ופסיכיאטריה",
+    description: "פסיכולוגים, פסיכיאטרים ותחומי התמחות",
+    professionNames: [
+      "פסיכולוג",
+      "פסיכולוג קליני",
+      "פסיכולוג חינוכי",
+      "פסיכולוג רפואי",
+      "פסיכולוג שיקומי",
+      "פסיכולוג התפתחותי",
+      "פסיכולוג ארגוני",
+      "פסיכולוג תעסוקתי",
+      "פסיכולוג תעסוקתי-ארגוני",
+      "פסיכולוג חברתי-תעסוקתי-ארגוני",
+      "פסיכיאטר",
+      "פסיכיאטר ילדים ונוער",
+    ],
+  },
+  {
+    id: "social-family",
+    title: "עבודה סוציאלית, זוגיות ומשפחה",
+    description: "עבודה סוציאלית, יחסים, הורות וגישור",
+    professionNames: [
+      "עובד סוציאלי",
+      "עובד סוציאלי קליני",
+      "עובד סוציאלי משפחתי",
+      "מטפל זוגי",
+      "מטפל משפחתי",
+      "מטפל מיני",
+      "מדריך הורים",
+      "מגשר",
+    ],
+  },
+  {
+    id: "arts-experiential",
+    title: "טיפול באמצעות אומנויות",
+    description: "אומנות, מוזיקה, תנועה, דרמה וחוויה",
+    professionNames: [
+      "מטפל באומנויות",
+      "מטפל באמצעות אומנויות",
+      "מטפל באמנות חזותית",
+      "מטפל במוזיקה",
+      "מטפל בתנועה ובמחול",
+      "מטפל בדרמה",
+      "מטפל בפסיכודרמה",
+      "פסיכודרמטיסט",
+      "ביבליותרפיסט",
+      "מטפל בעזרת בעלי חיים",
+    ],
+  },
+  {
+    id: "health-rehabilitation",
+    title: "בריאות, התפתחות ושיקום",
+    description: "מקצועות בריאות, התפתחות ושיקום",
+    professionNames: [
+      "מרפא בעיסוק",
+      "קלינאי תקשורת",
+      "פיזיותרפיסט",
+      "דיאטן קליני",
+      "תזונאי קליני",
+      "קרימינולוג קליני",
+      "קרימינולוג חברתי-שיקומי",
+      "מנתח התנהגות",
+      "אח מומחה בפסיכיאטריה",
+      "אחות מומחית בפסיכיאטריה",
+      "רופא",
+      "משקם",
+    ],
+  },
+  {
+    id: "guidance-diagnosis-coaching",
+    title: "ייעוץ, אבחון ואימון",
+    description: "ייעוץ, אבחון, הנחיה ואימון אישי",
+    professionNames: [
+      "יועץ חינוכי",
+      "מאבחן דידקטי",
+      "מנחה קבוצות",
+      "מאמן אישי",
+      "מאבחן",
+      "מדריך",
+      "מנחה",
+      "מעריך",
+      "יועץ",
+    ],
+  },
+] as const;
+
+function normalizeProfessionName(value: string): string {
+  return value
+    .replace(/[‐‑‒–—―]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function fromProfile(p: ProfileEditorData): FormState {
   return {
     full_name: p.full_name ?? "",
@@ -281,17 +405,15 @@ function EditorPage() {
               description="ספרו על ההכשרה, הניסיון, תחומי העיסוק ודרך העבודה שלכם."
             >
               <Section title="מקצוע וניסיון">
-                <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
-                  <Field label="מקצועות *">
-                    <SelectionGrid
-                      items={(options.data?.professions ?? []).map((p) => ({ id: p.id, label: p.name_he }))}
-                      selected={form.profession_ids}
-                      onChange={(ids) => setForm({ ...form, profession_ids: ids })}
-                      columns="three"
-                      hint="ניתן לבחור כמה מקצועות. יש לבחור לפחות מקצוע אחד."
-                    />
-                  </Field>
+                <Field label="מקצועות ותחומי עיסוק *">
+                  <ProfessionSelector
+                    professions={(options.data?.professions ?? []) as ProfessionOption[]}
+                    selected={form.profession_ids}
+                    onChange={(ids) => setForm({ ...form, profession_ids: ids })}
+                  />
+                </Field>
 
+                <div className="max-w-36">
                   <Field label="שנות ניסיון">
                     <Input
                       type="number"
@@ -619,6 +741,204 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <div className="mb-1.5 text-sm font-medium text-foreground">{label}</div>
       {children}
+    </div>
+  );
+}
+
+function ProfessionSelector({
+  professions,
+  selected,
+  onChange,
+}: {
+  professions: ProfessionOption[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+
+  const categories = useMemo(() => {
+    const matchedProfessionIds = new Set<string>();
+
+    const grouped = PROFESSION_CATEGORIES.map((category) => {
+      const categoryNames = new Set(category.professionNames.map(normalizeProfessionName));
+      const items = professions.filter((profession) => categoryNames.has(normalizeProfessionName(profession.name_he)));
+      items.forEach((profession) => matchedProfessionIds.add(profession.id));
+      return { ...category, items };
+    });
+
+    const unmatched = professions.filter((profession) => !matchedProfessionIds.has(profession.id));
+    if (unmatched.length === 0) return grouped;
+
+    return [
+      ...grouped,
+      {
+        id: "additional-professions",
+        title: "מקצועות נוספים",
+        description: "מקצועות שטרם שויכו לאחד התחומים",
+        professionNames: [] as readonly string[],
+        items: unmatched,
+      },
+    ];
+  }, [professions]);
+
+  const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? null;
+  const selectedProfessions = professions.filter((profession) => selected.includes(profession.id));
+  const totalSelectedLabel =
+    selected.length === 0
+      ? "טרם נבחרו מקצועות"
+      : selected.length === 1
+        ? "נבחר מקצוע אחד"
+        : `נבחרו ${selected.length} מקצועות`;
+
+  const toggleProfession = (professionId: string) => {
+    onChange(
+      selected.includes(professionId)
+        ? selected.filter((selectedId) => selectedId !== professionId)
+        : [...selected, professionId],
+    );
+  };
+
+  const selectedOtherProfession = professions.some((profession) => {
+    const normalizedName = normalizeProfessionName(profession.name_he);
+    return (
+      selected.includes(profession.id) &&
+      (normalizedName === "מקצוע טיפולי אחר" || normalizedName === "תחום טיפולי אחר")
+    );
+  });
+
+  if (professions.length === 0) {
+    return <p className="text-xs text-muted-foreground">אין מקצועות זמינים לבחירה.</p>;
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-2 text-xs text-muted-foreground">
+        <p>בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.</p>
+        <span className="shrink-0 rounded-full border border-brand/30 bg-brand/5 px-3 py-1 font-medium text-foreground">
+          {totalSelectedLabel}
+        </span>
+      </div>
+
+      {selectedProfessions.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2" aria-label="המקצועות שנבחרו">
+          {selectedProfessions.map((profession) => (
+            <button
+              key={profession.id}
+              type="button"
+              onClick={() => toggleProfession(profession.id)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 py-1 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+              aria-label={`הסרת ${profession.name_he}`}
+            >
+              <span>{profession.name_he}</span>
+              <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+                ×
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {categories.map((category) => {
+          const isOpen = activeCategoryId === category.id;
+          const selectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
+          const isEmpty = category.items.length === 0;
+          const countLabel = selectedCount === 1 ? "(מקצוע אחד נבחר)" : `(${selectedCount} נבחרו)`;
+
+          return (
+            <button
+              key={category.id}
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls={`profession-category-${category.id}`}
+              disabled={isEmpty}
+              onClick={() => setActiveCategoryId(isOpen ? null : category.id)}
+              className={`group flex min-h-[5.25rem] flex-col justify-between rounded-xl border p-3 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                isOpen
+                  ? "border-brand bg-brand/10 shadow-sm ring-1 ring-brand/20"
+                  : selectedCount > 0
+                    ? "border-brand/50 bg-brand/5 hover:border-brand/70"
+                    : "border-brand/30 bg-brand-soft hover:border-brand/60"
+              }`}
+            >
+              <span className="flex w-full items-start justify-between gap-2">
+                <span className="text-sm font-semibold leading-snug text-foreground">{category.title}</span>
+                <span
+                  aria-hidden="true"
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                    selectedCount > 0
+                      ? "border-brand bg-brand text-white"
+                      : "border-brand/40 bg-background text-muted-foreground"
+                  }`}
+                >
+                  {selectedCount > 0 ? "✓" : isOpen ? "−" : "+"}
+                </span>
+              </span>
+              <span className="mt-1 block text-xs leading-snug text-muted-foreground">{category.description}</span>
+              <span
+                className={`mt-2 text-xs font-medium ${selectedCount > 0 ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {isEmpty ? "אין אפשרויות זמינות" : countLabel}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeCategory && activeCategory.items.length > 0 && (
+        <div
+          id={`profession-category-${activeCategory.id}`}
+          className="mt-3 rounded-xl border border-brand/30 bg-background/70 p-3 sm:p-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">{activeCategory.title}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">בחרו את כל המקצועות הרלוונטיים לפרופיל שלכם.</p>
+            </div>
+            <span className="text-xs font-medium text-foreground">
+              {activeCategory.items.filter((profession) => selected.includes(profession.id)).length} מתוך{" "}
+              {activeCategory.items.length} נבחרו
+            </span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {activeCategory.items.map((profession) => {
+              const active = selected.includes(profession.id);
+              return (
+                <button
+                  key={profession.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleProfession(profession.id)}
+                  className={`group flex min-h-10 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 ${
+                    active
+                      ? "border-brand bg-brand/10 text-foreground shadow-sm ring-1 ring-brand/20"
+                      : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{profession.name_he}</span>
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                      active
+                        ? "border-brand bg-brand text-white"
+                        : "border-brand/40 bg-background text-transparent group-hover:border-brand/70"
+                    }`}
+                  >
+                    ✓
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedOtherProfession && activeCategory.id === "emotional-therapy" && (
+            <p className="mt-3 rounded-lg border border-brand/20 bg-brand/5 p-2.5 text-xs text-muted-foreground">
+              אם התחום שלכם אינו מופיע ברשימה, ציינו את ההגדרה המדויקת בשדה „כותרת מקצועית” שבאזור הפרטים האישיים.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
