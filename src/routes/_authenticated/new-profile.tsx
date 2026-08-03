@@ -670,7 +670,7 @@ function SelectionGrid({
                 }
                 if (!active) onChange([item.id]);
               }}
-              className={`group relative flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`group relative flex min-h-10 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                 active
                   ? "border-brand bg-brand/10 text-foreground shadow-sm ring-1 ring-brand/20"
                   : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
