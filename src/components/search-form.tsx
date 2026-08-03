@@ -157,14 +157,13 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
         helperText: "בחרו את האוכלוסייה שעבורה אתם מחפשים טיפול.",
       },
       {
-        {
-  key: "serviceType",
-  label: "אופן הטיפול",
-  placeholder: "כל האפשרויות",
-  options: serviceTypeOptions,
-  multiple: true,
-  helperText: "בחרו אפשרות אחת או יותר לקבלת הטיפול.",
-},
+        key: "serviceType",
+        label: "אופן הטיפול",
+        placeholder: "כל האפשרויות",
+        options: serviceTypeOptions,
+        multiple: true,
+        helperText: "בחרו אפשרות אחת או יותר לקבלת הטיפול.",
+      },
     ],
     [],
   );
