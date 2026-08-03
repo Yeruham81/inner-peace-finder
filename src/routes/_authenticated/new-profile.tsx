@@ -147,7 +147,7 @@ const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
   },
   {
     id: "health-rehabilitation",
-    title: "שיקום, התפתחות ובריאות",
+    title: "שיקום בריאות והתפתחות",
     professionNames: [
       "מרפא בעיסוק",
       "קלינאי תקשורת",
