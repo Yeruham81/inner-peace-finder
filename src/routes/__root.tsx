@@ -149,7 +149,9 @@ function SiteHeader() {
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSignedIn(!!data.session);
+    });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
@@ -162,9 +164,11 @@ function SiteHeader() {
     };
   }, []);
 
+  const mobileNavLinkClass = `${navBaseClass} flex min-w-0 items-center justify-center px-0.5 py-2 text-center leading-[1.15] sm:shrink-0 sm:px-3 sm:leading-normal`;
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/85 backdrop-blur">
-      <div className="mx-auto flex min-h-16 max-w-6xl flex-nowrap items-center gap-2 px-2 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-nowrap items-center gap-1 px-2 sm:gap-2 sm:px-6">
         <Link
           to="/"
           aria-label="Tipulinks — עמוד הבית"
@@ -183,54 +187,78 @@ function SiteHeader() {
 
         <nav
           aria-label="ניווט ראשי"
-          className="flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-0.5 text-[11px] sm:justify-end sm:gap-1 sm:text-sm"
+          className="grid min-w-0 flex-1 grid-cols-4 items-stretch gap-0 text-sm sm:flex sm:items-center sm:justify-end sm:gap-1"
         >
           <Link
             to="/"
             activeOptions={{ exact: true }}
             activeProps={{ className: navActiveClass }}
             inactiveProps={{ className: navInactiveClass }}
-            className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
+            className={mobileNavLinkClass}
           >
-            בית
+            <span className="whitespace-nowrap">בית</span>
           </Link>
 
           <Link
             to="/therapy-information"
+            aria-label="תחומי טיפול"
             activeProps={{ className: navActiveClass }}
             inactiveProps={{ className: navInactiveClass }}
-            className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
+            className={mobileNavLinkClass}
           >
-            תחומי טיפול
+            <span className="flex flex-col items-center sm:hidden">
+              <span>תחומי</span>
+              <span>טיפול</span>
+            </span>
+
+            <span className="hidden whitespace-nowrap sm:inline">תחומי טיפול</span>
           </Link>
 
           <Link
             to="/for-therapists"
+            aria-label="מידע למטפלים"
             activeProps={{ className: navActiveClass }}
             inactiveProps={{ className: navInactiveClass }}
-            className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
+            className={mobileNavLinkClass}
           >
-            מידע למטפלים
+            <span className="flex flex-col items-center sm:hidden">
+              <span>מידע</span>
+              <span>למטפלים</span>
+            </span>
+
+            <span className="hidden whitespace-nowrap sm:inline">מידע למטפלים</span>
           </Link>
 
           {signedIn ? (
             <Link
               to="/account"
+              aria-label="החשבון שלי"
               activeProps={{ className: navActiveClass }}
               inactiveProps={{ className: "font-medium text-foreground" }}
-              className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
+              className={mobileNavLinkClass}
             >
-              החשבון שלי
+              <span className="flex flex-col items-center sm:hidden">
+                <span>החשבון</span>
+                <span>שלי</span>
+              </span>
+
+              <span className="hidden whitespace-nowrap sm:inline">החשבון שלי</span>
             </Link>
           ) : (
             <Link
               to="/auth"
               search={{ mode: "signin" as const }}
+              aria-label="החשבון שלי"
               activeProps={{ className: navActiveClass }}
               inactiveProps={{ className: "font-medium text-brand" }}
-              className={`${navBaseClass} shrink-0 whitespace-nowrap px-1 sm:px-3`}
+              className={mobileNavLinkClass}
             >
-              החשבון שלי
+              <span className="flex flex-col items-center sm:hidden">
+                <span>החשבון</span>
+                <span>שלי</span>
+              </span>
+
+              <span className="hidden whitespace-nowrap sm:inline">החשבון שלי</span>
             </Link>
           )}
         </nav>
@@ -238,7 +266,6 @@ function SiteHeader() {
     </header>
   );
 }
-
 function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
