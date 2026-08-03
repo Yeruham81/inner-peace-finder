@@ -389,11 +389,11 @@ setOpenFilter(null);
             </div>
           )}
 
-          {serviceType && (
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              אופן הטיפול מוצג כעת לצורך המחשת הממשק. החיבור שלו לפרמטרי החיפוש יתווסף יחד עם מסך התוצאות.
-            </p>
-          )}
+          {selectedServiceTypes.length > 0 && (
+  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+    אפשר לבחור כמה אופני טיפול. החיבור שלהם לתוצאות החיפוש יתווסף יחד עם מסך התוצאות.
+  </p>
+)}
         </div>
       )}
     </form>
