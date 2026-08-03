@@ -1,5 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { CANONICAL_LANGUAGES } from "@/lib/language-options";
 
 type QuickFilterKey = "regions" | "language" | "population" | "serviceType";
 
@@ -28,16 +31,10 @@ const regionOptions: FilterOption[] = [
   { value: "south", label: "דרום" },
 ];
 
-const languageOptions: FilterOption[] = [
-  { value: "he", label: "עברית" },
-  { value: "en", label: "אנגלית" },
-  { value: "ar", label: "ערבית" },
-  { value: "ru", label: "רוסית" },
-  { value: "fr", label: "צרפתית" },
-  { value: "es", label: "ספרדית" },
-  { value: "de", label: "גרמנית" },
-  { value: "am", label: "אמהרית" },
-];
+const languageOptions: FilterOption[] = CANONICAL_LANGUAGES.map(({ code, name }) => ({
+  value: code,
+  label: name,
+}));
 
 const populationOptions: FilterOption[] = [
   { value: "babies-toddlers", label: "תינוקות ופעוטות" },
