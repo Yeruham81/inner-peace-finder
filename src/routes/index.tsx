@@ -317,7 +317,7 @@ function Index() {
           </div>
 
           <p className="mt-4 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
-            אפשר להתחיל רק מתיאור חופשי. כל הסינונים הנוספים הם אופציונליים וניתן לשנות אותם גם בעמוד התוצאות
+            אפשר להתחיל רק מתיאור חופשי. הסינונים הנוספים הם אופציונליים וניתנים לשינוי&nbsp;בעמוד התוצאות
           </p>
         </div>
       </section>
