@@ -957,17 +957,24 @@ function ProfessionSelector({
       </div>
 
       {selectedProfessions.length > 0 && (
-        <div className="mt-3 flex items-start gap-2" aria-label="המקצועות שנבחרו">
-          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+        <>
+          {/* מובייל: התגיות עוטפות את תגית הספירה,
+        והשורות הבאות מנצלות את מלוא הרוחב */}
+          <div className="mt-3 flow-root md:hidden" aria-label="המקצועות שנבחרו">
+            <span className="float-left mb-2 mr-2 inline-flex h-7 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+              {totalSelectedLabel}
+            </span>
+
             {selectedProfessions.map((profession) => (
               <button
                 key={profession.id}
                 type="button"
                 onClick={() => toggleProfession(profession.id)}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                className="mb-2 ml-2 inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 align-top text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                 aria-label={`הסרת ${profession.name_he}`}
               >
                 <span>{profession.name_he}</span>
+
                 <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
                   ×
                 </span>
@@ -975,12 +982,32 @@ function ProfessionSelector({
             ))}
           </div>
 
-          <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
-            {totalSelectedLabel}
-          </span>
-        </div>
-      )}
+          {/* דסקטופ: תגית הספירה נשארת בקצה השמאלי */}
+          <div className="mt-3 hidden items-start gap-2 md:flex" aria-label="המקצועות שנבחרו">
+            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+              {selectedProfessions.map((profession) => (
+                <button
+                  key={profession.id}
+                  type="button"
+                  onClick={() => toggleProfession(profession.id)}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                  aria-label={`הסרת ${profession.name_he}`}
+                >
+                  <span>{profession.name_he}</span>
 
+                  <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+                    ×
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+              {totalSelectedLabel}
+            </span>
+          </div>
+        </>
+      )}
       <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "mobile")}</div>
       <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "desktop")}</div>
     </div>
