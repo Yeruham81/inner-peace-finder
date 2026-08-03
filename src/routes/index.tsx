@@ -293,7 +293,7 @@ function Index() {
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
 
   return (
-    <className="min-h-screen bg-gradient-to-b from-brand-soft/50 via-background to-brand-soft/50">
+    <main className="min-h-screen bg-gradient-to-b from-brand-soft/50 via-background to-brand-soft/50">
       <section className="relative isolate overflow-hidden border-b border-border/60">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-20">
           <div className="text-center">
