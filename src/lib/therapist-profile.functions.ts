@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
+import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -76,11 +77,9 @@ function slugify(input: string): string {
 }
 
 function publicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -102,14 +101,7 @@ const SaveSchema = z.object({
   short_intro: z.string().trim().max(400, "תיאור קצר ארוך מדי.").nullable().optional(),
   background: z.string().trim().max(4000, "טקסט הרקע ארוך מדי.").nullable().optional(),
   years_experience: z.number().int().min(0).max(80, "שנות ניסיון לא תקין.").nullable().optional(),
-  email: z
-    .string()
-    .trim()
-    .email("כתובת אימייל לא תקינה.")
-    .max(160)
-    .nullable()
-    .optional()
-    .or(z.literal("")),
+  email: z.string().trim().email("כתובת אימייל לא תקינה.").max(160).nullable().optional().or(z.literal("")),
   phone: z.string().trim().max(40).nullable().optional().or(z.literal("")),
   image_url: z.string().trim().max(500).nullable().optional().or(z.literal("")),
   profession_ids: z.array(z.string().uuid()).max(10).default([]),
@@ -174,22 +166,24 @@ async function resolveAccount(
 /* Public options (available to editor without auth restrictions)     */
 /* ------------------------------------------------------------------ */
 
-export const getEditorOptions = createServerFn({ method: "GET" })
-  .handler(async (): Promise<EditorOptions> => {
-    const sb = publicClient();
-    const [profs, mods, langs, pops] = await Promise.all([
-      sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
-      sb.from("treatment_modalities").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
-      sb.from("languages").select("id, name, code").order("name"),
-      sb.from("population_groups").select("id, name, slug").order("sort_order"),
-    ]);
-    return {
-      professions: profs.data ?? [],
-      modalities: mods.data ?? [],
-      languages: langs.data ?? [],
-      populations: pops.data ?? [],
-    };
-  });
+export const getEditorOptions = createServerFn({ method: "GET" }).handler(async (): Promise<EditorOptions> => {
+  const sb = publicClient();
+  const [profs, mods, langs, pops] = await Promise.all([
+    sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
+    sb.from("treatment_modalities").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
+    sb
+      .from("languages")
+      .select("id, name, code")
+      .in("code", [...CANONICAL_LANGUAGE_CODES]),
+    sb.from("population_groups").select("id, name, slug").order("sort_order"),
+  ]);
+  return {
+    professions: profs.data ?? [],
+    modalities: mods.data ?? [],
+    languages: orderCanonicalLanguages(langs.data ?? []),
+    populations: pops.data ?? [],
+  };
+});
 
 /* ------------------------------------------------------------------ */
 /* Get my profile                                                     */
@@ -200,11 +194,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<ProfileEditorData | null> => {
     const { supabase, userId } = context;
     const accountId = await resolveAccount(supabase, userId);
-    const { data: t } = await supabase
-      .from("therapists")
-      .select("*")
-      .eq("owner_account_id", accountId)
-      .maybeSingle();
+    const { data: t } = await supabase.from("therapists").select("*").eq("owner_account_id", accountId).maybeSingle();
     if (!t) return null;
 
     const [profs, mods, langs, pops, locs] = await Promise.all([
@@ -358,11 +348,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
 
     // Sync m2m relationships (naive replace strategy — small sets).
     async function replaceLinks(
-      table:
-        | "therapist_professions"
-        | "therapist_modalities"
-        | "therapist_languages"
-        | "therapist_populations",
+      table: "therapist_professions" | "therapist_modalities" | "therapist_languages" | "therapist_populations",
       column: "profession_id" | "modality_id" | "language_id" | "population_id",
       ids: string[],
     ) {
