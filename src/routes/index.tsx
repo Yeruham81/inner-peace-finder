@@ -373,7 +373,7 @@ function ExplorerSection({ eyebrow, title, description, items, alternate = false
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   return (
-    <section className={alternate ? "bg-brand-soft/35" : "bg-background"}>
+    <section className={alternate ? "bg-brand-soft/20" : "bg-background"}>
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold text-primary">{eyebrow}</p>
