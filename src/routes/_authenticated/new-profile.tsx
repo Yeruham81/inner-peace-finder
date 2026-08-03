@@ -84,7 +84,7 @@ type ProfessionCategoryDefinition = {
 const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
   {
     id: "emotional-therapy",
-    title: "טיפול רגשי ופסיכותרפיה",
+    title: "פסיכותרפיה וטיפול רגשי",
     professionNames: [
       "מטפל",
       "מטפל רגשי",
@@ -117,7 +117,7 @@ const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
   },
   {
     id: "social-family",
-    title: "עבודה סוציאלית, זוגיות ומשפחה",
+    title: "זוגיות משפחה ורווחה",
     professionNames: [
       "עובד סוציאלי",
       "עובד סוציאלי קליני",
@@ -165,7 +165,7 @@ const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
   },
   {
     id: "guidance-diagnosis-coaching",
-    title: "ייעוץ, אבחון ואימון",
+    title: "ייעוץ אבחון ואימון",
     professionNames: [
       "יועץ חינוכי",
       "מאבחן דידקטי",
