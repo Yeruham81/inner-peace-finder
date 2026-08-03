@@ -822,11 +822,16 @@ function ProfessionSelector({
               : "border-brand/30 bg-brand-soft hover:border-brand/60"
         }`}
       >
-        <span className="min-w-0 flex-1">
-          <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground md:line-clamp-1">
+        <span className="flex min-w-0 flex-1 items-start gap-1">
+          <span className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold leading-snug text-foreground md:line-clamp-1">
             {category.title}
-            {selectedCount > 0 && <span className="mr-1 whitespace-nowrap text-brand">({selectedCount})</span>}
           </span>
+
+          {selectedCount > 0 && (
+            <span className="mt-0.5 shrink-0 whitespace-nowrap text-sm font-semibold leading-snug text-brand">
+              ({selectedCount})
+            </span>
+          )}
         </span>
 
         <span
