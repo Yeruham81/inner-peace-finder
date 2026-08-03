@@ -384,7 +384,7 @@ function EditorPage() {
                   items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
                   selected={form.population_ids}
                   onChange={(ids) => setForm({ ...form, population_ids: ids })}
-                  columns="three"
+                  columns="four"
                   hint="סמנו את כל האוכלוסיות שעבורן אתם מציעים טיפול."
                 />
               </Section>
@@ -486,16 +486,14 @@ function EditorPage() {
             </div>
           </main>
 
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
-              <ProfileActions
-                status={status}
-                isPending={mutation.isPending}
-                publishMissing={publishMissing}
-                onSaveDraft={() => mutation.mutate(false)}
-                onPublish={() => mutation.mutate(true)}
-              />
-            </div>
+          <aside className="sticky top-24 hidden h-fit self-start lg:block">
+            <ProfileActions
+              status={status}
+              isPending={mutation.isPending}
+              publishMissing={publishMissing}
+              onSaveDraft={() => mutation.mutate(false)}
+              onPublish={() => mutation.mutate(true)}
+            />
           </aside>
         </div>
       </div>
@@ -672,7 +670,7 @@ function SelectionGrid({
                 }
                 if (!active) onChange([item.id]);
               }}
-              className={`group relative flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-3 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`group relative flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                 active
                   ? "border-brand bg-brand/10 text-foreground shadow-sm ring-1 ring-brand/20"
                   : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
