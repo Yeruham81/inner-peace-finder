@@ -342,7 +342,7 @@ function Index() {
         <h2 className="text-2xl font-bold text-foreground sm:text-3xl">לא בטוחים מאיפה להתחיל?</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
           אתם לא חייבים לדעת איך קוראים לבעיה שלכם או איזה סוג טיפול עשוי לעזור לכם. פשוט תארו מה מטריד אתכם או איזו
-          עזרה אתם מחפשים, ומנוע החיפוש ימצא לכם את אנשי המקצוע המתאימים ביותר.
+          עזרה אתם מחפשים, ומנוע החיפוש ימצא לכם את אנשי המקצוע המתאימים ביותר
         </p>
         <div className="mx-auto mt-7 max-w-3xl text-right">
           <SearchForm variant="compact" />
