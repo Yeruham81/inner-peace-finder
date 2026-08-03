@@ -141,7 +141,7 @@ const problemDomains: ExplorerItem[] = [
 
 const populationGroups: ExplorerItem[] = [
   {
-    id: "babies-toddlers",
+    id: "infants",
     name: "תינוקות ופעוטות",
     description: "גילאי 0–5",
     problems: [
