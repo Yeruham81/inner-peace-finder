@@ -800,17 +800,10 @@ function ProfessionSelector({
   if (professions.length === 0) {
     return <p className="text-xs text-muted-foreground">אין מקצועות זמינים לבחירה.</p>;
   }
-
   const renderCategoryCard = (category: CategoryWithItems, layoutId: string) => {
     const isOpen = activeCategoryId === category.id;
     const selectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
     const isEmpty = category.items.length === 0;
-    const countLabel =
-      selectedCount === 0
-        ? "0 מקצועות נבחרו"
-        : selectedCount === 1
-          ? "מקצוע אחד נבחר"
-          : `${selectedCount} מקצועות נבחרו`;
 
     return (
       <button
@@ -820,7 +813,7 @@ function ProfessionSelector({
         aria-controls={`profession-category-${layoutId}-${category.id}`}
         disabled={isEmpty}
         onClick={() => setActiveCategoryId(isOpen ? null : category.id)}
-        className={`group flex min-h-[4.5rem] flex-col justify-between rounded-xl border p-3 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`group flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
           isOpen
             ? "border-brand bg-brand/10 shadow-sm ring-1 ring-brand/20"
             : selectedCount > 0
@@ -828,28 +821,24 @@ function ProfessionSelector({
               : "border-brand/30 bg-brand-soft hover:border-brand/60"
         }`}
       >
-        <span className="flex w-full items-start justify-between gap-2">
-          <span className="text-sm font-semibold leading-snug text-foreground">{category.title}</span>
-          <span
-            aria-hidden="true"
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
-              selectedCount > 0
-                ? "border-brand bg-brand text-white"
-                : "border-brand/40 bg-background text-muted-foreground"
-            }`}
-          >
-            {selectedCount > 0 ? "✓" : isOpen ? "−" : "+"}
-          </span>
+        <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground">
+          {category.title}
+          {selectedCount > 0 && <span className="mr-1 text-brand">({selectedCount})</span>}
         </span>
+
         <span
-          className={`mt-2 text-sm font-semibold ${selectedCount > 0 ? "text-foreground" : "text-muted-foreground"}`}
+          aria-hidden="true"
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+            selectedCount > 0
+              ? "border-brand bg-brand text-white"
+              : "border-brand/40 bg-background text-muted-foreground"
+          }`}
         >
-          {isEmpty ? "אין אפשרויות זמינות" : countLabel}
+          {selectedCount > 0 ? "✓" : isOpen ? "−" : "+"}
         </span>
       </button>
     );
   };
-
   const renderCategoryPanel = (category: CategoryWithItems, layoutId: string) => {
     const categorySelectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
 
