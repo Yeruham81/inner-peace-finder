@@ -243,7 +243,7 @@ setOpenFilter(null);
     if (key === "regions") setSelectedRegions([]);
     if (key === "language") setLanguage("");
     if (key === "population") setPopulation("");
-    if (key === "serviceType") setServiceType("");
+    if (key === "serviceType") setSelectedServiceTypes([]);
   }
 
   return (
