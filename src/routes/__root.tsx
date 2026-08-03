@@ -162,30 +162,38 @@ function SiteHeader() {
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">T</span>
           <span className="text-lg font-semibold tracking-tight text-foreground">Tipulinks</span>
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
+        <nav aria-label="ניווט ראשי" className="flex flex-wrap items-center justify-end gap-1 text-sm">
           <Link
             to="/"
-            className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            activeOptions={{ exact: true }}
+            activeProps={{ className: navActiveClass }}
+            inactiveProps={{ className: navInactiveClass }}
+            className={navBaseClass}
           >
             בית
           </Link>
           <Link
-            to="/problems/$slug"
-            params={{ slug: "anxiety" }}
-            className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            to="/therapy-information"
+            activeProps={{ className: navActiveClass }}
+            inactiveProps={{ className: navInactiveClass }}
+            className={navBaseClass}
           >
-            חרדה
+            תחומי טיפול
           </Link>
           <Link
-            to="/search"
-            className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            to="/for-therapists"
+            activeProps={{ className: navActiveClass }}
+            inactiveProps={{ className: navInactiveClass }}
+            className={navBaseClass}
           >
-            חיפוש מטפלים
+            מידע למטפלים
           </Link>
           {signedIn ? (
             <Link
               to="/account"
-              className="rounded-md px-3 py-2 font-medium text-foreground transition-colors hover:bg-secondary"
+              activeProps={{ className: navActiveClass }}
+              inactiveProps={{ className: "font-medium text-foreground" }}
+              className={navBaseClass}
             >
               החשבון שלי
             </Link>
@@ -193,9 +201,11 @@ function SiteHeader() {
             <Link
               to="/auth"
               search={{ mode: "signin" as const }}
-              className="rounded-md px-3 py-2 font-medium text-brand transition-colors hover:bg-secondary"
+              activeProps={{ className: navActiveClass }}
+              inactiveProps={{ className: "font-medium text-brand" }}
+              className={navBaseClass}
             >
-              כניסת מטפלים
+              החשבון שלי
             </Link>
           )}
         </nav>
@@ -205,6 +215,7 @@ function SiteHeader() {
 }
 
 function SiteFooter() {
+  return (
   return (
     <footer className="border-t border-border bg-surface mt-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
