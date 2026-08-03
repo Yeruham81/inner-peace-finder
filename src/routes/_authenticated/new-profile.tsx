@@ -171,8 +171,8 @@ function EditorPage() {
     (!hasCity && !form.online_available);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
+      <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
@@ -192,7 +192,7 @@ function EditorPage() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-6">
+        <div className="mt-6 grid gap-5">
           <Section title="מידע בסיסי">
             <Field label="תמונה">
               <TherapistImageUpload
@@ -202,6 +202,7 @@ function EditorPage() {
                 gender={form.gender}
               />
             </Field>
+
             <Field label="שם מלא *">
               <Input
                 value={form.full_name}
@@ -209,24 +210,25 @@ function EditorPage() {
                 maxLength={120}
               />
             </Field>
-            <Field label="מין *">
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { v: "male", l: "זכר" },
-                    { v: "female", l: "נקבה" },
-                    { v: "unspecified", l: "לא צוין" },
-                  ] as { v: Gender; l: string }[]
-                ).map((o) => (
-                  <Chip key={o.v} active={form.gender === o.v} onClick={() => setForm({ ...form, gender: o.v })}>
-                    {o.l}
-                  </Chip>
-                ))}
-              </div>
-            </Field>
-          </Section>
 
-          <Section title="פרטים מקצועיים">
+            <Field label="מין *">
+              <SelectionGrid
+                items={
+                  [
+                    { id: "male", label: "זכר" },
+                    { id: "female", label: "נקבה" },
+                    { id: "unspecified", label: "לא צוין" },
+                  ] as { id: Gender; label: string }[]
+                }
+                selected={form.gender ? [form.gender] : []}
+                onChange={(ids) => setForm({ ...form, gender: (ids[0] as Gender | undefined) ?? "" })}
+                multiple={false}
+                columns="three"
+                hint="יש לבחור אפשרות אחת."
+                showCount={false}
+              />
+            </Field>
+
             <Field label="כותרת מקצועית">
               <Input
                 value={form.professional_title}
@@ -235,14 +237,19 @@ function EditorPage() {
                 maxLength={160}
               />
             </Field>
+          </Section>
+
+          <Section title="מקצוע וניסיון">
             <Field label="מקצועות *">
-              <MultiChips
+              <SelectionGrid
                 items={(options.data?.professions ?? []).map((p) => ({ id: p.id, label: p.name_he }))}
                 selected={form.profession_ids}
                 onChange={(ids) => setForm({ ...form, profession_ids: ids })}
+                columns="three"
+                hint="ניתן לבחור כמה מקצועות. יש לבחור לפחות מקצוע אחד."
               />
-              <p className="mt-1 text-xs text-muted-foreground">בחרו לפחות מקצוע אחד.</p>
             </Field>
+
             <Field label="שנות ניסיון">
               <Input
                 type="number"
@@ -254,13 +261,36 @@ function EditorPage() {
                 className="max-w-32"
               />
             </Field>
+
             <Field label="שפות טיפול">
-              <MultiChips
+              <SelectionGrid
                 items={(options.data?.languages ?? []).map((l) => ({ id: l.id, label: l.name }))}
                 selected={form.language_ids}
                 onChange={(ids) => setForm({ ...form, language_ids: ids })}
+                columns="four"
+                hint="ניתן לבחור כמה שפות."
               />
             </Field>
+          </Section>
+
+          <Section title="למי מיועד הטיפול">
+            <SelectionGrid
+              items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
+              selected={form.population_ids}
+              onChange={(ids) => setForm({ ...form, population_ids: ids })}
+              columns="four"
+              hint="סמנו את כל האוכלוסיות שעבורן אתם מציעים טיפול."
+            />
+          </Section>
+
+          <Section title="גישות ושיטות טיפוליות">
+            <SelectionGrid
+              items={(options.data?.modalities ?? []).map((m) => ({ id: m.id, label: m.name_he }))}
+              selected={form.modality_ids}
+              onChange={(ids) => setForm({ ...form, modality_ids: ids })}
+              columns="three"
+              hint="ניתן לבחור כמה שיטות טיפול."
+            />
           </Section>
 
           <Section title="קצת עליי *" action={<DescriptionHelpDialog />}>
@@ -270,7 +300,6 @@ function EditorPage() {
                 אילו אוכלוסיות אתם עובדים ובאילו תחומים צברתם ניסיון. תיאור מדויק ומפורט יסייע להציג את הפרופיל שלכם
                 לאנשים שמחפשים מענה המתאים לניסיון ולתחומי הטיפול שלכם.
               </p>
-
               <p className="text-xs text-muted-foreground">
                 מומלץ להימנע מניסוחים כלליים כמו "ליווי בתהליכי שינוי” או "טיפול בקשיים רגשיים”, ולפרט ככל האפשר מהם
                 המצבים שבהם אתם מטפלים.
@@ -281,7 +310,7 @@ function EditorPage() {
               onChange={(e) => setForm({ ...form, full_description: e.target.value })}
               maxLength={DESCRIPTION_MAX}
               rows={9}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
               placeholder="לדוגמא: אני עובד סוציאלי קליני בעל ניסיון בטיפול במבוגרים ובמתבגרים. אני מסייע לאנשים המתמודדים עם חרדה וחרדה חברתית, קשיי שינה על רקע לחץ, טראומה, פרידה ומשברי חיים, וכן עם קשיים בוויסות רגשי ובתפקוד בעבודה או במערכות יחסים. אני עובד בגישה אינטגרטיבית ומאמין בקשר טיפולי בטוח שמאפשר התבוננות, התמודדות ושינוי."
             />
             <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
@@ -297,22 +326,6 @@ function EditorPage() {
             <SemanticFeedbackPanel description={form.full_description} />
           </Section>
 
-          <Section title="שיטות טיפול">
-            <MultiChips
-              items={(options.data?.modalities ?? []).map((m) => ({ id: m.id, label: m.name_he }))}
-              selected={form.modality_ids}
-              onChange={(ids) => setForm({ ...form, modality_ids: ids })}
-            />
-          </Section>
-
-          <Section title="אוכלוסיות מטופלים">
-            <MultiChips
-              items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
-              selected={form.population_ids}
-              onChange={(ids) => setForm({ ...form, population_ids: ids })}
-            />
-          </Section>
-
           <Section title="השכלה, הכשרה וניסיון מקצועי">
             <p className="text-xs text-muted-foreground">
               פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע רלוונטי.
@@ -322,12 +335,16 @@ function EditorPage() {
               onChange={(e) => setForm({ ...form, background: e.target.value })}
               maxLength={4000}
               rows={6}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
               placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב, הכשרה בטיפול דינמי, ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית."
             />
           </Section>
 
-          <Section title="מיקום *">
+          <Section title="מיקום ואופן הטיפול *">
+            <p className="text-xs text-muted-foreground">
+              יש למלא מיקום פיזי, לסמן זמינות לטיפול אונליין, או לבחור בשתי האפשרויות.
+            </p>
+
             <Field label="עיר (מיקום פיזי)">
               <Input
                 value={form.primary_city}
@@ -336,6 +353,7 @@ function EditorPage() {
                 maxLength={80}
               />
             </Field>
+
             <Field label="אזור">
               <Input
                 value={form.primary_region}
@@ -343,6 +361,7 @@ function EditorPage() {
                 maxLength={80}
               />
             </Field>
+
             <Field label="כתובת מלאה">
               <Input
                 value={form.primary_address}
@@ -350,15 +369,23 @@ function EditorPage() {
                 maxLength={200}
               />
             </Field>
-            <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={form.online_available}
-                onChange={(e) => setForm({ ...form, online_available: e.target.checked })}
+
+            <Field label="טיפול אונליין">
+              <SelectionGrid
+                items={[
+                  {
+                    id: "online",
+                    label: "טיפול אונליין",
+                    description: "פגישות טיפול מרחוק באמצעות שיחת וידאו",
+                  },
+                ]}
+                selected={form.online_available ? ["online"] : []}
+                onChange={(ids) => setForm({ ...form, online_available: ids.includes("online") })}
+                columns="two"
+                hint="הבחירה אינה מחליפה מיקום פיזי; ניתן להציע את שתי האפשרויות."
+                showCount={false}
               />
-              זמינות לטיפול אונליין
-            </label>
-            <p className="mt-1 text-xs text-muted-foreground">יש למלא מיקום פיזי, או לסמן זמינות אונליין, או שניהם.</p>
+            </Field>
           </Section>
 
           <Section title="פרטי קשר">
@@ -371,6 +398,7 @@ function EditorPage() {
                 maxLength={160}
               />
             </Field>
+
             <Field label="מספר טלפון *">
               <Input
                 dir="ltr"
@@ -382,7 +410,7 @@ function EditorPage() {
             </Field>
           </Section>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate(false)}>
                 {mutation.isPending ? "שומר…" : "שמור טיוטה"}
@@ -405,14 +433,32 @@ function EditorPage() {
   );
 }
 
+type SelectionItem = {
+  id: string;
+  label: string;
+  description?: string;
+  disabled?: boolean;
+};
+
+type SelectionGridProps = {
+  items: SelectionItem[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  multiple?: boolean;
+  columns?: "two" | "three" | "four";
+  hint?: string;
+  showCount?: boolean;
+  emptyMessage?: string;
+};
+
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="grid gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+    <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
         {action}
       </div>
-      <div className="grid gap-3">{children}</div>
+      <div className="grid gap-4">{children}</div>
     </section>
   );
 }
@@ -420,52 +466,85 @@ function Section({ title, action, children }: { title: string; action?: React.Re
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-foreground">{label}</label>
+      <div className="mb-1.5 text-sm font-medium text-foreground">{label}</div>
       {children}
     </div>
   );
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-md border px-3 py-1.5 text-sm transition ${
-        active
-          ? "border-brand bg-brand/10 text-foreground"
-          : "border-border bg-surface text-muted-foreground hover:border-brand/50"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function MultiChips({
+function SelectionGrid({
   items,
   selected,
   onChange,
-}: {
-  items: { id: string; label: string }[];
-  selected: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  if (items.length === 0) return <p className="text-xs text-muted-foreground">אין אפשרויות זמינות.</p>;
+  multiple = true,
+  columns = "four",
+  hint,
+  showCount = true,
+  emptyMessage = "אין אפשרויות זמינות.",
+}: SelectionGridProps) {
+  if (items.length === 0) return <p className="text-xs text-muted-foreground">{emptyMessage}</p>;
+
+  const columnClass = {
+    two: "grid-cols-1 sm:grid-cols-2",
+    three: "grid-cols-2 sm:grid-cols-3",
+    four: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+  }[columns];
+
+  const selectedLabel = selected.length === 1 ? "אפשרות אחת נבחרה" : `${selected.length} אפשרויות נבחרו`;
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((it) => {
-        const active = selected.includes(it.id);
-        return (
-          <Chip
-            key={it.id}
-            active={active}
-            onClick={() => onChange(active ? selected.filter((x) => x !== it.id) : [...selected, it.id])}
-          >
-            {it.label}
-          </Chip>
-        );
-      })}
+    <div>
+      {(hint || (showCount && selected.length > 0)) && (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>{hint}</span>
+          {showCount && selected.length > 0 && <span className="font-medium text-foreground">{selectedLabel}</span>}
+        </div>
+      )}
+
+      <div className={`grid gap-2 ${columnClass}`}>
+        {items.map((item) => {
+          const active = selected.includes(item.id);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={active}
+              disabled={item.disabled}
+              onClick={() => {
+                if (multiple) {
+                  onChange(active ? selected.filter((id) => id !== item.id) : [...selected, item.id]);
+                  return;
+                }
+                if (!active) onChange([item.id]);
+              }}
+              className={`group relative flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-3 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                active
+                  ? "border-brand bg-brand/10 text-foreground shadow-sm ring-1 ring-brand/20"
+                  : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
+              }`}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium leading-snug">{item.label}</span>
+                {item.description && (
+                  <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">
+                    {item.description}
+                  </span>
+                )}
+              </span>
+              <span
+                aria-hidden="true"
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                  active
+                    ? "border-brand bg-brand text-white"
+                    : "border-brand/40 bg-background text-transparent group-hover:border-brand/70"
+                }`}
+              >
+                ✓
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
