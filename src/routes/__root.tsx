@@ -141,6 +141,10 @@ function RootComponent() {
   );
 }
 
+const navBaseClass = "rounded-md px-3 py-2 transition-colors hover:bg-secondary hover:text-foreground";
+const navActiveClass = "font-semibold text-foreground bg-secondary";
+const navInactiveClass = "text-muted-foreground";
+
 function SiteHeader() {
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
