@@ -172,7 +172,7 @@ function SiteHeader() {
         <Link
           to="/"
           aria-label="Tipulinks — עמוד הבית"
-          className="flex shrink-0 flex-col items-center justify-center gap-0.5 sm:flex-row sm:gap-2"
+          className="flex shrink-0 flex-col items-center justify-center gap-1 sm:flex-row sm:gap-2"
         >
           <span className="grid h-9 w-9 place-items-center rounded-full bg-brand text-base font-bold text-brand-foreground sm:text-lg">
             T
