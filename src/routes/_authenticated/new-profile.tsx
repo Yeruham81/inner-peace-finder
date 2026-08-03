@@ -228,7 +228,7 @@ function EditorPage() {
                     [
                       { id: "male", label: "זכר" },
                       { id: "female", label: "נקבה" },
-                      { id: "unspecified", label: "לא צוין" },
+                      { id: "unspecified", label: "ללא" },
                     ] as { id: Gender; label: string }[]
                   }
                   selected={form.gender ? [form.gender] : []}
