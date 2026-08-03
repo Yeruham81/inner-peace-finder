@@ -227,9 +227,16 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
 
     if (filter.key === "language") setLanguage(value);
     if (filter.key === "population") setPopulation(value);
-    if (filter.key === "serviceType") setServiceType(value);
+    if (filter.key === "serviceType") {
+  setSelectedServiceTypes((current) =>
+    current.includes(value)
+      ? current.filter((serviceType) => serviceType !== value)
+      : [...current, value],
+  );
+  return;
+}
 
-    setOpenFilter(null);
+setOpenFilter(null);
   }
 
   function clearFilter(key: QuickFilterKey) {
