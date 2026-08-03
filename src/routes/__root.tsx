@@ -222,7 +222,9 @@ function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת אנשי מקצוע ואינו מהווה תחליף לייעוץ מקצועי</p>
+        <p>
+          © {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת אנשי מקצוע ומטפלים ואינו מהווה תחליף לייעוץ מקצועי
+        </p>
       </div>
     </footer>
   );
