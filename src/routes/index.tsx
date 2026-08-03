@@ -302,7 +302,6 @@ function Index() {
       }}
     >
       <section className="relative isolate overflow-hidden border-b border-border/60">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-brand-soft via-background to-background" />
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-20">
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand/10 bg-surface-elevated px-4 py-1.5 text-xs font-medium text-primary shadow-card">
