@@ -274,7 +274,7 @@ function SearchUserCard() {
         <UserRoundSearch className="h-6 w-6" />
       </div>
 
-      <p className="mt-5 text-sm font-semibold text-primary">האדם שמחפש עזרה</p>
+      <p className="mt-5 text-sm font-semibold text-primary">המשתמש שמחפש עזרה</p>
 
       <h3 className="mt-1 text-xl font-bold text-foreground">כותב במילים שלו</h3>
 
@@ -340,7 +340,7 @@ function MatchedTherapistCard() {
           <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
 
           <p className="text-sm leading-7 text-muted-foreground">
-            האדם מקבל רשימה ממוקדת יותר ויכול לפנות למטפל מתוך הבנה טובה יותר של ההתאמה.
+            המשתמש מקבל רשימה ממוקדת יותר ויכול לפנות למטפל מתוך הבנה טובה יותר של ההתאמה.
           </p>
         </div>
       </div>
