@@ -234,7 +234,7 @@ function HowItWorksSection() {
               <h3 className="text-xl font-bold text-foreground">ההתאמה אינה מבוססת על גורם אחד</h3>
 
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                המערכת מזהה את תחומי הטיפול הרלוונטיים מתוך הפרופיל המקצועי ומשלבת אותם עם העדפות וצרכים נוספים שהאדם
+                המערכת מזהה את תחומי הטיפול הרלוונטיים מתוך הפרופיל המקצועי ומשלבת אותם עם העדפות וצרכים נוספים שהמשתמש
                 הגדיר.
               </p>
             </div>
