@@ -120,7 +120,10 @@ const profileAdvantages = [
 
 function ForTherapistsPage() {
   return (
-    <main dir="rtl" className="overflow-hidden bg-background">
+    <main
+      dir="rtl"
+      className="min-h-screen overflow-hidden bg-gradient-to-b from-brand-soft/50 via-background to-brand-soft/50"
+    >
       <HeroSection />
 
       <SearchProblemSection />
@@ -143,7 +146,7 @@ function HeroSection() {
     <section className="relative isolate overflow-hidden border-b border-border">
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-20 bg-gradient-to-b from-primary/10 via-background to-background"
+        className="absolute inset-0 -z-20 bg-gradient-to-b from-brand-soft/50 via-background/90 to-transparent"
       />
 
       <div
