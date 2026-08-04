@@ -274,7 +274,7 @@ function SearchUserCard() {
         <UserRoundSearch className="h-6 w-6" />
       </div>
 
-      <p className="mt-5 text-sm font-semibold text-primary">המשתמש שמחפש עזרה</p>
+      <p className="mt-5 text-sm font-semibold text-primary">משתמש שמחפש עזרה</p>
 
       <h3 className="mt-1 text-xl font-bold text-foreground">כותב במילים שלו</h3>
 
