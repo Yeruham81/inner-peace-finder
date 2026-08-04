@@ -282,7 +282,8 @@ function SearchUserCard() {
         <MessageCircleMore className="h-5 w-5 text-primary" />
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          „אני מרגיש מוצף כבר תקופה, מתקשה לישון ולא יודע אם אני צריך פסיכולוג, טיפול רגשי או משהו אחר.”
+          "הבן שלי בן 9 התחיל לסרב ללכת לבית הספר, מתלונן על כאבי בטן בכל בוקר ונמנע ממפגשים עם ילדים. אנחנו לא יודעים
+          אם מדובר בחרדה או בקושי חברתי ואיזה איש מקצוע יכול לעזור לו.”
         </p>
       </div>
     </article>
@@ -306,7 +307,7 @@ function TipulinksEngineCard() {
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        {["מצוקה ותחושת הצפה", "קשיי שינה", "טיפול במבוגרים", "צורך בבירור ראשוני"].map((item) => (
+        {["טיפול רגשי לילדים", "חרדה", "קשיים חברתיים", "הדרכת הורים"].map((item) => (
           <span
             key={item}
             className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground"
