@@ -412,82 +412,36 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<SemanticFeedback> => {
     const desc = (data.description ?? "").trim();
     if (desc.length < 20) return { domains: [] };
-    const profile = await SemanticEngine.extractProfile(desc, context.supabase);
-    if (profile.length === 0) return { domains: [] };
-    const slugs = profile.map((e) => e.slug);
-    const [problemsRes, aliasesRes] = await Promise.all([
-      context.supabase.from("problems").select("id, slug, name_he").in("slug", slugs),
-      context.supabase.from("problem_aliases").select("problem_id, alias"),
-    ]);
-    const problems = problemsRes.data ?? [];
-    const bySlug = new Map(problems.map((p) => [p.slug, p.name_he as string]));
-    const slugById = new Map(problems.map((p) => [String(p.id), p.slug]));
-    const aliasesBySlug = new Map<string, string[]>();
-    for (const a of aliasesRes.data ?? []) {
-      const slug = slugById.get(String(a.problem_id));
-      if (!slug || !a.alias) continue;
-      const arr = aliasesBySlug.get(slug) ?? [];
-      arr.push(a.alias);
-      aliasesBySlug.set(slug, arr);
-    }
 
-    // P3.2 filter: display a treatment domain only when the therapist's
-    // description carries direct textual evidence for it — the canonical
-    // Hebrew name or one of the curated aliases must be present. We
-    // deliberately IGNORE intent phrases (verbs/statements-of-need) so a
-    // domain cannot slip in from a generic sentence, method, or population
-    // mention alone.
-    //
-    // Matching is layered from strict → tolerant so precision stays high
-    // while common Hebrew spelling variation is still accepted:
-    //   1. Full normalized substring (exact / plural / feminine folded).
-    //   2. Yod/vav-tolerant substring on the compact skeleton
-    //      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
-    //   3. `SemanticEngine.matchesText` on the phrase as a whole (shared
-    //      token overlap for multi-word aliases like "טיפול זוגי").
-    const isExplicit = (slug: string): boolean => {
-      const name = bySlug.get(slug);
-      if (name && phraseMatchesDescription(name, desc)) return true;
-      for (const al of aliasesBySlug.get(slug) ?? []) {
-        if (phraseMatchesDescription(al, desc)) return true;
-      }
-      return false;
-    };
+    // Two fixed queries (no N+1): the FULL active canonical catalog plus the
+    // aliases of those active problems. Direct matching must never be gated
+    // by what the semantic engine happened to propose.
+    const { data: problemRows, error: problemErr } = await context.supabase
+      .from("problems")
+      .select("id, slug, name_he")
+      .eq("is_active", true);
+    if (problemErr) throw new Error(`problems: ${problemErr.message}`);
+    const problems = (problemRows ?? []).map((p) => ({
+      id: String(p.id),
+      slug: p.slug as string,
+      name_he: p.name_he as string,
+    }));
 
-    const filtered = profile.filter((e) => isExplicit(e.slug)).slice(0, 8);
+    const { data: aliasRows, error: aliasErr } = await context.supabase
+      .from("problem_aliases")
+      .select("problem_id, alias")
+      .in("problem_id", problems.map((p) => Number(p.id)) as never);
+    if (aliasErr) throw new Error(`problem_aliases: ${aliasErr.message}`);
+    const aliases = (aliasRows ?? []).map((a) => ({
+      problem_id: String(a.problem_id),
+      alias: a.alias as string,
+    }));
+
+    // Semantic extraction stays untouched; its results are only *validated*
+    // against the active catalog + strict explicit evidence.
+    const semantic = await SemanticEngine.extractProfile(desc, context.supabase);
+
     return {
-      domains: filtered.map((e) => ({ slug: e.slug, name: bySlug.get(e.slug) ?? e.slug })),
+      domains: combineFeedbackDomains(desc, { problems, aliases }, semantic),
     };
   });
-
-/**
- * True when `phrase` (a curated problem name or alias) is present in the
- * therapist's `description` with enough textual evidence to justify
- * displaying the domain in the read-only Semantic Feedback Panel.
- *
- * Layered strict → tolerant so common Hebrew spelling variation is
- * accepted without opening the door to generic-token over-expansion:
- *   1. Full normalized substring (exact / plural / feminine folded).
- *   2. Yod/vav-tolerant substring on the compact skeleton
- *      ("פוסטטראומה" ↔ "פוסט טראומה", "דכאונות" ↔ "דיכאון").
- *   3. Multi-word phrases fall through to `SemanticEngine.matchesText`
- *      so aliases like "טיפול זוגי" still hit when tokens interleave.
- *      Single-token phrases DO NOT fall through — the token-overlap
- *      matcher is exactly what would surface unrelated domains from a
- *      single generic word.
- *
- * Intents are intentionally not passed through this function — the caller
- * only feeds names + aliases, so verbs/statements-of-need cannot promote
- * a domain on their own.
- */
-export function phraseMatchesDescription(phrase: string, description: string): boolean {
-  if (!phrase || !description) return false;
-  const nDesc = SemanticEngine.normalize(description);
-  const n = SemanticEngine.normalize(phrase);
-  if (n.length >= 2 && nDesc.includes(n)) return true;
-  const stripYv = (s: string) => s.replace(/[יו\s]/g, "");
-  const compact = stripYv(n);
-  if (compact.length >= 4 && stripYv(nDesc).includes(compact)) return true;
-  if (n.includes(" ") && SemanticEngine.matchesText(phrase, description)) return true;
-  return false;
-}
