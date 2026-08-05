@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
+import { combineFeedbackDomains } from "./profile-domain-feedback";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 
 /* ------------------------------------------------------------------ */
