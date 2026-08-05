@@ -191,6 +191,49 @@ export type FeedbackCatalog = {
   aliases: CatalogAlias[];
 };
 
+/* ------------------------------------------------------------------ */
+/* Catalog loading (dependency-injected, 2 fixed queries — no N+1)     */
+/* ------------------------------------------------------------------ */
+
+type QueryResult<T> = { data: T[] | null; error: { message: string } | null };
+
+/** Minimal structural contract of the Supabase client used here. */
+export type FeedbackDb = {
+  from(table: string): {
+    select(cols: string): {
+      eq(col: string, val: unknown): Promise<QueryResult<Record<string, unknown>>>;
+      in(col: string, vals: unknown[]): Promise<QueryResult<Record<string, unknown>>>;
+    };
+  };
+};
+
+/**
+ * Load the FULL active canonical catalog plus the aliases of those active
+ * problems. Exactly two queries; Supabase errors are surfaced, never
+ * silently converted into an empty result.
+ */
+export async function loadFeedbackCatalog(db: FeedbackDb): Promise<FeedbackCatalog> {
+  const problemsRes = await db.from("problems").select("id, slug, name_he").eq("is_active", true);
+  if (problemsRes.error) throw new Error(`problems: ${problemsRes.error.message}`);
+  const problems: ActiveProblem[] = (problemsRes.data ?? []).map((p) => ({
+    id: String(p["id"]),
+    slug: String(p["slug"]),
+    name_he: String(p["name_he"]),
+  }));
+
+  const aliasRes = await db
+    .from("problem_aliases")
+    .select("problem_id, alias")
+    .in("problem_id", problems.map((p) => Number(p.id)));
+  if (aliasRes.error) throw new Error(`problem_aliases: ${aliasRes.error.message}`);
+  const aliases: CatalogAlias[] = (aliasRes.data ?? []).map((a) => ({
+    problem_id: String(a["problem_id"]),
+    alias: String(a["alias"] ?? ""),
+  }));
+
+  return { problems, aliases };
+}
+
 /** Phrases (canonical name + aliases) per active slug, deterministically sorted. */
 function phrasesBySlug(catalog: FeedbackCatalog): Map<string, string[]> {
   const slugById = new Map(catalog.problems.map((p) => [String(p.id), p.slug]));
@@ -235,6 +278,13 @@ export function findDirectEvidence(
 
 export type FeedbackDomain = { slug: string; name: string };
 
+/** Deterministic order for semantic-only results: weight desc, then slug. */
+export function orderSemanticOnly(entries: SemanticEntry[]): SemanticEntry[] {
+  return [...entries].sort(
+    (a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.slug.localeCompare(b.slug),
+  );
+}
+
 /**
  * Union of direct evidence and validated semantic results.
  *
@@ -253,13 +303,14 @@ export function combineFeedbackDomains(
   const direct = findDirectEvidence(description, catalog);
   const directSlugs = new Set(direct.map((d) => d.slug));
 
-  const semanticOnly = semantic
-    .filter((e) => nameBySlug.has(e.slug) && !directSlugs.has(e.slug))
-    .filter((e) => {
-      const phrases = phrasesBySlug(catalog).get(e.slug) ?? [];
-      return phrases.some((p) => phraseHasDirectEvidence(p, description));
-    })
-    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.slug.localeCompare(b.slug));
+  const phrases = phrasesBySlug(catalog);
+  const semanticOnly = orderSemanticOnly(
+    semantic
+      .filter((e) => nameBySlug.has(e.slug) && !directSlugs.has(e.slug))
+      .filter((e) =>
+        (phrases.get(e.slug) ?? []).some((p) => phraseHasDirectEvidence(p, description)),
+      ),
+  );
 
   const seen = new Set<string>();
   const out: FeedbackDomain[] = [];
