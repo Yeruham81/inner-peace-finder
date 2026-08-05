@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
-import { combineFeedbackDomains } from "./profile-domain-feedback";
+import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-feedback";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 
 /* ------------------------------------------------------------------ */
@@ -417,32 +417,13 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
     // Two fixed queries (no N+1): the FULL active canonical catalog plus the
     // aliases of those active problems. Direct matching must never be gated
     // by what the semantic engine happened to propose.
-    const { data: problemRows, error: problemErr } = await context.supabase
-      .from("problems")
-      .select("id, slug, name_he")
-      .eq("is_active", true);
-    if (problemErr) throw new Error(`problems: ${problemErr.message}`);
-    const problems = (problemRows ?? []).map((p) => ({
-      id: String(p.id),
-      slug: p.slug as string,
-      name_he: p.name_he as string,
-    }));
-
-    const { data: aliasRows, error: aliasErr } = await context.supabase
-      .from("problem_aliases")
-      .select("problem_id, alias")
-      .in("problem_id", problems.map((p) => Number(p.id)) as never);
-    if (aliasErr) throw new Error(`problem_aliases: ${aliasErr.message}`);
-    const aliases = (aliasRows ?? []).map((a) => ({
-      problem_id: String(a.problem_id),
-      alias: a.alias as string,
-    }));
+    const catalog = await loadFeedbackCatalog(
+      context.supabase as unknown as Parameters<typeof loadFeedbackCatalog>[0],
+    );
 
     // Semantic extraction stays untouched; its results are only *validated*
     // against the active catalog + strict explicit evidence.
     const semantic = await SemanticEngine.extractProfile(desc, context.supabase);
 
-    return {
-      domains: combineFeedbackDomains(desc, { problems, aliases }, semantic),
-    };
+    return { domains: combineFeedbackDomains(desc, catalog, semantic) };
   });
