@@ -139,7 +139,9 @@ export function preparePhrase(phrase: string): PreparedPhrase | null {
 function sameToken(descToken: string, phraseToken: string): boolean {
   if (descToken === phraseToken) return true;
   // Ordinary Hebrew clitic prefixes: "בדיכאון" ↔ "דיכאון", "בטראומה" ↔ "טראומה".
-  return stripHebrewPrefix(descToken) === stripHebrewPrefix(phraseToken);
+  const d = stripHebrewPrefix(descToken);
+  const p = stripHebrewPrefix(phraseToken);
+  return d === phraseToken || descToken === p || d === p;
 }
 
 /**
