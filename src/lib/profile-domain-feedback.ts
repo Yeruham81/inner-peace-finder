@@ -41,6 +41,9 @@ export function normalizeFeedbackText(input: string): string {
   s = s.replace(HYPHENS_RE, " ");
   s = s.toLowerCase();
   s = s.replace(NON_WORD_RE, " ");
+  // Hebrew↔Latin boundaries act as token separators ("בOCD" → "ב ocd").
+  s = s.replace(/([\u0590-\u05FF])([A-Za-z0-9])/g, "$1 $2");
+  s = s.replace(/([A-Za-z0-9])([\u0590-\u05FF])/g, "$1 $2");
   s = foldSofit(s);
   s = collapseRepeatedChars(s);
   return s.replace(/\s+/g, " ").trim();
