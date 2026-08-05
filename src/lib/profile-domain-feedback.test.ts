@@ -7,9 +7,12 @@ import {
   combineFeedbackDomains,
   findDirectEvidence,
   latinSkeleton,
+  loadFeedbackCatalog,
   normalizeFeedbackText,
+  orderSemanticOnly,
   phraseHasDirectEvidence,
   type FeedbackCatalog,
+  type FeedbackDb,
 } from "./profile-domain-feedback";
 
 /* ---------------- catalog fixture (mirrors production active rows) ------- */
@@ -238,14 +241,22 @@ describe("combineFeedbackDomains", () => {
     );
   });
 
-  it("uses slug as tie-breaker for equal semantic weights", () => {
-    const t = "מטפלת בהדרכת הורים ובאבל ושכול";
-    const out = combineFeedbackDomains(t, { ...catalog, aliases: [] }, [
-      { slug: "grief_loss", weight: 1 },
-      { slug: "family_parenting", weight: 1 },
-    ]).map((d) => d.slug);
-    // canonical names only (aliases removed) → both semantic-only; slug order
-    expect(out).toEqual([]);
+  it("uses weight desc then slug as a deterministic semantic tie-breaker", () => {
+    expect(
+      orderSemanticOnly([
+        { slug: "trauma", weight: 1 },
+        { slug: "anxiety", weight: 1 },
+        { slug: "depression", weight: 5 },
+      ]).map((e) => e.slug),
+    ).toEqual(["depression", "anxiety", "trauma"]);
+    // shuffled input, identical output
+    expect(
+      orderSemanticOnly([
+        { slug: "anxiety", weight: 1 },
+        { slug: "depression", weight: 5 },
+        { slug: "trauma", weight: 1 },
+      ]).map((e) => e.slug),
+    ).toEqual(["depression", "anxiety", "trauma"]);
   });
 
   it("displays canonical name_he, never the alias", () => {
@@ -281,6 +292,34 @@ const FIXTURE_2 = `אני עובדת סוציאלית קלינית, עם התמ�
 עבודתי מתאפיינת באינטגרציה בין גישות טיפול ובשימוש בו זמני בכלים מעולמות שונים כגון: מיינדפולנס, בודהיזם,CBT, ACT ועוד.`;
 
 describe("profile editor fixtures", () => {
+  it("uses exactly two queries and surfaces Supabase errors", async () => {
+    const calls: string[] = [];
+    const makeDb = (fail?: "problems" | "problem_aliases"): FeedbackDb => ({
+      from(table) {
+        calls.push(table);
+        const res = {
+          data: table === "problems" ? [{ id: 1, slug: "trauma", name_he: "טראומה ומשברים" }] : [],
+          error: fail === table ? { message: "boom" } : null,
+        };
+        return {
+          select: () => ({
+            eq: async () => res,
+            in: async () => res,
+          }),
+        };
+      },
+    });
+
+    const loaded = await loadFeedbackCatalog(makeDb());
+    expect(loaded.problems).toHaveLength(1);
+    expect(calls).toEqual(["problems", "problem_aliases"]);
+
+    await expect(loadFeedbackCatalog(makeDb("problems"))).rejects.toThrow("problems: boom");
+    await expect(loadFeedbackCatalog(makeDb("problem_aliases"))).rejects.toThrow(
+      "problem_aliases: boom",
+    );
+  });
+
   it("fixture 1 returns the expected slugs in order", () => {
     expect(slugsFor(FIXTURE_1, [{ slug: "ptsd", weight: 10 }])).toEqual([
       "depression",
