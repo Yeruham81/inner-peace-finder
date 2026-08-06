@@ -15,7 +15,7 @@ import {
 } from "./profile-domain-feedback";
 
 const MIGRATION_PATH =
-  "supabase/migrations/20260806080000_phase3a_treatment_domain_catalog.sql";
+  "supabase/migrations/20260806082039_83f6bc89-0c47-48a1-a9ac-02e850f3d868.sql";
 const SQL = readFileSync(MIGRATION_PATH, "utf8");
 
 /* ------------------------------ parsing -------------------------------- */
