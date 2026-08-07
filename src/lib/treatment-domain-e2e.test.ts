@@ -26,7 +26,7 @@ const CATALOG = LIVE_ACTIVE_CATALOG;
 const domains = (text: string): string[] =>
   combineFeedbackDomains(text, CATALOG, []).map((d) => d.slug);
 
-const slugById = new Map(CATALOG.problems.map((p) => [p.problem_id ?? p.id, p.slug]));
+const slugById = new Map(CATALOG.problems.map((p) => [p.id, p.slug]));
 const aliasesOf = (slug: string): string[] =>
   CATALOG.aliases.filter((a) => slugById.get(a.problem_id) === slug).map((a) => a.alias);
 const nameOf = (slug: string): string =>
