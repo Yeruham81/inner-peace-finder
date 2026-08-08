@@ -85,6 +85,12 @@ export type StructuredFilters = {
   /** Canonical city strings as stored in `therapist_locations.city`. */
   cityNames: string[];
   therapistGender: TherapistGender | null;
+  /**
+   * Canonical region slugs (see `locality-options`). Region and delivery
+   * mode are correlated by the executor through ONE location-availability
+   * operation — they are never two unrelated therapist-id intersections.
+   */
+  regionSlugs?: string[];
 };
 
 /** Explicit UI filters, already validated against the canonical catalog. */
@@ -92,13 +98,22 @@ export type ValidatedExplicitFilters = {
   cityNames: string[];
   populationSlugs: string[];
   languageCodes: string[];
+  regionSlugs: string[];
+  serviceTypes: string[];
   /** Raw values that did not resolve to a canonical catalog entry. */
-  rejected: Array<{ category: "city" | "population" | "language"; value: string }>;
+  rejected: Array<{ category: ExplicitFilterCategory; value: string }>;
 };
+
+export type ExplicitFilterCategory =
+  | "city"
+  | "population"
+  | "language"
+  | "region"
+  | "serviceType";
 
 /** Recorded when an explicit UI filter overrode a query-inferred value. */
 export type FilterConflict = {
-  category: "city" | "population" | "language";
+  category: ExplicitFilterCategory;
   inferred: string[];
   explicit: string[];
 };
@@ -147,6 +162,12 @@ export type TherapistSearchPlan = {
   therapistNameIds: string[];
   /** Executor should short-circuit with this reason when set. */
   emptyReason: null | "unrecognized_query";
+  /**
+   * True when the request carried NO query text and NO explicit filters at
+   * all: `/search` should browse the eligible published list rather than
+   * report `unrecognized_query`.
+   */
+  browseAll?: boolean;
   /** Explicit UI filters folded into `hardFilters` (debug metadata). */
   explicitFilters?: ValidatedExplicitFilters | null;
   /** Explicit-vs-inferred conflicts, resolved in favor of the explicit value. */
