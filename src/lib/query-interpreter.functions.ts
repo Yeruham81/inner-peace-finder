@@ -40,7 +40,26 @@ import {
 } from "./locality-options";
 import { PHYSICAL_SERVICE_TYPES, SERVICE_TYPES } from "./search-contract";
 import { hasExplicitFilters } from "./explicit-filters";
-import type { SearchResultCard } from "./search-result-card";
+import {
+  buildCardLocationDisplay,
+  type ActiveLocationRow,
+  type SearchResultCard,
+} from "./search-result-card";
+import { REGION_DEFINITIONS } from "./locality-options";
+
+/** Resolve a stored `therapist_locations.region` value to canonical display. */
+function resolveStoredRegion(stored: string | null): {
+  slug: string | null;
+  label: string | null;
+} {
+  const slug = regionSlugForStoredValue(stored);
+  if (slug) {
+    const def = REGION_DEFINITIONS.find((d) => d.slug === slug);
+    return { slug, label: def?.label ?? stored?.trim() ?? null };
+  }
+  const raw = stored?.trim();
+  return { slug: null, label: raw && raw.length > 0 ? raw : null };
+}
 import type {
   InterpretationResult,
   SemanticSignal,
