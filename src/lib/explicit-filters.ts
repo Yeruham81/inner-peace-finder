@@ -137,6 +137,7 @@ export function applyExplicitFilters(
     languageCodes: [...hard.languageCodes],
     deliveryModes: [...hard.deliveryModes],
     cityNames: [...hard.cityNames],
+    regionSlugs: [...(hard.regionSlugs ?? [])],
   };
   const softPreferences: SoftPreferences = {
     ...soft,
@@ -172,6 +173,12 @@ export function applyExplicitFilters(
   override("language", hardFilters.languageCodes, explicit.languageCodes,
     (v) => { hardFilters.languageCodes = v; },
     () => { softPreferences.languageCodes = []; });
+  override("region", hardFilters.regionSlugs ?? [], explicit.regionSlugs,
+    (v) => { hardFilters.regionSlugs = v; },
+    () => {});
+  override("serviceType", hardFilters.deliveryModes, explicit.serviceTypes,
+    (v) => { hardFilters.deliveryModes = v; },
+    () => { softPreferences.deliveryModes = []; });
 
   return { hardFilters, softPreferences, conflicts };
 }
