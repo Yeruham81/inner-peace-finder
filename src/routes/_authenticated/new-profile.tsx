@@ -47,6 +47,21 @@ function blankLocation(): FormLocation {
   return { city: "", region: "", address: "" };
 }
 
+function isValidEmailInput(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function isValidPhoneInput(value: string): boolean {
+  const raw = value.trim();
+  if (!raw || !/^[+\d\s().-]+$/.test(raw)) return false;
+
+  const digits = raw.replace(/\D/g, "");
+  if (raw.startsWith("+")) return digits.length >= 10 && digits.length <= 15;
+
+  // Israeli local numbers: landlines are commonly 9 digits and mobile numbers 10.
+  return digits.length >= 9 && digits.length <= 10;
+}
+
 type FormState = {
   full_name: string;
   gender: Gender | "";
@@ -334,6 +349,8 @@ function EditorPage() {
   const orderedLanguages = orderCanonicalLanguages(options.data?.languages ?? []);
 
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
+  const emailInvalid = form.email.trim().length > 0 && !isValidEmailInput(form.email);
+  const phoneInvalid = form.phone.trim().length > 0 && !isValidPhoneInput(form.phone);
   const publishMissing =
     form.full_name.trim().length < 2 ||
     !form.gender ||
@@ -344,7 +361,9 @@ function EditorPage() {
     form.language_ids.length === 0 ||
     form.population_ids.length === 0 ||
     !form.email.trim() ||
+    emailInvalid ||
     !form.phone.trim() ||
+    phoneInvalid ||
     (form.home_visit_available && form.home_visit_regions.length === 0) ||
     (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
 
@@ -714,28 +733,49 @@ function EditorPage() {
                 </p>
               </Section>
 
-              <Section title="פרטי קשר">
+              <Section title="פרטי התקשרות">
+                <p className="text-sm text-muted-foreground">
+                  פרטים אלה ישמשו ליצירת קשר בנוגע לפניות שתקבלו דרך Tipulinks.
+                </p>
+
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="כתובת אימייל *">
+                  <Field label="אימייל לקבלת פניות *">
                     <Input
                       dir="ltr"
                       type="email"
+                      autoComplete="email"
+                      placeholder="name@example.com"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       maxLength={160}
-                      className="bg-white text-left transition-colors focus:border-brand focus:ring-brand/30"
+                      aria-invalid={emailInvalid}
+                      className={`bg-white text-left transition-colors focus:border-brand focus:ring-brand/30 ${
+                        emailInvalid ? "border-destructive focus:border-destructive focus:ring-destructive/20" : ""
+                      }`}
                     />
+                    {emailInvalid && <p className="mt-1.5 text-sm text-destructive">נא להזין כתובת אימייל תקינה.</p>}
                   </Field>
 
-                  <Field label="מספר טלפון *">
+                  <Field label="טלפון לקבלת פניות *">
                     <Input
                       dir="ltr"
                       type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="050-1234567"
                       value={form.phone}
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
                       maxLength={40}
-                      className="bg-white text-left transition-colors focus:border-brand focus:ring-brand/30"
+                      aria-invalid={phoneInvalid}
+                      className={`bg-white text-left transition-colors focus:border-brand focus:ring-brand/30 ${
+                        phoneInvalid ? "border-destructive focus:border-destructive focus:ring-destructive/20" : ""
+                      }`}
                     />
+                    <p className={`mt-1.5 text-sm ${phoneInvalid ? "text-destructive" : "text-muted-foreground"}`}>
+                      {phoneInvalid
+                        ? "נא להזין מספר טלפון תקין."
+                        : "אפשר להזין מספר ישראלי עם רווחים או מקפים, או מספר בינלאומי שמתחיל ב־+."}
+                    </p>
                   </Field>
                 </div>
               </Section>
