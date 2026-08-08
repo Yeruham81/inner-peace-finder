@@ -365,21 +365,85 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     async fetchDisplay(ids): Promise<Map<string, DisplayRow>> {
       const map = new Map<string, DisplayRow>();
       if (ids.length === 0) return map;
-      const res = await applyEligibility(
-        sb.from("therapists").select(
-          "id, slug, full_name, professional_title, image_url, city, verified",
-        ),
-      ).in("id", ids);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((res as any).error) throw (res as any).error;
-      for (const r of (res.data ?? []) as Array<{
-        id: string; slug: string; full_name: string; professional_title: string | null;
-        image_url: string | null; city: string | null; verified: boolean | null;
+      // Batched display relations for the final result ids only (no N+1).
+      const [tRes, locRes, langRes, popRes] = await Promise.all([
+        applyEligibility(
+          sb.from("therapists").select(
+            "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience",
+          ),
+        ).in("id", ids),
+        sb
+          .from("therapist_locations")
+          .select("therapist_id, location_type, city, region, is_primary")
+          .eq("is_active", true)
+          .in("therapist_id", ids),
+        sb
+          .from("therapist_languages")
+          .select("therapist_id, languages!inner(name)")
+          .in("therapist_id", ids),
+        sb
+          .from("therapist_populations")
+          .select("therapist_id, population_groups!inner(name)")
+          .in("therapist_id", ids),
+      ]);
+      for (const r of [tRes, locRes, langRes, popRes]) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err = (r as any).error;
+        if (err) throw err;
+      }
+
+      const locBy = new Map<string, ActiveLocationRow[]>();
+      for (const r of (locRes.data ?? []) as Array<{
+        therapist_id: string; location_type: string; city: string | null;
+        region: string | null; is_primary: boolean | null;
       }>) {
+        const list = locBy.get(r.therapist_id) ?? [];
+        list.push({
+          location_type: r.location_type,
+          city: r.city,
+          region: r.region,
+          is_primary: r.is_primary,
+        });
+        locBy.set(r.therapist_id, list);
+      }
+      const langBy = new Map<string, string[]>();
+      for (const r of (langRes.data ?? []) as Array<{
+        therapist_id: string; languages: { name: string } | null;
+      }>) {
+        if (!r.languages?.name) continue;
+        const list = langBy.get(r.therapist_id) ?? [];
+        if (!list.includes(r.languages.name)) list.push(r.languages.name);
+        langBy.set(r.therapist_id, list);
+      }
+      const popBy = new Map<string, string[]>();
+      for (const r of (popRes.data ?? []) as Array<{
+        therapist_id: string; population_groups: { name: string } | null;
+      }>) {
+        if (!r.population_groups?.name) continue;
+        const list = popBy.get(r.therapist_id) ?? [];
+        if (!list.includes(r.population_groups.name)) list.push(r.population_groups.name);
+        popBy.set(r.therapist_id, list);
+      }
+
+      for (const r of (tRes.data ?? []) as Array<{
+        id: string; slug: string; full_name: string; professional_title: string | null;
+        image_url: string | null; verified: boolean | null; short_intro: string | null;
+      }>) {
+        const loc = buildCardLocationDisplay(locBy.get(r.id) ?? [], resolveStoredRegion);
         map.set(r.id, {
-          slug: r.slug, full_name: r.full_name,
+          slug: r.slug,
+          full_name: r.full_name,
           professional_title: r.professional_title,
-          image_url: r.image_url, city: r.city, verified: !!r.verified,
+          image_url: r.image_url,
+          verified: !!r.verified,
+          short_intro: r.short_intro,
+          primary_clinic: loc.primary_clinic,
+          additional_clinic_count: loc.additional_clinic_count,
+          online_available: loc.online_available,
+          home_visit_regions: loc.home_visit_regions,
+          language_names: langBy.get(r.id) ?? [],
+          population_names: popBy.get(r.id) ?? [],
+          primary_clinic_fallback_used: loc.primary_clinic_fallback_used,
         });
       }
       return map;
@@ -395,7 +459,12 @@ export async function runUnifiedSearch(
   const { plan } = await buildPlan(args.query, args.explicit, sb);
   const repo = createSupabaseRepo(sb);
   const out = await executeUnifiedSearch(repo, plan, args.limit);
-  return { plan, results: out.results, emptyReason: out.emptyReason };
+  return {
+    plan,
+    results: out.results,
+    emptyReason: out.emptyReason,
+    primaryClinicFallbackCount: out.primaryClinicFallbackCount,
+  };
 }
 
 export const interpretQueryFn = createServerFn({ method: "POST" })
