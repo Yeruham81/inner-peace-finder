@@ -54,8 +54,7 @@ function resolveStoredRegion(stored: string | null): {
 } {
   const slug = regionSlugForStoredValue(stored);
   if (slug) {
-    const def = REGION_DEFINITIONS.find((d) => d.slug === slug);
-    return { slug, label: def?.label ?? stored?.trim() ?? null };
+    return { slug, label: REGION_DEFINITIONS[slug]?.label ?? stored?.trim() ?? null };
   }
   const raw = stored?.trim();
   return { slug: null, label: raw && raw.length > 0 ? raw : null };
