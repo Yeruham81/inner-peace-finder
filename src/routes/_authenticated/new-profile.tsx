@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import { orderCanonicalLanguages } from "@/lib/language-options";
@@ -29,6 +31,20 @@ export const Route = createFileRoute("/_authenticated/new-profile")({
   component: EditorPage,
 });
 
+type ProductRegion = EditorOptions["localities"][number]["region"];
+
+type FormLocation = {
+  city: string;
+  region: ProductRegion | "";
+  address: string;
+};
+
+const MAX_PHYSICAL_LOCATIONS = 3;
+
+function blankLocation(): FormLocation {
+  return { city: "", region: "", address: "" };
+}
+
 type FormState = {
   full_name: string;
   gender: Gender | "";
@@ -44,9 +60,7 @@ type FormState = {
   modality_ids: string[];
   language_ids: string[];
   population_ids: string[];
-  primary_city: string;
-  primary_region: string;
-  primary_address: string;
+  locations: FormLocation[];
   online_available: boolean;
 };
 
@@ -65,9 +79,7 @@ const emptyForm: FormState = {
   modality_ids: [],
   language_ids: [],
   population_ids: [],
-  primary_city: "",
-  primary_region: "",
-  primary_address: "",
+  locations: [blankLocation()],
   online_available: false,
 };
 
@@ -202,7 +214,18 @@ function chunkItems<T>(items: readonly T[], size: number): T[][] {
   return rows;
 }
 
-function fromProfile(p: ProfileEditorData): FormState {
+function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormState {
+  const locations: FormLocation[] = p.locations.length
+    ? p.locations.map((location) => {
+        const canonical = editorOptions.localities.find((item) => item.name === location.city);
+        return {
+          city: canonical?.name ?? location.city,
+          region: canonical?.region ?? location.region ?? "",
+          address: location.address ?? "",
+        };
+      })
+    : [blankLocation()];
+
   return {
     full_name: p.full_name ?? "",
     gender: (p.gender ?? "") as Gender | "",
@@ -218,9 +241,7 @@ function fromProfile(p: ProfileEditorData): FormState {
     modality_ids: p.modality_ids,
     language_ids: p.language_ids,
     population_ids: p.population_ids,
-    primary_city: p.primary_city ?? "",
-    primary_region: p.primary_region ?? "",
-    primary_address: p.primary_address ?? "",
+    locations,
     online_available: p.online_available,
   };
 }
@@ -239,13 +260,10 @@ function EditorPage() {
   const [missing, setMissing] = useState<string[] | null>(null);
 
   useEffect(() => {
-    if (!initialized && profile.data) {
-      setForm(fromProfile(profile.data));
-      setInitialized(true);
-    } else if (!initialized && profile.isSuccess && !profile.data) {
-      setInitialized(true);
-    }
-  }, [profile.data, profile.isSuccess, initialized]);
+    if (initialized || !profile.isSuccess || !options.isSuccess) return;
+    if (profile.data) setForm(fromProfile(profile.data, options.data));
+    setInitialized(true);
+  }, [profile.data, profile.isSuccess, options.data, options.isSuccess, initialized]);
 
   const mutation = useMutation({
     mutationFn: (publish: boolean) =>
@@ -265,9 +283,13 @@ function EditorPage() {
           modality_ids: form.modality_ids,
           language_ids: form.language_ids,
           population_ids: form.population_ids,
-          primary_city: form.primary_city || null,
-          primary_region: form.primary_region || null,
-          primary_address: form.primary_address || null,
+          locations: form.locations
+            .filter((location) => location.city.trim().length > 0)
+            .map((location) => ({
+              city: location.city,
+              region: location.region as ProductRegion,
+              address: location.address || null,
+            })),
           online_available: form.online_available,
           publish,
         },
@@ -301,7 +323,7 @@ function EditorPage() {
   // submit UUIDs to therapist_languages through language_ids.
   const orderedLanguages = orderCanonicalLanguages(options.data?.languages ?? []);
 
-  const hasCity = form.primary_city.trim().length > 0;
+  const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
   const publishMissing =
     form.full_name.trim().length < 2 ||
     !form.gender ||
@@ -313,7 +335,7 @@ function EditorPage() {
     form.population_ids.length === 0 ||
     !form.email.trim() ||
     !form.phone.trim() ||
-    (!hasCity && !form.online_available);
+    (!hasPhysicalLocation && !form.online_available);
 
   return (
     <div className="min-h-screen bg-brand-soft/50">
@@ -509,38 +531,112 @@ function EditorPage() {
 
               <Section title="מיקום הטיפול">
                 <p className="text-sm text-muted-foreground">
-                  מלאו את פרטי המיקום הפיזי שבו אתם מקבלים מטופלים. ניתן להציע גם טיפול אונליין באזור הבא.
+                  בחרו את היישוב שבו אתם מקבלים מטופלים. האזור יתעדכן אוטומטית. ניתן להוסיף עד שלושה מיקומים פיזיים.
                 </p>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="עיר (מיקום פיזי)">
-                    <Input
-                      value={form.primary_city}
-                      onChange={(e) => setForm({ ...form, primary_city: e.target.value })}
-                      placeholder="לדוגמה: תל אביב"
-                      maxLength={80}
-                      className="bg-white transition-colors focus:border-brand focus:ring-brand/30"
-                    />
-                  </Field>
+                {options.data?.locality_options_error && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                    רשימת היישובים הרשמית לא נטענה כרגע. נסו לרענן את העמוד לפני שמירת מיקום חדש.
+                  </div>
+                )}
 
-                  <Field label="אזור">
-                    <Input
-                      value={form.primary_region}
-                      onChange={(e) => setForm({ ...form, primary_region: e.target.value })}
-                      maxLength={80}
-                      className="bg-white transition-colors focus:border-brand focus:ring-brand/30"
-                    />
-                  </Field>
+                <div className="space-y-4">
+                  {form.locations.map((location, index) => {
+                    const selectedElsewhere = form.locations
+                      .filter((_, locationIndex) => locationIndex !== index)
+                      .map((item) => item.city)
+                      .filter(Boolean);
+
+                    return (
+                      <div key={index} className="rounded-xl border border-border bg-white/60 p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <h4 className="text-base font-semibold text-foreground">מיקום {index + 1}</h4>
+                          {index > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() =>
+                                setForm((current) => ({
+                                  ...current,
+                                  locations: current.locations.filter((_, locationIndex) => locationIndex !== index),
+                                }))
+                              }
+                            >
+                              הסרת מיקום
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="יישוב">
+                            <LocalityCombobox
+                              localities={options.data?.localities ?? []}
+                              value={location.city}
+                              disabledValues={selectedElsewhere}
+                              unavailable={Boolean(options.data?.locality_options_error)}
+                              onChange={(selected) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  locations: current.locations.map((item, locationIndex) =>
+                                    locationIndex === index
+                                      ? selected
+                                        ? { ...item, city: selected.name, region: selected.region }
+                                        : blankLocation()
+                                      : item,
+                                  ),
+                                }))
+                              }
+                            />
+                          </Field>
+
+                          <Field label="אזור">
+                            <Input
+                              value={location.region}
+                              readOnly
+                              placeholder="יתעדכן אוטומטית לאחר בחירת יישוב"
+                              className="cursor-default bg-muted/40 text-foreground"
+                            />
+                          </Field>
+                        </div>
+
+                        <Field label="כתובת מלאה">
+                          <Input
+                            value={location.address}
+                            onChange={(e) =>
+                              setForm((current) => ({
+                                ...current,
+                                locations: current.locations.map((item, locationIndex) =>
+                                  locationIndex === index ? { ...item, address: e.target.value } : item,
+                                ),
+                              }))
+                            }
+                            maxLength={200}
+                            placeholder="רחוב ומספר (אופציונלי)"
+                            className="bg-white transition-colors focus:border-brand focus:ring-brand/30"
+                          />
+                        </Field>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <Field label="כתובת מלאה">
-                  <Input
-                    value={form.primary_address}
-                    onChange={(e) => setForm({ ...form, primary_address: e.target.value })}
-                    maxLength={200}
-                    className="bg-white transition-colors focus:border-brand focus:ring-brand/30"
-                  />
-                </Field>
+                {form.locations.length < MAX_PHYSICAL_LOCATIONS && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        locations: [...current.locations, blankLocation()],
+                      }))
+                    }
+                  >
+                    + הוספת מיקום נוסף
+                  </Button>
+                )}
               </Section>
 
               <Section title="אופן הטיפול *">
@@ -560,7 +656,7 @@ function EditorPage() {
                     selected={form.online_available ? ["online"] : []}
                     onChange={(ids) => setForm({ ...form, online_available: ids.includes("online") })}
                     columns="one"
-                    hint="ניתן להציע טיפול אונליין בנוסף לטיפול במיקום הפיזי שמילאתם."
+                    hint="ניתן להציע טיפול אונליין בנוסף למיקום פיזי אחד או יותר, או כדרך הטיפול היחידה."
                     showCount={false}
                   />
                 </Field>
@@ -1020,6 +1116,119 @@ function ProfessionSelector({
       <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "mobile")}</div>
       <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "desktop")}</div>
     </div>
+  );
+}
+
+function normalizeLocalitySearch(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/[‐‑‒–—―]/g, "-")
+    .replace(/[׳’`]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function LocalityCombobox({
+  localities,
+  value,
+  disabledValues,
+  unavailable,
+  onChange,
+}: {
+  localities: EditorOptions["localities"];
+  value: string;
+  disabledValues: string[];
+  unavailable: boolean;
+  onChange: (locality: EditorOptions["localities"][number] | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const disabledSet = useMemo(() => new Set(disabledValues.map(normalizeLocalitySearch)), [disabledValues]);
+  const normalizedQuery = normalizeLocalitySearch(query);
+
+  const matches = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return localities
+      .filter((locality) => normalizeLocalitySearch(locality.name).includes(normalizedQuery))
+      .slice(0, 60);
+  }, [localities, normalizedQuery]);
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) setQuery("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={unavailable || localities.length === 0}
+          className="w-full justify-between bg-white font-normal"
+        >
+          <span className={value ? "text-foreground" : "text-muted-foreground"}>
+            {value || (unavailable ? "רשימת היישובים לא זמינה כרגע" : "חיפוש ובחירת יישוב")}
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-muted-foreground">
+            ⌄
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+        <Command shouldFilter={false}>
+          <CommandInput value={query} onValueChange={setQuery} placeholder="הקלידו שם יישוב..." autoFocus />
+          <CommandList>
+            {value && (
+              <CommandItem
+                value="__clear_locality__"
+                onSelect={() => {
+                  onChange(null);
+                  setOpen(false);
+                  setQuery("");
+                }}
+                className="text-muted-foreground"
+              >
+                ניקוי הבחירה
+              </CommandItem>
+            )}
+
+            {!normalizedQuery ? (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                הקלידו את שם היישוב כדי לחפש ברשימה הרשמית.
+              </div>
+            ) : matches.length === 0 ? (
+              <CommandEmpty>לא נמצא יישוב מתאים.</CommandEmpty>
+            ) : (
+              matches.map((locality) => {
+                const alreadySelected = disabledSet.has(normalizeLocalitySearch(locality.name));
+                const isSelected = locality.name === value;
+                return (
+                  <CommandItem
+                    key={locality.code}
+                    value={`${locality.name} ${locality.code}`}
+                    disabled={alreadySelected}
+                    onSelect={() => {
+                      onChange(locality);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{locality.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{locality.region}</span>
+                    {isSelected && <span className="shrink-0 text-brand">✓</span>}
+                  </CommandItem>
+                );
+              })
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
