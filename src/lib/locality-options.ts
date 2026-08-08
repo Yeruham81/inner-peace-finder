@@ -115,6 +115,22 @@ export function storedRegionValues(slugs: readonly RegionSlug[]): string[] {
   return [...out];
 }
 
+/**
+ * Resolve a stored `therapist_locations.region` value into a canonical slug
+ * plus a display label. Unrecognized values keep their stored text as the
+ * label (display only) and have no slug, so they never satisfy a region
+ * filter silently.
+ */
+export function resolveStoredRegion(stored: string | null): {
+  slug: RegionSlug | null;
+  label: string | null;
+} {
+  const slug = regionSlugForStoredValue(stored);
+  if (slug) return { slug, label: REGION_DEFINITIONS[slug].label };
+  const raw = stored?.trim();
+  return { slug: null, label: raw && raw.length > 0 ? raw : null };
+}
+
 export type LocalityOption = {
   code: string;
   name: string;
