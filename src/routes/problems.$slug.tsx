@@ -5,6 +5,7 @@ import {
   searchTherapists,
 } from "@/lib/therapists.functions";
 import { TherapistCard } from "@/components/therapist-card";
+import { legacyRowToCard } from "@/lib/search-result-card";
 
 function problemQuery(slug: string) {
   return queryOptions({
