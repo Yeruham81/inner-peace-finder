@@ -15,6 +15,12 @@ import {
   parseStoredProfile,
   type SemanticProfileEntry,
 } from "./therapist-semantic-profile";
+import { applyEligibility } from "./search-eligibility";
+import {
+  fetchPublicTherapistBySlug,
+  listEligibleFilterOptions,
+  listEligibleTherapistSlugs,
+} from "./public-therapist-queries";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -135,13 +141,13 @@ export const searchTherapists = createServerFn({ method: "POST" })
     }
 
     // 3) Load therapists (filter by candidate set if any; otherwise everyone)
-    let tq = sb
-      .from("therapists")
-      .select(
-        "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active, semantic_profile",
-      )
-      .eq("is_active", true)
-      .eq("profile_status", "published");
+    let tq = applyEligibility(
+      sb
+        .from("therapists")
+        .select(
+          "id, slug, full_name, professional_title, short_intro, full_description, years_experience, city, image_url, verified, is_active, semantic_profile",
+        ),
+    );
     if (candidateIds) {
       if (candidateIds.size === 0) return [] as ScoredTherapist[];
       tq = tq.in("id", Array.from(candidateIds));
@@ -288,19 +294,7 @@ export const listProblems = createServerFn({ method: "GET" }).handler(async () =
 });
 
 export const listFilterOptions = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = publicClient();
-  const [cities, populations, languages] = await Promise.all([
-    sb.from("therapists").select("city"),
-    sb.from("population_groups").select("slug, name").order("sort_order"),
-    sb.from("languages").select("code, name").order("name"),
-  ]);
-  const citySet = new Set<string>();
-  cities.data?.forEach((r) => { if (r.city) citySet.add(r.city); });
-  return {
-    cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "he")),
-    populations: populations.data ?? [],
-    languages: languages.data ?? [],
-  };
+  return listEligibleFilterOptions(publicClient());
 });
 
 export const getProblemBySlug = createServerFn({ method: "GET" })
@@ -324,40 +318,11 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
 export const getTherapistBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
-    const sb = publicClient();
-    const { data: t } = await sb
-      .from("therapists")
-      .select("*")
-      .eq("slug", data.slug)
-      .eq("is_active", true)
-      .eq("profile_status", "published")
-      .maybeSingle();
-    if (!t) return null;
-    const [{ data: tps }, { data: pops }, { data: langs }] = await Promise.all([
-      sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
-      sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
-      sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
-    ]);
-    return {
-      ...t,
-      problems: (tps ?? []).map((r: any) => r.problems).filter(Boolean) as {
-        id: string;
-        name: string;
-        slug: string;
-        parent_id: string | null;
-      }[],
-      populations: (pops ?? []).map((r: any) => r.population_groups).filter(Boolean) as {
-        slug: string;
-        name: string;
-      }[],
-      languages: (langs ?? []).map((r: any) => r.languages).filter(Boolean) as { code: string; name: string }[],
-    };
+    return fetchPublicTherapistBySlug(publicClient(), data.slug);
   });
 
 export const listAllTherapistSlugs = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = publicClient();
-  const { data } = await sb.from("therapists").select("slug");
-  return data?.map((r) => r.slug) ?? [];
+  return listEligibleTherapistSlugs(publicClient());
 });
 
 /* ------------------------------------------------------------------ */

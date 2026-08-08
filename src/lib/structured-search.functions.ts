@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { THERAPIST_ELIGIBILITY } from "./search-eligibility";
+import { applyEligibility } from "./search-eligibility";
 
 /**
  * Throw on Supabase read failure so a failed public query never masquerades
@@ -153,15 +153,15 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
       if (professionMatches.length > 0) {
         const ids = professionMatches.map((p) => p.id);
         const joins = unwrap(
-          await sb
-            .from("therapist_professions")
-            .select(
-              "therapist_id, profession_id, therapists!inner(id, is_active, profile_status, visibility)",
-            )
-            .in("profession_id", ids)
-            .eq("therapists.is_active", THERAPIST_ELIGIBILITY.isActive)
-            .eq("therapists.profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-            .in("therapists.visibility", THERAPIST_ELIGIBILITY.visibilities),
+          await applyEligibility(
+            sb
+              .from("therapist_professions")
+              .select(
+                "therapist_id, profession_id, therapists!inner(id, is_active, profile_status, visibility)",
+              )
+              .in("profession_id", ids),
+            "therapists!inner",
+          ),
         );
         for (const row of joins ?? []) therapistIdsByProfession.add(row.therapist_id);
       }
@@ -187,15 +187,15 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
       if (modalityMatches.length > 0) {
         const ids = modalityMatches.map((m) => m.id);
         const joins = unwrap(
-          await sb
-            .from("therapist_modalities")
-            .select(
-              "therapist_id, modality_id, therapists!inner(id, is_active, profile_status, visibility)",
-            )
-            .in("modality_id", ids)
-            .eq("therapists.is_active", THERAPIST_ELIGIBILITY.isActive)
-            .eq("therapists.profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-            .in("therapists.visibility", THERAPIST_ELIGIBILITY.visibilities),
+          await applyEligibility(
+            sb
+              .from("therapist_modalities")
+              .select(
+                "therapist_id, modality_id, therapists!inner(id, is_active, profile_status, visibility)",
+              )
+              .in("modality_id", ids),
+            "therapists!inner",
+          ),
         );
         for (const row of joins ?? []) therapistIdsByModality.add(row.therapist_id);
       }
@@ -206,15 +206,15 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     let therapistIdsByLocation = new Set<string>();
     if (types.has("location") || types.has("therapist")) {
       const locs = unwrap(
-        await sb
-          .from("therapist_locations")
-          .select(
-            "therapist_id, city, region, therapists!inner(id, is_active, profile_status, visibility)",
-          )
-          .eq("is_active", true)
-          .eq("therapists.is_active", THERAPIST_ELIGIBILITY.isActive)
-          .eq("therapists.profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-          .in("therapists.visibility", THERAPIST_ELIGIBILITY.visibilities)
+        await applyEligibility(
+          sb
+            .from("therapist_locations")
+            .select(
+              "therapist_id, city, region, therapists!inner(id, is_active, profile_status, visibility)",
+            )
+            .eq("is_active", true),
+          "therapists!inner",
+        )
           .ilike("city", like)
           .limit(200),
       );
@@ -240,12 +240,11 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     if (types.has("therapist")) {
       const nameLike = `%${escapeIlike(q)}%`;
       const byName = unwrap(
-        await sb
-          .from("therapists")
-          .select("id, slug, full_name, professional_title, city, image_url, verified")
-          .eq("is_active", THERAPIST_ELIGIBILITY.isActive)
-          .eq("profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-          .in("visibility", THERAPIST_ELIGIBILITY.visibilities)
+        await applyEligibility(
+          sb
+            .from("therapists")
+            .select("id, slug, full_name, professional_title, city, image_url, verified"),
+        )
           .ilike("full_name", nameLike)
           .limit(limit * 2),
       );
@@ -279,13 +278,11 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
 
       if (structuredTherapistIds.size > 0) {
         const byStructured = unwrap(
-          await sb
-            .from("therapists")
-            .select("id, slug, full_name, professional_title, city, image_url, verified")
-            .eq("is_active", THERAPIST_ELIGIBILITY.isActive)
-            .eq("profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-            .in("visibility", THERAPIST_ELIGIBILITY.visibilities)
-            .in("id", Array.from(structuredTherapistIds).slice(0, 40)),
+          await applyEligibility(
+            sb
+              .from("therapists")
+              .select("id, slug, full_name, professional_title, city, image_url, verified"),
+          ).in("id", Array.from(structuredTherapistIds).slice(0, 40)),
         );
         for (const r of byStructured ?? []) {
           let field: TherapistStructuredResult["match_field"] = "profession";
@@ -327,16 +324,16 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
         professionMatches
           .filter((p) => p.score > 0)
           .map(async (p) => {
-            const res = await sb
-              .from("therapist_professions")
-              .select(
-                "therapist_id, therapists!inner(id, is_active, profile_status, visibility)",
-                { head: true, count: "exact" },
-              )
-              .eq("profession_id", p.id)
-              .eq("therapists.is_active", THERAPIST_ELIGIBILITY.isActive)
-              .eq("therapists.profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-              .in("therapists.visibility", THERAPIST_ELIGIBILITY.visibilities);
+            const res = await applyEligibility(
+              sb
+                .from("therapist_professions")
+                .select(
+                  "therapist_id, therapists!inner(id, is_active, profile_status, visibility)",
+                  { head: true, count: "exact" },
+                )
+                .eq("profession_id", p.id),
+              "therapists!inner",
+            );
             if (res.error) throw res.error;
             const count = res.count;
             const r: ProfessionStructuredResult = {
@@ -359,16 +356,16 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
         modalityMatches
           .filter((m) => m.score > 0)
           .map(async (m) => {
-            const res = await sb
-              .from("therapist_modalities")
-              .select(
-                "therapist_id, therapists!inner(id, is_active, profile_status, visibility)",
-                { head: true, count: "exact" },
-              )
-              .eq("modality_id", m.id)
-              .eq("therapists.is_active", THERAPIST_ELIGIBILITY.isActive)
-              .eq("therapists.profile_status", THERAPIST_ELIGIBILITY.profileStatus)
-              .in("therapists.visibility", THERAPIST_ELIGIBILITY.visibilities);
+            const res = await applyEligibility(
+              sb
+                .from("therapist_modalities")
+                .select(
+                  "therapist_id, therapists!inner(id, is_active, profile_status, visibility)",
+                  { head: true, count: "exact" },
+                )
+                .eq("modality_id", m.id),
+              "therapists!inner",
+            );
             if (res.error) throw res.error;
             const count = res.count;
             const r: ModalityStructuredResult = {

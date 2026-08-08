@@ -54,6 +54,15 @@ class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknow
   limit(): this {
     return this;
   }
+  ilike(): this {
+    return this;
+  }
+  /** Mirrors PostgREST: first matching row, or null. */
+  async maybeSingle(): Promise<{ data: FakeRow | null; error: unknown }> {
+    const res = this.run();
+    if (res.error) return { data: null, error: res.error };
+    return { data: res.data?.[0] ?? null, error: null };
+  }
 
   private run(): { data: FakeRow[] | null; error: unknown } {
     this.onRead(this.table);
