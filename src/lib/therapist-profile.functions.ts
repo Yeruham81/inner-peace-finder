@@ -47,6 +47,8 @@ export type ProfileEditorData = {
     is_primary: boolean;
   }[];
   online_available: boolean;
+  home_visit_available: boolean;
+  home_visit_regions: ProductRegion[];
 };
 
 export type EditorOptions = {
@@ -143,6 +145,12 @@ const SaveSchema = z.object({
     )
     .default([]),
   online_available: z.boolean().default(false),
+  home_visit_available: z.boolean().default(false),
+  home_visit_regions: z
+    .array(z.enum(PRODUCT_REGIONS))
+    .max(PRODUCT_REGIONS.length, "נבחרו יותר מדי אזורי ביקורי בית.")
+    .refine((regions) => new Set(regions).size === regions.length, "לא ניתן לבחור אותו אזור ביקורי בית יותר מפעם אחת.")
+    .default([]),
   publish: z.boolean().default(false),
 });
 
@@ -247,6 +255,14 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .filter((location) => location.location_type === "clinic")
       .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)));
     const online = (locs.data ?? []).some((l) => l.location_type === "online");
+    const homeVisitLocations = (locs.data ?? []).filter((location) => location.location_type === "home_visit");
+    const homeVisitRegions = [
+      ...new Set(
+        homeVisitLocations
+          .map((location) => location.region)
+          .filter((region): region is ProductRegion => PRODUCT_REGIONS.includes(region as ProductRegion)),
+      ),
+    ];
 
     return {
       id: t.id,
@@ -274,6 +290,8 @@ export const getMyProfile = createServerFn({ method: "GET" })
         is_primary: Boolean(location.is_primary),
       })),
       online_available: online,
+      home_visit_available: homeVisitLocations.length > 0,
+      home_visit_regions: homeVisitRegions,
     };
   });
 
@@ -296,7 +314,10 @@ function validateForPublish(input: SaveInput): string[] {
   if (!input.email) missing.push("כתובת אימייל");
   if (!input.phone) missing.push("מספר טלפון");
   const hasPhysicalLocation = input.locations.length > 0;
-  if (!hasPhysicalLocation && !input.online_available) missing.push("מיקום פיזי או זמינות אונליין");
+  if (input.home_visit_available && input.home_visit_regions.length === 0) missing.push("אזורי ביקורי בית");
+  if (!hasPhysicalLocation && !input.online_available && !input.home_visit_available) {
+    missing.push("מיקום פיזי, טיפול אונליין או ביקורי בית");
+  }
   return missing;
 }
 
@@ -445,7 +466,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       .from("therapist_locations")
       .delete()
       .eq("therapist_id", therapistId)
-      .in("location_type", ["clinic", "online"]);
+      .in("location_type", ["clinic", "online", "home_visit"]);
     if (locationDeleteError) throw new Error(`therapist_locations: ${locationDeleteError.message}`);
 
     const locRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
@@ -467,6 +488,33 @@ export const saveMyProfile = createServerFn({ method: "POST" })
         is_primary: resolvedLocations.length === 0,
         is_active: true,
       });
+    }
+
+    if (data.home_visit_available) {
+      if (data.home_visit_regions.length > 0) {
+        for (const region of data.home_visit_regions) {
+          locRows.push({
+            therapist_id: therapistId,
+            location_type: "home_visit",
+            region,
+            country: "Israel",
+            is_primary: false,
+            is_active: true,
+          });
+        }
+      } else {
+        // Preserve the checkbox state in drafts. Publishing requires at least
+        // one service region, so a region-less home_visit row is never a
+        // complete public configuration.
+        locRows.push({
+          therapist_id: therapistId,
+          location_type: "home_visit",
+          region: null,
+          country: "Israel",
+          is_primary: false,
+          is_active: true,
+        });
+      }
     }
     if (locRows.length > 0) {
       const { error } = await supabase.from("therapist_locations").insert(locRows as never);
