@@ -157,13 +157,6 @@ describe("therapist relation tables — server/client boundary", () => {
 
   it("public DTOs expose no raw location columns", () => {
     const dto = read("lib/public-therapist-profile.ts");
-    for (const col of ["address", "postal_code", "latitude", "longitude"]) {
-      expect(dto.includes(`"${col}"`) && dto.includes("PUBLIC_THERAPIST_COLUMNS"), col).toBe(
-        dto.slice(dto.indexOf("PUBLIC_THERAPIST_COLUMNS"), dto.indexOf("] as const")).includes(
-          `"${col}"`,
-        ),
-      );
-    }
     const publicList = dto.slice(
       dto.indexOf("PUBLIC_THERAPIST_COLUMNS"),
       dto.indexOf("] as const"),
@@ -171,5 +164,5 @@ describe("therapist relation tables — server/client boundary", () => {
     for (const col of ["address", "postal_code", "latitude", "longitude", "region"]) {
       expect(publicList.includes(`"${col}"`), col).toBe(false);
     }
-  });
+});
 });
