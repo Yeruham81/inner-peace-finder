@@ -32,6 +32,15 @@ import {
   type HydratedCandidate,
   type TherapistRepo,
 } from "./unified-search-executor";
+import { matchesLocationAvailability } from "./unified-search-executor";
+import {
+  regionSlugForStoredValue,
+  storedRegionValues,
+  type RegionSlug,
+} from "./locality-options";
+import { PHYSICAL_SERVICE_TYPES, SERVICE_TYPES } from "./search-contract";
+import { hasExplicitFilters } from "./explicit-filters";
+import type { SearchResultCard } from "./search-result-card";
 import type {
   InterpretationResult,
   SemanticSignal,
@@ -44,6 +53,8 @@ const Input = z.object({
   city: z.string().trim().max(80).optional().default(""),
   population: z.string().trim().max(40).optional().default(""),
   language: z.string().trim().max(8).optional().default(""),
+  regions: z.union([z.string().max(200), z.array(z.string().max(40))]).optional(),
+  serviceTypes: z.union([z.string().max(120), z.array(z.string().max(40))]).optional(),
   limit: z.number().int().min(1).max(50).optional(),
 });
 
@@ -61,20 +72,10 @@ function serverClient(): SupabaseClient<Database> {
 
 export type UnifiedSearchResult = {
   plan: TherapistSearchPlan;
-  results: Array<{
-    id: string;
-    slug: string;
-    full_name: string;
-    professional_title: string | null;
-    image_url: string | null;
-    city: string | null;
-    verified: boolean;
-    semanticScore: number;
-    preferenceScore: number;
-    qualityScore: number;
-    yearsExperience: number;
-  }>;
+  results: SearchResultCard[];
   emptyReason: null | "unrecognized_query" | "no_matching_therapists";
+  /** Diagnostics: cards that needed the primary-clinic display fallback. */
+  primaryClinicFallbackCount: number;
 };
 
 /**
@@ -115,6 +116,7 @@ async function buildPlan(
     softPreferences: merged.softPreferences,
     therapistNameIds: interpretation.therapistNameIds,
     emptyReason: interpretation.unresolvedPrimary ? "unrecognized_query" : null,
+    browseAll: query.trim().length === 0 && !hasExplicitFilters(explicitRaw),
     explicitFilters: explicit,
     filterConflicts: merged.conflicts,
   };
