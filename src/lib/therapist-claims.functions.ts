@@ -95,7 +95,11 @@ export const submitClaimRequest = createServerFn({ method: "POST" })
     }
 
     // Precondition: for claim, profile must be unclaimed. RLS enforces on INSERT.
-    const { data: t, error: tErr } = await supabase
+    // Claim targets are, by definition, NOT owned by the requester, so the
+    // owner-scoped RLS policy cannot see them. Read the two fields needed
+    // for the precondition through the trusted server client instead.
+    const { trustedReadClient } = await import("./trusted-read-client.server");
+    const { data: t, error: tErr } = await trustedReadClient()
       .from("therapists")
       .select("id, owner_account_id")
       .eq("id", data.therapistId)
@@ -185,8 +189,10 @@ export const getClaimableTherapist = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => IdSchema.parse(input))
   .handler(async ({ data, context }): Promise<ClaimableTherapist | null> => {
-    const { supabase } = context;
-    const { data: t, error } = await supabase
+    // Explicit safe projection of a profile the caller does not own; read
+    // through the trusted server client because owner-scoped RLS hides it.
+    const { trustedReadClient } = await import("./trusted-read-client.server");
+    const { data: t, error } = await trustedReadClient()
       .from("therapists")
       .select("id, slug, full_name, professional_title, city, image_url, owner_account_id")
       .eq("id", data.therapistId)
