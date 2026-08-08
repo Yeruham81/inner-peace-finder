@@ -113,8 +113,8 @@ export function searchFixture(): FakeTables {
       { therapist_id: "t-haifa", treatment_modalities: { slug: "cbt" } },
     ],
     therapist_populations: [
-      { therapist_id: "t-haifa", population_groups: { slug: "children" } },
-      { therapist_id: "t-telaviv", population_groups: { slug: "adults" } },
+      { therapist_id: "t-haifa", population_groups: { slug: "children", name: "ילדים" } },
+      { therapist_id: "t-telaviv", population_groups: { slug: "adults", name: "מבוגרים" } },
     ],
     therapist_languages: [
       { therapist_id: "t-haifa", languages: { code: "ru", name: "רוסית" } },
