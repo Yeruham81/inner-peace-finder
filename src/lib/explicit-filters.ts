@@ -13,6 +13,7 @@
  */
 
 import { normalizeForInterpretation } from "./query-normalization";
+import { normalizeRegionsParam, normalizeServiceTypesParam, type MultiValueInput } from "./search-contract";
 import type {
   Catalog,
   FilterConflict,
@@ -25,17 +26,29 @@ export type RawExplicitFilters = {
   city?: string | null;
   population?: string | null;
   language?: string | null;
+  regions?: MultiValueInput;
+  serviceTypes?: MultiValueInput;
 };
 
 export const EMPTY_EXPLICIT: ValidatedExplicitFilters = {
   cityNames: [],
   populationSlugs: [],
   languageCodes: [],
+  regionSlugs: [],
+  serviceTypes: [],
   rejected: [],
 };
 
 export function hasExplicitFilters(raw: RawExplicitFilters): boolean {
-  return Boolean(raw.city?.trim() || raw.population?.trim() || raw.language?.trim());
+  const multi = (v: MultiValueInput) =>
+    Array.isArray(v) ? v.length > 0 : Boolean(typeof v === "string" && v.trim());
+  return Boolean(
+    raw.city?.trim() ||
+      raw.population?.trim() ||
+      raw.language?.trim() ||
+      multi(raw.regions) ||
+      multi(raw.serviceTypes),
+  );
 }
 
 /** Validate raw UI filter values against the canonical catalogs. */
@@ -44,7 +57,8 @@ export function validateExplicitFilters(
   catalog: Catalog,
 ): ValidatedExplicitFilters {
   const out: ValidatedExplicitFilters = {
-    cityNames: [], populationSlugs: [], languageCodes: [], rejected: [],
+    cityNames: [], populationSlugs: [], languageCodes: [],
+    regionSlugs: [], serviceTypes: [], rejected: [],
   };
 
   const city = raw.city?.trim();
@@ -85,6 +99,16 @@ export function validateExplicitFilters(
     else out.rejected.push({ category: "language", value: language });
   }
 
+  // Regions and service types are validated against the canonical contract
+  // (not the DB catalog): both are closed, code-defined vocabularies.
+  const regions = normalizeRegionsParam(raw.regions);
+  out.regionSlugs = [...regions.values];
+  for (const value of regions.rejected) out.rejected.push({ category: "region", value });
+
+  const serviceTypes = normalizeServiceTypesParam(raw.serviceTypes);
+  out.serviceTypes = [...serviceTypes.values];
+  for (const value of serviceTypes.rejected) out.rejected.push({ category: "serviceType", value });
+
   return out;
 }
 
@@ -113,6 +137,7 @@ export function applyExplicitFilters(
     languageCodes: [...hard.languageCodes],
     deliveryModes: [...hard.deliveryModes],
     cityNames: [...hard.cityNames],
+    regionSlugs: [...(hard.regionSlugs ?? [])],
   };
   const softPreferences: SoftPreferences = {
     ...soft,
@@ -148,6 +173,12 @@ export function applyExplicitFilters(
   override("language", hardFilters.languageCodes, explicit.languageCodes,
     (v) => { hardFilters.languageCodes = v; },
     () => { softPreferences.languageCodes = []; });
+  override("region", hardFilters.regionSlugs ?? [], explicit.regionSlugs,
+    (v) => { hardFilters.regionSlugs = v; },
+    () => {});
+  override("serviceType", hardFilters.deliveryModes, explicit.serviceTypes,
+    (v) => { hardFilters.deliveryModes = v; },
+    () => { softPreferences.deliveryModes = []; });
 
   return { hardFilters, softPreferences, conflicts };
 }

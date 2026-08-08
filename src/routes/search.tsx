@@ -10,6 +10,8 @@ import {
 } from "@/lib/therapists.functions";
 import { searchStructuredTherapists } from "@/lib/structured-search.functions";
 import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter.functions";
+import { legacyRowToCard, type SearchResultCard } from "@/lib/search-result-card";
+import { resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
@@ -35,6 +37,8 @@ const searchSchema = z.object({
   city: fallback(z.string().trim().max(80), "").default(""),
   population: fallback(z.string().trim().max(40), "").default(""),
   language: fallback(z.string().trim().max(8), "").default(""),
+  regions: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
+  serviceTypes: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
   flow: fallback(z.string(), "legacy").default("legacy"),
 });
 
@@ -68,32 +72,28 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   });
 }
 
-export type UnifiedParams = {
-  q: string;
-  city: string;
-  population: string;
-  language: string;
-};
+export type UnifiedParams = ExplicitSearchContract;
 
-export function hasUnifiedInput(p: UnifiedParams): boolean {
-  return Boolean(p.q.trim() || p.city.trim() || p.population.trim() || p.language.trim());
-}
-
+/**
+ * The unified search ALWAYS runs — including with no input at all. An empty
+ * request is a legitimate "browse every eligible therapist" search, so the
+ * page never renders an empty state that contradicts a populated list.
+ */
 export function unifiedResultsQuery(p: UnifiedParams) {
   return queryOptions({
     queryKey: ["unified-search", p],
-    queryFn: (): Promise<UnifiedSearchResult | null> =>
-      hasUnifiedInput(p)
-        ? unifiedSearch({
-            data: {
-              query: p.q.trim(),
-              city: p.city.trim(),
-              population: p.population.trim(),
-              language: p.language.trim(),
-              limit: 20,
-            },
-          })
-        : Promise.resolve(null),
+    queryFn: (): Promise<UnifiedSearchResult> =>
+      unifiedSearch({
+        data: {
+          query: p.q,
+          city: p.city,
+          population: p.population,
+          language: p.language,
+          regions: [...p.regions],
+          serviceTypes: [...p.serviceTypes],
+          limit: 20,
+        },
+      }),
   });
 }
 
@@ -147,7 +147,14 @@ export const Route = createFileRoute("/search")({
 type SearchParams = z.infer<typeof searchSchema>;
 
 export function toUnifiedParams(s: SearchParams): UnifiedParams {
-  return { q: s.q, city: s.city, population: s.population, language: s.language };
+  return resolveSearchContract({
+    q: s.q,
+    city: s.city,
+    population: s.population,
+    language: s.language,
+    regions: s.regions,
+    serviceTypes: s.serviceTypes,
+  });
 }
 
 /**
@@ -238,7 +245,7 @@ function ResultsHeader({ q, count }: { q: string; count: number | null }) {
   );
 }
 
-function ResultsGrid({ results }: { results: ScoredTherapist[] }) {
+function ResultsGrid({ results }: { results: SearchResultCard[] }) {
   return (
     <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
       {results.map((t, i) => (
@@ -279,28 +286,15 @@ function EmptyState({
 
 function UnifiedSearchResults({ search }: { search: SearchParams }) {
   const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(toUnifiedParams(search)));
-  const results: ScoredTherapist[] = (pipeline?.results ?? []).map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    full_name: r.full_name,
-    professional_title: r.professional_title,
-    short_intro: null,
-    years_experience: r.yearsExperience,
-    city: r.city,
-    image_url: r.image_url,
-    verified: r.verified,
-    score: r.semanticScore,
-    matched_problem_slugs: [],
-    population_names: [],
-    language_names: [],
-  }));
+  // No adaptation: the unified pipeline already returns the card contract.
+  const results: SearchResultCard[] = pipeline?.results ?? [];
   useSearchAnalytics({ search, mode: "unified", count: results.length, isClarification: false });
 
   return (
     <>
       <ResultsHeader q={search.q} count={results.length} />
       {results.length === 0 ? (
-        <EmptyState reason={pipeline?.emptyReason ?? "unrecognized_query"} />
+        <EmptyState reason={pipeline?.emptyReason ?? "no_matching_therapists"} />
       ) : (
         <ResultsGrid results={results} />
       )}
@@ -388,7 +382,7 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
       ) : results.length === 0 ? (
         <EmptyState reason="no_matching_therapists" />
       ) : (
-        <ResultsGrid results={results} />
+        <ResultsGrid results={results.map(legacyRowToCard)} />
       )}
     </>
   );

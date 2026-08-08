@@ -23,6 +23,7 @@ function therapist(
     professional_title: "פסיכולוג",
     image_url: null,
     city: null,
+    short_intro: `תקציר עבור ${full_name}`,
     verified: true,
     gender,
     years_experience: 10,
@@ -46,9 +47,38 @@ export function searchFixture(): FakeTables {
   ];
 
   const locations = [
-    { therapist_id: "t-haifa", city: "חיפה", location_type: "clinic", is_active: true },
-    { therapist_id: "t-telaviv", city: "תל אביב", location_type: "online", is_active: true },
-    { therapist_id: "t-hidden", city: "חיפה", location_type: "clinic", is_active: true },
+    // Haifa: primary clinic + a second clinic + home visits in the north.
+    {
+      therapist_id: "t-haifa", city: "חיפה", region: "חיפה והקריות",
+      location_type: "clinic", is_primary: true, is_active: true,
+    },
+    {
+      therapist_id: "t-haifa", city: "קריית ביאליק", region: "חיפה והקריות",
+      location_type: "clinic", is_primary: false, is_active: true,
+    },
+    {
+      therapist_id: "t-haifa", city: null, region: "צפון",
+      location_type: "home_visit", is_primary: false, is_active: true,
+    },
+    // Inactive row: must never affect filtering or display.
+    {
+      therapist_id: "t-haifa", city: "אילת", region: "דרום",
+      location_type: "clinic", is_primary: false, is_active: false,
+    },
+    // Tel Aviv: online only (no region on the row).
+    {
+      therapist_id: "t-telaviv", city: null, region: null,
+      location_type: "online", is_primary: false, is_active: true,
+    },
+    // A Tel Aviv clinic with NO primary marker anywhere → display fallback.
+    {
+      therapist_id: "t-telaviv", city: "תל אביב", region: "תל אביב וגוש דן",
+      location_type: "clinic", is_primary: false, is_active: true,
+    },
+    {
+      therapist_id: "t-hidden", city: "חיפה", region: "חיפה והקריות",
+      location_type: "clinic", is_primary: true, is_active: true,
+    },
   ].map((l) => ({
     ...l,
     therapists: therapists.find((t) => t.id === l.therapist_id)!,
@@ -83,12 +113,12 @@ export function searchFixture(): FakeTables {
       { therapist_id: "t-haifa", treatment_modalities: { slug: "cbt" } },
     ],
     therapist_populations: [
-      { therapist_id: "t-haifa", population_groups: { slug: "children" } },
-      { therapist_id: "t-telaviv", population_groups: { slug: "adults" } },
+      { therapist_id: "t-haifa", population_groups: { slug: "children", name: "ילדים" } },
+      { therapist_id: "t-telaviv", population_groups: { slug: "adults", name: "מבוגרים" } },
     ],
     therapist_languages: [
-      { therapist_id: "t-haifa", languages: { code: "ru" } },
-      { therapist_id: "t-telaviv", languages: { code: "he" } },
+      { therapist_id: "t-haifa", languages: { code: "ru", name: "רוסית" } },
+      { therapist_id: "t-telaviv", languages: { code: "he", name: "עברית" } },
     ],
     problems: [{ id: "1", slug: "anxiety", name: "חרדה" }],
     problem_aliases: [{ problem_id: "1", alias: "חרדות" }],

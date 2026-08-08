@@ -1,6 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CANONICAL_LANGUAGES } from "@/lib/language-options";
+import { REGION_DEFINITIONS, REGION_SLUGS } from "@/lib/locality-options";
+import { resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
 
 type QuickFilterKey = "regions" | "language" | "population" | "serviceType";
 
@@ -18,16 +20,12 @@ type FilterDefinition = {
   helperText?: string;
 };
 
-const regionOptions: FilterOption[] = [
-  { value: "north", label: "צפון" },
-  { value: "haifa-krayot", label: "חיפה והקריות" },
-  { value: "sharon", label: "השרון" },
-  { value: "tel-aviv-gush-dan", label: "תל אביב וגוש דן" },
-  { value: "center-shfela", label: "מרכז והשפלה" },
-  { value: "jerusalem-area", label: "ירושלים והסביבה" },
-  { value: "judea-samaria", label: "יהודה ושומרון" },
-  { value: "south", label: "דרום" },
-];
+// Regions come from the single canonical definition so the UI labels and the
+// search contract can never drift apart.
+const regionOptions: FilterOption[] = REGION_SLUGS.map((slug) => ({
+  value: slug,
+  label: REGION_DEFINITIONS[slug].label,
+}));
 
 const languageOptions: FilterOption[] = CANONICAL_LANGUAGES.map(({ code, name }) => ({
   value: code,
@@ -45,11 +43,12 @@ const populationOptions: FilterOption[] = [
   { value: "parents-families", label: "הורים ומשפחות" },
 ];
 
+// Only the service types the profile editor can actually produce. There is no
+// "group treatment" option because no therapist data models it.
 const serviceTypeOptions: FilterOption[] = [
   { value: "clinic", label: "פגישה בקליניקה" },
   { value: "online", label: "טיפול אונליין" },
-  { value: "home-visit", label: "ביקור בית" },
-  { value: "group", label: "טיפול קבוצתי" },
+  { value: "home_visit", label: "ביקור בית" },
 ];
 
 type SearchFormProps = {
@@ -168,17 +167,22 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
   function submit(e: React.FormEvent) {
     e.preventDefault();
 
+    const contract = resolveSearchContract({
+      q,
+      population,
+      language,
+      regions: selectedRegions,
+      serviceTypes: selectedServiceTypes,
+    });
+
     navigate({
       to: "/search",
       search: {
-        q: q.trim() || undefined,
-
-        // זמני: משתמשים בפרמטר הקיים city כדי לא לשבור את חוזה החיפוש.
-        // בהמשך מומלץ להוסיף region/regions לעמוד התוצאות ולמנוע החיפוש.
-        city: selectedRegions.length ? selectedRegions.join(",") : undefined,
-
-        population: population || undefined,
-        language: language || undefined,
+        q: contract.q || undefined,
+        population: contract.population || undefined,
+        language: contract.language || undefined,
+        regions: serializeMultiValue(contract.regions),
+        serviceTypes: serializeMultiValue(contract.serviceTypes),
       },
     });
   }
@@ -383,7 +387,7 @@ export function SearchForm({ initialQuery = "", initialFilters = {}, variant = "
 
           {selectedServiceTypes.length > 0 && (
             <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              אפשר לבחור כמה אופני טיפול. החיבור שלהם לתוצאות החיפוש יתווסף יחד עם מסך התוצאות.
+              אפשר לבחור כמה אופני טיפול. התוצאות יכללו מטפלים שמציעים לפחות אחד מהם.
             </p>
           )}
         </div>

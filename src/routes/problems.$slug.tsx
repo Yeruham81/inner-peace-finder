@@ -5,6 +5,7 @@ import {
   searchTherapists,
 } from "@/lib/therapists.functions";
 import { TherapistCard } from "@/components/therapist-card";
+import { legacyRowToCard } from "@/lib/search-result-card";
 
 function problemQuery(slug: string) {
   return queryOptions({
@@ -113,7 +114,7 @@ function ProblemPage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {therapists.map((t) => (
-              <TherapistCard key={t.id} t={t} />
+              <TherapistCard key={t.id} t={legacyRowToCard(t)} />
             ))}
           </div>
         )}
