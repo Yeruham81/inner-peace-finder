@@ -13,7 +13,16 @@ export type TherapistPath = "therapists" | `therapists!inner${string}`;
 export const THERAPIST_ELIGIBILITY = {
   isActive: true,
   profileStatus: "published" as Database["public"]["Enums"]["therapist_profile_status"],
-  visibility: "visible" as Database["public"]["Enums"]["therapist_visibility"],
+  /**
+   * `therapist_visibility` carries two historically equivalent "publicly
+   * listed" values: `published` (what stored profiles actually use) and
+   * `visible`. Both are eligible; every other value (hidden_by_owner,
+   * archived, hidden) is not. Matching only one of them silently emptied
+   * search results even though the profiles were live.
+   */
+  visibilities: ["published", "visible"] as Array<
+    Database["public"]["Enums"]["therapist_visibility"]
+  >,
 };
 
 /**
@@ -29,7 +38,7 @@ export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapist
   return b
     .eq(`${prefix}is_active`, THERAPIST_ELIGIBILITY.isActive)
     .eq(`${prefix}profile_status`, THERAPIST_ELIGIBILITY.profileStatus)
-    .eq(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibility) as Q;
+    .in(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibilities) as Q;
 }
 
 export function isEligibleRow(row: {
@@ -40,6 +49,6 @@ export function isEligibleRow(row: {
   return (
     row.is_active === true &&
     row.profile_status === THERAPIST_ELIGIBILITY.profileStatus &&
-    row.visibility === THERAPIST_ELIGIBILITY.visibility
+    (THERAPIST_ELIGIBILITY.visibilities as string[]).includes(row.visibility ?? "")
   );
 }
