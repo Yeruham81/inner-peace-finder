@@ -11,7 +11,7 @@ import {
 import { searchStructuredTherapists } from "@/lib/structured-search.functions";
 import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter.functions";
 import { legacyRowToCard, type SearchResultCard } from "@/lib/search-result-card";
-import { resolveSearchContract, type SearchContract } from "@/lib/search-contract";
+import { resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
@@ -72,7 +72,7 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
   });
 }
 
-export type UnifiedParams = SearchContract;
+export type UnifiedParams = ExplicitSearchContract;
 
 /**
  * The unified search ALWAYS runs — including with no input at all. An empty
