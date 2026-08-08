@@ -213,20 +213,46 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           },      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
-    async idsByDeliveryModes(modes) {
-      if (modes.length === 0) return new Set();
+    async idsByLocationAvailability(filter) {
+      const { regionSlugs, serviceTypes } = filter;
+      if (regionSlugs.length === 0 && serviceTypes.length === 0) return new Set();
+
+      // One query for every location type that could satisfy the filter, then
+      // correlate region + type on the SAME row in memory.
+      const typesToLoad = serviceTypes.length > 0 ? serviceTypes : [...PHYSICAL_SERVICE_TYPES];
       const rows = unwrap(
         await sb
           .from("therapist_locations")
-          .select("therapist_id")
+          .select("therapist_id, location_type, region")
           .eq("is_active", true)
           .in(
             "location_type",
-            modes as Array<Database["public"]["Enums"]["location_type"]>,
+            typesToLoad as Array<Database["public"]["Enums"]["location_type"]>,
           ) as unknown as {
-            data: Array<{ therapist_id: string }> | null; error: unknown;
+            data: Array<{
+              therapist_id: string; location_type: string; region: string | null;
+            }> | null;
+            error: unknown;
           },      );
-      return filterByEligible(collect(rows), await eligibleIds());
+
+      const byTherapist = new Map<
+        string,
+        Array<{ location_type: string; region_slug: string | null }>
+      >();
+      for (const r of rows ?? []) {
+        const list = byTherapist.get(r.therapist_id) ?? [];
+        list.push({
+          location_type: r.location_type,
+          region_slug: regionSlugForStoredValue(r.region),
+        });
+        byTherapist.set(r.therapist_id, list);
+      }
+
+      const matched = new Set<string>();
+      for (const [id, locs] of byTherapist) {
+        if (matchesLocationAvailability(locs, filter)) matched.add(id);
+      }
+      return filterByEligible(matched, await eligibleIds());
     },
     async idsByGender(gender) {
       const rows = unwrap(
