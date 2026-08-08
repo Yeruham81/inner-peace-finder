@@ -22,10 +22,11 @@ import {
   listEligibleTherapistSlugs,
 } from "./public-therapist-queries";
 
-function publicClient() {
-  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
+async function publicClient() {
+  // Public reads run through the server-only trusted client: `anon` has no
+  // direct privileges on public.therapists. Eligibility is still applied.
+  const { trustedReadClient } = await import("./trusted-read-client.server");
+  return trustedReadClient();
 }
 
 export type ScoredTherapist = {
@@ -59,7 +60,7 @@ const SearchSchema = z.object({
 export const searchTherapists = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SearchSchema.parse(input))
   .handler(async ({ data }) => {
-    const sb = publicClient();
+    const sb = await publicClient();
     const q = (data.query ?? "").trim();
 
     // 1) Intent / alias / problem-name → matching problem IDs
@@ -284,7 +285,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
   });
 
 export const listProblems = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = publicClient();
+  const sb = await publicClient();
   const { data, error } = await sb
     .from("problems")
     .select("id, slug, description, parent_id, name:name_he")
@@ -294,13 +295,13 @@ export const listProblems = createServerFn({ method: "GET" }).handler(async () =
 });
 
 export const listFilterOptions = createServerFn({ method: "GET" }).handler(async () => {
-  return listEligibleFilterOptions(publicClient());
+  return listEligibleFilterOptions(await publicClient());
 });
 
 export const getProblemBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
   .handler(async ({ data }) => {
-    const sb = publicClient();
+    const sb = await publicClient();
     const { data: problem } = await sb
       .from("problems")
       .select("id, slug, description, parent_id, name:name_he")
@@ -318,11 +319,11 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
 export const getTherapistBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
-    return fetchPublicTherapistBySlug(publicClient(), data.slug);
+    return fetchPublicTherapistBySlug(await publicClient(), data.slug);
   });
 
 export const listAllTherapistSlugs = createServerFn({ method: "GET" }).handler(async () => {
-  return listEligibleTherapistSlugs(publicClient());
+  return listEligibleTherapistSlugs(await publicClient());
 });
 
 /* ------------------------------------------------------------------ */
@@ -357,7 +358,7 @@ export type SearchPipelineResult =
 export const classifyAndSearch = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SearchSchema.parse(input))
   .handler(async ({ data }): Promise<SearchPipelineResult> => {
-    const sb = publicClient();
+    const sb = await publicClient();
     const rawQuery = (data.query ?? "").trim();
     const normalized = rawQuery ? SemanticEngine.normalize(rawQuery) : "";
 

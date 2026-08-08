@@ -3,7 +3,7 @@
  * Cached in-process with a TTL. Server-only; never import from client code.
  */
 
-import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { applyEligibility } from "./search-eligibility";
 import { buildSearchCatalog, CITY_ALIASES } from "./catalog-builder";
@@ -14,12 +14,10 @@ let cache: { at: number; catalog: Catalog } | null = null;
 
 export { CITY_ALIASES };
 
-function serverClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+async function serverClient(): Promise<SupabaseClient<Database>> {
+  // Server-only trusted read client; `anon` cannot read public.therapists.
+  const { trustedReadClient } = await import("./trusted-read-client.server");
+  return trustedReadClient();
 }
 
 /**
@@ -28,12 +26,12 @@ function serverClient() {
  * catalog and the search share one connection.
  */
 export async function loadSearchCatalog(
-  client?: ReturnType<typeof serverClient>,
+  client?: SupabaseClient<Database>,
 ): Promise<Catalog> {
   const now = Date.now();
   if (cache && now - cache.at < TTL_MS) return cache.catalog;
 
-  const sb = client ?? serverClient();
+  const sb = client ?? (await serverClient());
 
   const cityQ = applyEligibility(
     sb
