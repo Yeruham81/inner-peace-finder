@@ -6,6 +6,13 @@ import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
 import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-feedback";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
+import {
+  PRODUCT_REGIONS,
+  loadLocalityOptions,
+  normalizeLocalityName,
+  type LocalityOption,
+  type ProductRegion,
+} from "./locality-options";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -33,9 +40,12 @@ export type ProfileEditorData = {
   modality_ids: string[];
   language_ids: string[];
   population_ids: string[];
-  primary_city: string | null;
-  primary_region: string | null;
-  primary_address: string | null;
+  locations: {
+    city: string;
+    region: ProductRegion | null;
+    address: string | null;
+    is_primary: boolean;
+  }[];
   online_available: boolean;
 };
 
@@ -44,6 +54,8 @@ export type EditorOptions = {
   modalities: { id: string; name_he: string; slug: string }[];
   languages: { id: string; name: string; code: string }[];
   populations: { id: string; name: string; slug: string }[];
+  localities: LocalityOption[];
+  locality_options_error: boolean;
 };
 
 export type SaveResult = {
@@ -115,9 +127,21 @@ const SaveSchema = z.object({
   modality_ids: z.array(z.string().uuid()).max(20).default([]),
   language_ids: z.array(z.string().uuid()).max(20).default([]),
   population_ids: z.array(z.string().uuid()).max(20).default([]),
-  primary_city: z.string().trim().max(80).nullable().optional().or(z.literal("")),
-  primary_region: z.string().trim().max(80).nullable().optional().or(z.literal("")),
-  primary_address: z.string().trim().max(200).nullable().optional().or(z.literal("")),
+  locations: z
+    .array(
+      z.object({
+        city: z.string().trim().min(1, "יש לבחור יישוב.").max(80, "שם היישוב ארוך מדי."),
+        region: z.enum(PRODUCT_REGIONS),
+        address: z.string().trim().max(200, "הכתובת ארוכה מדי.").nullable().optional().or(z.literal("")),
+      }),
+    )
+    .max(3, "ניתן להוסיף עד שלושה מיקומים פיזיים.")
+    .refine(
+      (locations) =>
+        new Set(locations.map((location) => normalizeLocalityName(location.city))).size === locations.length,
+      "לא ניתן להוסיף את אותו יישוב יותר מפעם אחת.",
+    )
+    .default([]),
   online_available: z.boolean().default(false),
   publish: z.boolean().default(false),
 });
@@ -175,7 +199,11 @@ async function resolveAccount(
 
 export const getEditorOptions = createServerFn({ method: "GET" }).handler(async (): Promise<EditorOptions> => {
   const sb = publicClient();
-  const [profs, mods, langs, pops] = await Promise.all([
+  const localitiesPromise = loadLocalityOptions()
+    .then((items) => ({ items, error: false }))
+    .catch(() => ({ items: [] as LocalityOption[], error: true }));
+
+  const [profs, mods, langs, pops, localityResult] = await Promise.all([
     sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
     sb.from("treatment_modalities").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
     sb
@@ -183,12 +211,15 @@ export const getEditorOptions = createServerFn({ method: "GET" }).handler(async 
       .select("id, name, code")
       .in("code", [...CANONICAL_LANGUAGE_CODES]),
     sb.from("population_groups").select("id, name, slug").order("sort_order"),
+    localitiesPromise,
   ]);
   return {
     professions: profs.data ?? [],
     modalities: mods.data ?? [],
     languages: orderCanonicalLanguages(langs.data ?? []),
     populations: pops.data ?? [],
+    localities: localityResult.items,
+    locality_options_error: localityResult.error,
   };
 });
 
@@ -212,10 +243,9 @@ export const getMyProfile = createServerFn({ method: "GET" })
       supabase.from("therapist_locations").select("*").eq("therapist_id", t.id).eq("is_active", true),
     ]);
 
-    const primary =
-      (locs.data ?? []).find((l) => l.is_primary && l.location_type !== "online") ??
-      (locs.data ?? []).find((l) => l.location_type !== "online") ??
-      null;
+    const physicalLocations = (locs.data ?? [])
+      .filter((location) => location.location_type === "clinic")
+      .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)));
     const online = (locs.data ?? []).some((l) => l.location_type === "online");
 
     return {
@@ -237,9 +267,12 @@ export const getMyProfile = createServerFn({ method: "GET" })
       modality_ids: (mods.data ?? []).map((r) => r.modality_id),
       language_ids: (langs.data ?? []).map((r) => r.language_id),
       population_ids: (pops.data ?? []).map((r) => r.population_id),
-      primary_city: primary?.city ?? null,
-      primary_region: primary?.region ?? null,
-      primary_address: primary?.address ?? null,
+      locations: physicalLocations.map((location) => ({
+        city: location.city ?? "",
+        region: PRODUCT_REGIONS.includes(location.region as ProductRegion) ? (location.region as ProductRegion) : null,
+        address: location.address ?? null,
+        is_primary: Boolean(location.is_primary),
+      })),
       online_available: online,
     };
   });
@@ -262,9 +295,40 @@ function validateForPublish(input: SaveInput): string[] {
   if (!input.population_ids || input.population_ids.length === 0) missing.push("אוכלוסיות טיפול");
   if (!input.email) missing.push("כתובת אימייל");
   if (!input.phone) missing.push("מספר טלפון");
-  const hasCity = !!(input.primary_city && input.primary_city.trim().length > 0);
-  if (!hasCity && !input.online_available) missing.push("מיקום פיזי או זמינות אונליין");
+  const hasPhysicalLocation = input.locations.length > 0;
+  if (!hasPhysicalLocation && !input.online_available) missing.push("מיקום פיזי או זמינות אונליין");
   return missing;
+}
+
+async function resolvePhysicalLocations(
+  locations: SaveInput["locations"],
+): Promise<Array<{ city: string; region: ProductRegion; address: string | null }>> {
+  if (locations.length === 0) return [];
+
+  let catalog: LocalityOption[] | null = null;
+  try {
+    catalog = await loadLocalityOptions();
+  } catch {
+    // The editor only offers official options. If data.gov.il is temporarily
+    // unavailable during save, keep the form usable and fall back to the
+    // already-derived, enum-validated region sent by the editor.
+  }
+
+  const byName = catalog ? new Map(catalog.map((locality) => [normalizeLocalityName(locality.name), locality])) : null;
+
+  return locations.map((location) => {
+    const normalizedCity = normalizeLocalityName(location.city);
+    const canonical = byName?.get(normalizedCity);
+    if (byName && !canonical) {
+      throw new Error(`היישוב "${location.city}" אינו מופיע ברשימת היישובים הרשמית.`);
+    }
+
+    return {
+      city: canonical?.name ?? normalizedCity,
+      region: canonical?.region ?? location.region,
+      address: location.address?.trim() || null,
+    };
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -281,6 +345,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<SaveResult> => {
     const { supabase, userId } = context;
     const accountId = await resolveAccount(supabase, userId);
+    const resolvedLocations = await resolvePhysicalLocations(data.locations);
 
     const missing = data.publish ? validateForPublish(data) : [];
     if (data.publish && missing.length > 0) {
@@ -321,8 +386,8 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       image_url: data.image_url ? data.image_url.trim() : null,
       profile_status: nextStatus,
       is_active: true,
-      city: data.primary_city ? data.primary_city.trim() : null,
-      region: data.primary_region ? data.primary_region.trim() : null,
+      city: resolvedLocations[0]?.city ?? null,
+      region: resolvedLocations[0]?.region ?? null,
       ...(data.publish ? { visibility: "visible" as const } : {}),
     };
 
@@ -374,27 +439,32 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     await replaceLinks("therapist_languages", "language_id", data.language_ids);
     await replaceLinks("therapist_populations", "population_id", data.population_ids);
 
-    // Sync locations (primary clinic + optional online row).
-    await supabase.from("therapist_locations").delete().eq("therapist_id", therapistId);
-    const locRows: Array<Record<string, unknown>> = [];
-    if (data.primary_city && data.primary_city.trim()) {
-      locRows.push({
-        therapist_id: therapistId,
-        location_type: "clinic",
-        city: data.primary_city.trim(),
-        region: data.primary_region?.trim() || null,
-        address: data.primary_address?.trim() || null,
-        country: "Israel",
-        is_primary: true,
-        is_active: true,
-      });
-    }
+    // Sync the location types managed by this editor. Preserve any future or
+    // externally-managed location types rather than deleting them blindly.
+    const { error: locationDeleteError } = await supabase
+      .from("therapist_locations")
+      .delete()
+      .eq("therapist_id", therapistId)
+      .in("location_type", ["clinic", "online"]);
+    if (locationDeleteError) throw new Error(`therapist_locations: ${locationDeleteError.message}`);
+
+    const locRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
+      therapist_id: therapistId,
+      location_type: "clinic",
+      city: location.city,
+      region: location.region,
+      address: location.address,
+      country: "Israel",
+      is_primary: index === 0,
+      is_active: true,
+    }));
+
     if (data.online_available) {
       locRows.push({
         therapist_id: therapistId,
         location_type: "online",
         country: "Israel",
-        is_primary: locRows.length === 0,
+        is_primary: resolvedLocations.length === 0,
         is_active: true,
       });
     }
