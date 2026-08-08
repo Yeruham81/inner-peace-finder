@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import type { ScoredTherapist } from "@/lib/therapists.functions";
+import { cardLocationLine, type SearchResultCard } from "@/lib/search-result-card";
 import { track } from "@/lib/analytics";
 
 export function TherapistCard({
@@ -8,7 +8,7 @@ export function TherapistCard({
   rankPosition,
   pageSource,
 }: {
-  t: ScoredTherapist;
+  t: SearchResultCard;
   rankPosition?: number;
   pageSource?: string;
 }) {
@@ -62,7 +62,7 @@ export function TherapistCard({
           </p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>📍 {t.city}</span>
+          {cardLocationLine(t) && <span>📍 {cardLocationLine(t)}</span>}
           <span>
             <span className="ltr-num">{t.years_experience}</span> שנות ניסיון
           </span>
