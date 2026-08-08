@@ -479,7 +479,13 @@ export const unifiedSearch = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<UnifiedSearchResult> => {
     return runUnifiedSearch({
       query: data.query,
-      explicit: { city: data.city, population: data.population, language: data.language },
+      explicit: {
+        city: data.city,
+        population: data.population,
+        language: data.language,
+        regions: data.regions,
+        serviceTypes: data.serviceTypes,
+      },
       limit: data.limit ?? 20,
     });
   });
