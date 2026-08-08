@@ -3,15 +3,11 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import {
-  listFilterOptions,
-  classifyAndSearch,
-  type ScoredTherapist,
-} from "@/lib/therapists.functions";
+import { listFilterOptions, classifyAndSearch, type ScoredTherapist } from "@/lib/therapists.functions";
 import { searchStructuredTherapists } from "@/lib/structured-search.functions";
 import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter.functions";
 import { legacyRowToCard, type SearchResultCard } from "@/lib/search-result-card";
-import { resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
+import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
@@ -101,9 +97,7 @@ export function structuredTherapistQuery(q: string) {
   return queryOptions({
     queryKey: ["structured-search", "therapist", q],
     queryFn: () =>
-      q.trim().length >= 2
-        ? searchStructuredTherapists({ data: { query: q.trim(), limit: 4 } })
-        : Promise.resolve([]),
+      q.trim().length >= 2 ? searchStructuredTherapists({ data: { query: q.trim(), limit: 4 } }) : Promise.resolve([]),
   });
 }
 
@@ -112,13 +106,9 @@ export const Route = createFileRoute("/search")({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     const flow = resolveFlowFromEnv(deps.flow);
-    const promises: Promise<unknown>[] = [
-      context.queryClient.ensureQueryData(filterOptionsQuery),
-    ];
+    const promises: Promise<unknown>[] = [context.queryClient.ensureQueryData(filterOptionsQuery)];
     if (flow === "unified") {
-      promises.push(
-        context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps))),
-      );
+      promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps))));
     } else {
       promises.push(context.queryClient.ensureQueryData(structuredTherapistQuery(deps.q)));
       promises.push(context.queryClient.ensureQueryData(resultsQuery(deps)));
@@ -127,10 +117,10 @@ export const Route = createFileRoute("/search")({
   },
   head: () => ({
     meta: [
-      { title: "חיפוש מטפלים לחרדה" },
+      { title: "חיפוש מטפלים | Tipulinks" },
       {
         name: "description",
-        content: "תוצאות חיפוש מטפלים לחרדה לפי בעיה, עיר, אוכלוסייה ושפה.",
+        content: "חיפוש מטפלים לפי צורך, אזור, יישוב, אוכלוסיית יעד, שפה ואופן הטיפול.",
       },
     ],
   }),
@@ -162,18 +152,8 @@ export function toUnifiedParams(s: SearchParams): UnifiedParams {
  * orchestration regression test can render the real switch and prove that
  * the Legacy queries are never instantiated in production (unified) mode.
  */
-export function SearchResultsSwitch({
-  flow,
-  search,
-}: {
-  flow: FlowValue;
-  search: SearchParams;
-}) {
-  return flow === "unified" ? (
-    <UnifiedSearchResults search={search} />
-  ) : (
-    <LegacySearchResults search={search} />
-  );
+export function SearchResultsSwitch({ flow, search }: { flow: FlowValue; search: SearchParams }) {
+  return flow === "unified" ? <UnifiedSearchResults search={search} /> : <LegacySearchResults search={search} />;
 }
 
 /**
@@ -181,13 +161,14 @@ export function SearchResultsSwitch({
  * They are NOT interchangeable: one means "we could not understand the
  * request", the other means "we understood it and nobody matched".
  */
-export function emptyStateMessage(
-  reason: null | "unrecognized_query" | "no_matching_therapists",
-): { title: string; body: string } {
+export function emptyStateMessage(reason: null | "unrecognized_query" | "no_matching_therapists"): {
+  title: string;
+  body: string;
+} {
   if (reason === "unrecognized_query") {
     return {
       title: "לא הצלחנו להבין את הבקשה",
-      body: "לא זיהינו בוודאות מה חיפשתם. נסו לנסח מחדש במילים אחרות, או השתמשו בסינון לפי עיר, אוכלוסייה ושפה.",
+      body: "לא זיהינו בוודאות מה חיפשתם. נסו לנסח מחדש במילים אחרות, או בחרו אזור, יישוב, אוכלוסיית יעד, שפה או אופן טיפול.",
     };
   }
   return {
@@ -196,12 +177,7 @@ export function emptyStateMessage(
   };
 }
 
-function useSearchAnalytics(args: {
-  search: SearchParams;
-  mode: string;
-  count: number;
-  isClarification: boolean;
-}) {
+function useSearchAnalytics(args: { search: SearchParams; mode: string; count: number; isClarification: boolean }) {
   const { search, mode, count, isClarification } = args;
   const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -210,9 +186,15 @@ function useSearchAnalytics(args: {
     lastSearchKeyRef.current = key;
     track("search_executed", { page_source: "search", origin: "SearchPage" });
     if (isClarification) {
-      track("search_clarification_shown", { page_source: "search", origin: "SearchPage" });
+      track("search_clarification_shown", {
+        page_source: "search",
+        origin: "SearchPage",
+      });
     } else if (count === 0) {
-      track("no_results_returned", { page_source: "search", origin: "SearchPage" });
+      track("no_results_returned", {
+        page_source: "search",
+        origin: "SearchPage",
+      });
     } else {
       track("therapist_results_rendered", {
         page_source: "search",
@@ -221,24 +203,41 @@ function useSearchAnalytics(args: {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.q, search.problem, search.city, search.population, search.language, count, mode]);
+  }, [
+    search.q,
+    search.problem,
+    search.city,
+    search.population,
+    search.language,
+    search.regions,
+    search.serviceTypes,
+    count,
+    mode,
+  ]);
 }
 
-function ResultsHeader({ q, count }: { q: string; count: number | null }) {
+function resultCountLabel(count: number): string {
+  if (count === 1) return "מטפל אחד";
+  return `${count} מטפלים`;
+}
+
+function ResultsHeader({ q, count, hasFilters }: { q: string; count: number | null; hasFilters: boolean }) {
   return (
-    <div className="mt-6 flex items-baseline justify-between">
-      <h1 className="text-xl font-bold text-foreground sm:text-2xl">
+    <div className="mt-7 flex flex-wrap items-end justify-between gap-2 sm:mt-8">
+      <h1 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
         {q ? (
           <>
-            תוצאות עבור <span className="text-primary">"{q}"</span>
+            תוצאות עבור <span className="text-primary">״{q}״</span>
           </>
+        ) : hasFilters ? (
+          "מטפלים לפי הסינון שבחרתם"
         ) : (
           "כל המטפלים"
         )}
       </h1>
       {count !== null && (
-        <span className="text-sm text-muted-foreground">
-          <span className="ltr-num">{count}</span> מטפלים
+        <span aria-live="polite" className="pb-0.5 text-sm text-muted-foreground sm:text-base">
+          {resultCountLabel(count)}
         </span>
       )}
     </div>
@@ -247,34 +246,30 @@ function ResultsHeader({ q, count }: { q: string; count: number | null }) {
 
 function ResultsGrid({ results }: { results: SearchResultCard[] }) {
   return (
-    <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
+    <section aria-label="תוצאות חיפוש" className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2 sm:mt-6 sm:gap-5">
       {results.map((t, i) => (
         <TherapistCard key={t.id} t={t} rankPosition={i + 1} pageSource="search" />
       ))}
-    </div>
+    </section>
   );
 }
 
-function EmptyState({
-  reason,
-}: {
-  reason: null | "unrecognized_query" | "no_matching_therapists";
-}) {
+function EmptyState({ reason }: { reason: null | "unrecognized_query" | "no_matching_therapists" }) {
   const msg = emptyStateMessage(reason);
   return (
     <div
       data-testid="search-empty-state"
       data-empty-reason={reason ?? "no_matching_therapists"}
-      className="mt-10 rounded-2xl border border-dashed border-border bg-surface p-10 text-center"
+      className="mt-6 rounded-2xl border border-dashed border-border bg-surface px-5 py-10 text-center sm:px-10 sm:py-12"
     >
-      <p className="text-base font-semibold text-foreground">{msg.title}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{msg.body}</p>
+      <p className="text-lg font-semibold text-foreground">{msg.title}</p>
+      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{msg.body}</p>
       <Link
         to="/search"
         search={{}}
-        className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
+        className="mt-5 inline-flex min-h-10 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft px-4 py-2 text-sm font-semibold text-primary transition-colors hover:border-brand/50 hover:bg-brand-soft/80"
       >
-        איפוס חיפוש
+        ניקוי החיפוש והצגת כל המטפלים
       </Link>
     </div>
   );
@@ -285,14 +280,20 @@ function EmptyState({
 /* ------------------------------------------------------------------ */
 
 function UnifiedSearchResults({ search }: { search: SearchParams }) {
-  const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(toUnifiedParams(search)));
+  const contract = toUnifiedParams(search);
+  const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(contract));
   // No adaptation: the unified pipeline already returns the card contract.
   const results: SearchResultCard[] = pipeline?.results ?? [];
-  useSearchAnalytics({ search, mode: "unified", count: results.length, isClarification: false });
+  useSearchAnalytics({
+    search,
+    mode: "unified",
+    count: results.length,
+    isClarification: false,
+  });
 
   return (
     <>
-      <ResultsHeader q={search.q} count={results.length} />
+      <ResultsHeader q={contract.q} count={results.length} hasFilters={hasAnyExplicitFilter(contract)} />
       {results.length === 0 ? (
         <EmptyState reason={pipeline?.emptyReason ?? "no_matching_therapists"} />
       ) : (
@@ -320,16 +321,18 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
     count: results.length,
     isClarification,
   });
+  const contract = toUnifiedParams(search);
 
   return (
     <>
-      <ResultsHeader q={search.q} count={isClarification ? null : results.length} />
+      <ResultsHeader
+        q={contract.q}
+        count={isClarification ? null : results.length}
+        hasFilters={hasAnyExplicitFilter(contract)}
+      />
 
       {structuredMatches && structuredMatches.length > 0 && (
-        <section
-          aria-label="התאמות לפי שם"
-          className="mt-4 rounded-2xl border border-border bg-surface p-4"
-        >
+        <section aria-label="התאמות לפי שם" className="mt-4 rounded-2xl border border-border bg-surface p-4">
           <p className="text-sm font-semibold text-foreground">התאמות לפי שם או מקצוע</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {structuredMatches.map((m) => (
@@ -341,7 +344,8 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
                 >
                   <span className="font-medium">{m.full_name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {m.professional_title}{m.city ? ` · ${m.city}` : ""}
+                    {m.professional_title}
+                    {m.city ? ` · ${m.city}` : ""}
                   </span>
                 </Link>
               </li>
@@ -352,9 +356,7 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
 
       {isClarification ? (
         <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-6 shadow-soft">
-          <p className="text-base font-semibold text-foreground">
-            {legacyPipeline!.clarification.question}
-          </p>
+          <p className="text-base font-semibold text-foreground">{legacyPipeline!.clarification.question}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {legacyPipeline!.clarification.reason === "disambiguation"
               ? "מצאנו כמה כיוונים קרובים. בחרו את המתאים ביותר כדי שנציג מטפלים רלוונטיים."
@@ -370,7 +372,10 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
                     page_source: "search",
                     problem_slug: opt.slug,
                   });
-                  navigate({ to: "/search", search: { ...search, problem: opt.slug } });
+                  navigate({
+                    to: "/search",
+                    search: { ...search, problem: opt.slug },
+                  });
                 }}
                 className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand hover:bg-brand/5"
               >
@@ -393,19 +398,23 @@ function SearchPage() {
   const navigate = useNavigate();
   const flow = resolveFlowFromEnv(search.flow);
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
+  const contract = toUnifiedParams(search);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <SearchForm
-        initialQuery={search.q}
+        initialQuery={contract.q}
         cities={filters.cities}
         populations={filters.populations}
         languages={filters.languages}
         initialFilters={{
-          city: search.city,
-          population: search.population,
-          language: search.language,
+          city: contract.city,
+          population: contract.population,
+          language: contract.language,
+          regions: [...contract.regions],
+          serviceTypes: [...contract.serviceTypes],
         }}
+        preserveSearch={import.meta.env.DEV ? { problem: search.problem, flow: search.flow } : undefined}
         variant="compact"
       />
 
@@ -419,7 +428,10 @@ function SearchPage() {
             onClick={() =>
               navigate({
                 to: "/search",
-                search: { ...search, flow: flow === "unified" ? "legacy" : "unified" },
+                search: {
+                  ...search,
+                  flow: flow === "unified" ? "legacy" : "unified",
+                },
               })
             }
           >
