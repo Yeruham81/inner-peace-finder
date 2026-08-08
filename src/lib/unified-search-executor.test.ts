@@ -247,7 +247,7 @@ describe("executor: semantic data", () => {
       semanticSignals: [{ slug: "anxiety", confidence: 1 }],
     }));
     expect(out.results.length).toBe(1);
-    expect(out.results[0].semanticScore).toBeCloseTo(0.9, 5);
+    expect(out.results[0].scores.semantic).toBeCloseTo(0.9, 5);
   });
 
   it("semantic score uses query confidence × profile weight", async () => {
@@ -259,7 +259,7 @@ describe("executor: semantic data", () => {
     const out = await executeUnifiedSearch(repo, plan({
       semanticSignals: [{ slug: "trauma", confidence: 0.6 }],
     }));
-    expect(out.results[0].semanticScore).toBeCloseTo(0.3, 5);
+    expect(out.results[0].scores.semantic).toBeCloseTo(0.3, 5);
   });
 
   it("null/malformed profile becomes empty profile without throwing", async () => {
@@ -632,7 +632,7 @@ describe("executor: ranking & preferences", () => {
       semanticSignals: [{ slug: "anxiety", confidence: 1 }],
     }));
     // One category → exactly one point, never two.
-    expect(out.results[0].preferenceScore).toBe(1);
+    expect(out.results[0].scores.preference).toBe(1);
   });
 
   it("a full seven-category preference match scores 7", async () => {
@@ -654,7 +654,7 @@ describe("executor: ranking & preferences", () => {
       semanticSignals: [{ slug: "anxiety", confidence: 1 }],
     }));
     // Seven categories × 1 point = 7, the maximum possible score.
-    expect(out.results[0].preferenceScore).toBe(7);
+    expect(out.results[0].scores.preference).toBe(7);
   });
 
   it("equal scores sort by therapistId ascending", async () => {
@@ -705,6 +705,6 @@ describe("executor: ranking & preferences", () => {
     expect(out.results[0].id).toBe("long");
     // Also assert equal qualityScore — proving experience does not leak
     // into qualityScore.
-    expect(out.results[0].qualityScore).toBe(out.results[1].qualityScore);
+    expect(out.results[0].scores.quality).toBe(out.results[1].scores.quality);
   });
 });
