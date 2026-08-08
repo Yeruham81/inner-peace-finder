@@ -382,7 +382,7 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
       ) : results.length === 0 ? (
         <EmptyState reason="no_matching_therapists" />
       ) : (
-        <ResultsGrid results={results} />
+        <ResultsGrid results={results.map(legacyRowToCard)} />
       )}
     </>
   );
