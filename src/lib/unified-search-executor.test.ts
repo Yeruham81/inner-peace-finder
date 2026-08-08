@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { executeUnifiedSearch, type TherapistRepo, type HydratedCandidate, type DisplayRow } from "./unified-search-executor";
+import {
+  executeUnifiedSearch,
+  matchesLocationAvailability,
+  type TherapistRepo,
+  type HydratedCandidate,
+  type DisplayRow,
+} from "./unified-search-executor";
 import type { SemanticProfileEntry } from "./therapist-semantic-profile";
 import type { TherapistGender, TherapistSearchPlan } from "./query-interpreter.types";
 import { parseStoredProfile } from "./therapist-semantic-profile";
@@ -23,7 +29,13 @@ type FakeTherapist = {
   populationSlugs: string[];
   languageCodes: string[];
   /** Each row = one location; therapist has one row per (city, deliveryMode). */
-  locations: { city: string; deliveryMode: "clinic" | "home_visit" | "online" | "hospital" | "other" }[];
+  locations: {
+    city: string;
+    deliveryMode: "clinic" | "home_visit" | "online" | "hospital" | "other";
+    /** Canonical region slug for this row, when it has one. */
+    regionSlug?: string | null;
+    isPrimary?: boolean;
+  }[];
   /** Canonical stored form (array). */
   storedSemanticProfile: unknown;
 };
@@ -107,11 +119,21 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
           .map((t) => t.id),
       );
     },
-    async idsByDeliveryModes(modes) {
-      guard("idsByDeliveryModes");
+    async idsByLocationAvailability(filter) {
+      guard("idsByLocationAvailability");
       return new Set(
         therapists
-          .filter((t) => isEligible(t) && t.locations.some((l) => modes.includes(l.deliveryMode)))
+          .filter(
+            (t) =>
+              isEligible(t) &&
+              matchesLocationAvailability(
+                t.locations.map((l) => ({
+                  location_type: l.deliveryMode,
+                  region_slug: l.regionSlug ?? null,
+                })),
+                filter,
+              ),
+          )
           .map((t) => t.id),
       );
     },
@@ -158,8 +180,16 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
           full_name: t.full_name,
           professional_title: t.professional_title,
           image_url: t.image_url,
-          city: t.displayCity,
           verified: t.verified,
+          short_intro: null,
+          primary_clinic: t.displayCity
+            ? { city: t.displayCity, region_slug: null, region_label: null }
+            : null,
+          additional_clinic_count: 0,
+          online_available: t.locations.some((l) => l.deliveryMode === "online"),
+          home_visit_regions: [],
+          language_names: [],
+          population_names: [],
         });
       }
       return map;
