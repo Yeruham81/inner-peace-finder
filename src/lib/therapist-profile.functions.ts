@@ -101,7 +101,13 @@ const SaveSchema = z.object({
   full_description: z.string().trim().max(DESCRIPTION_MAX, "התיאור המקצועי ארוך מדי.").nullable().optional(),
   short_intro: z.string().trim().max(400, "תיאור קצר ארוך מדי.").nullable().optional(),
   background: z.string().trim().max(4000, "טקסט הרקע ארוך מדי.").nullable().optional(),
-  years_experience: z.number().int().min(0).max(80, "שנות ניסיון לא תקין.").nullable().optional(),
+  years_experience: z
+    .number()
+    .int("שנות ניסיון חייבות להיות מספר שלם.")
+    .min(0, "שנות ניסיון לא יכולות להיות שליליות.")
+    .max(80, "שנות ניסיון לא תקין.")
+    .nullable()
+    .optional(),
   email: z.string().trim().email("כתובת אימייל לא תקינה.").max(160).nullable().optional().or(z.literal("")),
   phone: z.string().trim().max(40).nullable().optional().or(z.literal("")),
   image_url: z.string().trim().max(500).nullable().optional().or(z.literal("")),
@@ -246,10 +252,14 @@ function validateForPublish(input: SaveInput): string[] {
   const missing: string[] = [];
   if (!input.full_name || input.full_name.trim().length < 2) missing.push("שם מלא");
   if (!input.gender) missing.push("מין");
+  if (!input.professional_title || input.professional_title.trim().length === 0) missing.push("כותרת מקצועית");
   if (!input.profession_ids || input.profession_ids.length === 0) missing.push("מקצועות");
+  if (input.years_experience === null || input.years_experience === undefined) missing.push("שנות ניסיון");
   if (!input.full_description || input.full_description.trim().length < DESCRIPTION_MIN) {
     missing.push("תיאור מקצועי");
   }
+  if (!input.language_ids || input.language_ids.length === 0) missing.push("שפות טיפול");
+  if (!input.population_ids || input.population_ids.length === 0) missing.push("אוכלוסיות טיפול");
   if (!input.email) missing.push("כתובת אימייל");
   if (!input.phone) missing.push("מספר טלפון");
   const hasCity = !!(input.primary_city && input.primary_city.trim().length > 0);
@@ -305,7 +315,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       full_description: data.full_description?.trim() || null,
       short_intro: data.short_intro?.trim() || null,
       background: data.background?.trim() || null,
-      years_experience: data.years_experience ?? 0,
+      years_experience: data.years_experience ?? null,
       email: data.email ? data.email.trim() : null,
       phone: data.phone ? data.phone.trim() : null,
       image_url: data.image_url ? data.image_url.trim() : null,
@@ -417,9 +427,7 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
     // Two fixed queries (no N+1): the FULL active canonical catalog plus the
     // aliases of those active problems. Direct matching must never be gated
     // by what the semantic engine happened to propose.
-    const catalog = await loadFeedbackCatalog(
-      context.supabase as unknown as Parameters<typeof loadFeedbackCatalog>[0],
-    );
+    const catalog = await loadFeedbackCatalog(context.supabase as unknown as Parameters<typeof loadFeedbackCatalog>[0]);
 
     // Semantic extraction stays untouched; its results are only *validated*
     // against the active catalog + strict explicit evidence.
