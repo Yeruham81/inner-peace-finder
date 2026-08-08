@@ -298,8 +298,12 @@ function EditorPage() {
   const publishMissing =
     form.full_name.trim().length < 2 ||
     !form.gender ||
+    !form.professional_title.trim() ||
     form.profession_ids.length === 0 ||
+    form.years_experience.trim() === "" ||
     form.full_description.trim().length < DESCRIPTION_MIN ||
+    form.language_ids.length === 0 ||
+    form.population_ids.length === 0 ||
     !form.email.trim() ||
     !form.phone.trim() ||
     (!hasCity && !form.online_available);
@@ -310,11 +314,11 @@ function EditorPage() {
         <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-3xl font-bold text-foreground">
                 {isEdit ? "עריכת פרופיל מטפל" : "יצירת פרופיל מטפל חדש"}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                ניתן לשמור טיוטה בכל שלב. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום.
+              <p className="mt-1 text-base text-muted-foreground">
+                ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום.
               </p>
             </div>
             <StatusBadge status={status} />
@@ -374,7 +378,7 @@ function EditorPage() {
                       />
                     </Field>
 
-                    <Field label="כותרת מקצועית">
+                    <Field label="כותרת מקצועית *">
                       <Input
                         value={form.professional_title}
                         onChange={(e) => setForm({ ...form, professional_title: e.target.value })}
@@ -391,7 +395,7 @@ function EditorPage() {
                         placeholder="לדוגמה: פסיכולוגית קלינית המתמחה בטיפול בחרדה, משברי חיים וקשיים במערכות יחסים"
                         className="bg-white transition-colors focus:border-brand focus:ring-brand/30"
                       />
-                      <p className="mt-1.5 text-xs text-muted-foreground">
+                      <p className="mt-1.5 text-sm text-muted-foreground">
                         הציגו את עצמכם במשפט אחד שיופיע בחלק העליון של הפרופיל.
                       </p>
                     </Field>
@@ -417,12 +421,12 @@ function EditorPage() {
 
               <Section title="קצת עליי *" action={<DescriptionHelpDialog />}>
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     כתבו תיאור אישי ומקצועי של עצמכם, של דרך העבודה והניסיון שלכם. פרטו באילו מצבים וקשיים אתם מסייעים,
                     עם אילו אוכלוסיות אתם עובדים ובאילו תחומים צברתם ניסיון. תיאור מדויק ומפורט יסייע להציג את הפרופיל
                     שלכם לאנשים שמחפשים מענה המתאים לניסיון ולתחומי הטיפול שלכם.
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     מומלץ להימנע מניסוחים כלליים כמו "ליווי בתהליכי שינוי” או "טיפול בקשיים רגשיים”, ולפרט ככל האפשר מהם
                     המצבים שבהם אתם מטפלים.
                   </p>
@@ -459,7 +463,7 @@ function EditorPage() {
               </Section>
 
               <Section title="השכלה, הכשרה וניסיון מקצועי">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע רלוונטי.
                 </p>
                 <textarea
@@ -478,7 +482,7 @@ function EditorPage() {
               title="פרטי הטיפול"
               description="הגדירו למי הטיפול מתאים, היכן ובאילו שפות הוא ניתן וכיצד ניתן ליצור אתכם קשר."
             >
-              <Section title="שפות הטיפול">
+              <Section title="שפות הטיפול *">
                 <SelectionGrid
                   items={orderedLanguages.map((l) => ({ id: l.id, label: l.name }))}
                   selected={form.language_ids}
@@ -488,7 +492,7 @@ function EditorPage() {
                 />
               </Section>
 
-              <Section title="למי מיועד הטיפול?">
+              <Section title="למי מיועד הטיפול? *">
                 <SelectionGrid
                   items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
                   selected={form.population_ids}
@@ -499,7 +503,7 @@ function EditorPage() {
               </Section>
 
               <Section title="מיקום הטיפול">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   מלאו את פרטי המיקום הפיזי שבו אתם מקבלים מטופלים. ניתן להציע גם טיפול אונליין באזור הבא.
                 </p>
 
@@ -535,7 +539,7 @@ function EditorPage() {
               </Section>
 
               <Section title="אופן הטיפול *">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   יש למלא מיקום פיזי, לסמן זמינות לטיפול אונליין, או לבחור בשתי האפשרויות.
                 </p>
 
@@ -649,8 +653,8 @@ function FormArea({
           {number}
         </span>
         <div>
-          <h2 className="text-xl font-bold text-foreground">{title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+          <p className="mt-1 text-base text-muted-foreground">{description}</p>
         </div>
       </div>
       <div className="grid gap-4">{children}</div>
@@ -674,12 +678,12 @@ function ProfileActions({
   return (
     <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-foreground">שמירה ופרסום</h2>
+        <h2 className="text-lg font-semibold text-foreground">שמירה ופרסום</h2>
         <StatusBadge status={status} />
       </div>
 
       <div
-        className={`mt-4 rounded-xl border p-3 text-xs leading-relaxed ${
+        className={`mt-4 rounded-xl border p-3 text-sm leading-relaxed ${
           publishMissing
             ? "border-amber-200 bg-amber-50 text-amber-900"
             : "border-emerald-200 bg-emerald-50 text-emerald-900"
@@ -715,7 +719,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
   return (
     <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         {action}
       </div>
       <div className="grid gap-4">{children}</div>
@@ -823,7 +827,7 @@ function ProfessionSelector({
         }`}
       >
         <span className="flex min-w-0 flex-1 items-start gap-1">
-          <span className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold leading-snug text-foreground md:line-clamp-1">
+          <span className="min-w-0 flex-1 line-clamp-2 text-base font-semibold leading-snug text-foreground md:line-clamp-1">
             {category.title}
           </span>
 
@@ -858,8 +862,8 @@ function ProfessionSelector({
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">{category.title}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">בחרו את כל המקצועות הרלוונטיים לפרופיל שלכם.</p>
+            <h3 className="text-base font-semibold text-foreground">{category.title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">בחרו את כל המקצועות הרלוונטיים לפרופיל שלכם.</p>
           </div>
           <span className="text-xs font-medium text-foreground">
             {categorySelectedCount} מתוך {category.items.length} נבחרו
@@ -898,7 +902,7 @@ function ProfessionSelector({
         </div>
 
         {selectedOtherProfession && category.id === "emotional-therapy" && (
-          <p className="mt-3 rounded-lg border border-brand/20 bg-brand/5 p-2.5 text-xs text-muted-foreground">
+          <p className="mt-3 rounded-lg border border-brand/20 bg-brand/5 p-2.5 text-sm text-muted-foreground">
             אם התחום שלכם אינו מופיע ברשימה, ציינו את ההגדרה המדויקת בשדה „כותרת מקצועית” שבאזור הפרטים האישיים.
           </p>
         )}
@@ -937,13 +941,13 @@ function ProfessionSelector({
     <div>
       <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_8rem] sm:gap-4">
         <div className="min-w-0 text-right">
-          <div className="text-sm font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <div className="text-base font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.
           </p>
         </div>
 
-        <Field label="שנות ניסיון">
+        <Field label="שנות ניסיון *">
           <Input
             type="number"
             inputMode="numeric"
@@ -1039,9 +1043,11 @@ function SelectionGrid({
   return (
     <div>
       {(hint || (showCount && selected.length > 0)) && (
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>{hint}</span>
-          {showCount && selected.length > 0 && <span className="font-medium text-foreground">{selectedLabel}</span>}
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-muted-foreground">
+          <span className="text-sm">{hint}</span>
+          {showCount && selected.length > 0 && (
+            <span className="text-xs font-medium text-foreground">{selectedLabel}</span>
+          )}
         </div>
       )}
 
@@ -1070,7 +1076,7 @@ function SelectionGrid({
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium leading-snug">{item.label}</span>
                 {item.description && (
-                  <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">
+                  <span className="mt-1 block text-sm font-normal leading-relaxed text-muted-foreground">
                     {item.description}
                   </span>
                 )}
@@ -1148,19 +1154,15 @@ function SemanticFeedbackPanel({ description }: { description: string }) {
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
-      <h3 className="text-sm font-semibold text-foreground">תחומי טיפול מרכזיים שעלו מתוך התיאור שלך</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        המערכת מנתחת את התיאור שלך כדי לזהות אילו תחומי טיפול והתמודדויות ניתן להסיק ממנו.
-      </p>
+      <h3 className="text-base font-semibold text-foreground">תחומי טיפול שהמערכת זיהתה בתיאור שלך</h3>
+      <p className="mt-1 text-sm text-muted-foreground">המערכת מזהה בתיאור את תחומי הטיפול.</p>
       <div className="mt-3">
         {!enabled ? (
-          <p className="text-xs text-muted-foreground">הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.</p>
+          <p className="text-sm text-muted-foreground">הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.</p>
         ) : query.isFetching && domains.length === 0 ? (
-          <p className="text-xs text-muted-foreground">מנתח…</p>
+          <p className="text-sm text-muted-foreground">מנתח…</p>
         ) : domains.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            עדיין לא זוהו תחומי טיפול. ניתן לשפר את התיאור כדי לעזור למערכת להבין את תחומי הטיפול שלך.
-          </p>
+          <p className="text-sm text-muted-foreground">עדיין לא זוהו תחומי טיפול בתיאור.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {domains.map((d) => (
