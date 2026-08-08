@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import { orderCanonicalLanguages } from "@/lib/language-options";
+import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
@@ -73,6 +74,12 @@ const emptyForm: FormState = {
 type ProfessionOption = {
   id: string;
   name_he: string;
+};
+
+type ModalityOption = {
+  id: string;
+  name_he: string;
+  slug: string;
 };
 
 type ProfessionCategoryDefinition = {
@@ -453,12 +460,10 @@ function EditorPage() {
               </Section>
 
               <Section title="גישות ושיטות טיפוליות">
-                <SelectionGrid
-                  items={(options.data?.modalities ?? []).map((m) => ({ id: m.id, label: m.name_he }))}
+                <ModalitySelector
+                  modalities={options.data?.modalities ?? []}
                   selected={form.modality_ids}
                   onChange={(ids) => setForm({ ...form, modality_ids: ids })}
-                  columns="three"
-                  hint="ניתן לבחור כמה שיטות טיפול."
                 />
               </Section>
 
@@ -1014,6 +1019,220 @@ function ProfessionSelector({
       )}
       <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "mobile")}</div>
       <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "desktop")}</div>
+    </div>
+  );
+}
+
+function ModalitySelector({
+  modalities,
+  selected,
+  onChange,
+}: {
+  modalities: ModalityOption[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+
+  const categories = useMemo(() => {
+    const matchedIds = new Set<string>();
+
+    const grouped = MODALITY_GROUPS.map((group) => {
+      const items = modalities.filter((modality) => modalityGroupForSlug(modality.slug)?.id === group.id);
+      items.forEach((modality) => matchedIds.add(modality.id));
+      return { ...group, items };
+    });
+
+    const unmatched = modalities.filter((modality) => !matchedIds.has(modality.id));
+    if (unmatched.length === 0) return grouped;
+
+    return [
+      ...grouped,
+      {
+        id: "additional-modalities",
+        title: "גישות נוספות",
+        description: "גישות ושיטות נוספות הזמינות במערכת.",
+        items: unmatched,
+      },
+    ];
+  }, [modalities]);
+
+  type CategoryWithItems = (typeof categories)[number];
+
+  const selectedModalities = modalities.filter((modality) => selected.includes(modality.id));
+  const totalSelectedLabel =
+    selected.length === 1 ? "נבחרה גישה אחת" : selected.length > 1 ? `נבחרו ${selected.length} גישות` : "";
+
+  const toggleModality = (modalityId: string) => {
+    onChange(
+      selected.includes(modalityId)
+        ? selected.filter((selectedId) => selectedId !== modalityId)
+        : [...selected, modalityId],
+    );
+  };
+
+  if (modalities.length === 0) {
+    return <p className="text-sm text-muted-foreground">אין גישות ושיטות זמינות לבחירה.</p>;
+  }
+
+  const renderCategoryCard = (category: CategoryWithItems, layoutId: string) => {
+    const isOpen = activeCategoryId === category.id;
+    const selectedCount = category.items.filter((modality) => selected.includes(modality.id)).length;
+    const isEmpty = category.items.length === 0;
+
+    return (
+      <button
+        key={category.id}
+        type="button"
+        aria-expanded={isOpen}
+        aria-controls={`modality-category-${layoutId}-${category.id}`}
+        disabled={isEmpty}
+        onClick={() => setActiveCategoryId(isOpen ? null : category.id)}
+        className={`group flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 md:min-h-12 ${
+          isOpen
+            ? "border-brand bg-brand/10 shadow-sm ring-1 ring-brand/20"
+            : selectedCount > 0
+              ? "border-brand/50 bg-brand/5 hover:border-brand/70"
+              : "border-brand/30 bg-brand-soft hover:border-brand/60"
+        }`}
+      >
+        <span className="flex min-w-0 flex-1 items-start gap-1">
+          <span className="min-w-0 flex-1 line-clamp-2 text-base font-semibold leading-snug text-foreground">
+            {category.title}
+          </span>
+
+          {selectedCount > 0 && (
+            <span className="mt-0.5 shrink-0 whitespace-nowrap text-sm font-semibold leading-snug text-brand">
+              ({selectedCount})
+            </span>
+          )}
+        </span>
+
+        <span
+          aria-hidden="true"
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+            selectedCount > 0
+              ? "border-brand bg-brand text-white"
+              : "border-brand/40 bg-background text-muted-foreground"
+          }`}
+        >
+          {selectedCount > 0 ? "✓" : isOpen ? "−" : "+"}
+        </span>
+      </button>
+    );
+  };
+
+  const renderCategoryPanel = (category: CategoryWithItems, layoutId: string) => {
+    const selectedCount = category.items.filter((modality) => selected.includes(modality.id)).length;
+
+    return (
+      <div
+        id={`modality-category-${layoutId}-${category.id}`}
+        className="rounded-xl border border-brand/30 bg-background/70 p-3 sm:p-4"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="max-w-2xl">
+            <h3 className="text-base font-semibold text-foreground">{category.title}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{category.description}</p>
+          </div>
+          <span className="text-xs font-medium text-foreground">
+            {selectedCount} מתוך {category.items.length} נבחרו
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {category.items.map((modality) => {
+            const active = selected.includes(modality.id);
+
+            return (
+              <button
+                key={modality.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleModality(modality.id)}
+                className={`group flex min-h-10 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 ${
+                  active
+                    ? "border-brand bg-brand/10 text-foreground shadow-sm ring-1 ring-brand/20"
+                    : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
+                }`}
+              >
+                <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{modality.name_he}</span>
+                <span
+                  aria-hidden="true"
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                    active
+                      ? "border-brand bg-brand text-white"
+                      : "border-brand/40 bg-background text-transparent group-hover:border-brand/70"
+                  }`}
+                >
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCategoryRows = (columns: 2 | 3, layoutId: string) =>
+    chunkItems(categories, columns).map((row, rowIndex) => {
+      const openCategory = row.find((category) => category.id === activeCategoryId) ?? null;
+      const gridColumnsClass = columns === 2 ? "grid-cols-2" : "grid-cols-3";
+
+      return (
+        <div key={`${layoutId}-${rowIndex}`}>
+          <div className={`grid gap-2 ${gridColumnsClass}`}>
+            {row.map((category) => renderCategoryCard(category, `${layoutId}-${rowIndex}`))}
+          </div>
+
+          {openCategory && openCategory.items.length > 0 && (
+            <>
+              <div className={`grid ${gridColumnsClass}`} aria-hidden="true">
+                {row.map((category) => (
+                  <div key={category.id} className="flex justify-center">
+                    {category.id === openCategory.id && <span className="h-3 w-px bg-brand/50" />}
+                  </div>
+                ))}
+              </div>
+              {renderCategoryPanel(openCategory, `${layoutId}-${rowIndex}`)}
+            </>
+          )}
+        </div>
+      );
+    });
+
+  return (
+    <div>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        סמנו את הגישות והשיטות שבהן אתם משתמשים במסגרת הטיפול. ניתן לבחור יותר מאפשרות אחת.
+      </p>
+
+      {selectedModalities.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="הגישות והשיטות שנבחרו">
+          {selectedModalities.map((modality) => (
+            <button
+              key={modality.id}
+              type="button"
+              onClick={() => toggleModality(modality.id)}
+              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+              aria-label={`הסרת ${modality.name_he}`}
+            >
+              <span>{modality.name_he}</span>
+              <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+                ×
+              </span>
+            </button>
+          ))}
+
+          <span className="inline-flex h-7 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+            {totalSelectedLabel}
+          </span>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "modality-mobile")}</div>
+      <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "modality-desktop")}</div>
     </div>
   );
 }
