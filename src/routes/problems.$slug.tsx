@@ -113,7 +113,7 @@ function ProblemPage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {therapists.map((t) => (
-              <TherapistCard key={t.id} t={t} />
+              <TherapistCard key={t.id} t={legacyRowToCard(t)} />
             ))}
           </div>
         )}
