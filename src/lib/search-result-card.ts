@@ -38,6 +38,70 @@ export type SearchResultCard = {
   scores: { semantic: number; preference: number; quality: number };
 };
 
+export type ActiveLocationRow = {
+  location_type: string;
+  city: string | null;
+  region: string | null;
+  is_primary: boolean | null;
+};
+
+export type CardLocationDisplay = {
+  primary_clinic: CardClinicLocation | null;
+  additional_clinic_count: number;
+  online_available: boolean;
+  home_visit_regions: string[];
+  /** Active clinics exist but none was marked primary (historical data). */
+  primary_clinic_fallback_used: boolean;
+};
+
+/**
+ * Derive card location display data from ACTIVE `therapist_locations` rows.
+ *
+ * Read-only and deterministic:
+ *  - primary clinic = the explicitly marked `is_primary` active clinic,
+ *  - if malformed historical data has active clinics but no primary marker,
+ *    the first clinic in Hebrew city order is used for display ONLY and the
+ *    fallback is reported,
+ *  - remaining active clinics are counted separately,
+ *  - online availability comes from an active `online` row,
+ *  - home-visit regions come from active `home_visit` rows.
+ */
+export function buildCardLocationDisplay(
+  rows: readonly ActiveLocationRow[],
+  resolveRegion: (stored: string | null) => { slug: string | null; label: string | null },
+): CardLocationDisplay {
+  const clinics = rows
+    .filter((r) => r.location_type === "clinic" && (r.city ?? "").trim().length > 0)
+    .sort((a, b) => (a.city ?? "").localeCompare(b.city ?? "", "he"));
+
+  const marked = clinics.filter((r) => r.is_primary === true);
+  const chosen = marked[0] ?? clinics[0] ?? null;
+  const fallbackUsed = marked.length === 0 && clinics.length > 0;
+
+  const primary_clinic: CardClinicLocation | null = chosen
+    ? {
+        city: (chosen.city ?? "").trim(),
+        region_slug: resolveRegion(chosen.region).slug,
+        region_label: resolveRegion(chosen.region).label,
+      }
+    : null;
+
+  const home_visit_regions: string[] = [];
+  for (const r of rows) {
+    if (r.location_type !== "home_visit") continue;
+    const label = resolveRegion(r.region).label;
+    if (label && !home_visit_regions.includes(label)) home_visit_regions.push(label);
+  }
+
+  return {
+    primary_clinic,
+    additional_clinic_count: clinics.length > 0 ? clinics.length - 1 : 0,
+    online_available: rows.some((r) => r.location_type === "online"),
+    home_visit_regions,
+    primary_clinic_fallback_used: fallbackUsed,
+  };
+}
+
 /** Human-readable location line, or null when there is nothing to show. */
 export function cardLocationLine(card: SearchResultCard): string | null {
   const parts: string[] = [];
