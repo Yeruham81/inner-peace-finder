@@ -23,6 +23,98 @@ export const PRODUCT_REGIONS = [
 
 export type ProductRegion = (typeof PRODUCT_REGIONS)[number];
 
+/**
+ * Canonical region slugs — the ONLY representation allowed in the search
+ * contract (URL `regions=` parameter and validated filters).
+ *
+ * `storedValues` is the set of values that may legitimately appear in
+ * `therapist_locations.region` for this region: the canonical Hebrew
+ * `ProductRegion` label written by the current profile editor, plus the
+ * shorter historical labels present in rows created before the eight
+ * product regions were introduced. Matching is READ-ONLY: nothing is
+ * rewritten or backfilled.
+ */
+export const REGION_SLUGS = [
+  "north",
+  "haifa-krayot",
+  "sharon",
+  "tel-aviv-gush-dan",
+  "center-shfela",
+  "jerusalem-area",
+  "judea-samaria",
+  "south",
+] as const;
+
+export type RegionSlug = (typeof REGION_SLUGS)[number];
+
+export type RegionDefinition = {
+  slug: RegionSlug;
+  /** Canonical Hebrew label (also the editor-side `ProductRegion` value). */
+  label: ProductRegion;
+  /** Values accepted in `therapist_locations.region` for this region. */
+  storedValues: string[];
+};
+
+export const REGION_DEFINITIONS: Record<RegionSlug, RegionDefinition> = {
+  north: { slug: "north", label: "צפון", storedValues: ["צפון"] },
+  "haifa-krayot": {
+    slug: "haifa-krayot",
+    label: "חיפה והקריות",
+    storedValues: ["חיפה והקריות", "חיפה"],
+  },
+  sharon: { slug: "sharon", label: "השרון", storedValues: ["השרון", "שרון"] },
+  "tel-aviv-gush-dan": {
+    slug: "tel-aviv-gush-dan",
+    label: "תל אביב וגוש דן",
+    storedValues: ["תל אביב וגוש דן", "תל אביב", "גוש דן"],
+  },
+  "center-shfela": {
+    slug: "center-shfela",
+    label: "מרכז והשפלה",
+    storedValues: ["מרכז והשפלה", "מרכז", "השפלה", "שפלה"],
+  },
+  "jerusalem-area": {
+    slug: "jerusalem-area",
+    label: "ירושלים והסביבה",
+    storedValues: ["ירושלים והסביבה", "ירושלים"],
+  },
+  "judea-samaria": {
+    slug: "judea-samaria",
+    label: "יהודה ושומרון",
+    storedValues: ["יהודה ושומרון"],
+  },
+  south: { slug: "south", label: "דרום", storedValues: ["דרום"] },
+};
+
+export function isRegionSlug(value: string): value is RegionSlug {
+  return (REGION_SLUGS as readonly string[]).includes(value);
+}
+
+export function regionLabel(slug: RegionSlug): ProductRegion {
+  return REGION_DEFINITIONS[slug].label;
+}
+
+/** Slug for a value stored in `therapist_locations.region`, when recognized. */
+export function regionSlugForStoredValue(stored: string | null): RegionSlug | null {
+  if (!stored) return null;
+  const n = normalizeLocalityName(stored);
+  for (const slug of REGION_SLUGS) {
+    if (REGION_DEFINITIONS[slug].storedValues.some((v) => normalizeLocalityName(v) === n)) {
+      return slug;
+    }
+  }
+  return null;
+}
+
+/** Every accepted stored `region` value for the given canonical slugs. */
+export function storedRegionValues(slugs: readonly RegionSlug[]): string[] {
+  const out = new Set<string>();
+  for (const slug of slugs) {
+    for (const v of REGION_DEFINITIONS[slug].storedValues) out.add(v);
+  }
+  return [...out];
+}
+
 export type LocalityOption = {
   code: string;
   name: string;
