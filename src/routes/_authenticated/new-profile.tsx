@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -11,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import { orderCanonicalLanguages } from "@/lib/language-options";
+import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
 import {
   DESCRIPTION_MAX,
@@ -62,6 +64,8 @@ type FormState = {
   population_ids: string[];
   locations: FormLocation[];
   online_available: boolean;
+  home_visit_available: boolean;
+  home_visit_regions: ProductRegion[];
 };
 
 const emptyForm: FormState = {
@@ -81,6 +85,8 @@ const emptyForm: FormState = {
   population_ids: [],
   locations: [blankLocation()],
   online_available: false,
+  home_visit_available: false,
+  home_visit_regions: [],
 };
 
 type ProfessionOption = {
@@ -243,6 +249,8 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
     population_ids: p.population_ids,
     locations,
     online_available: p.online_available,
+    home_visit_available: p.home_visit_available,
+    home_visit_regions: p.home_visit_regions,
   };
 }
 
@@ -291,6 +299,8 @@ function EditorPage() {
               address: location.address || null,
             })),
           online_available: form.online_available,
+          home_visit_available: form.home_visit_available,
+          home_visit_regions: form.home_visit_regions,
           publish,
         },
       }),
@@ -335,7 +345,8 @@ function EditorPage() {
     form.population_ids.length === 0 ||
     !form.email.trim() ||
     !form.phone.trim() ||
-    (!hasPhysicalLocation && !form.online_available);
+    (form.home_visit_available && form.home_visit_regions.length === 0) ||
+    (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
 
   return (
     <div className="min-h-screen bg-brand-soft/50">
@@ -529,9 +540,10 @@ function EditorPage() {
                 />
               </Section>
 
-              <Section title="מיקום הטיפול">
+              <Section title="מיקום הטיפול *">
                 <p className="text-sm text-muted-foreground">
-                  בחרו את היישוב שבו אתם מקבלים מטופלים. האזור יתעדכן אוטומטית. ניתן להוסיף עד שלושה מיקומים פיזיים.
+                  בחרו את היישוב שבו אתם מקבלים מטופלים. האזור יתעדכן אוטומטית. ניתן להוסיף עד שלושה מיקומים פיזיים,
+                  ולהציע גם טיפול אונליין או ביקורי בית.
                 </p>
 
                 {options.data?.locality_options_error && (
@@ -637,29 +649,69 @@ function EditorPage() {
                     + הוספת מיקום נוסף
                   </Button>
                 )}
-              </Section>
 
-              <Section title="אופן הטיפול *">
+                <div className="space-y-3 border-t border-border pt-5">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white/60 p-4 transition-colors hover:border-brand/50">
+                    <Checkbox
+                      checked={form.online_available}
+                      onCheckedChange={(checked) =>
+                        setForm((current) => ({ ...current, online_available: checked === true }))
+                      }
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-foreground">אני מציע/ה גם טיפול אונליין</span>
+                      <span className="mt-1 block text-sm text-muted-foreground">
+                        פגישות טיפול מרחוק באמצעות שיחת וידאו.
+                      </span>
+                    </span>
+                  </label>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white/60 p-4 transition-colors hover:border-brand/50">
+                    <Checkbox
+                      checked={form.home_visit_available}
+                      onCheckedChange={(checked) =>
+                        setForm((current) => ({
+                          ...current,
+                          home_visit_available: checked === true,
+                          home_visit_regions: checked === true ? current.home_visit_regions : [],
+                        }))
+                      }
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-foreground">אני מציע/ה גם ביקורי בית</span>
+                      <span className="mt-1 block text-sm text-muted-foreground">
+                        מפגשים בבית המטופל באזורים שתבחרו.
+                      </span>
+                    </span>
+                  </label>
+
+                  {form.home_visit_available && (
+                    <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
+                      <h4 className="text-base font-semibold text-foreground">אזורי ביקורי הבית *</h4>
+                      <p className="mt-1 text-sm text-muted-foreground">ניתן לבחור יותר מאזור אחד.</p>
+                      <div className="mt-3">
+                        <SelectionGrid
+                          items={PRODUCT_REGIONS.map((region) => ({ id: region, label: region }))}
+                          selected={form.home_visit_regions}
+                          onChange={(ids) =>
+                            setForm((current) => ({
+                              ...current,
+                              home_visit_regions: ids as ProductRegion[],
+                            }))
+                          }
+                          columns="four"
+                          showCount={false}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <p className="text-sm text-muted-foreground">
-                  יש למלא מיקום פיזי, לסמן זמינות לטיפול אונליין, או לבחור בשתי האפשרויות.
+                  לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור שירות.
                 </p>
-
-                <Field label="טיפול אונליין">
-                  <SelectionGrid
-                    items={[
-                      {
-                        id: "online",
-                        label: "אני מציע/ה גם טיפול אונליין",
-                        description: "פגישות טיפול מרחוק באמצעות שיחת וידאו",
-                      },
-                    ]}
-                    selected={form.online_available ? ["online"] : []}
-                    onChange={(ids) => setForm({ ...form, online_available: ids.includes("online") })}
-                    columns="one"
-                    hint="ניתן להציע טיפול אונליין בנוסף למיקום פיזי אחד או יותר, או כדרך הטיפול היחידה."
-                    showCount={false}
-                  />
-                </Field>
               </Section>
 
               <Section title="פרטי קשר">
