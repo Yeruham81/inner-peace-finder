@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { applyEligibility } from "./search-eligibility";
@@ -34,12 +33,11 @@ function unwrap<T>(res: { data: T | null; error: unknown }): T | null {
  * union — no core changes required.
  */
 
-function publicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+async function publicClient() {
+  // Public reads run through the server-only trusted client: `anon` has no
+  // direct privileges on public.therapists. Eligibility is still applied.
+  const { trustedReadClient } = await import("./trusted-read-client.server");
+  return trustedReadClient();
 }
 
 export type StructuredEntityType = "therapist" | "profession" | "modality" | "location";
@@ -123,7 +121,7 @@ function scoreText(target: string, ql: string): number {
  * entity types via `types`; default is all supported types.
  */
 async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<StructuredResult[]> {
-    const sb = publicClient();
+    const sb = await publicClient();
     const q = data.query.trim();
     if (q.length < 2) return [];
     const ql = q.toLowerCase();

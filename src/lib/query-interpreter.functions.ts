@@ -13,7 +13,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
@@ -62,12 +62,10 @@ const InterpretInput = z.object({
   query: z.string().trim().min(1).max(200),
 });
 
-function serverClient(): SupabaseClient<Database> {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+async function serverClient(): Promise<SupabaseClient<Database>> {
+  // Server-only trusted read client; `anon` cannot read public.therapists.
+  const { trustedReadClient } = await import("./trusted-read-client.server");
+  return trustedReadClient();
 }
 
 export type UnifiedSearchResult = {
@@ -455,7 +453,7 @@ export async function runUnifiedSearch(
   args: { query: string; explicit: RawExplicitFilters; limit: number },
   client?: SupabaseClient<Database>,
 ): Promise<UnifiedSearchResult> {
-  const sb = client ?? serverClient();
+  const sb = client ?? (await serverClient());
   const { plan } = await buildPlan(args.query, args.explicit, sb);
   const repo = createSupabaseRepo(sb);
   const out = await executeUnifiedSearch(repo, plan, args.limit);
