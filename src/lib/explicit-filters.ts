@@ -13,7 +13,13 @@
  */
 
 import { normalizeForInterpretation } from "./query-normalization";
-import { normalizeRegionsParam, normalizeServiceTypesParam, type MultiValueInput } from "./search-contract";
+import {
+  normalizeRegionsParam,
+  normalizeServiceTypesParam,
+  normalizeTherapyFormatsParam,
+  THERAPIST_GENDERS,
+  type MultiValueInput,
+} from "./search-contract";
 import type {
   Catalog,
   FilterConflict,
@@ -28,6 +34,14 @@ export type RawExplicitFilters = {
   language?: string | null;
   regions?: MultiValueInput;
   serviceTypes?: MultiValueInput;
+  professions?: MultiValueInput;
+  modalities?: MultiValueInput;
+  therapyFormats?: MultiValueInput;
+  gender?: string | null;
+  accessible?: boolean;
+  verified?: boolean;
+  lgbtqAffirming?: boolean;
+  freeIntro?: boolean;
 };
 
 export const EMPTY_EXPLICIT: ValidatedExplicitFilters = {
@@ -36,29 +50,49 @@ export const EMPTY_EXPLICIT: ValidatedExplicitFilters = {
   languageCodes: [],
   regionSlugs: [],
   serviceTypes: [],
+  professionSlugs: [],
+  modalitySlugs: [],
+  therapyFormatSlugs: [],
+  therapistGender: null,
+  accessibleClinic: false,
+  verifiedOnly: false,
+  lgbtqAffirming: false,
+  freeIntroOnly: false,
   rejected: [],
 };
 
 export function hasExplicitFilters(raw: RawExplicitFilters): boolean {
-  const multi = (v: MultiValueInput) =>
-    Array.isArray(v) ? v.length > 0 : Boolean(typeof v === "string" && v.trim());
+  const multi = (v: MultiValueInput) => (Array.isArray(v) ? v.length > 0 : Boolean(typeof v === "string" && v.trim()));
   return Boolean(
-    raw.city?.trim() ||
-      raw.population?.trim() ||
-      raw.language?.trim() ||
-      multi(raw.regions) ||
-      multi(raw.serviceTypes),
+    raw.city?.trim() || raw.population?.trim() || raw.language?.trim() || multi(raw.regions) || multi(raw.serviceTypes),
+    multi(raw.professions) ||
+      multi(raw.modalities) ||
+      multi(raw.therapyFormats) ||
+      raw.gender ||
+      raw.accessible ||
+      raw.verified ||
+      raw.lgbtqAffirming ||
+      raw.freeIntro,
   );
 }
 
 /** Validate raw UI filter values against the canonical catalogs. */
-export function validateExplicitFilters(
-  raw: RawExplicitFilters,
-  catalog: Catalog,
-): ValidatedExplicitFilters {
+export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalog): ValidatedExplicitFilters {
   const out: ValidatedExplicitFilters = {
-    cityNames: [], populationSlugs: [], languageCodes: [],
-    regionSlugs: [], serviceTypes: [], rejected: [],
+    cityNames: [],
+    populationSlugs: [],
+    languageCodes: [],
+    regionSlugs: [],
+    serviceTypes: [],
+    professionSlugs: [],
+    modalitySlugs: [],
+    therapyFormatSlugs: [],
+    therapistGender: null,
+    accessibleClinic: false,
+    verifiedOnly: false,
+    lgbtqAffirming: false,
+    freeIntroOnly: false,
+    rejected: [],
   };
 
   const city = raw.city?.trim();
@@ -66,8 +100,7 @@ export function validateExplicitFilters(
     const n = normalizeForInterpretation(city);
     const hit = catalog.cities.find(
       (c) =>
-        normalizeForInterpretation(c.canonical) === n ||
-        c.aliases.some((a) => normalizeForInterpretation(a) === n),
+        normalizeForInterpretation(c.canonical) === n || c.aliases.some((a) => normalizeForInterpretation(a) === n),
     );
     if (hit) out.cityNames.push(hit.canonical);
     else out.rejected.push({ category: "city", value: city });
@@ -108,6 +141,40 @@ export function validateExplicitFilters(
   const serviceTypes = normalizeServiceTypesParam(raw.serviceTypes);
   out.serviceTypes = [...serviceTypes.values];
   for (const value of serviceTypes.rejected) out.rejected.push({ category: "serviceType", value });
+
+  const resolveSlugs = (
+    rawValues: MultiValueInput,
+    catalogValues: Array<{ slug: string }>,
+    category: "profession" | "modality",
+  ) => {
+    const allowed = new Set(catalogValues.map((item) => item.slug));
+    const values = [
+      ...new Set(
+        (Array.isArray(rawValues) ? rawValues : typeof rawValues === "string" ? rawValues.split(",") : [])
+          .map((value) => value.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ];
+    const accepted: string[] = [];
+    for (const value of values) {
+      if (allowed.has(value)) accepted.push(value);
+      else out.rejected.push({ category, value });
+    }
+    return accepted.sort();
+  };
+  out.professionSlugs = resolveSlugs(raw.professions, catalog.professions, "profession");
+  out.modalitySlugs = resolveSlugs(raw.modalities, catalog.modalities, "modality");
+  const formats = normalizeTherapyFormatsParam(raw.therapyFormats);
+  out.therapyFormatSlugs = [...formats.values];
+  for (const value of formats.rejected) out.rejected.push({ category: "therapyFormat", value });
+  out.therapistGender = (THERAPIST_GENDERS as readonly string[]).includes(raw.gender ?? "")
+    ? (raw.gender as "male" | "female")
+    : null;
+  if (raw.gender && !out.therapistGender) out.rejected.push({ category: "gender", value: raw.gender });
+  out.accessibleClinic = Boolean(raw.accessible);
+  out.verifiedOnly = Boolean(raw.verified);
+  out.lgbtqAffirming = Boolean(raw.lgbtqAffirming);
+  out.freeIntroOnly = Boolean(raw.freeIntro);
 
   return out;
 }
@@ -164,21 +231,87 @@ export function applyExplicitFilters(
     clearSoft();
   };
 
-  override("city", hardFilters.cityNames, explicit.cityNames,
-    (v) => { hardFilters.cityNames = v; },
-    () => { softPreferences.cities = []; });
-  override("population", hardFilters.populationSlugs, explicit.populationSlugs,
-    (v) => { hardFilters.populationSlugs = v; },
-    () => { softPreferences.populationSlugs = []; });
-  override("language", hardFilters.languageCodes, explicit.languageCodes,
-    (v) => { hardFilters.languageCodes = v; },
-    () => { softPreferences.languageCodes = []; });
-  override("region", hardFilters.regionSlugs ?? [], explicit.regionSlugs,
-    (v) => { hardFilters.regionSlugs = v; },
-    () => {});
-  override("serviceType", hardFilters.deliveryModes, explicit.serviceTypes,
-    (v) => { hardFilters.deliveryModes = v; },
-    () => { softPreferences.deliveryModes = []; });
+  override(
+    "city",
+    hardFilters.cityNames,
+    explicit.cityNames,
+    (v) => {
+      hardFilters.cityNames = v;
+    },
+    () => {
+      softPreferences.cities = [];
+    },
+  );
+  override(
+    "population",
+    hardFilters.populationSlugs,
+    explicit.populationSlugs,
+    (v) => {
+      hardFilters.populationSlugs = v;
+    },
+    () => {
+      softPreferences.populationSlugs = [];
+    },
+  );
+  override(
+    "language",
+    hardFilters.languageCodes,
+    explicit.languageCodes,
+    (v) => {
+      hardFilters.languageCodes = v;
+    },
+    () => {
+      softPreferences.languageCodes = [];
+    },
+  );
+  override(
+    "region",
+    hardFilters.regionSlugs ?? [],
+    explicit.regionSlugs,
+    (v) => {
+      hardFilters.regionSlugs = v;
+    },
+    () => {},
+  );
+  override(
+    "serviceType",
+    hardFilters.deliveryModes,
+    explicit.serviceTypes,
+    (v) => {
+      hardFilters.deliveryModes = v;
+    },
+    () => {
+      softPreferences.deliveryModes = [];
+    },
+  );
+  override(
+    "profession",
+    hardFilters.professionSlugs,
+    explicit.professionSlugs,
+    (v) => {
+      hardFilters.professionSlugs = v;
+    },
+    () => {
+      softPreferences.professionSlugs = [];
+    },
+  );
+  override(
+    "modality",
+    hardFilters.modalitySlugs,
+    explicit.modalitySlugs,
+    (v) => {
+      hardFilters.modalitySlugs = v;
+    },
+    () => {
+      softPreferences.modalitySlugs = [];
+    },
+  );
+  if (explicit.therapistGender) hardFilters.therapistGender = explicit.therapistGender;
+  hardFilters.therapyFormatSlugs = [...explicit.therapyFormatSlugs];
+  hardFilters.accessibleClinic = explicit.accessibleClinic;
+  hardFilters.verifiedOnly = explicit.verifiedOnly;
+  hardFilters.lgbtqAffirming = explicit.lgbtqAffirming;
+  hardFilters.freeIntroOnly = explicit.freeIntroOnly;
 
   return { hardFilters, softPreferences, conflicts };
 }

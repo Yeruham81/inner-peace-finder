@@ -87,10 +87,13 @@ export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<
 
 /** Filter options. Cities are derived from eligible profiles only. */
 export async function listEligibleFilterOptions(sb: PublicReadClient) {
-  const [cities, populations, languages] = await Promise.all([
+  const [cities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
     applyEligibility(sb.from("therapists").select("city")),
     sb.from("population_groups").select("slug, name").order("sort_order"),
     sb.from("languages").select("code, name").order("name"),
+    sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
+    sb.from("treatment_modalities").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
+    sb.from("therapy_formats").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
   ]);
   const citySet = new Set<string>();
   ((unwrap(cities) ?? []) as Array<{ city: string | null }>).forEach((r) => {
@@ -100,5 +103,8 @@ export async function listEligibleFilterOptions(sb: PublicReadClient) {
     cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "he")),
     populations: (populations?.data ?? []) as Array<{ slug: string; name: string }>,
     languages: (languages?.data ?? []) as Array<{ code: string; name: string }>,
+    professions: (professions?.data ?? []) as Array<{ slug: string; name: string }>,
+    modalities: (modalities?.data ?? []) as Array<{ slug: string; name: string }>,
+    therapyFormats: (therapyFormats?.data ?? []) as Array<{ slug: string; name: string }>,
   };
 }
