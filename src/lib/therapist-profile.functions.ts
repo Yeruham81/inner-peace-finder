@@ -36,6 +36,7 @@ export type ProfileEditorData = {
   slug: string | null;
   profile_status: ProfileStatus;
   is_active: boolean;
+  visibility: "visible" | "hidden";
   verified: boolean;
   profession_ids: string[];
   modality_ids: string[];
@@ -60,6 +61,18 @@ export type ProfileEditorData = {
   free_intro_duration_minutes: number | null;
   professional_memberships: { organization_name: string; member_since: number | null }[];
   service_arrangements: { organization_name: string; note: string | null }[];
+  credential: {
+    id: string;
+    profession_id: string | null;
+    credential_type: string;
+    institution: string | null;
+    license_number: string | null;
+    document_url: string | null;
+    issuing_authority: string | null;
+    expires_at: string | null;
+    verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
+    rejection_reason: string | null;
+  } | null;
 };
 
 export type EditorOptions = {
@@ -300,7 +313,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const { data: t } = await supabase.from("therapists").select("*").eq("owner_account_id", accountId).maybeSingle();
     if (!t) return null;
 
-    const [profs, mods, langs, pops, locs, formats, memberships, arrangements] = await Promise.all([
+    const [profs, mods, langs, pops, locs, formats, memberships, arrangements, credentials] = await Promise.all([
       supabase.from("therapist_professions").select("profession_id").eq("therapist_id", t.id),
       supabase.from("therapist_modalities").select("modality_id").eq("therapist_id", t.id),
       supabase.from("therapist_languages").select("language_id").eq("therapist_id", t.id),
@@ -317,6 +330,14 @@ export const getMyProfile = createServerFn({ method: "GET" })
         .select("organization_name, note")
         .eq("therapist_id", t.id)
         .order("sort_order"),
+      supabase
+        .from("therapist_credentials")
+        .select(
+          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, expires_at, verification_status, rejection_reason",
+        )
+        .eq("therapist_id", t.id)
+        .order("updated_at", { ascending: false })
+        .limit(1),
     ]);
 
     const physicalLocations = (locs.data ?? [])
@@ -347,6 +368,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       slug: t.slug,
       profile_status: (t as { profile_status: ProfileStatus }).profile_status,
       is_active: t.is_active,
+      visibility: t.visibility === "visible" ? "visible" : "hidden",
       verified: Boolean(t.verified),
       profession_ids: (profs.data ?? []).map((r) => r.profession_id),
       modality_ids: (mods.data ?? []).map((r) => r.modality_id),
@@ -371,6 +393,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       free_intro_duration_minutes: t.free_intro_duration_minutes,
       professional_memberships: memberships.data ?? [],
       service_arrangements: arrangements.data ?? [],
+      credential: (credentials.data?.[0] as ProfileEditorData["credential"] | undefined) ?? null,
     };
   });
 
@@ -641,6 +664,130 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     }
 
     return { therapist_id: therapistId, profile_status: nextStatus };
+  });
+
+const ProfileVisibilitySchema = z.object({ visible: z.boolean() });
+
+export const setMyProfileVisibility = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ProfileVisibilitySchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const accountId = await resolveAccount(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile, error: loadError } = await supabaseAdmin
+      .from("therapists")
+      .select("id, profile_status")
+      .eq("owner_account_id", accountId)
+      .maybeSingle();
+    if (loadError) throw new Error(loadError.message);
+    if (!profile) throw new Error("לא נמצא פרופיל לניהול.");
+    if (data.visible && profile.profile_status !== "published") {
+      throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
+    }
+    const { error } = await supabaseAdmin
+      .from("therapists")
+      .update({ visibility: data.visible ? "visible" : "hidden" })
+      .eq("id", profile.id);
+    if (error) throw new Error(error.message);
+    return { visibility: data.visible ? ("visible" as const) : ("hidden" as const) };
+  });
+
+export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input))
+  .handler(async ({ context }) => {
+    const accountId = await resolveAccount(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile, error: loadError } = await supabaseAdmin
+      .from("therapists")
+      .select("id")
+      .eq("owner_account_id", accountId)
+      .maybeSingle();
+    if (loadError) throw new Error(loadError.message);
+    if (!profile) throw new Error("לא נמצא פרופיל למחיקה.");
+
+    // Hide first: a failed cleanup can never leave the profile public.
+    const { error: hideError } = await supabaseAdmin
+      .from("therapists")
+      .update({ visibility: "hidden" })
+      .eq("id", profile.id);
+    if (hideError) throw new Error(hideError.message);
+
+    for (const bucket of ["therapist-credentials", "therapist-images"] as const) {
+      const { data: files, error: listError } = await supabaseAdmin.storage
+        .from(bucket)
+        .list(profile.id, { limit: 1000 });
+      if (listError) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listError.message}`);
+      const paths = (files ?? []).filter((file) => file.name).map((file) => `${profile.id}/${file.name}`);
+      if (paths.length > 0) {
+        const { error: removeError } = await supabaseAdmin.storage.from(bucket).remove(paths);
+        if (removeError) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removeError.message}`);
+      }
+    }
+
+    const { error: deleteError } = await supabaseAdmin.from("therapists").delete().eq("id", profile.id);
+    if (deleteError) throw new Error(deleteError.message);
+    await supabaseAdmin
+      .from("therapist_accounts")
+      .update({ account_status: "active", onboarding_completed: false })
+      .eq("id", accountId);
+    return { deleted: true as const };
+  });
+
+const CredentialSubmissionSchema = z.object({
+  credential_id: z.string().uuid().nullable().optional(),
+  profession_id: z.string().uuid(),
+  credential_type: z.string().trim().min(2).max(120),
+  institution: z.string().trim().max(160).nullable().optional(),
+  license_number: z.string().trim().min(2).max(120),
+  document_url: z.string().trim().min(3).max(500),
+  issuing_authority: z.string().trim().min(2).max(160),
+  expires_at: z.string().datetime().nullable().optional(),
+});
+
+export const submitMyCredential = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => CredentialSubmissionSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const accountId = await resolveAccount(context.supabase, context.userId);
+    const { data: profile } = await context.supabase
+      .from("therapists")
+      .select("id")
+      .eq("owner_account_id", accountId)
+      .maybeSingle();
+    if (!profile) throw new Error("יש לבצע שמירת פרופיל לפני הגשת מסמך הסמכה.");
+    const payload = {
+      therapist_id: profile.id,
+      profession_id: data.profession_id,
+      credential_type: data.credential_type,
+      institution: data.institution || null,
+      license_number: data.license_number,
+      document_url: data.document_url,
+      issuing_authority: data.issuing_authority,
+      expires_at: data.expires_at ?? null,
+      submitted_at: new Date().toISOString(),
+      verification_status: "pending_review" as const,
+    };
+    if (data.credential_id) {
+      const { data: owned } = await context.supabase
+        .from("therapist_credentials")
+        .select("id, verification_status")
+        .eq("id", data.credential_id)
+        .eq("therapist_id", profile.id)
+        .maybeSingle();
+      if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
+      if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
+      const { error } = await context.supabase.from("therapist_credentials").update(payload).eq("id", owned.id);
+      if (error) throw new Error(error.message);
+      return { id: owned.id, verification_status: "pending_review" as const };
+    }
+    const { data: created, error } = await context.supabase
+      .from("therapist_credentials")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: created.id, verification_status: "pending_review" as const };
   });
 
 /* ------------------------------------------------------------------ */
