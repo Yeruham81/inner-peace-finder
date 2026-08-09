@@ -139,8 +139,10 @@ describe("saveMyProfile — semantic wiring", () => {
   it("computes it BEFORE any therapists write (create, draft, publish)", () => {
     const compute = saveSource.indexOf("await computeSemanticProfile(");
     const firstWrite = Math.min(
-      ...[saveSource.indexOf('.from("therapists")\n      .update'), saveSource.indexOf('.from("therapists")\n        .insert')]
-        .filter((i) => i > 0),
+      ...[
+        saveSource.indexOf('.from("therapists")\n      .update'),
+        saveSource.indexOf('.from("therapists")\n        .insert'),
+      ].filter((i) => i > 0),
     );
     expect(compute).toBeGreaterThan(0);
     expect(compute).toBeLessThan(firstWrite);
@@ -150,7 +152,9 @@ describe("saveMyProfile — semantic wiring", () => {
     expect(saveSource).toContain("semantic_profile: semanticProfile");
     const payloadStart = saveSource.indexOf("const basePayload = {");
     const payloadEnd = saveSource.indexOf("let therapistId");
-    expect(saveSource.slice(payloadStart, payloadEnd)).toContain("semantic_profile: semanticProfile");
+    expect(saveSource.slice(payloadStart, payloadEnd)).toContain(
+      "semantic_profile: semanticProfile",
+    );
     // Both write paths spread basePayload.
     expect(saveSource).toContain("...basePayload");
   });
