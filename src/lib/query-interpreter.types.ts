@@ -60,18 +60,9 @@ export type Catalog = {
   firstNameCount: Map<string, number>;
 };
 
-export type Intent =
-  | "structured"
-  | "semantic"
-  | "hybrid"
-  | "named"
-  | "unresolved_service"
-  | "unknown";
+export type Intent = "structured" | "semantic" | "hybrid" | "named" | "unresolved_service" | "unknown";
 
-export type UnresolvedCode =
-  | "unrecognized_service"
-  | "gender_conflict"
-  | "empty_query";
+export type UnresolvedCode = "unrecognized_service" | "gender_conflict" | "empty_query";
 
 export type TherapistGender = "male" | "female";
 
@@ -91,6 +82,11 @@ export type StructuredFilters = {
    * operation — they are never two unrelated therapist-id intersections.
    */
   regionSlugs?: string[];
+  therapyFormatSlugs?: string[];
+  accessibleClinic?: boolean;
+  verifiedOnly?: boolean;
+  lgbtqAffirming?: boolean;
+  freeIntroOnly?: boolean;
 };
 
 /** Explicit UI filters, already validated against the canonical catalog. */
@@ -100,6 +96,14 @@ export type ValidatedExplicitFilters = {
   languageCodes: string[];
   regionSlugs: string[];
   serviceTypes: string[];
+  professionSlugs: string[];
+  modalitySlugs: string[];
+  therapyFormatSlugs: string[];
+  therapistGender: TherapistGender | null;
+  accessibleClinic: boolean;
+  verifiedOnly: boolean;
+  lgbtqAffirming: boolean;
+  freeIntroOnly: boolean;
   /** Raw values that did not resolve to a canonical catalog entry. */
   rejected: Array<{ category: ExplicitFilterCategory; value: string }>;
 };
@@ -109,7 +113,15 @@ export type ExplicitFilterCategory =
   | "population"
   | "language"
   | "region"
-  | "serviceType";
+  | "serviceType"
+  | "profession"
+  | "modality"
+  | "therapyFormat"
+  | "gender"
+  | "accessible"
+  | "verified"
+  | "lgbtqAffirming"
+  | "freeIntro";
 
 /** Recorded when an explicit UI filter overrode a query-inferred value. */
 export type FilterConflict = {
@@ -128,10 +140,7 @@ export type SoftPreferences = {
   genders: TherapistGender[];
 };
 
-export type GenderEvidence =
-  | "explicit_female"
-  | "explicit_male"
-  | "feminine_profession_form";
+export type GenderEvidence = "explicit_female" | "explicit_male" | "feminine_profession_form";
 
 export type InterpretationResult = {
   raw: string;
