@@ -46,10 +46,20 @@ export type ProfileEditorData = {
     region: ProductRegion | null;
     address: string | null;
     is_primary: boolean;
+    accessibility_status: string;
+    accessibility_features: string[];
+    accessibility_note: string | null;
   }[];
   online_available: boolean;
   home_visit_available: boolean;
   home_visit_regions: ProductRegion[];
+  therapy_format_ids: string[];
+  lgbtq_affirming: boolean;
+  offers_free_intro: boolean;
+  free_intro_types: string[];
+  free_intro_duration_minutes: number | null;
+  professional_memberships: { organization_name: string; member_since: number | null }[];
+  service_arrangements: { organization_name: string; note: string | null }[];
 };
 
 export type EditorOptions = {
@@ -59,6 +69,7 @@ export type EditorOptions = {
   populations: { id: string; name: string; slug: string }[];
   localities: LocalityOption[];
   locality_options_error: boolean;
+  therapy_formats: { id: string; name_he: string; slug: string }[];
 };
 
 export type SaveResult = {
@@ -136,6 +147,23 @@ const SaveSchema = z.object({
         city: z.string().trim().min(1, "יש לבחור יישוב.").max(80, "שם היישוב ארוך מדי."),
         region: z.enum(PRODUCT_REGIONS),
         address: z.string().trim().max(200, "הכתובת ארוכה מדי.").nullable().optional().or(z.literal("")),
+        accessibility_status: z
+          .enum(["accessible", "partially_accessible", "not_accessible", "unknown"])
+          .default("unknown"),
+        accessibility_features: z
+          .array(
+            z.enum([
+              "step_free_entrance",
+              "accessible_elevator",
+              "accessible_restroom",
+              "accessible_parking",
+              "wide_doorways",
+              "hearing_loop",
+            ]),
+          )
+          .max(6)
+          .default([]),
+        accessibility_note: z.string().trim().max(500).nullable().optional().or(z.literal("")),
       }),
     )
     .max(3, "ניתן להוסיף עד שלושה מיקומים פיזיים.")
@@ -151,6 +179,32 @@ const SaveSchema = z.object({
     .array(z.enum(PRODUCT_REGIONS))
     .max(PRODUCT_REGIONS.length, "נבחרו יותר מדי אזורי ביקורי בית.")
     .refine((regions) => new Set(regions).size === regions.length, "לא ניתן לבחור אותו אזור ביקורי בית יותר מפעם אחת.")
+    .default([]),
+  therapy_format_ids: z.array(z.string().uuid()).max(6).default([]),
+  lgbtq_affirming: z.boolean().default(false),
+  offers_free_intro: z.boolean().default(false),
+  free_intro_types: z
+    .array(z.enum(["phone", "video", "in_person"]))
+    .max(3)
+    .default([]),
+  free_intro_duration_minutes: z.number().int().min(5).max(120).nullable().optional(),
+  professional_memberships: z
+    .array(
+      z.object({
+        organization_name: z.string().trim().min(2).max(160),
+        member_since: z.number().int().min(1900).max(2100).nullable().optional(),
+      }),
+    )
+    .max(20)
+    .default([]),
+  service_arrangements: z
+    .array(
+      z.object({
+        organization_name: z.string().trim().min(2).max(160),
+        note: z.string().trim().max(500).nullable().optional(),
+      }),
+    )
+    .max(20)
     .default([]),
   publish: z.boolean().default(false),
 });
@@ -212,7 +266,7 @@ export const getEditorOptions = createServerFn({ method: "GET" }).handler(async 
     .then((items) => ({ items, error: false }))
     .catch(() => ({ items: [] as LocalityOption[], error: true }));
 
-  const [profs, mods, langs, pops, localityResult] = await Promise.all([
+  const [profs, mods, langs, pops, formats, localityResult] = await Promise.all([
     sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
     sb.from("treatment_modalities").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
     sb
@@ -220,6 +274,7 @@ export const getEditorOptions = createServerFn({ method: "GET" }).handler(async 
       .select("id, name, code")
       .in("code", [...CANONICAL_LANGUAGE_CODES]),
     sb.from("population_groups").select("id, name, slug").order("sort_order"),
+    sb.from("therapy_formats").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
     localitiesPromise,
   ]);
   return {
@@ -227,6 +282,7 @@ export const getEditorOptions = createServerFn({ method: "GET" }).handler(async 
     modalities: mods.data ?? [],
     languages: orderCanonicalLanguages(langs.data ?? []),
     populations: pops.data ?? [],
+    therapy_formats: formats.data ?? [],
     localities: localityResult.items,
     locality_options_error: localityResult.error,
   };
@@ -244,12 +300,23 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const { data: t } = await supabase.from("therapists").select("*").eq("owner_account_id", accountId).maybeSingle();
     if (!t) return null;
 
-    const [profs, mods, langs, pops, locs] = await Promise.all([
+    const [profs, mods, langs, pops, locs, formats, memberships, arrangements] = await Promise.all([
       supabase.from("therapist_professions").select("profession_id").eq("therapist_id", t.id),
       supabase.from("therapist_modalities").select("modality_id").eq("therapist_id", t.id),
       supabase.from("therapist_languages").select("language_id").eq("therapist_id", t.id),
       supabase.from("therapist_populations").select("population_id").eq("therapist_id", t.id),
       supabase.from("therapist_locations").select("*").eq("therapist_id", t.id).eq("is_active", true),
+      supabase.from("therapist_therapy_formats").select("therapy_format_id").eq("therapist_id", t.id),
+      supabase
+        .from("therapist_professional_memberships")
+        .select("organization_name, member_since")
+        .eq("therapist_id", t.id)
+        .order("sort_order"),
+      supabase
+        .from("therapist_service_arrangements")
+        .select("organization_name, note")
+        .eq("therapist_id", t.id)
+        .order("sort_order"),
     ]);
 
     const physicalLocations = (locs.data ?? [])
@@ -290,10 +357,20 @@ export const getMyProfile = createServerFn({ method: "GET" })
         region: PRODUCT_REGIONS.includes(location.region as ProductRegion) ? (location.region as ProductRegion) : null,
         address: location.address ?? null,
         is_primary: Boolean(location.is_primary),
+        accessibility_status: location.accessibility_status,
+        accessibility_features: location.accessibility_features,
+        accessibility_note: location.accessibility_note,
       })),
       online_available: online,
       home_visit_available: homeVisitLocations.length > 0,
       home_visit_regions: homeVisitRegions,
+      therapy_format_ids: (formats.data ?? []).map((row) => row.therapy_format_id),
+      lgbtq_affirming: Boolean(t.lgbtq_affirming),
+      offers_free_intro: Boolean(t.offers_free_intro),
+      free_intro_types: t.free_intro_types ?? [],
+      free_intro_duration_minutes: t.free_intro_duration_minutes,
+      professional_memberships: memberships.data ?? [],
+      service_arrangements: arrangements.data ?? [],
     };
   });
 
@@ -394,7 +471,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     //  - Publish: explicit user action → 'visible'.
     //  - is_active is a technical filter flag: always true for editable
     //    rows. Only archival flips it off, and archival is not exposed here.
-    const visibilityForNewRow: "hidden" = "hidden";
+    const visibilityForNewRow = "hidden" as const;
 
     const basePayload = {
       full_name: data.full_name.trim(),
@@ -407,6 +484,10 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       email: data.email ? data.email.trim() : null,
       phone: data.phone ? data.phone.trim() : null,
       image_url: data.image_url ? data.image_url.trim() : null,
+      lgbtq_affirming: data.lgbtq_affirming,
+      offers_free_intro: data.offers_free_intro,
+      free_intro_types: data.offers_free_intro ? data.free_intro_types : [],
+      free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
       profile_status: nextStatus,
       is_active: true,
       city: resolvedLocations[0]?.city ?? null,
@@ -461,6 +542,39 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     await replaceLinks("therapist_modalities", "modality_id", data.modality_ids);
     await replaceLinks("therapist_languages", "language_id", data.language_ids);
     await replaceLinks("therapist_populations", "population_id", data.population_ids);
+    await supabase.from("therapist_therapy_formats").delete().eq("therapist_id", therapistId);
+    if (data.therapy_format_ids.length > 0) {
+      const { error } = await supabase.from("therapist_therapy_formats").insert(
+        data.therapy_format_ids.map((therapy_format_id) => ({
+          therapist_id: therapistId,
+          therapy_format_id,
+        })),
+      );
+      if (error) throw new Error(`therapist_therapy_formats: ${error.message}`);
+    }
+
+    await supabase.from("therapist_professional_memberships").delete().eq("therapist_id", therapistId);
+    if (data.professional_memberships.length > 0) {
+      const { error } = await supabase.from("therapist_professional_memberships").insert(
+        data.professional_memberships.map((item, sort_order) => ({
+          ...item,
+          therapist_id: therapistId,
+          sort_order,
+        })),
+      );
+      if (error) throw new Error(`therapist_professional_memberships: ${error.message}`);
+    }
+    await supabase.from("therapist_service_arrangements").delete().eq("therapist_id", therapistId);
+    if (data.service_arrangements.length > 0) {
+      const { error } = await supabase.from("therapist_service_arrangements").insert(
+        data.service_arrangements.map((item, sort_order) => ({
+          ...item,
+          therapist_id: therapistId,
+          sort_order,
+        })),
+      );
+      if (error) throw new Error(`therapist_service_arrangements: ${error.message}`);
+    }
 
     // Sync the location types managed by this editor. Preserve any future or
     // externally-managed location types rather than deleting them blindly.
@@ -477,6 +591,9 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       city: location.city,
       region: location.region,
       address: location.address,
+      accessibility_status: data.locations[index]?.accessibility_status ?? "unknown",
+      accessibility_features: data.locations[index]?.accessibility_features ?? [],
+      accessibility_note: data.locations[index]?.accessibility_note ?? null,
       country: "Israel",
       is_primary: index === 0,
       is_active: true,
