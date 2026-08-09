@@ -11,6 +11,19 @@ export type TherapistProfileViewData = {
   city: string | null;
   image_url: string | null;
   verified: boolean;
+  lgbtq_affirming: boolean;
+  offers_free_intro: boolean;
+  free_intro_types: string[];
+  free_intro_duration_minutes: number | null;
+  therapy_formats: { slug: string; name: string }[];
+  locations: {
+    city: string;
+    accessibility_status: string;
+    accessibility_features: string[];
+    accessibility_note: string | null;
+  }[];
+  professional_memberships: { organization_name: string; member_since: number | null }[];
+  service_arrangements: { organization_name: string; note: string | null }[];
   problems: { id: string; name: string; slug: string }[];
   populations: { slug: string; name: string }[];
   languages: { code: string; name: string }[];
@@ -38,18 +51,22 @@ export function TherapistProfileView({
           )}
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-extrabold text-foreground sm:text-3xl">
-                {t.full_name || "שם המטפל/ת"}
-              </h1>
+              <h1 className="text-2xl font-extrabold text-foreground sm:text-3xl">{t.full_name || "שם המטפל/ת"}</h1>
               {t.verified && (
-                <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-primary">
-                  מאומת
+                <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-primary">מאומת</span>
+              )}
+              {t.lgbtq_affirming && (
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-800">
+                  טיפול מותאם לקהילה הגאה
+                </span>
+              )}
+              {t.offers_free_intro && (
+                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+                  היכרות ללא תשלום
                 </span>
               )}
             </div>
-            <p className="mt-1 text-base text-muted-foreground">
-              {t.professional_title || "כותרת מקצועית"}
-            </p>
+            <p className="mt-1 text-base text-muted-foreground">{t.professional_title || "כותרת מקצועית"}</p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground/80">
               {t.city && <span>📍 {t.city}</span>}
               {t.years_experience !== null && (
@@ -57,9 +74,7 @@ export function TherapistProfileView({
                   <span className="ltr-num">{t.years_experience}</span> שנות ניסיון
                 </span>
               )}
-              {t.languages.length > 0 && (
-                <span>שפות: {t.languages.map((language) => language.name).join(" · ")}</span>
-              )}
+              {t.languages.length > 0 && <span>שפות: {t.languages.map((language) => language.name).join(" · ")}</span>}
             </div>
           </div>
         </div>
@@ -111,6 +126,67 @@ export function TherapistProfileView({
               </p>
             </section>
           )}
+
+          {t.therapy_formats.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground">מסגרת הטיפול</h2>
+              <p className="mt-2 text-sm text-foreground/80">
+                {t.therapy_formats.map((item) => item.name).join(" · ")}
+              </p>
+            </section>
+          )}
+
+          {t.locations.some(
+            (location) =>
+              location.accessibility_status === "accessible" ||
+              location.accessibility_status === "partially_accessible",
+          ) && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground">נגישות</h2>
+              <div className="mt-2 space-y-2 text-sm text-foreground/80">
+                {t.locations
+                  .filter(
+                    (location) =>
+                      location.accessibility_status === "accessible" ||
+                      location.accessibility_status === "partially_accessible",
+                  )
+                  .map((location, index) => (
+                    <p key={`${location.city}-${index}`}>
+                      {location.city}:{" "}
+                      {location.accessibility_status === "accessible" ? "קליניקה נגישה" : "קליניקה נגישה חלקית"}
+                      {location.accessibility_note ? ` — ${location.accessibility_note}` : ""}
+                    </p>
+                  ))}
+              </div>
+            </section>
+          )}
+
+          {t.professional_memberships.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground">חברות באיגודים מקצועיים</h2>
+              <ul className="mt-2 list-disc space-y-1 pr-5 text-sm text-foreground/80">
+                {t.professional_memberships.map((item, index) => (
+                  <li key={`${item.organization_name}-${index}`}>
+                    {item.organization_name}
+                    {item.member_since ? `, משנת ${item.member_since}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {t.service_arrangements.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground">הסדרים עם גופים</h2>
+              <ul className="mt-2 list-disc space-y-1 pr-5 text-sm text-foreground/80">
+                {t.service_arrangements.map((item, index) => (
+                  <li key={`${item.organization_name}-${index}`}>
+                    {item.organization_name}
+                    {item.note ? ` — ${item.note}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
 
         <aside className="md:sticky md:top-20 md:self-start">
@@ -119,11 +195,7 @@ export function TherapistProfileView({
             <p className="mt-1 text-sm text-foreground">לשליחת הודעה ישירה</p>
             <div className="mt-4">
               {interactive ? (
-                <CtaCallButton
-                  therapistId={t.id}
-                  therapistName={t.full_name}
-                  pageSource="therapist_profile"
-                />
+                <CtaCallButton therapistId={t.id} therapistName={t.full_name} pageSource="therapist_profile" />
               ) : (
                 <button
                   type="button"
