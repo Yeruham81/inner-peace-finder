@@ -4,7 +4,16 @@ import { CANONICAL_LANGUAGES } from "@/lib/language-options";
 import { REGION_DEFINITIONS, REGION_SLUGS } from "@/lib/locality-options";
 import { resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
 
-type FilterKey = "regions" | "city" | "language" | "population" | "serviceType";
+type FilterKey =
+  | "regions"
+  | "city"
+  | "language"
+  | "population"
+  | "serviceType"
+  | "profession"
+  | "modality"
+  | "therapyFormat"
+  | "gender";
 
 type FilterOption = {
   value: string;
@@ -58,6 +67,9 @@ type SearchFormProps = {
   cities?: string[];
   populations?: { slug: string; name: string }[];
   languages?: { code: string; name: string }[];
+  professions?: { slug: string; name: string }[];
+  modalities?: { slug: string; name: string }[];
+  therapyFormats?: { slug: string; name: string }[];
   initialFilters?: {
     region?: string | string[];
     regions?: string[];
@@ -66,6 +78,14 @@ type SearchFormProps = {
     language?: string;
     serviceType?: string | string[];
     serviceTypes?: string[];
+    professions?: string[];
+    modalities?: string[];
+    therapyFormats?: string[];
+    gender?: string;
+    accessible?: boolean;
+    verified?: boolean;
+    lgbtqAffirming?: boolean;
+    freeIntro?: boolean;
   };
   preserveSearch?: {
     problem?: string;
@@ -87,6 +107,9 @@ export function SearchForm({
   cities = [],
   populations = [],
   languages = [],
+  professions = [],
+  modalities = [],
+  therapyFormats = [],
   initialFilters = {},
   preserveSearch,
   variant = "hero",
@@ -101,9 +124,20 @@ export function SearchForm({
     language: initialFilters.language,
     regions: multiValue(initialFilters.regions, initialFilters.region),
     serviceTypes: multiValue(initialFilters.serviceTypes, initialFilters.serviceType),
+    professions: initialFilters.professions,
+    modalities: initialFilters.modalities,
+    therapyFormats: initialFilters.therapyFormats,
+    gender: initialFilters.gender,
+    accessible: initialFilters.accessible,
+    verified: initialFilters.verified,
+    lgbtqAffirming: initialFilters.lgbtqAffirming,
+    freeIntro: initialFilters.freeIntro,
   });
   const appliedRegionKey = appliedContract.regions.join(",");
   const appliedServiceTypeKey = appliedContract.serviceTypes.join(",");
+  const appliedProfessionKey = appliedContract.professionSlugs.join(",");
+  const appliedModalityKey = appliedContract.modalitySlugs.join(",");
+  const appliedTherapyFormatKey = appliedContract.therapyFormats.join(",");
 
   const [q, setQ] = useState(appliedContract.q);
   const [city, setCity] = useState(appliedContract.city);
@@ -111,6 +145,14 @@ export function SearchForm({
   const [language, setLanguage] = useState(appliedContract.language);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([...appliedContract.regions]);
   const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([...appliedContract.serviceTypes]);
+  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([...appliedContract.professionSlugs]);
+  const [selectedModalities, setSelectedModalities] = useState<string[]>([...appliedContract.modalitySlugs]);
+  const [selectedTherapyFormats, setSelectedTherapyFormats] = useState<string[]>([...appliedContract.therapyFormats]);
+  const [gender, setGender] = useState(appliedContract.gender);
+  const [accessible, setAccessible] = useState(appliedContract.accessible);
+  const [verified, setVerified] = useState(appliedContract.verified);
+  const [lgbtqAffirming, setLgbtqAffirming] = useState(appliedContract.lgbtqAffirming);
+  const [freeIntro, setFreeIntro] = useState(appliedContract.freeIntro);
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -123,6 +165,14 @@ export function SearchForm({
     setLanguage(appliedContract.language);
     setSelectedRegions(appliedRegionKey ? appliedRegionKey.split(",") : []);
     setSelectedServiceTypes(appliedServiceTypeKey ? appliedServiceTypeKey.split(",") : []);
+    setSelectedProfessions([...appliedContract.professionSlugs]);
+    setSelectedModalities([...appliedContract.modalitySlugs]);
+    setSelectedTherapyFormats([...appliedContract.therapyFormats]);
+    setGender(appliedContract.gender);
+    setAccessible(appliedContract.accessible);
+    setVerified(appliedContract.verified);
+    setLgbtqAffirming(appliedContract.lgbtqAffirming);
+    setFreeIntro(appliedContract.freeIntro);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     appliedContract.q,
@@ -131,6 +181,14 @@ export function SearchForm({
     appliedContract.language,
     appliedRegionKey,
     appliedServiceTypeKey,
+    appliedProfessionKey,
+    appliedModalityKey,
+    appliedTherapyFormatKey,
+    appliedContract.gender,
+    appliedContract.accessible,
+    appliedContract.verified,
+    appliedContract.lgbtqAffirming,
+    appliedContract.freeIntro,
   ]);
 
   const cityOptions = useMemo<FilterOption[]>(() => {
@@ -189,11 +247,43 @@ export function SearchForm({
         multiple: true,
         helperText: "אזור חל על קליניקה או ביקורי בית; טיפול אונליין אינו תלוי באזור.",
       },
+      {
+        key: "profession",
+        label: "מקצוע",
+        placeholder: "כל המקצועות",
+        options: professions.map((item) => ({ value: item.slug, label: item.name })),
+        multiple: true,
+      },
+      {
+        key: "modality",
+        label: "שיטת טיפול",
+        placeholder: "כל השיטות",
+        options: modalities.map((item) => ({ value: item.slug, label: item.name })),
+        multiple: true,
+      },
+      {
+        key: "therapyFormat",
+        label: "מסגרת טיפול",
+        placeholder: "כל המסגרות",
+        options: therapyFormats.map((item) => ({ value: item.slug, label: item.name })),
+        multiple: true,
+      },
+      {
+        key: "gender",
+        label: "מגדר המטפל/ת",
+        placeholder: "ללא העדפה",
+        options: [
+          { value: "female", label: "אישה" },
+          { value: "male", label: "גבר" },
+        ],
+      },
     ],
-    [cityOptions, languageOptions, populationOptions],
+    [cityOptions, languageOptions, populationOptions, professions, modalities, therapyFormats],
   );
 
-  const visibleFilters = isHero ? filters.filter((filter) => filter.key !== "city") : filters;
+  const visibleFilters = isHero
+    ? filters.filter((filter) => ["regions", "language", "population", "serviceType"].includes(filter.key))
+    : filters;
   const activeFilter = visibleFilters.find((filter) => filter.key === openFilter);
 
   function selectedValues(key: FilterKey): string[] {
@@ -208,6 +298,14 @@ export function SearchForm({
         return population ? [population] : [];
       case "serviceType":
         return selectedServiceTypes;
+      case "profession":
+        return selectedProfessions;
+      case "modality":
+        return selectedModalities;
+      case "therapyFormat":
+        return selectedTherapyFormats;
+      case "gender":
+        return gender ? [gender] : [];
     }
   }
 
@@ -261,7 +359,37 @@ export function SearchForm({
       value,
       label: optionLabel("serviceType", value),
     })),
+    ...appliedContract.professionSlugs.map((value) => ({
+      key: "profession" as const,
+      value,
+      label: optionLabel("profession", value),
+    })),
+    ...appliedContract.modalitySlugs.map((value) => ({
+      key: "modality" as const,
+      value,
+      label: optionLabel("modality", value),
+    })),
+    ...appliedContract.therapyFormats.map((value) => ({
+      key: "therapyFormat" as const,
+      value,
+      label: optionLabel("therapyFormat", value),
+    })),
+    ...(appliedContract.gender
+      ? [
+          {
+            key: "gender" as const,
+            value: appliedContract.gender,
+            label: optionLabel("gender", appliedContract.gender),
+          },
+        ]
+      : []),
   ];
+  const activeFilterCount =
+    appliedChips.length +
+    Number(appliedContract.accessible) +
+    Number(appliedContract.verified) +
+    Number(appliedContract.lgbtqAffirming) +
+    Number(appliedContract.freeIntro);
 
   function navigateToContract(input: {
     q: string;
@@ -270,6 +398,14 @@ export function SearchForm({
     language?: string;
     regions?: readonly string[];
     serviceTypes?: readonly string[];
+    professions?: readonly string[];
+    modalities?: readonly string[];
+    therapyFormats?: readonly string[];
+    gender?: string;
+    accessible?: boolean;
+    verified?: boolean;
+    lgbtqAffirming?: boolean;
+    freeIntro?: boolean;
   }) {
     const contract = resolveSearchContract(input);
     navigate({
@@ -282,6 +418,14 @@ export function SearchForm({
         language: contract.language || undefined,
         regions: serializeMultiValue(contract.regions),
         serviceTypes: serializeMultiValue(contract.serviceTypes),
+        professions: serializeMultiValue(contract.professionSlugs),
+        modalities: serializeMultiValue(contract.modalitySlugs),
+        therapyFormats: serializeMultiValue(contract.therapyFormats),
+        gender: contract.gender || undefined,
+        accessible: contract.accessible ? "1" : undefined,
+        verified: contract.verified ? "1" : undefined,
+        lgbtqAffirming: contract.lgbtqAffirming ? "1" : undefined,
+        freeIntro: contract.freeIntro ? "1" : undefined,
         flow: preserveSearch?.flow || undefined,
       },
     });
@@ -296,6 +440,14 @@ export function SearchForm({
       language,
       regions: selectedRegions,
       serviceTypes: selectedServiceTypes,
+      professions: selectedProfessions,
+      modalities: selectedModalities,
+      therapyFormats: selectedTherapyFormats,
+      gender,
+      accessible,
+      verified,
+      lgbtqAffirming,
+      freeIntro,
     });
     setOpenFilter(null);
     setMobileFiltersOpen(false);
@@ -321,6 +473,19 @@ export function SearchForm({
     if (filter.key === "population") {
       setPopulation((current) => (current === value ? "" : value));
     }
+    if (filter.key === "profession")
+      setSelectedProfessions((current) =>
+        current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+      );
+    if (filter.key === "modality")
+      setSelectedModalities((current) =>
+        current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+      );
+    if (filter.key === "therapyFormat")
+      setSelectedTherapyFormats((current) =>
+        current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+      );
+    if (filter.key === "gender") setGender((current) => (current === value ? "" : (value as "male" | "female")));
   }
 
   function clearDraftFilter(key: FilterKey) {
@@ -329,6 +494,10 @@ export function SearchForm({
     if (key === "language") setLanguage("");
     if (key === "population") setPopulation("");
     if (key === "serviceType") setSelectedServiceTypes([]);
+    if (key === "profession") setSelectedProfessions([]);
+    if (key === "modality") setSelectedModalities([]);
+    if (key === "therapyFormat") setSelectedTherapyFormats([]);
+    if (key === "gender") setGender("");
   }
 
   function removeAppliedChip(chip: AppliedChip) {
@@ -345,11 +514,49 @@ export function SearchForm({
         chip.key === "serviceType"
           ? appliedContract.serviceTypes.filter((value) => value !== chip.value)
           : appliedContract.serviceTypes,
+      professions:
+        chip.key === "profession"
+          ? appliedContract.professionSlugs.filter((value) => value !== chip.value)
+          : appliedContract.professionSlugs,
+      modalities:
+        chip.key === "modality"
+          ? appliedContract.modalitySlugs.filter((value) => value !== chip.value)
+          : appliedContract.modalitySlugs,
+      therapyFormats:
+        chip.key === "therapyFormat"
+          ? appliedContract.therapyFormats.filter((value) => value !== chip.value)
+          : appliedContract.therapyFormats,
+      gender: chip.key === "gender" ? "" : appliedContract.gender,
+      accessible: appliedContract.accessible,
+      verified: appliedContract.verified,
+      lgbtqAffirming: appliedContract.lgbtqAffirming,
+      freeIntro: appliedContract.freeIntro,
     });
   }
 
   function clearAppliedFilters() {
     navigateToContract({ q: appliedContract.q });
+  }
+
+  function toggleQuickFilter(
+    key: "online" | "home_visit" | "accessible" | "verified" | "lgbtqAffirming" | "freeIntro",
+  ) {
+    const serviceTypes =
+      key === "online" || key === "home_visit"
+        ? appliedContract.serviceTypes.includes(key)
+          ? appliedContract.serviceTypes.filter((value) => value !== key)
+          : [...appliedContract.serviceTypes, key]
+        : appliedContract.serviceTypes;
+    navigateToContract({
+      ...appliedContract,
+      professions: appliedContract.professionSlugs,
+      modalities: appliedContract.modalitySlugs,
+      serviceTypes,
+      accessible: key === "accessible" ? !appliedContract.accessible : appliedContract.accessible,
+      verified: key === "verified" ? !appliedContract.verified : appliedContract.verified,
+      lgbtqAffirming: key === "lgbtqAffirming" ? !appliedContract.lgbtqAffirming : appliedContract.lgbtqAffirming,
+      freeIntro: key === "freeIntro" ? !appliedContract.freeIntro : appliedContract.freeIntro,
+    });
   }
 
   return (
@@ -384,7 +591,40 @@ export function SearchForm({
 
       {!isHero && (
         <div className="mt-3 border-t border-border pt-3">
-          <div className="flex items-center justify-between gap-3 sm:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-2" aria-label="מסננים מהירים">
+            {[
+              {
+                key: "online",
+                label: "אונליין",
+                active: appliedContract.serviceTypes.includes("online"),
+              },
+              {
+                key: "home_visit",
+                label: "ביקורי בית",
+                active: appliedContract.serviceTypes.includes("home_visit"),
+              },
+              { key: "accessible", label: "קליניקה נגישה", active: appliedContract.accessible },
+              { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
+              {
+                key: "lgbtqAffirming",
+                label: "מותאם לקהילה הגאה",
+                active: appliedContract.lgbtqAffirming,
+              },
+              { key: "freeIntro", label: "היכרות ללא תשלום", active: appliedContract.freeIntro },
+            ].map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                aria-pressed={item.active}
+                onClick={() => toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])}
+                className={`shrink-0 rounded-full border px-3 py-2 text-xs font-medium transition-colors ${item.active ? "border-brand bg-brand text-brand-foreground" : "border-border bg-background text-foreground hover:border-brand/50"}`}
+              >
+                {item.active && <span aria-hidden="true">✓ </span>}
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3">
             <button
               type="button"
               aria-expanded={mobileFiltersOpen}
@@ -392,10 +632,10 @@ export function SearchForm({
               onClick={() => setMobileFiltersOpen((open) => !open)}
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground"
             >
-              <span>סינון</span>
-              {appliedChips.length > 0 && (
+              <span>מסננים נוספים</span>
+              {activeFilterCount > 0 && (
                 <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-xs font-bold text-brand-foreground">
-                  {appliedChips.length}
+                  {activeFilterCount}
                 </span>
               )}
               <span aria-hidden="true">{mobileFiltersOpen ? "⌃" : "⌄"}</span>
@@ -429,8 +669,8 @@ export function SearchForm({
             </div>
           )}
 
-          <div id="search-filter-controls" className={`${mobileFiltersOpen ? "block" : "hidden"} sm:block`}>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:mt-0 sm:grid-cols-2 lg:grid-cols-5">
+          <div id="search-filter-controls" className={mobileFiltersOpen ? "block" : "hidden"}>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {visibleFilters.map((filter) => {
                 const values = selectedValues(filter.key);
                 const isOpen = openFilter === filter.key;
