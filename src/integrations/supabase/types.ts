@@ -553,10 +553,14 @@ export type Database = {
           created_at: string
           credential_type: string
           document_url: string | null
+          expires_at: string | null
           id: string
           institution: string | null
+          issuing_authority: string | null
           license_number: string | null
           profession_id: string | null
+          rejection_reason: string | null
+          submitted_at: string | null
           therapist_id: string
           updated_at: string
           verification_status: Database["public"]["Enums"]["credential_verification_status"]
@@ -567,10 +571,14 @@ export type Database = {
           created_at?: string
           credential_type: string
           document_url?: string | null
+          expires_at?: string | null
           id?: string
           institution?: string | null
+          issuing_authority?: string | null
           license_number?: string | null
           profession_id?: string | null
+          rejection_reason?: string | null
+          submitted_at?: string | null
           therapist_id: string
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["credential_verification_status"]
@@ -581,10 +589,14 @@ export type Database = {
           created_at?: string
           credential_type?: string
           document_url?: string | null
+          expires_at?: string | null
           id?: string
           institution?: string | null
+          issuing_authority?: string | null
           license_number?: string | null
           profession_id?: string | null
+          rejection_reason?: string | null
+          submitted_at?: string | null
           therapist_id?: string
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["credential_verification_status"]
@@ -643,6 +655,9 @@ export type Database = {
       }
       therapist_locations: {
         Row: {
+          accessibility_features: string[]
+          accessibility_note: string | null
+          accessibility_status: string
           address: string | null
           city: string | null
           country: string
@@ -661,6 +676,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accessibility_features?: string[]
+          accessibility_note?: string | null
+          accessibility_status?: string
           address?: string | null
           city?: string | null
           country?: string
@@ -679,6 +697,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accessibility_features?: string[]
+          accessibility_note?: string | null
+          accessibility_status?: string
           address?: string | null
           city?: string | null
           country?: string
@@ -808,6 +829,41 @@ export type Database = {
           },
         ]
       }
+      therapist_professional_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          member_since: number | null
+          organization_name: string
+          sort_order: number
+          therapist_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_since?: number | null
+          organization_name: string
+          sort_order?: number
+          therapist_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_since?: number | null
+          organization_name?: string
+          sort_order?: number
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_professional_memberships_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapist_professions: {
         Row: {
           created_at: string
@@ -844,6 +900,74 @@ export type Database = {
           },
         ]
       }
+      therapist_service_arrangements: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          organization_name: string
+          sort_order: number
+          therapist_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          organization_name: string
+          sort_order?: number
+          therapist_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          organization_name?: string
+          sort_order?: number
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_service_arrangements_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapist_therapy_formats: {
+        Row: {
+          created_at: string
+          therapist_id: string
+          therapy_format_id: string
+        }
+        Insert: {
+          created_at?: string
+          therapist_id: string
+          therapy_format_id: string
+        }
+        Update: {
+          created_at?: string
+          therapist_id?: string
+          therapy_format_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_therapy_formats_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_therapy_formats_therapy_format_id_fkey"
+            columns: ["therapy_format_id"]
+            isOneToOne: false
+            referencedRelation: "therapy_formats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapists: {
         Row: {
           background: string | null
@@ -853,6 +977,8 @@ export type Database = {
           country: string
           created_at: string
           email: string | null
+          free_intro_duration_minutes: number | null
+          free_intro_types: string[]
           full_description: string | null
           full_name: string
           gender: Database["public"]["Enums"]["therapist_gender"] | null
@@ -860,8 +986,10 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           latitude: number | null
+          lgbtq_affirming: boolean
           license_number: string | null
           longitude: number | null
+          offers_free_intro: boolean
           owner_account_id: string | null
           phone: string | null
           preferred_contact_channel: Database["public"]["Enums"]["contact_channel"]
@@ -884,6 +1012,8 @@ export type Database = {
           country?: string
           created_at?: string
           email?: string | null
+          free_intro_duration_minutes?: number | null
+          free_intro_types?: string[]
           full_description?: string | null
           full_name: string
           gender?: Database["public"]["Enums"]["therapist_gender"] | null
@@ -891,8 +1021,10 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           latitude?: number | null
+          lgbtq_affirming?: boolean
           license_number?: string | null
           longitude?: number | null
+          offers_free_intro?: boolean
           owner_account_id?: string | null
           phone?: string | null
           preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
@@ -915,6 +1047,8 @@ export type Database = {
           country?: string
           created_at?: string
           email?: string | null
+          free_intro_duration_minutes?: number | null
+          free_intro_types?: string[]
           full_description?: string | null
           full_name?: string
           gender?: Database["public"]["Enums"]["therapist_gender"] | null
@@ -922,8 +1056,10 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           latitude?: number | null
+          lgbtq_affirming?: boolean
           license_number?: string | null
           longitude?: number | null
+          offers_free_intro?: boolean
           owner_account_id?: string | null
           phone?: string | null
           preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
@@ -947,6 +1083,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      therapy_formats: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name_he: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_he: string
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_he?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       treatment_modalities: {
         Row: {
