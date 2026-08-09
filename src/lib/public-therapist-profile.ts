@@ -18,6 +18,10 @@ export const PUBLIC_THERAPIST_COLUMNS = [
   "city",
   "image_url",
   "verified",
+  "lgbtq_affirming",
+  "offers_free_intro",
+  "free_intro_types",
+  "free_intro_duration_minutes",
 ] as const;
 
 export type PublicTherapistColumn = (typeof PUBLIC_THERAPIST_COLUMNS)[number];
@@ -62,6 +66,19 @@ export type PublicTherapistProfile = {
   city: string | null;
   image_url: string | null;
   verified: boolean;
+  lgbtq_affirming: boolean;
+  offers_free_intro: boolean;
+  free_intro_types: string[];
+  free_intro_duration_minutes: number | null;
+  therapy_formats: { slug: string; name: string }[];
+  locations: {
+    city: string;
+    accessibility_status: string;
+    accessibility_features: string[];
+    accessibility_note: string | null;
+  }[];
+  professional_memberships: { organization_name: string; member_since: number | null }[];
+  service_arrangements: { organization_name: string; note: string | null }[];
   problems: { id: string; name: string; slug: string; parent_id: string | null }[];
   populations: { slug: string; name: string }[];
   languages: { code: string; name: string }[];
