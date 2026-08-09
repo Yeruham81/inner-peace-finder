@@ -64,8 +64,12 @@ export const EMPTY_EXPLICIT: ValidatedExplicitFilters = {
 export function hasExplicitFilters(raw: RawExplicitFilters): boolean {
   const multi = (v: MultiValueInput) => (Array.isArray(v) ? v.length > 0 : Boolean(typeof v === "string" && v.trim()));
   return Boolean(
-    raw.city?.trim() || raw.population?.trim() || raw.language?.trim() || multi(raw.regions) || multi(raw.serviceTypes),
-    multi(raw.professions) ||
+    raw.city?.trim() ||
+      raw.population?.trim() ||
+      raw.language?.trim() ||
+      multi(raw.regions) ||
+      multi(raw.serviceTypes) ||
+      multi(raw.professions) ||
       multi(raw.modalities) ||
       multi(raw.therapyFormats) ||
       raw.gender ||
