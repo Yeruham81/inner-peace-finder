@@ -36,6 +36,7 @@ export type ProfileEditorData = {
   slug: string | null;
   profile_status: ProfileStatus;
   is_active: boolean;
+  verified: boolean;
   profession_ids: string[];
   modality_ids: string[];
   language_ids: string[];
@@ -279,6 +280,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       slug: t.slug,
       profile_status: (t as { profile_status: ProfileStatus }).profile_status,
       is_active: t.is_active,
+      verified: Boolean(t.verified),
       profession_ids: (profs.data ?? []).map((r) => r.profession_id),
       modality_ids: (mods.data ?? []).map((r) => r.modality_id),
       language_ids: (langs.data ?? []).map((r) => r.language_id),
