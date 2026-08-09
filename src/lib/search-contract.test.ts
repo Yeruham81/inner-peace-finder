@@ -67,8 +67,12 @@ describe("city vs region separation", () => {
 describe("resolveSearchContract", () => {
   it("is idempotent: resolving its own output changes nothing", () => {
     const once = resolveSearchContract({
-      q: "  חרדה  ", city: "חיפה", population: "children",
-      language: "ru", regions: "north,north", serviceTypes: ["online", "clinic"],
+      q: "  חרדה  ",
+      city: "חיפה",
+      population: "children",
+      language: "ru",
+      regions: "north,north",
+      serviceTypes: ["online", "clinic"],
     });
     const twice = resolveSearchContract(once);
     expect(twice).toEqual(once);
@@ -76,7 +80,20 @@ describe("resolveSearchContract", () => {
 
   it("an empty request produces a fully empty contract", () => {
     expect(resolveSearchContract({})).toEqual({
-      q: "", city: "", population: "", language: "", regions: [], serviceTypes: [],
+      q: "",
+      city: "",
+      population: "",
+      language: "",
+      regions: [],
+      serviceTypes: [],
+      professionSlugs: [],
+      modalitySlugs: [],
+      therapyFormats: [],
+      gender: "",
+      accessible: false,
+      verified: false,
+      lgbtqAffirming: false,
+      freeIntro: false,
     });
   });
 });
