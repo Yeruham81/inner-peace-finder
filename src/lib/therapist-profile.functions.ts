@@ -673,23 +673,8 @@ export const setMyProfileVisibility = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ProfileVisibilitySchema.parse(input))
   .handler(async ({ data, context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profile, error: loadError } = await supabaseAdmin
-      .from("therapists")
-      .select("id, profile_status")
-      .eq("owner_account_id", accountId)
-      .maybeSingle();
-    if (loadError) throw new Error(loadError.message);
-    if (!profile) throw new Error("לא נמצא פרופיל לניהול.");
-    if (data.visible && profile.profile_status !== "published") {
-      throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
-    }
-    const { error } = await supabaseAdmin
-      .from("therapists")
-      .update({ visibility: data.visible ? "visible" : "hidden" })
-      .eq("id", profile.id);
-    if (error) throw new Error(error.message);
-    return { visibility: data.visible ? ("visible" as const) : ("hidden" as const) };
+    const { setOwnedProfileVisibility } = await import("./profile-management.server");
+    return setOwnedProfileVisibility(accountId, data.visible);
   });
 
 export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
@@ -697,41 +682,8 @@ export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input))
   .handler(async ({ context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profile, error: loadError } = await supabaseAdmin
-      .from("therapists")
-      .select("id")
-      .eq("owner_account_id", accountId)
-      .maybeSingle();
-    if (loadError) throw new Error(loadError.message);
-    if (!profile) throw new Error("לא נמצא פרופיל למחיקה.");
-
-    // Hide first: a failed cleanup can never leave the profile public.
-    const { error: hideError } = await supabaseAdmin
-      .from("therapists")
-      .update({ visibility: "hidden" })
-      .eq("id", profile.id);
-    if (hideError) throw new Error(hideError.message);
-
-    for (const bucket of ["therapist-credentials", "therapist-images"] as const) {
-      const { data: files, error: listError } = await supabaseAdmin.storage
-        .from(bucket)
-        .list(profile.id, { limit: 1000 });
-      if (listError) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listError.message}`);
-      const paths = (files ?? []).filter((file) => file.name).map((file) => `${profile.id}/${file.name}`);
-      if (paths.length > 0) {
-        const { error: removeError } = await supabaseAdmin.storage.from(bucket).remove(paths);
-        if (removeError) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removeError.message}`);
-      }
-    }
-
-    const { error: deleteError } = await supabaseAdmin.from("therapists").delete().eq("id", profile.id);
-    if (deleteError) throw new Error(deleteError.message);
-    await supabaseAdmin
-      .from("therapist_accounts")
-      .update({ account_status: "active", onboarding_completed: false })
-      .eq("id", accountId);
-    return { deleted: true as const };
+    const { permanentlyDeleteOwnedProfile } = await import("./profile-management.server");
+    return permanentlyDeleteOwnedProfile(accountId);
   });
 
 const CredentialSubmissionSchema = z.object({
