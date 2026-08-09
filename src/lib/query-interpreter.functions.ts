@@ -20,11 +20,7 @@ import { SemanticEngine } from "./semantic-engine";
 import { parseStoredProfile } from "./therapist-semantic-profile";
 import { loadSearchCatalog } from "./query-catalog";
 import { interpretQuery } from "./query-interpreter";
-import {
-  applyExplicitFilters,
-  validateExplicitFilters,
-  type RawExplicitFilters,
-} from "./explicit-filters";
+import { applyExplicitFilters, validateExplicitFilters, type RawExplicitFilters } from "./explicit-filters";
 import { applyEligibility } from "./search-eligibility";
 import {
   executeUnifiedSearch,
@@ -36,11 +32,7 @@ import { matchesLocationAvailability } from "./unified-search-executor";
 import { regionSlugForStoredValue, resolveStoredRegion } from "./locality-options";
 import { PHYSICAL_SERVICE_TYPES } from "./search-contract";
 import { hasExplicitFilters } from "./explicit-filters";
-import {
-  buildCardLocationDisplay,
-  type ActiveLocationRow,
-  type SearchResultCard,
-} from "./search-result-card";
+import { buildCardLocationDisplay, type ActiveLocationRow, type SearchResultCard } from "./search-result-card";
 import type {
   InterpretationResult,
   SemanticSignal,
@@ -55,6 +47,14 @@ const Input = z.object({
   language: z.string().trim().max(8).optional().default(""),
   regions: z.union([z.string().max(200), z.array(z.string().max(40))]).optional(),
   serviceTypes: z.union([z.string().max(120), z.array(z.string().max(40))]).optional(),
+  professions: z.union([z.string().max(300), z.array(z.string().max(80))]).optional(),
+  modalities: z.union([z.string().max(500), z.array(z.string().max(80))]).optional(),
+  therapyFormats: z.union([z.string().max(200), z.array(z.string().max(40))]).optional(),
+  gender: z.enum(["male", "female"]).optional(),
+  accessible: z.boolean().optional(),
+  verified: z.boolean().optional(),
+  lgbtqAffirming: z.boolean().optional(),
+  freeIntro: z.boolean().optional(),
   limit: z.number().int().min(1).max(50).optional(),
 });
 
@@ -82,7 +82,7 @@ export type UnifiedSearchResult = {
  */
 function unwrap<T>(res: { data: T | null; error: unknown }): T {
   if (res.error) throw res.error;
-  return (res.data ?? ([] as unknown as T));
+  return res.data ?? ([] as unknown as T);
 }
 
 async function buildPlan(
@@ -101,11 +101,7 @@ async function buildPlan(
   // Explicit UI filters are canonicalized and folded in as HARD filters.
   // They are authoritative over anything the query inferred.
   const explicit = validateExplicitFilters(explicitRaw, catalog);
-  const merged = applyExplicitFilters(
-    interpretation.hardFilters,
-    interpretation.softPreferences,
-    explicit,
-  );
+  const merged = applyExplicitFilters(interpretation.hardFilters, interpretation.softPreferences, explicit);
 
   const plan: TherapistSearchPlan = {
     interpretation,
@@ -144,9 +140,11 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
   const eligibleIds = async (): Promise<Set<string>> => {
     if (cachedEligible) return cachedEligible;
     const rows = unwrap(
-      await applyEligibility(sb.from("therapists").select("id")) as unknown as {
-        data: Array<{ id: string }> | null; error: unknown;
-      },    );
+      (await applyEligibility(sb.from("therapists").select("id"))) as unknown as {
+        data: Array<{ id: string }> | null;
+        error: unknown;
+      },
+    );
     cachedEligible = new Set(rows.map((r) => r.id));
     return cachedEligible;
   };
@@ -158,57 +156,67 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     async idsByProfessions(slugs) {
       if (slugs.length === 0) return new Set();
       const rows = unwrap(
-        await sb
+        (await sb
           .from("therapist_professions")
           .select("therapist_id, professions!inner(slug)")
-          .in("professions.slug", slugs) as unknown as {
-            data: Array<{ therapist_id: string }> | null; error: unknown;
-          },      );
+          .in("professions.slug", slugs)) as unknown as {
+          data: Array<{ therapist_id: string }> | null;
+          error: unknown;
+        },
+      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByModalities(slugs) {
       if (slugs.length === 0) return new Set();
       const rows = unwrap(
-        await sb
+        (await sb
           .from("therapist_modalities")
           .select("therapist_id, treatment_modalities!inner(slug)")
-          .in("treatment_modalities.slug", slugs) as unknown as {
-            data: Array<{ therapist_id: string }> | null; error: unknown;
-          },      );
+          .in("treatment_modalities.slug", slugs)) as unknown as {
+          data: Array<{ therapist_id: string }> | null;
+          error: unknown;
+        },
+      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByPopulations(slugs) {
       if (slugs.length === 0) return new Set();
       const rows = unwrap(
-        await sb
+        (await sb
           .from("therapist_populations")
           .select("therapist_id, population_groups!inner(slug)")
-          .in("population_groups.slug", slugs) as unknown as {
-            data: Array<{ therapist_id: string }> | null; error: unknown;
-          },      );
+          .in("population_groups.slug", slugs)) as unknown as {
+          data: Array<{ therapist_id: string }> | null;
+          error: unknown;
+        },
+      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByLanguages(codes) {
       if (codes.length === 0) return new Set();
       const rows = unwrap(
-        await sb
+        (await sb
           .from("therapist_languages")
           .select("therapist_id, languages!inner(code)")
-          .in("languages.code", codes) as unknown as {
-            data: Array<{ therapist_id: string }> | null; error: unknown;
-          },      );
+          .in("languages.code", codes)) as unknown as {
+          data: Array<{ therapist_id: string }> | null;
+          error: unknown;
+        },
+      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByCities(cities) {
       if (cities.length === 0) return new Set();
       const rows = unwrap(
-        await sb
+        (await sb
           .from("therapist_locations")
           .select("therapist_id")
           .eq("is_active", true)
-          .in("city", cities) as unknown as {
-            data: Array<{ therapist_id: string }> | null; error: unknown;
-          },      );
+          .in("city", cities)) as unknown as {
+          data: Array<{ therapist_id: string }> | null;
+          error: unknown;
+        },
+      );
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByLocationAvailability(filter) {
@@ -219,24 +227,21 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       // correlate region + type on the SAME row in memory.
       const typesToLoad = serviceTypes.length > 0 ? serviceTypes : [...PHYSICAL_SERVICE_TYPES];
       const rows = unwrap(
-        await sb
+        (await sb
           .from("therapist_locations")
           .select("therapist_id, location_type, region")
           .eq("is_active", true)
-          .in(
-            "location_type",
-            typesToLoad as Array<Database["public"]["Enums"]["location_type"]>,
-          ) as unknown as {
-            data: Array<{
-              therapist_id: string; location_type: string; region: string | null;
-            }> | null;
-            error: unknown;
-          },      );
+          .in("location_type", typesToLoad as Array<Database["public"]["Enums"]["location_type"]>)) as unknown as {
+          data: Array<{
+            therapist_id: string;
+            location_type: string;
+            region: string | null;
+          }> | null;
+          error: unknown;
+        },
+      );
 
-      const byTherapist = new Map<
-        string,
-        Array<{ location_type: string; region_slug: string | null }>
-      >();
+      const byTherapist = new Map<string, Array<{ location_type: string; region_slug: string | null }>>();
       for (const r of rows ?? []) {
         const list = byTherapist.get(r.therapist_id) ?? [];
         list.push({
@@ -254,11 +259,51 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     },
     async idsByGender(gender) {
       const rows = unwrap(
-        await applyEligibility(
-          sb.from("therapists").select("id").eq("gender", gender),
-        ) as unknown as { data: Array<{ id: string }> | null; error: unknown },
+        (await applyEligibility(sb.from("therapists").select("id").eq("gender", gender))) as unknown as {
+          data: Array<{ id: string }> | null;
+          error: unknown;
+        },
       );
       return new Set(rows.map((r) => r.id));
+    },
+    async idsByTherapyFormats(slugs) {
+      if (slugs.length === 0) return new Set();
+      const rows = unwrap(
+        (await sb
+          .from("therapist_therapy_formats")
+          .select("therapist_id, therapy_formats!inner(slug)")
+          .in("therapy_formats.slug", slugs)) as unknown as {
+          data: Array<{ therapist_id: string }> | null;
+          error: unknown;
+        },
+      );
+      return filterByEligible(collect(rows), await eligibleIds());
+    },
+    async idsByProfileAttributes(filter) {
+      let therapistQuery = applyEligibility(sb.from("therapists").select("id"));
+      if (filter.verifiedOnly) therapistQuery = therapistQuery.eq("verified", true);
+      if (filter.lgbtqAffirming) therapistQuery = therapistQuery.eq("lgbtq_affirming", true);
+      if (filter.freeIntroOnly) therapistQuery = therapistQuery.eq("offers_free_intro", true);
+      const therapistRows = unwrap(
+        (await therapistQuery) as unknown as { data: Array<{ id: string }> | null; error: unknown },
+      );
+      let ids = new Set(therapistRows.map((row) => row.id));
+      if (filter.accessibleClinic) {
+        const locationRows = unwrap(
+          (await sb
+            .from("therapist_locations")
+            .select("therapist_id")
+            .eq("is_active", true)
+            .eq("location_type", "clinic")
+            .eq("accessibility_status", "accessible")) as unknown as {
+            data: Array<{ therapist_id: string }> | null;
+            error: unknown;
+          },
+        );
+        const accessibleIds = collect(locationRows);
+        ids = new Set([...ids].filter((id) => accessibleIds.has(id)));
+      }
+      return filterByEligible(ids, await eligibleIds());
     },
     async hydrate(ids): Promise<HydratedCandidate[]> {
       if (ids.length === 0) return [];
@@ -266,26 +311,15 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         applyEligibility(
           sb
             .from("therapists")
-            .select(
-              "id, verified, image_url, gender, years_experience, full_description, semantic_profile",
-            ),
+            .select("id, verified, image_url, gender, years_experience, full_description, semantic_profile"),
         ).in("id", ids),
-        sb
-          .from("therapist_professions")
-          .select("therapist_id, professions!inner(slug)")
-          .in("therapist_id", ids),
+        sb.from("therapist_professions").select("therapist_id, professions!inner(slug)").in("therapist_id", ids),
         sb
           .from("therapist_modalities")
           .select("therapist_id, treatment_modalities!inner(slug)")
           .in("therapist_id", ids),
-        sb
-          .from("therapist_populations")
-          .select("therapist_id, population_groups!inner(slug)")
-          .in("therapist_id", ids),
-        sb
-          .from("therapist_languages")
-          .select("therapist_id, languages!inner(code)")
-          .in("therapist_id", ids),
+        sb.from("therapist_populations").select("therapist_id, population_groups!inner(slug)").in("therapist_id", ids),
+        sb.from("therapist_languages").select("therapist_id, languages!inner(code)").in("therapist_id", ids),
         sb
           .from("therapist_locations")
           .select("therapist_id, city, location_type")
@@ -307,31 +341,45 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         full_description: string | null;
         semantic_profile: unknown;
       }>;
-      const pushInto = <V>(m: Map<string, V[]>, k: string, v: V) => {
+      const pushInto = <V,>(m: Map<string, V[]>, k: string, v: V) => {
         const arr = m.get(k);
         if (arr) arr.push(v);
         else m.set(k, [v]);
       };
       const profBy = new Map<string, string[]>();
-      for (const r of (profRes.data ?? []) as Array<{ therapist_id: string; professions: { slug: string } }>) {
+      for (const r of (profRes.data ?? []) as Array<{
+        therapist_id: string;
+        professions: { slug: string };
+      }>) {
         if (r.professions?.slug) pushInto(profBy, r.therapist_id, r.professions.slug);
       }
       const modBy = new Map<string, string[]>();
-      for (const r of (modRes.data ?? []) as Array<{ therapist_id: string; treatment_modalities: { slug: string } }>) {
+      for (const r of (modRes.data ?? []) as Array<{
+        therapist_id: string;
+        treatment_modalities: { slug: string };
+      }>) {
         if (r.treatment_modalities?.slug) pushInto(modBy, r.therapist_id, r.treatment_modalities.slug);
       }
       const popBy = new Map<string, string[]>();
-      for (const r of (popRes.data ?? []) as Array<{ therapist_id: string; population_groups: { slug: string } }>) {
+      for (const r of (popRes.data ?? []) as Array<{
+        therapist_id: string;
+        population_groups: { slug: string };
+      }>) {
         if (r.population_groups?.slug) pushInto(popBy, r.therapist_id, r.population_groups.slug);
       }
       const langBy = new Map<string, string[]>();
-      for (const r of (langRes.data ?? []) as Array<{ therapist_id: string; languages: { code: string } }>) {
+      for (const r of (langRes.data ?? []) as Array<{
+        therapist_id: string;
+        languages: { code: string };
+      }>) {
         if (r.languages?.code) pushInto(langBy, r.therapist_id, r.languages.code);
       }
       const cityBy = new Map<string, string[]>();
       const deliveryBy = new Map<string, string[]>();
       for (const r of (locRes.data ?? []) as Array<{
-        therapist_id: string; city: string | null; location_type: string | null;
+        therapist_id: string;
+        city: string | null;
+        location_type: string | null;
       }>) {
         if (r.city) pushInto(cityBy, r.therapist_id, r.city);
         if (r.location_type) pushInto(deliveryBy, r.therapist_id, r.location_type);
@@ -339,8 +387,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
 
       return tRows.map((t) => {
         const bio = t.full_description ?? "";
-        const g: TherapistGender | null =
-          t.gender === "male" || t.gender === "female" ? t.gender : null;
+        const g: TherapistGender | null = t.gender === "male" || t.gender === "female" ? t.gender : null;
         return {
           id: t.id,
           gender: g,
@@ -366,23 +413,17 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       // Batched display relations for the final result ids only (no N+1).
       const [tRes, locRes, langRes, popRes] = await Promise.all([
         applyEligibility(
-          sb.from("therapists").select(
-            "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience",
-          ),
+          sb
+            .from("therapists")
+            .select("id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience"),
         ).in("id", ids),
         sb
           .from("therapist_locations")
           .select("therapist_id, location_type, city, region, is_primary")
           .eq("is_active", true)
           .in("therapist_id", ids),
-        sb
-          .from("therapist_languages")
-          .select("therapist_id, languages!inner(name)")
-          .in("therapist_id", ids),
-        sb
-          .from("therapist_populations")
-          .select("therapist_id, population_groups!inner(name)")
-          .in("therapist_id", ids),
+        sb.from("therapist_languages").select("therapist_id, languages!inner(name)").in("therapist_id", ids),
+        sb.from("therapist_populations").select("therapist_id, population_groups!inner(name)").in("therapist_id", ids),
       ]);
       for (const r of [tRes, locRes, langRes, popRes]) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -392,8 +433,11 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
 
       const locBy = new Map<string, ActiveLocationRow[]>();
       for (const r of (locRes.data ?? []) as Array<{
-        therapist_id: string; location_type: string; city: string | null;
-        region: string | null; is_primary: boolean | null;
+        therapist_id: string;
+        location_type: string;
+        city: string | null;
+        region: string | null;
+        is_primary: boolean | null;
       }>) {
         const list = locBy.get(r.therapist_id) ?? [];
         list.push({
@@ -406,7 +450,8 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       }
       const langBy = new Map<string, string[]>();
       for (const r of (langRes.data ?? []) as Array<{
-        therapist_id: string; languages: { name: string } | null;
+        therapist_id: string;
+        languages: { name: string } | null;
       }>) {
         if (!r.languages?.name) continue;
         const list = langBy.get(r.therapist_id) ?? [];
@@ -415,7 +460,8 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       }
       const popBy = new Map<string, string[]>();
       for (const r of (popRes.data ?? []) as Array<{
-        therapist_id: string; population_groups: { name: string } | null;
+        therapist_id: string;
+        population_groups: { name: string } | null;
       }>) {
         if (!r.population_groups?.name) continue;
         const list = popBy.get(r.therapist_id) ?? [];
@@ -424,8 +470,13 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       }
 
       for (const r of (tRes.data ?? []) as Array<{
-        id: string; slug: string; full_name: string; professional_title: string | null;
-        image_url: string | null; verified: boolean | null; short_intro: string | null;
+        id: string;
+        slug: string;
+        full_name: string;
+        professional_title: string | null;
+        image_url: string | null;
+        verified: boolean | null;
+        short_intro: string | null;
       }>) {
         const loc = buildCardLocationDisplay(locBy.get(r.id) ?? [], resolveStoredRegion);
         map.set(r.id, {
@@ -483,6 +534,14 @@ export const unifiedSearch = createServerFn({ method: "POST" })
         language: data.language,
         regions: data.regions,
         serviceTypes: data.serviceTypes,
+        professions: data.professions,
+        modalities: data.modalities,
+        therapyFormats: data.therapyFormats,
+        gender: data.gender,
+        accessible: data.accessible,
+        verified: data.verified,
+        lgbtqAffirming: data.lgbtqAffirming,
+        freeIntro: data.freeIntro,
       },
       limit: data.limit ?? 20,
     });
