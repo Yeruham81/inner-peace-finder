@@ -19,10 +19,7 @@ import {
   type RankedCandidate,
 } from "./unified-search";
 import type { SemanticProfileEntry } from "./therapist-semantic-profile";
-import type {
-  TherapistGender,
-  TherapistSearchPlan,
-} from "./query-interpreter.types";
+import type { TherapistGender, TherapistSearchPlan } from "./query-interpreter.types";
 import type { CardClinicLocation, SearchResultCard } from "./search-result-card";
 
 export type DeliveryMode = "clinic" | "home_visit" | "online" | "hospital" | "other";
@@ -112,6 +109,13 @@ export interface TherapistRepo {
    */
   idsByLocationAvailability(filter: LocationAvailabilityFilter): Promise<Set<string>>;
   idsByGender(gender: TherapistGender): Promise<Set<string>>;
+  idsByTherapyFormats?(slugs: string[]): Promise<Set<string>>;
+  idsByProfileAttributes?(filter: {
+    accessibleClinic: boolean;
+    verifiedOnly: boolean;
+    lgbtqAffirming: boolean;
+    freeIntroOnly: boolean;
+  }): Promise<Set<string>>;
   /** Full canonical hydration for ranking + preference scoring. */
   hydrate(ids: string[]): Promise<HydratedCandidate[]>;
   fetchDisplay(ids: string[]): Promise<Map<string, DisplayRow>>;
@@ -176,6 +180,21 @@ export async function executeUnifiedSearch(
     );
   }
   if (hf.therapistGender) setsToIntersect.push(await repo.idsByGender(hf.therapistGender));
+  if ((hf.therapyFormatSlugs?.length ?? 0) > 0) {
+    if (!repo.idsByTherapyFormats) throw new Error("Therapy-format filtering is unavailable");
+    setsToIntersect.push(await repo.idsByTherapyFormats(hf.therapyFormatSlugs ?? []));
+  }
+  if (hf.accessibleClinic || hf.verifiedOnly || hf.lgbtqAffirming || hf.freeIntroOnly) {
+    if (!repo.idsByProfileAttributes) throw new Error("Profile-attribute filtering is unavailable");
+    setsToIntersect.push(
+      await repo.idsByProfileAttributes({
+        accessibleClinic: Boolean(hf.accessibleClinic),
+        verifiedOnly: Boolean(hf.verifiedOnly),
+        lgbtqAffirming: Boolean(hf.lgbtqAffirming),
+        freeIntroOnly: Boolean(hf.freeIntroOnly),
+      }),
+    );
+  }
 
   const hasHardFilters = setsToIntersect.length > 0;
 
