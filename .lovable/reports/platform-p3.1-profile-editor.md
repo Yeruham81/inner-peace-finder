@@ -73,7 +73,7 @@ Full RTL Hebrew editor with sections for basic info, contact
 information, professional info, professional description (with a `?`
 help dialog covering the recommended structure), treatment
 modalities, languages, populations, and location + online
-availability. Explicit `שמור טיוטה` and `פרסם פרופיל` buttons —
+availability. Explicit `שמירת טיוטה` and `פרסום פרופיל` buttons —
 never auto-save. Publish failures show a friendly Hebrew list of
 missing fields. Status badge (`טיוטה`/`מוכן לפרסום`/`מפורסם`) at the
 top-right, with toast confirmation for both save and publish.
