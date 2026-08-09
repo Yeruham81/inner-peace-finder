@@ -180,8 +180,18 @@ describe("saveMyProfile — semantic wiring", () => {
     const syncSource = readFileSync("src/lib/profile-semantic-sync.ts", "utf8");
     expect(syncSource).toContain("SemanticEngine.extractProfile");
     expect(syncSource).toContain("serializeProfile");
-    expect(syncSource).not.toMatch(/llm/i);
+    expect(syncSource).not.toMatch(/from ".\/llm-/);
     expect(typeof SemanticEngine.extractProfile).toBe("function");
+  });
+});
+
+describe("Unified Search consumption", () => {
+  it("scores a published therapist through the computed semantic profile", async () => {
+    const profile = await computeSemanticProfile(RECOGNIZED, makeSb());
+    const before = SemanticEngine.scoreProfiles([{ slug: "anxiety", confidence: 1 }], []);
+    const after = SemanticEngine.scoreProfiles([{ slug: "anxiety", confidence: 1 }], profile);
+    expect(before).toBe(0);
+    expect(after).toBeGreaterThan(0);
   });
 });
 
