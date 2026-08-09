@@ -47,12 +47,30 @@ type FormLocation = {
   city: string;
   region: ProductRegion | "";
   address: string;
+  accessibility_status: "accessible" | "partially_accessible" | "not_accessible" | "unknown";
+  accessibility_features: string[];
+  accessibility_note: string;
 };
 
 const MAX_PHYSICAL_LOCATIONS = 3;
+const ACCESSIBILITY_FEATURES = [
+  { id: "step_free_entrance", label: "כניסה ללא מדרגות" },
+  { id: "accessible_elevator", label: "מעלית נגישה" },
+  { id: "accessible_restroom", label: "שירותים נגישים" },
+  { id: "accessible_parking", label: "חניית נכים" },
+  { id: "wide_doorways", label: "פתחים רחבים" },
+  { id: "hearing_loop", label: "לולאת השראה" },
+];
 
 function blankLocation(): FormLocation {
-  return { city: "", region: "", address: "" };
+  return {
+    city: "",
+    region: "",
+    address: "",
+    accessibility_status: "unknown",
+    accessibility_features: [],
+    accessibility_note: "",
+  };
 }
 
 function isValidEmailInput(value: string): boolean {
@@ -89,6 +107,13 @@ type FormState = {
   online_available: boolean;
   home_visit_available: boolean;
   home_visit_regions: ProductRegion[];
+  therapy_format_ids: string[];
+  lgbtq_affirming: boolean;
+  offers_free_intro: boolean;
+  free_intro_types: string[];
+  free_intro_duration_minutes: string;
+  professional_memberships: { organization_name: string; member_since: string }[];
+  service_arrangements: { organization_name: string; note: string }[];
 };
 
 const emptyForm: FormState = {
@@ -110,6 +135,13 @@ const emptyForm: FormState = {
   online_available: false,
   home_visit_available: false,
   home_visit_regions: [],
+  therapy_format_ids: [],
+  lgbtq_affirming: false,
+  offers_free_intro: false,
+  free_intro_types: [],
+  free_intro_duration_minutes: "",
+  professional_memberships: [],
+  service_arrangements: [],
 };
 
 type ProfessionOption = {
@@ -251,6 +283,9 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
           city: canonical?.name ?? location.city,
           region: canonical?.region ?? location.region ?? "",
           address: location.address ?? "",
+          accessibility_status: location.accessibility_status as FormLocation["accessibility_status"],
+          accessibility_features: location.accessibility_features,
+          accessibility_note: location.accessibility_note ?? "",
         };
       })
     : [blankLocation()];
@@ -274,6 +309,19 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
     online_available: p.online_available,
     home_visit_available: p.home_visit_available,
     home_visit_regions: p.home_visit_regions,
+    therapy_format_ids: p.therapy_format_ids,
+    lgbtq_affirming: p.lgbtq_affirming,
+    offers_free_intro: p.offers_free_intro,
+    free_intro_types: p.free_intro_types,
+    free_intro_duration_minutes: p.free_intro_duration_minutes === null ? "" : String(p.free_intro_duration_minutes),
+    professional_memberships: p.professional_memberships.map((item) => ({
+      ...item,
+      member_since: item.member_since === null ? "" : String(item.member_since),
+    })),
+    service_arrangements: p.service_arrangements.map((item) => ({
+      ...item,
+      note: item.note ?? "",
+    })),
   };
 }
 
@@ -329,10 +377,33 @@ function EditorPage() {
               city: location.city,
               region: location.region as ProductRegion,
               address: location.address || null,
+              accessibility_status: location.accessibility_status,
+              accessibility_features: location.accessibility_features,
+              accessibility_note: location.accessibility_note || null,
             })),
           online_available: form.online_available,
           home_visit_available: form.home_visit_available,
           home_visit_regions: form.home_visit_regions,
+          therapy_format_ids: form.therapy_format_ids,
+          lgbtq_affirming: form.lgbtq_affirming,
+          offers_free_intro: form.offers_free_intro,
+          free_intro_types: form.offers_free_intro ? form.free_intro_types : [],
+          free_intro_duration_minutes:
+            form.offers_free_intro && form.free_intro_duration_minutes
+              ? Number(form.free_intro_duration_minutes)
+              : null,
+          professional_memberships: form.professional_memberships
+            .filter((item) => item.organization_name.trim())
+            .map((item) => ({
+              organization_name: item.organization_name,
+              member_since: item.member_since ? Number(item.member_since) : null,
+            })),
+          service_arrangements: form.service_arrangements
+            .filter((item) => item.organization_name.trim())
+            .map((item) => ({
+              organization_name: item.organization_name,
+              note: item.note || null,
+            })),
           publish,
         },
       }),
@@ -393,6 +464,30 @@ function EditorPage() {
     city: form.locations.find((location) => location.city.trim())?.city.trim() || null,
     image_url: form.image_url.trim() || null,
     verified: profile.data?.verified ?? false,
+    lgbtq_affirming: form.lgbtq_affirming,
+    offers_free_intro: form.offers_free_intro,
+    free_intro_types: form.free_intro_types,
+    free_intro_duration_minutes: form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
+    therapy_formats: (options.data?.therapy_formats ?? [])
+      .filter((item) => form.therapy_format_ids.includes(item.id))
+      .map((item) => ({ slug: item.slug, name: item.name_he })),
+    locations: form.locations
+      .filter((item) => item.city)
+      .map((item) => ({
+        city: item.city,
+        accessibility_status: item.accessibility_status,
+        accessibility_features: item.accessibility_features,
+        accessibility_note: item.accessibility_note || null,
+      })),
+    professional_memberships: form.professional_memberships
+      .filter((item) => item.organization_name.trim())
+      .map((item) => ({
+        organization_name: item.organization_name,
+        member_since: item.member_since ? Number(item.member_since) : null,
+      })),
+    service_arrangements: form.service_arrangements
+      .filter((item) => item.organization_name.trim())
+      .map((item) => ({ organization_name: item.organization_name, note: item.note || null })),
     problems: (previewDomains.data?.domains ?? []).map((domain) => ({
       id: domain.slug,
       slug: domain.slug,
@@ -590,12 +685,77 @@ function EditorPage() {
 
               <Section title="למי מיועד הטיפול? *">
                 <SelectionGrid
-                  items={(options.data?.populations ?? []).map((p) => ({ id: p.id, label: p.name }))}
+                  items={(options.data?.populations ?? []).map((p) => ({
+                    id: p.id,
+                    label: p.name,
+                  }))}
                   selected={form.population_ids}
                   onChange={(ids) => setForm({ ...form, population_ids: ids })}
                   columns="four"
                   hint="סמנו את כל האוכלוסיות שעבורן אתם מציעים טיפול."
                 />
+              </Section>
+
+              <Section title="מסגרת הטיפול">
+                <SelectionGrid
+                  items={(options.data?.therapy_formats ?? []).map((item) => ({
+                    id: item.id,
+                    label: item.name_he,
+                  }))}
+                  selected={form.therapy_format_ids}
+                  onChange={(ids) => setForm({ ...form, therapy_format_ids: ids })}
+                  columns="three"
+                  hint="ניתן לבחור יותר ממסגרת טיפול אחת."
+                />
+              </Section>
+
+              <Section title="מאפייני הטיפול">
+                <div className="space-y-3">
+                  <CheckCard
+                    checked={form.lgbtq_affirming}
+                    onChange={(checked) => setForm({ ...form, lgbtq_affirming: checked })}
+                    title="טיפול מותאם לקהילה הגאה"
+                    description="הצהרה עצמית שתוצג כתגית בפרופיל. אינה מהווה הסמכה מקצועית מאומתת."
+                  />
+                  <CheckCard
+                    checked={form.offers_free_intro}
+                    onChange={(checked) =>
+                      setForm({
+                        ...form,
+                        offers_free_intro: checked,
+                        free_intro_types: checked ? form.free_intro_types : [],
+                        free_intro_duration_minutes: checked ? form.free_intro_duration_minutes : "",
+                      })
+                    }
+                    title="פגישת או שיחת היכרות ללא תשלום"
+                    description="ציינו כיצד ניתן לקיים את ההיכרות וכמה זמן היא נמשכת."
+                  />
+                  {form.offers_free_intro && (
+                    <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
+                      <SelectionGrid
+                        items={[
+                          { id: "phone", label: "טלפון" },
+                          { id: "video", label: "וידאו" },
+                          { id: "in_person", label: "פגישה בקליניקה" },
+                        ]}
+                        selected={form.free_intro_types}
+                        onChange={(ids) => setForm({ ...form, free_intro_types: ids })}
+                        columns="three"
+                        showCount={false}
+                      />
+                      <Field label="משך ההיכרות בדקות">
+                        <Input
+                          type="number"
+                          min={5}
+                          max={120}
+                          value={form.free_intro_duration_minutes}
+                          onChange={(e) => setForm({ ...form, free_intro_duration_minutes: e.target.value })}
+                          className="max-w-40 bg-white"
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </div>
               </Section>
 
               <Section title="מיקום הטיפול *">
@@ -687,6 +847,75 @@ function EditorPage() {
                             className="bg-white transition-colors focus:border-brand focus:ring-brand/30"
                           />
                         </Field>
+
+                        {location.city && (
+                          <div className="mt-4 border-t border-border pt-4">
+                            <Field label="נגישות הקליניקה">
+                              <SelectionGrid
+                                items={[
+                                  { id: "accessible", label: "נגישה" },
+                                  { id: "partially_accessible", label: "נגישה חלקית" },
+                                  { id: "not_accessible", label: "אינה נגישה" },
+                                  { id: "unknown", label: "לא ידוע" },
+                                ]}
+                                selected={[location.accessibility_status]}
+                                onChange={(ids) =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    locations: current.locations.map((item, locationIndex) =>
+                                      locationIndex === index
+                                        ? {
+                                            ...item,
+                                            accessibility_status: (ids[0] ??
+                                              "unknown") as FormLocation["accessibility_status"],
+                                            accessibility_features:
+                                              ids[0] === "accessible" || ids[0] === "partially_accessible"
+                                                ? item.accessibility_features
+                                                : [],
+                                          }
+                                        : item,
+                                    ),
+                                  }))
+                                }
+                                multiple={false}
+                                columns="four"
+                                showCount={false}
+                              />
+                            </Field>
+                            {(location.accessibility_status === "accessible" ||
+                              location.accessibility_status === "partially_accessible") && (
+                              <SelectionGrid
+                                items={ACCESSIBILITY_FEATURES}
+                                selected={location.accessibility_features}
+                                onChange={(ids) =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    locations: current.locations.map((item, locationIndex) =>
+                                      locationIndex === index ? { ...item, accessibility_features: ids } : item,
+                                    ),
+                                  }))
+                                }
+                                columns="three"
+                                hint="סמנו את מאפייני הנגישות הקיימים במקום."
+                              />
+                            )}
+                            <Field label="מידע נוסף על הנגישות">
+                              <Input
+                                value={location.accessibility_note}
+                                maxLength={500}
+                                onChange={(e) =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    locations: current.locations.map((item, locationIndex) =>
+                                      locationIndex === index ? { ...item, accessibility_note: e.target.value } : item,
+                                    ),
+                                  }))
+                                }
+                                className="bg-white"
+                              />
+                            </Field>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -770,6 +999,38 @@ function EditorPage() {
                 <p className="text-sm text-muted-foreground">
                   לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור שירות.
                 </p>
+              </Section>
+
+              <Section title="איגודים מקצועיים והסדרים">
+                <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.</p>
+                <StringListEditor
+                  title="חברות באיגודים מקצועיים"
+                  placeholder="שם האיגוד או האגודה"
+                  items={form.professional_memberships.map((item) => item.organization_name)}
+                  onChange={(items) =>
+                    setForm({
+                      ...form,
+                      professional_memberships: items.map((organization_name, index) => ({
+                        organization_name,
+                        member_since: form.professional_memberships[index]?.member_since ?? "",
+                      })),
+                    })
+                  }
+                />
+                <StringListEditor
+                  title="הסדרים עם גופים"
+                  placeholder="לדוגמה: קופת חולים או גוף ציבורי"
+                  items={form.service_arrangements.map((item) => item.organization_name)}
+                  onChange={(items) =>
+                    setForm({
+                      ...form,
+                      service_arrangements: items.map((organization_name, index) => ({
+                        organization_name,
+                        note: form.service_arrangements[index]?.note ?? "",
+                      })),
+                    })
+                  }
+                />
               </Section>
 
               <Section title="פרטי התקשרות">
@@ -872,6 +1133,71 @@ type SelectionItem = {
   disabled?: boolean;
 };
 
+function CheckCard({
+  checked,
+  onChange,
+  title,
+  description,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white/60 p-4 transition-colors hover:border-brand/50">
+      <Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} className="mt-0.5 shrink-0" />
+      <span>
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
+      </span>
+    </label>
+  );
+}
+
+function StringListEditor({
+  title,
+  placeholder,
+  items,
+  onChange,
+}: {
+  title: string;
+  placeholder: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+}) {
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium text-foreground">{title}</h3>
+      <div className="space-y-2">
+        {items.map((item, index) => (
+          <div key={index} className="flex gap-2">
+            <Input
+              value={item}
+              maxLength={160}
+              placeholder={placeholder}
+              onChange={(e) =>
+                onChange(items.map((value, itemIndex) => (itemIndex === index ? e.target.value : value)))
+              }
+              className="bg-white"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+            >
+              הסרה
+            </Button>
+          </div>
+        ))}
+        <Button type="button" variant="outline" onClick={() => onChange([...items, ""])}>
+          + הוספה
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 type SelectionGridProps = {
   items: SelectionItem[];
   selected: string[];
@@ -952,7 +1278,7 @@ function ProfileActions({
           תצוגה מקדימה
         </Button>
         <Button variant="outline" disabled={isPending} onClick={onSaveDraft} className="w-full">
-          {isPending ? "שומר…" : "שמור טיוטה"}
+          {isPending ? "מתבצעת שמירה…" : "שמירת פרופיל"}
         </Button>
         <Button
           disabled={isPending || publishMissing}
@@ -960,7 +1286,7 @@ function ProfileActions({
           onClick={onPublish}
           className="w-full"
         >
-          {isPending ? "מפרסם…" : "פרסם פרופיל"}
+          {isPending ? "מתבצע פרסום…" : "פרסום פרופיל"}
         </Button>
       </div>
 
