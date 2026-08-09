@@ -35,6 +35,14 @@ const searchSchema = z.object({
   language: fallback(z.string().trim().max(8), "").default(""),
   regions: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
   serviceTypes: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
+  professions: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
+  modalities: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
+  therapyFormats: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
+  gender: fallback(z.string(), "").default(""),
+  accessible: fallback(z.string(), "").default(""),
+  verified: fallback(z.string(), "").default(""),
+  lgbtqAffirming: fallback(z.string(), "").default(""),
+  freeIntro: fallback(z.string(), "").default(""),
   flow: fallback(z.string(), "legacy").default("legacy"),
 });
 
@@ -87,6 +95,14 @@ export function unifiedResultsQuery(p: UnifiedParams) {
           language: p.language,
           regions: [...p.regions],
           serviceTypes: [...p.serviceTypes],
+          professions: [...p.professionSlugs],
+          modalities: [...p.modalitySlugs],
+          therapyFormats: [...p.therapyFormats],
+          gender: p.gender || undefined,
+          accessible: p.accessible,
+          verified: p.verified,
+          lgbtqAffirming: p.lgbtqAffirming,
+          freeIntro: p.freeIntro,
           limit: 20,
         },
       }),
@@ -144,6 +160,14 @@ export function toUnifiedParams(s: SearchParams): UnifiedParams {
     language: s.language,
     regions: s.regions,
     serviceTypes: s.serviceTypes,
+    professions: s.professions,
+    modalities: s.modalities,
+    therapyFormats: s.therapyFormats,
+    gender: s.gender,
+    accessible: s.accessible,
+    verified: s.verified,
+    lgbtqAffirming: s.lgbtqAffirming,
+    freeIntro: s.freeIntro,
   });
 }
 
@@ -407,12 +431,23 @@ function SearchPage() {
         cities={filters.cities}
         populations={filters.populations}
         languages={filters.languages}
+        professions={filters.professions}
+        modalities={filters.modalities}
+        therapyFormats={filters.therapyFormats}
         initialFilters={{
           city: contract.city,
           population: contract.population,
           language: contract.language,
           regions: [...contract.regions],
           serviceTypes: [...contract.serviceTypes],
+          professions: [...contract.professionSlugs],
+          modalities: [...contract.modalitySlugs],
+          therapyFormats: [...contract.therapyFormats],
+          gender: contract.gender,
+          accessible: contract.accessible,
+          verified: contract.verified,
+          lgbtqAffirming: contract.lgbtqAffirming,
+          freeIntro: contract.freeIntro,
         }}
         preserveSearch={import.meta.env.DEV ? { problem: search.problem, flow: search.flow } : undefined}
         variant="compact"
