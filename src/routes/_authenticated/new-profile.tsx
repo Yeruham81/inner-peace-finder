@@ -6,11 +6,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
+import { TherapistProfileView, type TherapistProfileViewData } from "@/components/therapist-profile-view";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
@@ -274,6 +282,7 @@ function EditorPage() {
   const getProfileFn = useServerFn(getMyProfile);
   const getOptionsFn = useServerFn(getEditorOptions);
   const saveFn = useServerFn(saveMyProfile);
+  const getFeedbackFn = useServerFn(getSemanticFeedback);
 
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
   const options = useQuery({ queryKey: ["editor-options"], queryFn: () => getOptionsFn() });
@@ -281,6 +290,14 @@ function EditorPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [initialized, setInitialized] = useState(false);
   const [missing, setMissing] = useState<string[] | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const previewDomains = useQuery({
+    queryKey: ["semantic-feedback", form.full_description.trim()],
+    queryFn: () => getFeedbackFn({ data: { description: form.full_description } }),
+    enabled: previewOpen && form.full_description.trim().length >= 20,
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
     if (initialized || !profile.isSuccess || !options.isSuccess) return;
@@ -366,6 +383,28 @@ function EditorPage() {
     phoneInvalid ||
     (form.home_visit_available && form.home_visit_regions.length === 0) ||
     (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
+
+  const previewData: TherapistProfileViewData = {
+    id: profile.data?.id ?? "preview",
+    full_name: form.full_name.trim(),
+    professional_title: form.professional_title.trim() || null,
+    full_description: form.full_description.trim() || null,
+    years_experience: form.years_experience.trim() === "" ? null : Number(form.years_experience),
+    city: form.locations.find((location) => location.city.trim())?.city.trim() || null,
+    image_url: form.image_url.trim() || null,
+    verified: profile.data?.verified ?? false,
+    problems: (previewDomains.data?.domains ?? []).map((domain) => ({
+      id: domain.slug,
+      slug: domain.slug,
+      name: domain.name,
+    })),
+    populations: (options.data?.populations ?? [])
+      .filter((population) => form.population_ids.includes(population.id))
+      .map((population) => ({ slug: population.slug, name: population.name })),
+    languages: orderedLanguages
+      .filter((language) => form.language_ids.includes(language.id))
+      .map((language) => ({ code: language.code, name: language.name })),
+  };
 
   return (
     <div className="min-h-screen bg-brand-soft/50">
@@ -786,6 +825,7 @@ function EditorPage() {
                 status={status}
                 isPending={mutation.isPending}
                 publishMissing={publishMissing}
+                onPreview={() => setPreviewOpen(true)}
                 onSaveDraft={() => mutation.mutate(false)}
                 onPublish={() => mutation.mutate(true)}
               />
@@ -797,12 +837,30 @@ function EditorPage() {
               status={status}
               isPending={mutation.isPending}
               publishMissing={publishMissing}
+              onPreview={() => setPreviewOpen(true)}
               onSaveDraft={() => mutation.mutate(false)}
               onPublish={() => mutation.mutate(true)}
             />
           </aside>
         </div>
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent
+          dir="rtl"
+          className="flex h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0 sm:h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]"
+        >
+          <DialogHeader className="shrink-0 border-b border-border px-5 py-4 text-right sm:px-6">
+            <DialogTitle>תצוגה מקדימה של הפרופיל</DialogTitle>
+            <DialogDescription>כך הפרופיל יוצג למבקרים. שינויים שלא שמרתם מוצגים כאן בלבד.</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-brand-soft/50 p-2 sm:p-6">
+            <div className="mx-auto max-w-4xl">
+              <TherapistProfileView therapist={previewData} interactive={false} />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -859,12 +917,14 @@ function ProfileActions({
   status,
   isPending,
   publishMissing,
+  onPreview,
   onSaveDraft,
   onPublish,
 }: {
   status: "draft" | "completed" | "published";
   isPending: boolean;
   publishMissing: boolean;
+  onPreview: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
 }) {
@@ -888,6 +948,9 @@ function ProfileActions({
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        <Button variant="outline" onClick={onPreview} className="w-full">
+          תצוגה מקדימה
+        </Button>
         <Button variant="outline" disabled={isPending} onClick={onSaveDraft} className="w-full">
           {isPending ? "שומר…" : "שמור טיוטה"}
         </Button>
