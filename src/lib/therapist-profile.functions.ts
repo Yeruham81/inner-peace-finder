@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
 import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-feedback";
+import { computeSemanticProfile } from "./profile-semantic-sync";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 import {
   PRODUCT_REGIONS,
@@ -475,6 +476,11 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       return { therapist_id: "", profile_status: "draft", missing };
     }
 
+    // Recompute the semantic source of truth BEFORE any write. A catalog or
+    // extraction failure must abort the save/publish instead of persisting an
+    // outdated (or silently emptied) semantic_profile.
+    const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
+
     // Load existing profile (if any)
     const { data: existing } = await supabase
       .from("therapists")
@@ -513,6 +519,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
       profile_status: nextStatus,
       is_active: true,
+      semantic_profile: semanticProfile,
       city: resolvedLocations[0]?.city ?? null,
       region: resolvedLocations[0]?.region ?? null,
       ...(data.publish ? { visibility: "visible" as const } : {}),
