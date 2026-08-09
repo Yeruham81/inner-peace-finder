@@ -31,11 +31,11 @@ export function TherapistCredentialPanel({
   const submitFn = useServerFn(submitMyCredential);
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const status = credential?.verification_status ?? "unverified";
   const locked = credential?.verification_status === "verified";
+  const [expanded, setExpanded] = useState(status === "rejected" || status === "expired");
   const [professionId, setProfessionId] = useState(credential?.profession_id ?? "");
-  const [credentialType, setCredentialType] = useState(
-    credential?.credential_type ?? "רישיון מקצועי",
-  );
+  const [credentialType, setCredentialType] = useState(credential?.credential_type ?? "רישיון מקצועי");
   const [licenseNumber, setLicenseNumber] = useState(credential?.license_number ?? "");
   const [issuingAuthority, setIssuingAuthority] = useState(credential?.issuing_authority ?? "");
   const [institution, setInstitution] = useState(credential?.institution ?? "");
@@ -86,7 +86,6 @@ export function TherapistCredentialPanel({
     }
   }
 
-  const status = credential?.verification_status ?? "unverified";
   const canSubmit =
     therapistId &&
     professionId &&
@@ -96,125 +95,144 @@ export function TherapistCredentialPanel({
     documentPath;
 
   return (
-    <div className="rounded-xl border border-brand/20 bg-brand-soft/25 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">הסמכה מקצועית מאומתת</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            הזינו פרטי רישיון והעלו מסמך לצורך בדיקה. פרטי הרישיון והמסמך לא יוצגו לציבור.
-          </p>
-        </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_COPY[status][1]}`}>
-          {STATUS_COPY[status][0]}
+    <div className="overflow-hidden rounded-xl border border-brand/20 bg-brand-soft/25">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="professional-credential-form"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-brand-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold text-foreground">הסמכה מקצועית מאומתת</span>
+          <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+            {status === "unverified"
+              ? "בעלי רישיון מקצועי יכולים להגיש פרטי רישיון ומסמך לצורך אימות."
+              : "לחצו להצגת פרטי ההסמכה והמסמך שהוגש."}
+          </span>
         </span>
-      </div>
-      {credential?.verification_status === "rejected" && credential.rejection_reason && (
-        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          סיבת הדחייה: {credential.rejection_reason}
-        </div>
-      )}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-medium">
-          מקצוע
-          <select
-            value={professionId}
-            disabled={locked}
-            onChange={(e) => setProfessionId(e.target.value)}
-            className="mt-1.5 h-10 w-full rounded-md border border-border bg-white px-3 font-normal"
+        <span className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_COPY[status][1]}`}>
+            {STATUS_COPY[status][0]}
+          </span>
+          <span
+            aria-hidden="true"
+            className={`text-lg text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
           >
-            <option value="">בחירת מקצוע</option>
-            {professions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name_he}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm font-medium">
-          סוג ההסמכה
-          <Input
-            value={credentialType}
-            disabled={locked}
-            maxLength={120}
-            onChange={(e) => setCredentialType(e.target.value)}
-            className="mt-1.5 bg-white"
-          />
-        </label>
-        <label className="text-sm font-medium">
-          מספר רישיון
-          <Input
-            dir="ltr"
-            value={licenseNumber}
-            disabled={locked}
-            maxLength={120}
-            onChange={(e) => setLicenseNumber(e.target.value)}
-            className="mt-1.5 bg-white text-left"
-          />
-        </label>
-        <label className="text-sm font-medium">
-          הגוף המנפיק
-          <Input
-            value={issuingAuthority}
-            disabled={locked}
-            maxLength={160}
-            onChange={(e) => setIssuingAuthority(e.target.value)}
-            className="mt-1.5 bg-white"
-          />
-        </label>
-        <label className="text-sm font-medium">
-          מוסד לימודים או הכשרה
-          <Input
-            value={institution}
-            disabled={locked}
-            maxLength={160}
-            onChange={(e) => setInstitution(e.target.value)}
-            className="mt-1.5 bg-white"
-          />
-        </label>
-        <label className="text-sm font-medium">
-          תאריך תפוגה, אם קיים
-          <Input
-            type="date"
-            value={expiresAt}
-            disabled={locked}
-            onChange={(e) => setExpiresAt(e.target.value)}
-            className="mt-1.5 bg-white"
-          />
-        </label>
-      </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          hidden
-          accept={ACCEPTED.join(",")}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void upload(file);
-          }}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          disabled={locked || uploading || !therapistId}
-          onClick={() => inputRef.current?.click()}
-        >
-          {uploading ? "המסמך מועלה…" : documentPath ? "החלפת מסמך" : "העלאת מסמך"}
-        </Button>
-        {documentPath && <span className="text-sm text-emerald-700">✓ מסמך הועלה</span>}
-        {!therapistId && (
-          <span className="text-xs text-muted-foreground">יש לבצע תחילה שמירת פרופיל.</span>
-        )}
-      </div>
-      {!locked && (
-        <Button
-          type="button"
-          className="mt-4"
-          disabled={!canSubmit || uploading || mutation.isPending}
-          onClick={() => mutation.mutate()}
-        >
-          {mutation.isPending ? "הבקשה נשלחת…" : "שליחת ההסמכה לבדיקה"}
-        </Button>
+            ⌄
+          </span>
+        </span>
+      </button>
+
+      {expanded && (
+        <div id="professional-credential-form" className="border-t border-brand/20 p-4">
+          {credential?.verification_status === "rejected" && credential.rejection_reason && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+              סיבת הדחייה: {credential.rejection_reason}
+            </div>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-medium">
+              מקצוע
+              <select
+                value={professionId}
+                disabled={locked}
+                onChange={(e) => setProfessionId(e.target.value)}
+                className="mt-1.5 h-10 w-full rounded-md border border-border bg-white px-3 font-normal"
+              >
+                <option value="">בחירת מקצוע</option>
+                {professions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name_he}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-medium">
+              סוג ההסמכה
+              <Input
+                value={credentialType}
+                disabled={locked}
+                maxLength={120}
+                onChange={(e) => setCredentialType(e.target.value)}
+                className="mt-1.5 bg-white"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              מספר רישיון
+              <Input
+                dir="ltr"
+                value={licenseNumber}
+                disabled={locked}
+                maxLength={120}
+                onChange={(e) => setLicenseNumber(e.target.value)}
+                className="mt-1.5 bg-white text-left"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              הגוף המנפיק
+              <Input
+                value={issuingAuthority}
+                disabled={locked}
+                maxLength={160}
+                onChange={(e) => setIssuingAuthority(e.target.value)}
+                className="mt-1.5 bg-white"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              מוסד לימודים או הכשרה
+              <Input
+                value={institution}
+                disabled={locked}
+                maxLength={160}
+                onChange={(e) => setInstitution(e.target.value)}
+                className="mt-1.5 bg-white"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              תאריך תפוגה, אם קיים
+              <Input
+                type="date"
+                value={expiresAt}
+                disabled={locked}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="mt-1.5 bg-white"
+              />
+            </label>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <input
+              ref={inputRef}
+              type="file"
+              hidden
+              accept={ACCEPTED.join(",")}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void upload(file);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={locked || uploading || !therapistId}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploading ? "המסמך מועלה…" : documentPath ? "החלפת מסמך" : "העלאת מסמך"}
+            </Button>
+            {documentPath && <span className="text-sm text-emerald-700">✓ מסמך הועלה</span>}
+            {!therapistId && <span className="text-xs text-muted-foreground">יש לבצע תחילה שמירת פרופיל.</span>}
+          </div>
+          {!locked && (
+            <Button
+              type="button"
+              className="mt-4"
+              disabled={!canSubmit || uploading || mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? "הבקשה נשלחת…" : "שליחת ההסמכה לבדיקה"}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
