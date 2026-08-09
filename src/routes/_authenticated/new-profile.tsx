@@ -18,6 +18,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
+import { TherapistCredentialPanel } from "@/components/therapist-credential-panel";
 import { TherapistProfileView, type TherapistProfileViewData } from "@/components/therapist-profile-view";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
@@ -28,7 +29,9 @@ import {
   getEditorOptions,
   getMyProfile,
   getSemanticFeedback,
+  deleteMyProfilePermanently,
   saveMyProfile,
+  setMyProfileVisibility,
   type EditorOptions,
   type Gender,
   type ProfileEditorData,
@@ -331,6 +334,8 @@ function EditorPage() {
   const getOptionsFn = useServerFn(getEditorOptions);
   const saveFn = useServerFn(saveMyProfile);
   const getFeedbackFn = useServerFn(getSemanticFeedback);
+  const setVisibilityFn = useServerFn(setMyProfileVisibility);
+  const deleteProfileFn = useServerFn(deleteMyProfilePermanently);
 
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
   const options = useQuery({ queryKey: ["editor-options"], queryFn: () => getOptionsFn() });
@@ -419,6 +424,25 @@ function EditorPage() {
       queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
     },
     onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
+  });
+
+  const visibilityMutation = useMutation({
+    mutationFn: (visible: boolean) => setVisibilityFn({ data: { visible } }),
+    onSuccess: (result) => {
+      toast.success(result.visibility === "visible" ? "הפרופיל הופעל מחדש." : "הפרופיל הוקפא ואינו גלוי כעת.");
+      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
+    },
+    onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteProfileFn({ data: { confirmation: "מחיקת הפרופיל לצמיתות" } }),
+    onSuccess: () => {
+      queryClient.clear();
+      window.location.assign("/account");
+    },
+    onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
 
   if (profile.isLoading || options.isLoading || !initialized) {
@@ -664,6 +688,43 @@ function EditorPage() {
                   rows={6}
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב, הכשרה בטיפול דינמי, ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית."
+                />
+                <TherapistCredentialPanel
+                  therapistId={profile.data?.id ?? null}
+                  professions={options.data?.professions ?? []}
+                  credential={profile.data?.credential ?? null}
+                />
+              </Section>
+
+              <Section title="איגודים מקצועיים והסדרים">
+                <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.</p>
+                <StringListEditor
+                  title="חברות באיגודים מקצועיים"
+                  placeholder="שם האיגוד או האגודה"
+                  items={form.professional_memberships.map((item) => item.organization_name)}
+                  onChange={(items) =>
+                    setForm({
+                      ...form,
+                      professional_memberships: items.map((organization_name, index) => ({
+                        organization_name,
+                        member_since: form.professional_memberships[index]?.member_since ?? "",
+                      })),
+                    })
+                  }
+                />
+                <StringListEditor
+                  title="הסדרים עם גופים"
+                  placeholder="לדוגמה: קופת חולים או גוף ציבורי"
+                  items={form.service_arrangements.map((item) => item.organization_name)}
+                  onChange={(items) =>
+                    setForm({
+                      ...form,
+                      service_arrangements: items.map((organization_name, index) => ({
+                        organization_name,
+                        note: form.service_arrangements[index]?.note ?? "",
+                      })),
+                    })
+                  }
                 />
               </Section>
             </FormArea>
@@ -1001,38 +1062,6 @@ function EditorPage() {
                 </p>
               </Section>
 
-              <Section title="איגודים מקצועיים והסדרים">
-                <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.</p>
-                <StringListEditor
-                  title="חברות באיגודים מקצועיים"
-                  placeholder="שם האיגוד או האגודה"
-                  items={form.professional_memberships.map((item) => item.organization_name)}
-                  onChange={(items) =>
-                    setForm({
-                      ...form,
-                      professional_memberships: items.map((organization_name, index) => ({
-                        organization_name,
-                        member_since: form.professional_memberships[index]?.member_since ?? "",
-                      })),
-                    })
-                  }
-                />
-                <StringListEditor
-                  title="הסדרים עם גופים"
-                  placeholder="לדוגמה: קופת חולים או גוף ציבורי"
-                  items={form.service_arrangements.map((item) => item.organization_name)}
-                  onChange={(items) =>
-                    setForm({
-                      ...form,
-                      service_arrangements: items.map((organization_name, index) => ({
-                        organization_name,
-                        note: form.service_arrangements[index]?.note ?? "",
-                      })),
-                    })
-                  }
-                />
-              </Section>
-
               <Section title="פרטי התקשרות">
                 <p className="text-sm text-muted-foreground">
                   פרטים אלה ישמשו ליצירת קשר בנוגע לפניות שתקבלו דרך Tipulinks.
@@ -1089,6 +1118,10 @@ function EditorPage() {
                 onPreview={() => setPreviewOpen(true)}
                 onSaveDraft={() => mutation.mutate(false)}
                 onPublish={() => mutation.mutate(true)}
+                visibility={profile.data?.visibility ?? "hidden"}
+                canReactivate={status === "published"}
+                visibilityPending={visibilityMutation.isPending}
+                onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
               />
             </div>
           </main>
@@ -1101,9 +1134,19 @@ function EditorPage() {
               onPreview={() => setPreviewOpen(true)}
               onSaveDraft={() => mutation.mutate(false)}
               onPublish={() => mutation.mutate(true)}
+              visibility={profile.data?.visibility ?? "hidden"}
+              canReactivate={status === "published"}
+              visibilityPending={visibilityMutation.isPending}
+              onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
             />
           </aside>
         </div>
+
+        {isEdit && (
+          <div className="mt-10">
+            <DeleteProfilePanel pending={deleteMutation.isPending} onConfirm={() => deleteMutation.mutate()} />
+          </div>
+        )}
       </div>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -1246,6 +1289,10 @@ function ProfileActions({
   onPreview,
   onSaveDraft,
   onPublish,
+  visibility,
+  canReactivate,
+  visibilityPending,
+  onVisibilityChange,
 }: {
   status: "draft" | "completed" | "published";
   isPending: boolean;
@@ -1253,12 +1300,37 @@ function ProfileActions({
   onPreview: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
+  visibility: "visible" | "hidden";
+  canReactivate: boolean;
+  visibilityPending: boolean;
+  onVisibilityChange: (visible: boolean) => void;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">שמירה ופרסום</h2>
         <StatusBadge status={status} />
+      </div>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
+          />
+          {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={visibilityPending || (visibility === "hidden" && !canReactivate)}
+          onClick={() => onVisibilityChange(visibility !== "visible")}
+          className="mt-3 w-full"
+        >
+          {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
+        </Button>
+        {visibility === "hidden" && !canReactivate && (
+          <p className="mt-2 text-xs text-muted-foreground">ניתן להפעיל מחדש לאחר פרסום הפרופיל.</p>
+        )}
       </div>
 
       <div
@@ -1294,6 +1366,69 @@ function ProfileActions({
         חזרה לחשבון
       </Link>
     </div>
+  );
+}
+
+function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const phrase = "מחיקת הפרופיל לצמיתות";
+
+  function close(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen && !pending) {
+      setAcknowledged(false);
+      setConfirmation("");
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5">
+      <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או לשחזר את
+        הפרופיל לאחר מכן.
+      </p>
+      <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
+        מחיקת הפרופיל
+      </Button>
+
+      <Dialog open={open} onOpenChange={close}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>אישור מחיקה לצמיתות</DialogTitle>
+            <DialogDescription>זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות שחזור.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+              <Checkbox checked={acknowledged} onCheckedChange={(value) => setAcknowledged(value === true)} />
+              <span className="text-sm text-foreground">ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את הפרופיל.</span>
+            </label>
+            <Field label={`כדי לאשר, הקלידו: ${phrase}`}>
+              <Input
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                autoComplete="off"
+              />
+            </Field>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button type="button" variant="outline" disabled={pending} onClick={() => close(false)}>
+                ביטול
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending || !acknowledged || confirmation !== phrase}
+                onClick={onConfirm}
+              >
+                {pending ? "הפרופיל נמחק…" : "כן, מחיקת הפרופיל לצמיתות"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 
