@@ -7,10 +7,7 @@
  */
 
 import { applyEligibility } from "./search-eligibility";
-import {
-  PUBLIC_THERAPIST_SELECT,
-  type PublicTherapistProfile,
-} from "./public-therapist-profile";
+import { PUBLIC_THERAPIST_SELECT, type PublicTherapistProfile } from "./public-therapist-profile";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type PublicReadClient = { from: (table: string) => any };
@@ -31,16 +28,27 @@ export async function fetchPublicTherapistBySlug(
   const t = unwrap(res) as Record<string, any> | null;
   if (!t) return null;
 
-  const [tps, pops, langs] = await Promise.all([
-    sb
-      .from("therapist_problems")
-      .select("problems(id, name, slug, parent_id)")
-      .eq("therapist_id", t.id),
-    sb
-      .from("therapist_populations")
-      .select("population_groups(slug, name)")
-      .eq("therapist_id", t.id),
+  const [tps, pops, langs, formats, locations, memberships, arrangements] = await Promise.all([
+    sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
+    sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
     sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
+    sb.from("therapist_therapy_formats").select("therapy_formats(slug, name:name_he)").eq("therapist_id", t.id),
+    sb
+      .from("therapist_locations")
+      .select("city, accessibility_status, accessibility_features, accessibility_note")
+      .eq("therapist_id", t.id)
+      .eq("location_type", "clinic")
+      .eq("is_active", true),
+    sb
+      .from("therapist_professional_memberships")
+      .select("organization_name, member_since")
+      .eq("therapist_id", t.id)
+      .order("sort_order"),
+    sb
+      .from("therapist_service_arrangements")
+      .select("organization_name, note")
+      .eq("therapist_id", t.id)
+      .order("sort_order"),
   ]);
 
   // Explicit projection — never spread the database row.
@@ -55,6 +63,14 @@ export async function fetchPublicTherapistBySlug(
     city: t.city ?? null,
     image_url: t.image_url ?? null,
     verified: !!t.verified,
+    lgbtq_affirming: !!t.lgbtq_affirming,
+    offers_free_intro: !!t.offers_free_intro,
+    free_intro_types: t.free_intro_types ?? [],
+    free_intro_duration_minutes: t.free_intro_duration_minutes ?? null,
+    therapy_formats: ((formats?.data ?? []) as any[]).map((r) => r.therapy_formats).filter(Boolean),
+    locations: (locations?.data ?? []) as any[],
+    professional_memberships: (memberships?.data ?? []) as any[],
+    service_arrangements: (arrangements?.data ?? []) as any[],
     problems: ((tps?.data ?? []) as any[]).map((r) => r.problems).filter(Boolean),
     populations: ((pops?.data ?? []) as any[]).map((r) => r.population_groups).filter(Boolean),
     languages: ((langs?.data ?? []) as any[]).map((r) => r.languages).filter(Boolean),
@@ -63,9 +79,9 @@ export async function fetchPublicTherapistBySlug(
 
 /** Sitemap slugs — eligible profiles only. */
 export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<string[]> {
-  const rows = unwrap(await applyEligibility(sb.from("therapists").select("slug"))) as
-    | Array<{ slug: string }>
-    | null;
+  const rows = unwrap(await applyEligibility(sb.from("therapists").select("slug"))) as Array<{
+    slug: string;
+  }> | null;
   return (rows ?? []).map((r) => r.slug).filter(Boolean);
 }
 
