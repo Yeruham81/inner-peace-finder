@@ -283,7 +283,7 @@ export function SearchForm({
 
   const visibleFilters = isHero
     ? filters.filter((filter) => ["regions", "language", "population", "serviceType"].includes(filter.key))
-    : filters;
+    : filters.filter((filter) => filter.key !== "serviceType" && filter.key !== "gender");
   const activeFilter = visibleFilters.find((filter) => filter.key === openFilter);
 
   function selectedValues(key: FilterKey): string[] {
@@ -539,19 +539,31 @@ export function SearchForm({
   }
 
   function toggleQuickFilter(
-    key: "online" | "home_visit" | "accessible" | "verified" | "lgbtqAffirming" | "freeIntro",
+    key:
+      | "clinic"
+      | "online"
+      | "home_visit"
+      | "female"
+      | "male"
+      | "accessible"
+      | "verified"
+      | "lgbtqAffirming"
+      | "freeIntro",
   ) {
     const serviceTypes =
-      key === "online" || key === "home_visit"
+      key === "clinic" || key === "online" || key === "home_visit"
         ? appliedContract.serviceTypes.includes(key)
           ? appliedContract.serviceTypes.filter((value) => value !== key)
           : [...appliedContract.serviceTypes, key]
         : appliedContract.serviceTypes;
+    const gender =
+      key === "female" || key === "male" ? (appliedContract.gender === key ? "" : key) : appliedContract.gender;
     navigateToContract({
       ...appliedContract,
       professions: appliedContract.professionSlugs,
       modalities: appliedContract.modalitySlugs,
       serviceTypes,
+      gender,
       accessible: key === "accessible" ? !appliedContract.accessible : appliedContract.accessible,
       verified: key === "verified" ? !appliedContract.verified : appliedContract.verified,
       lgbtqAffirming: key === "lgbtqAffirming" ? !appliedContract.lgbtqAffirming : appliedContract.lgbtqAffirming,
@@ -594,6 +606,11 @@ export function SearchForm({
           <div className="flex gap-2 overflow-x-auto pb-2" aria-label="מסננים מהירים">
             {[
               {
+                key: "clinic",
+                label: "פגישה בקליניקה",
+                active: appliedContract.serviceTypes.includes("clinic"),
+              },
+              {
                 key: "online",
                 label: "אונליין",
                 active: appliedContract.serviceTypes.includes("online"),
@@ -603,6 +620,8 @@ export function SearchForm({
                 label: "ביקורי בית",
                 active: appliedContract.serviceTypes.includes("home_visit"),
               },
+              { key: "female", label: "אישה", active: appliedContract.gender === "female" },
+              { key: "male", label: "גבר", active: appliedContract.gender === "male" },
               { key: "accessible", label: "קליניקה נגישה", active: appliedContract.accessible },
               { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
               {
