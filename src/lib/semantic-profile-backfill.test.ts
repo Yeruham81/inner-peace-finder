@@ -43,9 +43,10 @@ function makeSb(rows: Row[], opts: { concurrent?: Set<string> } = {}) {
         then: (resolve: (v: unknown) => unknown) => {
           if (payload) {
             updates.push({ payload, filters });
-            const idFilter = filters.find(
-              (f) => Array.isArray(f) && f[0] === "id",
-            ) as [string, string];
+            const idFilter = filters.find((f) => Array.isArray(f) && f[0] === "id") as [
+              string,
+              string,
+            ];
             const blocked = opts.concurrent?.has(idFilter[1]);
             return Promise.resolve({
               data: blocked ? [] : [{ id: idFilter[1] }],
@@ -76,9 +77,7 @@ const legacy: Row = {
   semantic_profile: ["anxiety", "depression"],
 };
 
-const okCompute = async (): Promise<SemanticProfileEntry[]> => [
-  { slug: "anxiety", weight: 0.8 },
-];
+const okCompute = async (): Promise<SemanticProfileEntry[]> => [{ slug: "anxiety", weight: 0.8 }];
 
 describe("isLegacyStringProfile", () => {
   it("accepts a non-empty string array", () => {

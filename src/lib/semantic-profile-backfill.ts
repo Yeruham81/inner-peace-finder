@@ -39,12 +39,7 @@ export type RowReport = {
   full_name: string;
   old: unknown;
   next: SemanticProfileEntry[] | null;
-  outcome:
-    | "dry_run_ok"
-    | "updated"
-    | "skipped_non_legacy"
-    | "skipped_concurrent_change"
-    | "error";
+  outcome: "dry_run_ok" | "updated" | "skipped_non_legacy" | "skipped_concurrent_change" | "error";
   errorCategory?: "extraction_or_catalog" | "update_failed";
   errorMessage?: string;
 };
@@ -76,9 +71,7 @@ export type BackfillOptions = {
 /** Strict legacy predicate: non-empty array of strings only. */
 export function isLegacyStringProfile(value: unknown): boolean {
   return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every((item) => typeof item === "string")
+    Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string")
   );
 }
 
@@ -98,9 +91,7 @@ export async function runSemanticProfileBackfill(
 
   if (apply) {
     if (options.confirmToken !== BACKFILL_CONFIRM_TOKEN) {
-      throw new Error(
-        "apply mode blocked: missing or invalid confirmation token",
-      );
+      throw new Error("apply mode blocked: missing or invalid confirmation token");
     }
     if (
       typeof options.expectedCount !== "number" ||
