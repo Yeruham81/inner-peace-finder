@@ -41,7 +41,10 @@ function therapist(
  */
 export function searchFixture(): FakeTables {
   const therapists = [
-    therapist("t-haifa", "יעל כהן", "female", true),
+    therapist("t-haifa", "יעל כהן", "female", true, {
+      lgbtq_affirming: true,
+      offers_free_intro: true,
+    }),
     therapist("t-telaviv", "דני לוי", "male", true),
     therapist("t-hidden", "נסתר נסתר", "female", false),
   ];
@@ -49,35 +52,63 @@ export function searchFixture(): FakeTables {
   const locations = [
     // Haifa: primary clinic + a second clinic + home visits in the north.
     {
-      therapist_id: "t-haifa", city: "חיפה", region: "חיפה והקריות",
-      location_type: "clinic", is_primary: true, is_active: true,
+      therapist_id: "t-haifa",
+      city: "חיפה",
+      region: "חיפה והקריות",
+      location_type: "clinic",
+      is_primary: true,
+      is_active: true,
     },
     {
-      therapist_id: "t-haifa", city: "קריית ביאליק", region: "חיפה והקריות",
-      location_type: "clinic", is_primary: false, is_active: true,
+      therapist_id: "t-haifa",
+      city: "קריית ביאליק",
+      region: "חיפה והקריות",
+      location_type: "clinic",
+      is_primary: false,
+      is_active: true,
     },
     {
-      therapist_id: "t-haifa", city: null, region: "צפון",
-      location_type: "home_visit", is_primary: false, is_active: true,
+      therapist_id: "t-haifa",
+      city: null,
+      region: "צפון",
+      location_type: "home_visit",
+      is_primary: false,
+      is_active: true,
     },
     // Inactive row: must never affect filtering or display.
     {
-      therapist_id: "t-haifa", city: "אילת", region: "דרום",
-      location_type: "clinic", is_primary: false, is_active: false,
+      therapist_id: "t-haifa",
+      city: "אילת",
+      region: "דרום",
+      location_type: "clinic",
+      is_primary: false,
+      is_active: false,
     },
     // Tel Aviv: online only (no region on the row).
     {
-      therapist_id: "t-telaviv", city: null, region: null,
-      location_type: "online", is_primary: false, is_active: true,
+      therapist_id: "t-telaviv",
+      city: null,
+      region: null,
+      location_type: "online",
+      is_primary: false,
+      is_active: true,
     },
     // A Tel Aviv clinic with NO primary marker anywhere → display fallback.
     {
-      therapist_id: "t-telaviv", city: "תל אביב", region: "תל אביב וגוש דן",
-      location_type: "clinic", is_primary: false, is_active: true,
+      therapist_id: "t-telaviv",
+      city: "תל אביב",
+      region: "תל אביב וגוש דן",
+      location_type: "clinic",
+      is_primary: false,
+      is_active: true,
     },
     {
-      therapist_id: "t-hidden", city: "חיפה", region: "חיפה והקריות",
-      location_type: "clinic", is_primary: true, is_active: true,
+      therapist_id: "t-hidden",
+      city: "חיפה",
+      region: "חיפה והקריות",
+      location_type: "clinic",
+      is_primary: true,
+      is_active: true,
     },
   ].map((l) => ({
     ...l,
@@ -87,13 +118,32 @@ export function searchFixture(): FakeTables {
   return {
     therapists,
     professions: [
-      { id: "p1", slug: "psychologist", name_he: "פסיכולוג", name_en: "Psychologist", is_active: true },
-      { id: "p2", slug: "social-worker", name_he: "עובד סוציאלי", name_en: "Social worker", is_active: true },
-      { id: "p3", slug: "psychiatrist", name_he: "פסיכיאטר", name_en: "Psychiatrist", is_active: true },
+      {
+        id: "p1",
+        slug: "psychologist",
+        name_he: "פסיכולוג",
+        name_en: "Psychologist",
+        is_active: true,
+      },
+      {
+        id: "p2",
+        slug: "social-worker",
+        name_he: "עובד סוציאלי",
+        name_en: "Social worker",
+        is_active: true,
+      },
+      {
+        id: "p3",
+        slug: "psychiatrist",
+        name_he: "פסיכיאטר",
+        name_en: "Psychiatrist",
+        is_active: true,
+      },
       { id: "p4", slug: "therapist", name_he: "מטפל", name_en: "Therapist", is_active: true },
     ],
     treatment_modalities: [
       { id: "m1", slug: "cbt", name_he: "CBT", name_en: "CBT", is_active: true },
+      { id: "m2", slug: "retired", name_he: "גישה לא פעילה", name_en: null, is_active: false },
     ],
     population_groups: [
       { id: "g1", slug: "children", name: "ילדים" },
@@ -110,7 +160,19 @@ export function searchFixture(): FakeTables {
       { therapist_id: "t-hidden", professions: { slug: "psychologist" } },
     ],
     therapist_modalities: [
-      { therapist_id: "t-haifa", treatment_modalities: { slug: "cbt" } },
+      {
+        therapist_id: "t-haifa",
+        treatment_modalities: { slug: "cbt", name: "CBT", sort_order: 1, is_active: true },
+      },
+      {
+        therapist_id: "t-haifa",
+        treatment_modalities: {
+          slug: "retired",
+          name: "גישה לא פעילה",
+          sort_order: 2,
+          is_active: false,
+        },
+      },
     ],
     therapist_populations: [
       { therapist_id: "t-haifa", population_groups: { slug: "children", name: "ילדים" } },
