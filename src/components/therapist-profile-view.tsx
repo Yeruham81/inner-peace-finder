@@ -134,20 +134,14 @@ function TwoRowTags({ items, interactive }: { items: TagItem[]; interactive: boo
     if (!container || !measurement) return;
 
     const measure = () => {
-      const tagWidths = Array.from(
-        measurement.querySelectorAll<HTMLElement>("[data-measure-tag]"),
-      ).map((node) => node.getBoundingClientRect().width);
+      const tagWidths = Array.from(measurement.querySelectorAll<HTMLElement>("[data-measure-tag]")).map(
+        (node) => node.getBoundingClientRect().width,
+      );
       const moreButtonWidths: Record<number, number> = {};
       measurement.querySelectorAll<HTMLElement>("[data-measure-more]").forEach((node) => {
         moreButtonWidths[Number(node.dataset.measureMore)] = node.getBoundingClientRect().width;
       });
-      setVisibleCount(
-        visibleTagCountForRows(
-          tagWidths,
-          container.getBoundingClientRect().width,
-          moreButtonWidths,
-        ),
-      );
+      setVisibleCount(visibleTagCountForRows(tagWidths, container.getBoundingClientRect().width, moreButtonWidths));
     };
 
     measure();
@@ -228,15 +222,7 @@ function TwoRowTags({ items, interactive }: { items: TagItem[]; interactive: boo
   );
 }
 
-function TagGroup({
-  title,
-  items,
-  interactive,
-}: {
-  title: string;
-  items: TagItem[];
-  interactive: boolean;
-}) {
+function TagGroup({ title, items, interactive }: { title: string; items: TagItem[]; interactive: boolean }) {
   if (items.length === 0) return null;
   return (
     <div>
@@ -255,17 +241,9 @@ function ProfileImage({
   name: string;
   compact?: boolean;
 }) {
-  const size = compact
-    ? "h-14 w-14 rounded-2xl text-lg"
-    : "h-28 w-28 rounded-3xl text-3xl sm:h-36 sm:w-36";
+  const size = compact ? "h-14 w-14 rounded-2xl text-lg" : "h-28 w-28 rounded-3xl text-3xl sm:h-36 sm:w-36";
   if (imageUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={name || "תמונת פרופיל"}
-        className={`${size} shrink-0 object-cover shadow-card`}
-      />
-    );
+    return <img src={imageUrl} alt={name || "תמונת פרופיל"} className={`${size} shrink-0 object-cover shadow-card`} />;
   }
   return (
     <div
@@ -277,22 +255,14 @@ function ProfileImage({
   );
 }
 
-function CollapsibleProfessionalSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function CollapsibleProfessionalSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <details className="group rounded-2xl border border-border bg-background/70">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 font-semibold text-foreground marker:content-none sm:px-5">
         <span>{title}</span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
-      <div className="border-t border-border px-4 py-4 text-sm leading-7 text-foreground/80 sm:px-5">
-        {children}
-      </div>
+      <div className="border-t border-border px-4 py-4 text-sm leading-7 text-foreground/80 sm:px-5">{children}</div>
     </details>
   );
 }
@@ -307,9 +277,7 @@ export function TherapistProfileView({
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const clinicLocations = t.locations.filter((location) => location.location_type === "clinic");
   const onlineAvailable = t.locations.some((location) => location.location_type === "online");
-  const homeVisitLocations = t.locations.filter(
-    (location) => location.location_type === "home_visit",
-  );
+  const homeVisitLocations = t.locations.filter((location) => location.location_type === "home_visit");
   const homeVisitRegions = [
     ...new Set(homeVisitLocations.map((location) => location.region).filter(Boolean)),
   ] as string[];
@@ -329,13 +297,10 @@ export function TherapistProfileView({
 
   const heroServiceTags = useMemo(() => {
     const tags: { key: string; label: string; icon: React.ReactNode }[] = [];
-    if (clinicLocations.length > 0)
-      tags.push({ key: "clinic", label: "טיפול בקליניקה", icon: <Building2 /> });
+    if (clinicLocations.length > 0) tags.push({ key: "clinic", label: "טיפול בקליניקה", icon: <Building2 /> });
     if (onlineAvailable) tags.push({ key: "online", label: "טיפול אונליין", icon: <Video /> });
-    if (homeVisitLocations.length > 0)
-      tags.push({ key: "home", label: "ביקורי בית", icon: <Home /> });
-    if (t.offers_free_intro)
-      tags.push({ key: "intro", label: "היכרות ללא תשלום", icon: <MessageCircle /> });
+    if (homeVisitLocations.length > 0) tags.push({ key: "home", label: "ביקורי בית", icon: <Home /> });
+    if (t.offers_free_intro) tags.push({ key: "intro", label: "היכרות ללא תשלום", icon: <MessageCircle /> });
     return tags;
   }, [clinicLocations.length, homeVisitLocations.length, onlineAvailable, t.offers_free_intro]);
 
@@ -356,13 +321,9 @@ export function TherapistProfileView({
                   </span>
                 )}
               </div>
-              <p className="mt-1.5 text-lg font-medium text-foreground/80">
-                {t.professional_title || "כותרת מקצועית"}
-              </p>
+              <p className="mt-1.5 text-lg font-medium text-foreground/80">{t.professional_title || "כותרת מקצועית"}</p>
               {t.short_intro && (
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  {t.short_intro}
-                </p>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">{t.short_intro}</p>
               )}
 
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/75">
@@ -394,9 +355,7 @@ export function TherapistProfileView({
                       key={tag.key}
                       className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-surface-elevated/80 px-3 py-1.5 text-xs font-medium text-foreground/80"
                     >
-                      <span className="[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:text-primary">
-                        {tag.icon}
-                      </span>
+                      <span className="[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:text-primary">{tag.icon}</span>
                       {tag.label}
                     </span>
                   ))}
@@ -486,9 +445,7 @@ export function TherapistProfileView({
                       <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                       <div>
                         <p className="font-semibold text-foreground">טיפול בקליניקה</p>
-                        {location.city && (
-                          <p className="mt-0.5 text-sm text-muted-foreground">{location.city}</p>
-                        )}
+                        {location.city && <p className="mt-0.5 text-sm text-muted-foreground">{location.city}</p>}
                       </div>
                     </div>
                     {(location.accessibility_status === "accessible" ||
@@ -496,9 +453,7 @@ export function TherapistProfileView({
                       <details className="group mt-3 border-t border-border pt-3 text-sm">
                         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-primary marker:content-none">
                           <span>
-                            {location.accessibility_status === "accessible"
-                              ? "קליניקה נגישה"
-                              : "קליניקה נגישה חלקית"}
+                            {location.accessibility_status === "accessible" ? "קליניקה נגישה" : "קליניקה נגישה חלקית"}
                           </span>
                           <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
                         </summary>
@@ -510,9 +465,7 @@ export function TherapistProfileView({
                                 .join(" · ")}
                             </p>
                           )}
-                          {location.accessibility_note && (
-                            <p className="mt-1">{location.accessibility_note}</p>
-                          )}
+                          {location.accessibility_note && <p className="mt-1">{location.accessibility_note}</p>}
                         </div>
                       </details>
                     )}
@@ -536,9 +489,7 @@ export function TherapistProfileView({
                       <div>
                         <p className="font-semibold text-foreground">ביקורי בית</p>
                         {homeVisitRegions.length > 0 && (
-                          <p className="mt-0.5 text-sm text-muted-foreground">
-                            {homeVisitRegions.join(" · ")}
-                          </p>
+                          <p className="mt-0.5 text-sm text-muted-foreground">{homeVisitRegions.join(" · ")}</p>
                         )}
                       </div>
                     </div>
@@ -601,9 +552,7 @@ export function TherapistProfileView({
               <ProfileImage imageUrl={t.image_url} name={t.full_name} compact />
               <div className="min-w-0">
                 <p className="truncate font-bold text-foreground">{t.full_name || "שם המטפל/ת"}</p>
-                <p className="truncate text-sm text-muted-foreground">
-                  {t.professional_title || "כותרת מקצועית"}
-                </p>
+                <p className="truncate text-sm text-muted-foreground">{t.professional_title || "כותרת מקצועית"}</p>
                 {displayLocation && (
                   <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" /> {displayLocation}
@@ -618,11 +567,7 @@ export function TherapistProfileView({
             </p>
             <div className="mt-4">
               {interactive ? (
-                <CtaCallButton
-                  therapistId={t.id}
-                  therapistName={t.full_name}
-                  pageSource="therapist_profile"
-                />
+                <CtaCallButton therapistId={t.id} therapistName={t.full_name} pageSource="therapist_profile" />
               ) : (
                 <button
                   type="button"
@@ -643,23 +588,19 @@ export function TherapistProfileView({
                     <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                     <span>
                       היכרות ללא תשלום
-                      {t.free_intro_duration_minutes
-                        ? ` · ${t.free_intro_duration_minutes} דקות`
-                        : ""}
+                      {t.free_intro_duration_minutes ? ` · ${t.free_intro_duration_minutes} דקות` : ""}
                     </span>
                   </p>
                 )}
                 {onlineAvailable && (
                   <p className="flex items-start gap-2">
-                    <Video className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> טיפול אונליין
-                    זמין
+                    <Video className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> טיפול אונליין זמין
                   </p>
                 )}
               </div>
             )}
             <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> פרטי הקשר שלכם יישלחו למטפל/ת
-              רק עם שליחת הפנייה.
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> פרטי הקשר שלכם יישלחו למטפל/ת רק עם שליחת הפנייה.
             </p>
           </div>
         </aside>
