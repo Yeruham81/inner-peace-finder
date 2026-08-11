@@ -17,8 +17,11 @@ import { cardLocationLine } from "./search-result-card";
 function run(
   query: string,
   explicit: {
-    city?: string; population?: string; language?: string;
-    regions?: string[]; serviceTypes?: string[];
+    city?: string;
+    population?: string;
+    language?: string;
+    regions?: string[];
+    serviceTypes?: string[];
   } = {},
 ) {
   return runUnifiedSearch(
@@ -60,7 +63,10 @@ describe("correlated region + service-type semantics (pure)", () => {
   it("service types OR within the category", () => {
     const homeOnly = [{ location_type: "home_visit", region_slug: "north" }];
     expect(
-      matchesLocationAvailability(homeOnly, { regionSlugs: [], serviceTypes: ["clinic", "home_visit"] }),
+      matchesLocationAvailability(homeOnly, {
+        regionSlugs: [],
+        serviceTypes: ["clinic", "home_visit"],
+      }),
     ).toBe(true);
   });
 
@@ -100,10 +106,7 @@ describe("region and service-type filters on the production path", () => {
   it("invalid regions and service types are rejected, not silently ignored", async () => {
     const out = await run("", { regions: ["atlantis"], serviceTypes: ["group"] });
     expect(out.plan.hardFilters.regionSlugs).toEqual([]);
-    expect(out.plan.explicitFilters?.rejected.map((r) => r.category).sort()).toEqual([
-      "region",
-      "serviceType",
-    ]);
+    expect(out.plan.explicitFilters?.rejected.map((r) => r.category).sort()).toEqual(["region", "serviceType"]);
     expect(out.emptyReason).toBe("unrecognized_query");
   });
 
@@ -118,13 +121,18 @@ describe("result-card hydration comes from active locations, not therapists.city
     const out = await run("", { regions: ["haifa-krayot"] });
     const card = out.results[0];
     expect(card.primary_clinic).toEqual({
-      city: "חיפה", region_slug: "haifa-krayot", region_label: "חיפה והקריות",
+      city: "חיפה",
+      region_slug: "haifa-krayot",
+      region_label: "חיפה והקריות",
     });
     expect(card.additional_clinic_count).toBe(1);
     expect(card.home_visit_regions).toEqual(["צפון"]);
     expect(card.online_available).toBe(false);
     expect(card.language_names).toEqual(["רוסית"]);
     expect(card.population_names).toEqual(["ילדים"]);
+    expect(card.modality_names).toEqual(["CBT"]);
+    expect(card.lgbtq_affirming).toBe(true);
+    expect(card.offers_free_intro).toBe(true);
     expect(card.short_intro).toContain("יעל");
     expect(cardLocationLine(card)).toContain("חיפה");
   });
@@ -135,6 +143,7 @@ describe("result-card hydration comes from active locations, not therapists.city
     expect(keys).not.toContain("phone");
     expect(keys).not.toContain("email");
     expect(keys).not.toContain("contact_destination");
+    expect(keys).not.toContain("semantic_profile");
   });
 
   it("reports the primary-clinic display fallback when no clinic is marked primary", async () => {
