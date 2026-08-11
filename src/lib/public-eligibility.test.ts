@@ -34,6 +34,7 @@ function therapistRow(over: FakeRow): FakeRow {
     professional_title: "פסיכולוגית",
     short_intro: "מבוא",
     full_description: "תיאור",
+    background: "השכלה וניסיון",
     years_experience: 8,
     city: "חיפה",
     image_url: null,
@@ -65,10 +66,57 @@ function db(rows: FakeRow[]) {
   return createFakeSupabase({
     therapists: rows,
     therapist_problems: [
-      { therapist_id: "t-1", problems: { id: "p1", name: "חרדה", slug: "anxiety", parent_id: null } },
+      {
+        therapist_id: "t-1",
+        problems: { id: "p1", name: "חרדה", slug: "anxiety", parent_id: null },
+      },
     ],
     therapist_populations: [{ therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } }],
     therapist_languages: [{ therapist_id: "t-1", languages: { code: "he", name: "עברית" } }],
+    therapist_professions: [
+      {
+        therapist_id: "t-1",
+        is_primary: true,
+        professions: { slug: "psychologist", name: "פסיכולוגית", sort_order: 1, is_active: true },
+      },
+    ],
+    therapist_modalities: [
+      {
+        therapist_id: "t-1",
+        treatment_modalities: { slug: "cbt", name: "CBT", sort_order: 1, is_active: true },
+      },
+    ],
+    therapist_therapy_formats: [{ therapist_id: "t-1", therapy_formats: { slug: "individual", name: "טיפול פרטני" } }],
+    therapist_locations: [
+      {
+        therapist_id: "t-1",
+        location_type: "clinic",
+        city: "חיפה",
+        region: "חיפה והקריות",
+        is_primary: true,
+        is_active: true,
+        accessibility_status: "accessible",
+        accessibility_features: ["step_free_entrance"],
+        accessibility_note: null,
+      },
+      {
+        therapist_id: "t-1",
+        location_type: "online",
+        city: null,
+        region: null,
+        is_primary: false,
+        is_active: true,
+        accessibility_status: "unknown",
+        accessibility_features: [],
+        accessibility_note: null,
+      },
+    ],
+    therapist_professional_memberships: [
+      { therapist_id: "t-1", organization_name: "איגוד מקצועי", member_since: 2020, sort_order: 0 },
+    ],
+    therapist_service_arrangements: [
+      { therapist_id: "t-1", organization_name: "גוף מסדיר", note: "בכפוף לזכאות", sort_order: 0 },
+    ],
     population_groups: [{ slug: "adults", name: "מבוגרים" }],
     languages: [{ code: "he", name: "עברית" }],
   });
@@ -96,6 +144,10 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.problems.map((p) => p.slug)).toEqual(["anxiety"]);
     expect(res?.populations.map((p) => p.slug)).toEqual(["adults"]);
     expect(res?.languages.map((l) => l.code)).toEqual(["he"]);
+    expect(res?.background).toBe("השכלה וניסיון");
+    expect(res?.professions.map((item) => item.slug)).toEqual(["psychologist"]);
+    expect(res?.modalities.map((item) => item.slug)).toEqual(["cbt"]);
+    expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
   });
 
   it("the public profile response contains every field the route consumes", async () => {
@@ -103,16 +155,23 @@ describe("public eligibility — shared predicate", () => {
     for (const col of PUBLIC_THERAPIST_COLUMNS) {
       expect(Object.keys(res as object)).toContain(col);
     }
-    for (const rel of ["problems", "populations", "languages"]) {
+    for (const rel of [
+      "problems",
+      "populations",
+      "languages",
+      "professions",
+      "modalities",
+      "therapy_formats",
+      "locations",
+      "professional_memberships",
+      "service_arrangements",
+    ]) {
       expect(Object.keys(res as object)).toContain(rel);
     }
   });
 
   it("the public profile response contains no private or internal column", async () => {
-    const res = (await fetchPublicTherapistBySlug(db([therapistRow({})]), "eligible-one")) as Record<
-      string,
-      unknown
-    >;
+    const res = (await fetchPublicTherapistBySlug(db([therapistRow({})]), "eligible-one")) as Record<string, unknown>;
     const keys = Object.keys(res);
     for (const col of PRIVATE_THERAPIST_COLUMNS) {
       expect(keys, col).not.toContain(col);
