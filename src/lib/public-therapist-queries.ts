@@ -28,16 +28,27 @@ export async function fetchPublicTherapistBySlug(
   const t = unwrap(res) as Record<string, any> | null;
   if (!t) return null;
 
-  const [tps, pops, langs, formats, locations, memberships, arrangements] = await Promise.all([
+  const [tps, pops, langs, professions, modalities, formats, locations, memberships, arrangements] = await Promise.all([
     sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
     sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
     sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
+    sb
+      .from("therapist_professions")
+      .select("is_primary, professions!inner(slug, name:name_he, sort_order, is_active)")
+      .eq("therapist_id", t.id)
+      .eq("professions.is_active", true),
+    sb
+      .from("therapist_modalities")
+      .select("treatment_modalities!inner(slug, name:name_he, sort_order, is_active)")
+      .eq("therapist_id", t.id)
+      .eq("treatment_modalities.is_active", true),
     sb.from("therapist_therapy_formats").select("therapy_formats(slug, name:name_he)").eq("therapist_id", t.id),
     sb
       .from("therapist_locations")
-      .select("city, accessibility_status, accessibility_features, accessibility_note")
+      .select(
+        "location_type, city, region, is_primary, accessibility_status, accessibility_features, accessibility_note",
+      )
       .eq("therapist_id", t.id)
-      .eq("location_type", "clinic")
       .eq("is_active", true),
     sb
       .from("therapist_professional_memberships")
@@ -51,6 +62,28 @@ export async function fetchPublicTherapistBySlug(
       .order("sort_order"),
   ]);
 
+  type MappedProfession = { slug: string; name: string; is_primary: boolean; sort_order: number };
+  const mappedProfessions = ((professions?.data ?? []) as any[])
+    .map((row): MappedProfession | null =>
+      row.professions
+        ? {
+            slug: row.professions.slug,
+            name: row.professions.name,
+            is_primary: !!row.is_primary,
+            sort_order: row.professions.sort_order ?? 0,
+          }
+        : null,
+    )
+    .filter((row): row is MappedProfession => row !== null)
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
+    .map(({ slug, name, is_primary }) => ({ slug, name, is_primary }));
+
+  const mappedModalities = ((modalities?.data ?? []) as any[])
+    .map((row) => row.treatment_modalities)
+    .filter(Boolean)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map(({ slug, name }) => ({ slug, name }));
+
   // Explicit projection — never spread the database row.
   return {
     id: t.id,
@@ -59,6 +92,7 @@ export async function fetchPublicTherapistBySlug(
     professional_title: t.professional_title ?? null,
     short_intro: t.short_intro ?? null,
     full_description: t.full_description ?? null,
+    background: t.background ?? null,
     years_experience: t.years_experience ?? 0,
     city: t.city ?? null,
     image_url: t.image_url ?? null,
@@ -67,6 +101,8 @@ export async function fetchPublicTherapistBySlug(
     offers_free_intro: !!t.offers_free_intro,
     free_intro_types: t.free_intro_types ?? [],
     free_intro_duration_minutes: t.free_intro_duration_minutes ?? null,
+    professions: mappedProfessions,
+    modalities: mappedModalities,
     therapy_formats: ((formats?.data ?? []) as any[]).map((r) => r.therapy_formats).filter(Boolean),
     locations: (locations?.data ?? []) as any[],
     professional_memberships: (memberships?.data ?? []) as any[],
