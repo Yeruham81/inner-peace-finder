@@ -1,7 +1,89 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SearchResultCard } from "@/lib/search-result-card";
 import { track } from "@/lib/analytics";
+import { visibleItemCountForRows } from "@/lib/tag-overflow";
+
+const COMPACT_TAG_CLASS =
+  "inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap rounded-full border border-border px-2.5 py-1 text-xs leading-4";
+
+function CompactTagRow({ labels, tone = "neutral" }: { labels: string[]; tone?: "neutral" | "brand" }) {
+  const uniqueLabels = [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(Math.min(uniqueLabels.length, 1));
+  const signature = uniqueLabels.join("|");
+  const toneClass = tone === "brand" ? "border-brand/20 bg-brand-soft text-primary" : "bg-background text-foreground";
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const measurement = measureRef.current;
+    if (!container || !measurement) return;
+
+    const measure = () => {
+      const itemWidths = Array.from(measurement.querySelectorAll<HTMLElement>("[data-measure-item]")).map(
+        (node) => node.getBoundingClientRect().width,
+      );
+      const moreWidths: Record<number, number> = {};
+      measurement.querySelectorAll<HTMLElement>("[data-measure-more]").forEach((node) => {
+        moreWidths[Number(node.dataset.measureMore)] = node.getBoundingClientRect().width;
+      });
+      setVisibleCount(visibleItemCountForRows(itemWidths, container.getBoundingClientRect().width, moreWidths, 1, 6));
+    };
+
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(container);
+    void document.fonts?.ready.then(measure);
+    return () => observer?.disconnect();
+  }, [signature]);
+
+  if (uniqueLabels.length === 0) return null;
+  const hiddenCount = uniqueLabels.length - visibleCount;
+
+  return (
+    <div ref={containerRef} className="relative min-w-0 overflow-hidden">
+      <div className="flex flex-nowrap gap-1.5">
+        {uniqueLabels.slice(0, visibleCount).map((label) => (
+          <span key={label} title={label} className={`${COMPACT_TAG_CLASS} ${toneClass}`}>
+            {label}
+          </span>
+        ))}
+        {hiddenCount > 0 && (
+          <span className={`${COMPACT_TAG_CLASS} border-brand/20 bg-brand-soft font-medium text-primary`}>
+            +{hiddenCount} נוספים
+          </span>
+        )}
+      </div>
+
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        className="pointer-events-none invisible absolute inset-x-0 top-0 flex flex-wrap gap-1.5"
+      >
+        {uniqueLabels.map((label) => (
+          <span key={`measure-${label}`} data-measure-item className={`${COMPACT_TAG_CLASS} ${toneClass}`}>
+            {label}
+          </span>
+        ))}
+        <div className="absolute left-0 top-0 flex flex-col items-start gap-1">
+          {uniqueLabels.map((_, index) => {
+            const hidden = index + 1;
+            return (
+              <span
+                key={`measure-more-${hidden}`}
+                data-measure-more={hidden}
+                className={`${COMPACT_TAG_CLASS} border-brand/20 bg-brand-soft font-medium text-primary`}
+              >
+                +{hidden} נוספים
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MetaIcon({ children }: { children: React.ReactNode }) {
   return (
@@ -94,11 +176,25 @@ export function TherapistCard({
               {t.professional_title}
             </p>
           )}
+          {(t.offers_free_intro || t.lgbtq_affirming) && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {t.offers_free_intro && (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                  היכרות ללא תשלום
+                </span>
+              )}
+              {t.lgbtq_affirming && (
+                <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-800 ring-1 ring-violet-200">
+                  טיפול מותאם לקהילה הגאה
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {t.short_intro && (
-        <p className="mt-4 line-clamp-3 text-sm leading-6 text-foreground/85 sm:text-[15px]">{t.short_intro}</p>
+        <p className="mt-4 line-clamp-2 text-sm leading-6 text-foreground/85 sm:text-[15px]">{t.short_intro}</p>
       )}
 
       <ul className="mt-4 space-y-2 text-sm leading-5 text-muted-foreground">
@@ -152,6 +248,23 @@ export function TherapistCard({
           </li>
         )}
       </ul>
+
+      {(t.population_names.length > 0 || t.modality_names.length > 0) && (
+        <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+          {t.population_names.length > 0 && (
+            <div className="min-w-0">
+              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">אוכלוסיות</p>
+              <CompactTagRow labels={t.population_names} />
+            </div>
+          )}
+          {t.modality_names.length > 0 && (
+            <div className="min-w-0">
+              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">גישות ושיטות</p>
+              <CompactTagRow labels={t.modality_names} tone="brand" />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
         <div className="flex flex-wrap gap-2">
