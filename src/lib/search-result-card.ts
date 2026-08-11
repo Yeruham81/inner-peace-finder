@@ -34,6 +34,9 @@ export type SearchResultCard = {
   home_visit_regions: string[];
   language_names: string[];
   population_names: string[];
+  modality_names: string[];
+  lgbtq_affirming: boolean;
+  offers_free_intro: boolean;
   /** Internal ranking scores already required by the executor. */
   scores: { semantic: number; preference: number; quality: number };
 };
@@ -153,6 +156,9 @@ export function legacyRowToCard(row: {
     home_visit_regions: [],
     language_names: row.language_names ?? [],
     population_names: row.population_names ?? [],
+    modality_names: [],
+    lgbtq_affirming: false,
+    offers_free_intro: false,
     scores: { semantic: row.score ?? 0, preference: 0, quality: 0 },
   };
 }
