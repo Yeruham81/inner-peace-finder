@@ -142,7 +142,9 @@ describe("preview rendering reuses the public profile presentation", () => {
     const { TherapistProfileView } = await import("@/components/therapist-profile-view");
 
     const view = buildPreviewViewData(form(), options, { id: "t1", verified: false });
-    const html = renderToStaticMarkup(<TherapistProfileView therapist={view} interactive={false} />);
+    const html = renderToStaticMarkup(
+      <TherapistProfileView therapist={view} interactive={false} />,
+    );
 
     expect(html).toContain("רות לוי");
     expect(html).toContain("טקסט לא שמור על אודותיי");
@@ -163,7 +165,9 @@ describe("editor preview wiring", () => {
 
   it("builds the preview from live form state, not a refetch", () => {
     expect(editorSource).toContain("buildPreviewViewData(form, options.data, profile.data)");
-    expect(editorSource).toContain("<TherapistProfileView therapist={previewData} interactive={false} />");
+    expect(editorSource).toContain(
+      "<TherapistProfileView therapist={previewData} interactive={false} />",
+    );
   });
 
   it("opening the preview only toggles local state — no save, publish or refetch call", () => {

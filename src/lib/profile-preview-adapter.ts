@@ -104,7 +104,9 @@ export function buildPreviewViewData(
     lgbtq_affirming: form.lgbtq_affirming,
     offers_free_intro: form.offers_free_intro,
     free_intro_types: form.free_intro_types,
-    free_intro_duration_minutes: form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
+    free_intro_duration_minutes: form.free_intro_duration_minutes
+      ? Number(form.free_intro_duration_minutes)
+      : null,
     professions: (options?.professions ?? [])
       .filter((item) => form.profession_ids.includes(item.id))
       .map((item) => ({ slug: item.slug, name: item.name_he, is_primary: false })),
