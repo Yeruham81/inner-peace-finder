@@ -19,7 +19,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import { TherapistCredentialPanel } from "@/components/therapist-credential-panel";
-import { TherapistProfileView, type TherapistProfileViewData } from "@/components/therapist-profile-view";
+import { TherapistProfileView } from "@/components/therapist-profile-view";
+import { buildPreviewViewData } from "@/lib/profile-preview-adapter";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
@@ -471,88 +472,7 @@ function EditorPage() {
     (form.home_visit_available && form.home_visit_regions.length === 0) ||
     (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
 
-  const previewLocations: TherapistProfileViewData["locations"] = [
-    ...form.locations
-      .filter((item) => item.city.trim())
-      .map((item, index) => ({
-        location_type: "clinic" as const,
-        city: item.city.trim(),
-        region: item.region || null,
-        is_primary: index === 0,
-        accessibility_status: item.accessibility_status,
-        accessibility_features: item.accessibility_features,
-        accessibility_note: item.accessibility_note || null,
-      })),
-    ...(form.online_available
-      ? [
-          {
-            location_type: "online" as const,
-            city: null,
-            region: null,
-            is_primary: !hasPhysicalLocation,
-            accessibility_status: "unknown",
-            accessibility_features: [],
-            accessibility_note: null,
-          },
-        ]
-      : []),
-    ...(form.home_visit_available
-      ? (form.home_visit_regions.length > 0 ? form.home_visit_regions : [null]).map((region) => ({
-          location_type: "home_visit" as const,
-          city: null,
-          region,
-          is_primary: false,
-          accessibility_status: "unknown",
-          accessibility_features: [],
-          accessibility_note: null,
-        }))
-      : []),
-  ];
-
-  const previewData: TherapistProfileViewData = {
-    id: profile.data?.id ?? "preview",
-    full_name: form.full_name.trim(),
-    professional_title: form.professional_title.trim() || null,
-    short_intro: form.short_intro.trim() || null,
-    full_description: form.full_description.trim() || null,
-    background: form.background.trim() || null,
-    years_experience: form.years_experience.trim() === "" ? null : Number(form.years_experience),
-    city: form.locations.find((location) => location.city.trim())?.city.trim() || null,
-    image_url: form.image_url.trim() || null,
-    verified: profile.data?.verified ?? false,
-    lgbtq_affirming: form.lgbtq_affirming,
-    offers_free_intro: form.offers_free_intro,
-    free_intro_types: form.free_intro_types,
-    free_intro_duration_minutes: form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
-    professions: (options.data?.professions ?? [])
-      .filter((item) => form.profession_ids.includes(item.id))
-      .map((item) => ({ slug: item.slug, name: item.name_he, is_primary: false })),
-    modalities: (options.data?.modalities ?? [])
-      .filter((item) => form.modality_ids.includes(item.id))
-      .map((item) => ({ slug: item.slug, name: item.name_he })),
-    therapy_formats: (options.data?.therapy_formats ?? [])
-      .filter((item) => form.therapy_format_ids.includes(item.id))
-      .map((item) => ({ slug: item.slug, name: item.name_he })),
-    locations: previewLocations,
-    professional_memberships: form.professional_memberships
-      .filter((item) => item.organization_name.trim())
-      .map((item) => ({
-        organization_name: item.organization_name,
-        member_since: item.member_since ? Number(item.member_since) : null,
-      })),
-    service_arrangements: form.service_arrangements
-      .filter((item) => item.organization_name.trim())
-      .map((item) => ({ organization_name: item.organization_name, note: item.note || null })),
-    // Semantic extraction powers search ranking; it is not a therapist-declared
-    // public field, so the preview must not present it as one.
-    problems: [],
-    populations: (options.data?.populations ?? [])
-      .filter((population) => form.population_ids.includes(population.id))
-      .map((population) => ({ slug: population.slug, name: population.name })),
-    languages: orderedLanguages
-      .filter((language) => form.language_ids.includes(language.id))
-      .map((language) => ({ code: language.code, name: language.name })),
-  };
+  const previewData = buildPreviewViewData(form, options.data, profile.data);
 
   return (
     <div className="min-h-screen bg-brand-soft/50">
