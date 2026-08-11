@@ -411,11 +411,13 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       const map = new Map<string, DisplayRow>();
       if (ids.length === 0) return map;
       // Batched display relations for the final result ids only (no N+1).
-      const [tRes, locRes, langRes, popRes] = await Promise.all([
+      const [tRes, locRes, langRes, popRes, modRes] = await Promise.all([
         applyEligibility(
           sb
             .from("therapists")
-            .select("id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience"),
+            .select(
+              "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience, lgbtq_affirming, offers_free_intro",
+            ),
         ).in("id", ids),
         sb
           .from("therapist_locations")
@@ -424,8 +426,13 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .in("therapist_id", ids),
         sb.from("therapist_languages").select("therapist_id, languages!inner(name)").in("therapist_id", ids),
         sb.from("therapist_populations").select("therapist_id, population_groups!inner(name)").in("therapist_id", ids),
+        sb
+          .from("therapist_modalities")
+          .select("therapist_id, treatment_modalities!inner(name:name_he, sort_order, is_active)")
+          .eq("treatment_modalities.is_active", true)
+          .in("therapist_id", ids),
       ]);
-      for (const r of [tRes, locRes, langRes, popRes]) {
+      for (const r of [tRes, locRes, langRes, popRes, modRes]) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const err = (r as any).error;
         if (err) throw err;
@@ -468,6 +475,21 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         if (!list.includes(r.population_groups.name)) list.push(r.population_groups.name);
         popBy.set(r.therapist_id, list);
       }
+      const modalityBy = new Map<string, Array<{ name: string; sort_order: number }>>();
+      for (const r of (modRes.data ?? []) as Array<{
+        therapist_id: string;
+        treatment_modalities: { name: string; sort_order: number | null } | null;
+      }>) {
+        if (!r.treatment_modalities?.name) continue;
+        const list = modalityBy.get(r.therapist_id) ?? [];
+        if (!list.some((item) => item.name === r.treatment_modalities?.name)) {
+          list.push({
+            name: r.treatment_modalities.name,
+            sort_order: r.treatment_modalities.sort_order ?? 0,
+          });
+        }
+        modalityBy.set(r.therapist_id, list);
+      }
 
       for (const r of (tRes.data ?? []) as Array<{
         id: string;
@@ -477,6 +499,8 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         image_url: string | null;
         verified: boolean | null;
         short_intro: string | null;
+        lgbtq_affirming: boolean | null;
+        offers_free_intro: boolean | null;
       }>) {
         const loc = buildCardLocationDisplay(locBy.get(r.id) ?? [], resolveStoredRegion);
         map.set(r.id, {
@@ -492,6 +516,11 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           home_visit_regions: loc.home_visit_regions,
           language_names: langBy.get(r.id) ?? [],
           population_names: popBy.get(r.id) ?? [],
+          modality_names: (modalityBy.get(r.id) ?? [])
+            .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "he"))
+            .map((item) => item.name),
+          lgbtq_affirming: !!r.lgbtq_affirming,
+          offers_free_intro: !!r.offers_free_intro,
           primary_clinic_fallback_used: loc.primary_clinic_fallback_used,
         });
       }
