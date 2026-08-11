@@ -546,7 +546,7 @@ export function TherapistProfileView({
           )}
         </main>
 
-        <aside className="lg:sticky lg:top-6 lg:self-start">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-card">
             <div className="flex items-center gap-3 border-b border-border pb-4">
               <ProfileImage imageUrl={t.image_url} name={t.full_name} compact />
