@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createLead } from "@/lib/lead.functions";
 import { track } from "@/lib/analytics";
 
@@ -57,6 +58,7 @@ export function LeadModal({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset state on every open
   useEffect(() => {
@@ -69,8 +71,21 @@ export function LeadModal({
     setError(null);
     setDone(false);
     setSubmitting(false);
-    setTimeout(() => firstFieldRef.current?.focus(), 30);
+    setTimeout(() => {
+      panelRef.current?.scrollTo({ top: 0 });
+      firstFieldRef.current?.focus({ preventScroll: true });
+    }, 30);
   }, [open, problemName, populationName]);
+
+  // Keep the profile page fixed behind the dialog while it is open.
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   // Close on Escape
   useEffect(() => {
@@ -84,9 +99,7 @@ export function LeadModal({
 
   const challengeAnswerNum = Number(challengeAnswer);
   const challengeOk =
-    challengeAnswer.trim() !== "" &&
-    Number.isFinite(challengeAnswerNum) &&
-    challengeAnswerNum === challenge.expected;
+    challengeAnswer.trim() !== "" && Number.isFinite(challengeAnswerNum) && challengeAnswerNum === challenge.expected;
 
   const phoneOk = PHONE_RE.test(phone.trim());
   const nameOk = name.trim().length >= 2;
@@ -95,7 +108,7 @@ export function LeadModal({
 
   const titleId = useMemo(() => `lead-modal-${therapistId}`, [therapistId]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -119,14 +132,12 @@ export function LeadModal({
         },
       });
       if (!res.ok) {
-        if ((res as any).reason === "rate_limit_exceeded") {
+        if (res.reason === "rate_limit_exceeded") {
           track("lead_rate_limited", {
             therapist_id: therapistId,
             page_source: pageSource ?? null,
           });
-          setError(
-            (res as any).message ?? "שלחתם כבר מספר פניות. נסו שוב בעוד כמה דקות.",
-          );
+          setError(res.message ?? "שלחתם כבר מספר פניות. נסו שוב בעוד כמה דקות.");
           setSubmitting(false);
           return;
         }
@@ -153,19 +164,18 @@ export function LeadModal({
     }
   }
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
     >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div className="relative w-full max-w-md rounded-2xl bg-surface-elevated p-6 shadow-card max-h-[92vh] overflow-y-auto">
+        ref={panelRef}
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-surface-elevated p-6 shadow-card sm:max-h-[calc(100dvh-3rem)]"
+      >
         <button
           type="button"
           onClick={onClose}
@@ -200,9 +210,7 @@ export function LeadModal({
               <h2 id={titleId} className="text-lg font-semibold text-foreground">
                 פנייה ל{therapistName}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                מלאו פרטים והפנייה תועבר ישירות למטפל/ת.
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">מלאו פרטים והפנייה תועבר ישירות למטפל/ת.</p>
             </div>
 
             <div>
@@ -256,7 +264,11 @@ export function LeadModal({
 
             <div>
               <label className="block text-sm font-medium text-foreground" htmlFor="lead-cap">
-                אימות אנושי: כמה זה <span dir="ltr" className="ltr-num">{challenge.text}</span> ?
+                אימות אנושי: כמה זה{" "}
+                <span dir="ltr" className="ltr-num">
+                  {challenge.text}
+                </span>{" "}
+                ?
               </label>
               <input
                 id="lead-cap"
@@ -269,11 +281,7 @@ export function LeadModal({
               />
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+            {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
 
             <button
               type="submit"
@@ -282,12 +290,10 @@ export function LeadModal({
             >
               {submitting ? "שולח..." : "שליחת פנייה"}
             </button>
-            <p className="text-center text-[11px] text-muted-foreground">
-              הפנייה נשלחת דרך טיפולינקס. מספר המטפל/ת אינו נחשף.
-            </p>
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
