@@ -82,41 +82,31 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
     async idsByProfessions(slugs) {
       guard("idsByProfessions");
       return new Set(
-        therapists
-          .filter((t) => isEligible(t) && t.professionSlugs.some((s) => slugs.includes(s)))
-          .map((t) => t.id),
+        therapists.filter((t) => isEligible(t) && t.professionSlugs.some((s) => slugs.includes(s))).map((t) => t.id),
       );
     },
     async idsByModalities(slugs) {
       guard("idsByModalities");
       return new Set(
-        therapists
-          .filter((t) => isEligible(t) && t.modalitySlugs.some((s) => slugs.includes(s)))
-          .map((t) => t.id),
+        therapists.filter((t) => isEligible(t) && t.modalitySlugs.some((s) => slugs.includes(s))).map((t) => t.id),
       );
     },
     async idsByPopulations(slugs) {
       guard("idsByPopulations");
       return new Set(
-        therapists
-          .filter((t) => isEligible(t) && t.populationSlugs.some((s) => slugs.includes(s)))
-          .map((t) => t.id),
+        therapists.filter((t) => isEligible(t) && t.populationSlugs.some((s) => slugs.includes(s))).map((t) => t.id),
       );
     },
     async idsByLanguages(codes) {
       guard("idsByLanguages");
       return new Set(
-        therapists
-          .filter((t) => isEligible(t) && t.languageCodes.some((c) => codes.includes(c)))
-          .map((t) => t.id),
+        therapists.filter((t) => isEligible(t) && t.languageCodes.some((c) => codes.includes(c))).map((t) => t.id),
       );
     },
     async idsByCities(cities) {
       guard("idsByCities");
       return new Set(
-        therapists
-          .filter((t) => isEligible(t) && t.locations.some((l) => cities.includes(l.city)))
-          .map((t) => t.id),
+        therapists.filter((t) => isEligible(t) && t.locations.some((l) => cities.includes(l.city))).map((t) => t.id),
       );
     },
     async idsByLocationAvailability(filter) {
@@ -139,9 +129,7 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
     },
     async idsByGender(gender) {
       guard("idsByGender");
-      return new Set(
-        therapists.filter((t) => isEligible(t) && t.gender === gender).map((t) => t.id),
-      );
+      return new Set(therapists.filter((t) => isEligible(t) && t.gender === gender).map((t) => t.id));
     },
     async hydrate(ids): Promise<HydratedCandidate[]> {
       guard("hydrate");
@@ -182,14 +170,15 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
           image_url: t.image_url,
           verified: t.verified,
           short_intro: null,
-          primary_clinic: t.displayCity
-            ? { city: t.displayCity, region_slug: null, region_label: null }
-            : null,
+          primary_clinic: t.displayCity ? { city: t.displayCity, region_slug: null, region_label: null } : null,
           additional_clinic_count: 0,
           online_available: t.locations.some((l) => l.deliveryMode === "online"),
           home_visit_regions: [],
           language_names: [],
           population_names: [],
+          modality_names: [],
+          lgbtq_affirming: false,
+          offers_free_intro: false,
         });
       }
       return map;
@@ -207,12 +196,22 @@ function plan(over: Partial<TherapistSearchPlan> = {}): TherapistSearchPlan {
       unresolvedPrimary: false,
       primaryHead: null,
       hardFilters: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: [], deliveryModes: [], cityNames: [], therapistGender: null,
+        professionSlugs: [],
+        modalitySlugs: [],
+        populationSlugs: [],
+        languageCodes: [],
+        deliveryModes: [],
+        cityNames: [],
+        therapistGender: null,
       },
       softPreferences: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: [], cities: [], deliveryModes: [], genders: [],
+        professionSlugs: [],
+        modalitySlugs: [],
+        populationSlugs: [],
+        languageCodes: [],
+        cities: [],
+        deliveryModes: [],
+        genders: [],
       },
       therapistNameIds: [],
       semanticRemainder: "",
@@ -221,12 +220,22 @@ function plan(over: Partial<TherapistSearchPlan> = {}): TherapistSearchPlan {
     },
     semanticSignals: [],
     hardFilters: over.hardFilters ?? {
-      professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-      languageCodes: [], deliveryModes: [], cityNames: [], therapistGender: null,
+      professionSlugs: [],
+      modalitySlugs: [],
+      populationSlugs: [],
+      languageCodes: [],
+      deliveryModes: [],
+      cityNames: [],
+      therapistGender: null,
     },
     softPreferences: over.softPreferences ?? {
-      professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-      languageCodes: [], cities: [], deliveryModes: [], genders: [],
+      professionSlugs: [],
+      modalitySlugs: [],
+      populationSlugs: [],
+      languageCodes: [],
+      cities: [],
+      deliveryModes: [],
+      genders: [],
     },
     therapistNameIds: over.therapistNameIds ?? [],
     emptyReason: over.emptyReason ?? null,
@@ -243,9 +252,12 @@ describe("executor: semantic data", () => {
       storedSemanticProfile: [{ slug: "anxiety", weight: 0.9 }],
     });
     const { repo } = makeRepo([t]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     expect(out.results.length).toBe(1);
     expect(out.results[0].scores.semantic).toBeCloseTo(0.9, 5);
   });
@@ -256,9 +268,12 @@ describe("executor: semantic data", () => {
       storedSemanticProfile: [{ slug: "trauma", weight: 0.5 }],
     });
     const { repo } = makeRepo([t]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "trauma", confidence: 0.6 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "trauma", confidence: 0.6 }],
+      }),
+    );
     expect(out.results[0].scores.semantic).toBeCloseTo(0.3, 5);
   });
 
@@ -270,24 +285,32 @@ describe("executor: semantic data", () => {
       storedSemanticProfile: [{ slug: "anxiety", weight: 0.7 }],
     });
     const { repo } = makeRepo([t, t2, t3]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     // Only t3 has overlap; semantic gate drops the rest.
     expect(out.results.map((r) => r.id)).toEqual(["c"]);
   });
 
   it("zero-overlap candidates are removed when signals exist", async () => {
     const a = makeTherapist({
-      id: "a", storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
+      id: "a",
+      storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
     });
     const b = makeTherapist({
-      id: "b", storedSemanticProfile: [{ slug: "grief", weight: 1 }],
+      id: "b",
+      storedSemanticProfile: [{ slug: "grief", weight: 1 }],
     });
     const { repo } = makeRepo([a, b]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["a"]);
   });
 
@@ -295,17 +318,25 @@ describe("executor: semantic data", () => {
     const strong = makeTherapist({
       id: "strong",
       storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
-      verified: false, bioLength: 0, yearsExperience: 1,
+      verified: false,
+      bioLength: 0,
+      yearsExperience: 1,
     });
     const weak = makeTherapist({
       id: "weak",
       storedSemanticProfile: [{ slug: "anxiety", weight: 0.1 }],
-      verified: true, image_url: "img", bioLength: 800, yearsExperience: 25,
+      verified: true,
+      image_url: "img",
+      bioLength: 800,
+      yearsExperience: 25,
     });
     const { repo } = makeRepo([weak, strong]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     expect(out.results[0].id).toBe("strong");
   });
 });
@@ -333,49 +364,76 @@ describe("executor: structured filtering", () => {
       locations: [{ city: "חיפה", deliveryMode: "clinic" }],
     });
     const { repo } = makeRepo([match, missingCity, missingPop]);
-    const out = await executeUnifiedSearch(repo, plan({
-      hardFilters: {
-        professionSlugs: ["psychologist"], modalitySlugs: [],
-        populationSlugs: ["children"], languageCodes: [], deliveryModes: [],
-        cityNames: ["חיפה"], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        hardFilters: {
+          professionSlugs: ["psychologist"],
+          modalitySlugs: [],
+          populationSlugs: ["children"],
+          languageCodes: [],
+          deliveryModes: [],
+          cityNames: ["חיפה"],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["match"]);
   });
 
   it("intersects language + city", async () => {
     const match = makeTherapist({
-      id: "match", languageCodes: ["ru"],
+      id: "match",
+      languageCodes: ["ru"],
       locations: [{ city: "חיפה", deliveryMode: "clinic" }],
     });
     const wrongCity = makeTherapist({
-      id: "wrong", languageCodes: ["ru"],
+      id: "wrong",
+      languageCodes: ["ru"],
       locations: [{ city: "תל אביב", deliveryMode: "clinic" }],
     });
     const { repo } = makeRepo([match, wrongCity]);
-    const out = await executeUnifiedSearch(repo, plan({
-      hardFilters: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: ["ru"], deliveryModes: [], cityNames: ["חיפה"], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        hardFilters: {
+          professionSlugs: [],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: ["ru"],
+          deliveryModes: [],
+          cityNames: ["חיפה"],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["match"]);
   });
 
   it("delivery mode is a hard filter when not preferred", async () => {
     const online = makeTherapist({
-      id: "online", locations: [{ city: "תל אביב", deliveryMode: "online" }],
+      id: "online",
+      locations: [{ city: "תל אביב", deliveryMode: "online" }],
     });
     const clinicOnly = makeTherapist({
-      id: "clinic", locations: [{ city: "תל אביב", deliveryMode: "clinic" }],
+      id: "clinic",
+      locations: [{ city: "תל אביב", deliveryMode: "clinic" }],
     });
     const { repo } = makeRepo([online, clinicOnly]);
-    const out = await executeUnifiedSearch(repo, plan({
-      hardFilters: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: [], deliveryModes: ["online"], cityNames: [], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        hardFilters: {
+          professionSlugs: [],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: [],
+          deliveryModes: ["online"],
+          cityNames: [],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["online"]);
   });
 
@@ -388,49 +446,91 @@ describe("executor: structured filtering", () => {
       ],
     });
     const { repo } = makeRepo([split]);
-    const out = await executeUnifiedSearch(repo, plan({
-      hardFilters: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: [], deliveryModes: ["online"], cityNames: ["חיפה"], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        hardFilters: {
+          professionSlugs: [],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: [],
+          deliveryModes: ["online"],
+          cityNames: ["חיפה"],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["split"]);
   });
 
   it("OR within a category, AND across categories (multiple professions)", async () => {
-    const psy = makeTherapist({ id: "psy", professionSlugs: ["psychologist"], languageCodes: ["he"] });
-    const sw = makeTherapist({ id: "sw", professionSlugs: ["social-worker"], languageCodes: ["he"] });
-    const misfit = makeTherapist({ id: "misfit", professionSlugs: ["coach"], languageCodes: ["he"] });
-    const wrongLang = makeTherapist({ id: "wrong-lang", professionSlugs: ["psychologist"], languageCodes: ["ru"] });
+    const psy = makeTherapist({
+      id: "psy",
+      professionSlugs: ["psychologist"],
+      languageCodes: ["he"],
+    });
+    const sw = makeTherapist({
+      id: "sw",
+      professionSlugs: ["social-worker"],
+      languageCodes: ["he"],
+    });
+    const misfit = makeTherapist({
+      id: "misfit",
+      professionSlugs: ["coach"],
+      languageCodes: ["he"],
+    });
+    const wrongLang = makeTherapist({
+      id: "wrong-lang",
+      professionSlugs: ["psychologist"],
+      languageCodes: ["ru"],
+    });
     const { repo } = makeRepo([psy, sw, misfit, wrongLang]);
-    const out = await executeUnifiedSearch(repo, plan({
-      hardFilters: {
-        professionSlugs: ["psychologist", "social-worker"], modalitySlugs: [],
-        populationSlugs: [], languageCodes: ["he"], deliveryModes: [],
-        cityNames: [], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        hardFilters: {
+          professionSlugs: ["psychologist", "social-worker"],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: ["he"],
+          deliveryModes: [],
+          cityNames: [],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id).sort()).toEqual(["psy", "sw"]);
   });
 
   it("named seed + city intersects correctly", async () => {
     const named = makeTherapist({
-      id: "yael", locations: [{ city: "חיפה", deliveryMode: "clinic" }],
+      id: "yael",
+      locations: [{ city: "חיפה", deliveryMode: "clinic" }],
     });
     const other = makeTherapist({
-      id: "other", locations: [{ city: "חיפה", deliveryMode: "clinic" }],
+      id: "other",
+      locations: [{ city: "חיפה", deliveryMode: "clinic" }],
     });
     const wrongCityNamed = makeTherapist({
-      id: "yael-tlv", locations: [{ city: "תל אביב", deliveryMode: "clinic" }],
+      id: "yael-tlv",
+      locations: [{ city: "תל אביב", deliveryMode: "clinic" }],
     });
     const { repo } = makeRepo([named, other, wrongCityNamed]);
-    const out = await executeUnifiedSearch(repo, plan({
-      therapistNameIds: ["yael", "yael-tlv"],
-      hardFilters: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: [], deliveryModes: [], cityNames: ["חיפה"], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        therapistNameIds: ["yael", "yael-tlv"],
+        hardFilters: {
+          professionSlugs: [],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: [],
+          deliveryModes: [],
+          cityNames: ["חיפה"],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["yael"]);
   });
 
@@ -439,13 +539,21 @@ describe("executor: structured filtering", () => {
     const namedHe = makeTherapist({ id: "n2", languageCodes: ["he"] });
     const other = makeTherapist({ id: "n3", languageCodes: ["ru"] });
     const { repo } = makeRepo([namedRu, namedHe, other]);
-    const out = await executeUnifiedSearch(repo, plan({
-      therapistNameIds: ["n1", "n2"],
-      hardFilters: {
-        professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-        languageCodes: ["ru"], deliveryModes: [], cityNames: [], therapistGender: null,
-      },
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        therapistNameIds: ["n1", "n2"],
+        hardFilters: {
+          professionSlugs: [],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: ["ru"],
+          deliveryModes: [],
+          cityNames: [],
+          therapistGender: null,
+        },
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["n1"]);
   });
 
@@ -459,10 +567,13 @@ describe("executor: structured filtering", () => {
       storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
     });
     const { repo } = makeRepo([namedAnxiety, unrelatedButAnxious]);
-    const out = await executeUnifiedSearch(repo, plan({
-      therapistNameIds: ["named"],
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        therapistNameIds: ["named"],
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["named"]);
   });
 });
@@ -482,7 +593,11 @@ describe("executor: eligibility", () => {
   });
 
   it("excludes draft therapist", async () => {
-    const bad = makeTherapist({ id: "bad", profile_status: "draft", storedSemanticProfile: profile });
+    const bad = makeTherapist({
+      id: "bad",
+      profile_status: "draft",
+      storedSemanticProfile: profile,
+    });
     const good = makeTherapist({ id: "good", storedSemanticProfile: profile });
     const { repo } = makeRepo([bad, good]);
     const out = await executeUnifiedSearch(repo, plan(anxietySignal));
@@ -490,7 +605,11 @@ describe("executor: eligibility", () => {
   });
 
   it("excludes completed-but-unpublished therapist", async () => {
-    const bad = makeTherapist({ id: "bad", profile_status: "completed", storedSemanticProfile: profile });
+    const bad = makeTherapist({
+      id: "bad",
+      profile_status: "completed",
+      storedSemanticProfile: profile,
+    });
     const good = makeTherapist({ id: "good", storedSemanticProfile: profile });
     const { repo } = makeRepo([bad, good]);
     const out = await executeUnifiedSearch(repo, plan(anxietySignal));
@@ -506,7 +625,11 @@ describe("executor: eligibility", () => {
   });
 
   it("excludes hidden_by_owner therapist", async () => {
-    const bad = makeTherapist({ id: "bad", visibility: "hidden_by_owner", storedSemanticProfile: profile });
+    const bad = makeTherapist({
+      id: "bad",
+      visibility: "hidden_by_owner",
+      storedSemanticProfile: profile,
+    });
     const good = makeTherapist({ id: "good", storedSemanticProfile: profile });
     const { repo } = makeRepo([bad, good]);
     const out = await executeUnifiedSearch(repo, plan(anxietySignal));
@@ -515,20 +638,31 @@ describe("executor: eligibility", () => {
 
   it("loads eligibility once per executor request", async () => {
     const t = makeTherapist({
-      id: "a", professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
-      populationSlugs: ["adults"], languageCodes: ["he"],
+      id: "a",
+      professionSlugs: ["psychologist"],
+      modalitySlugs: ["cbt"],
+      populationSlugs: ["adults"],
+      languageCodes: ["he"],
       locations: [{ city: "חיפה", deliveryMode: "clinic" }],
-      storedSemanticProfile: profile, gender: "female",
+      storedSemanticProfile: profile,
+      gender: "female",
     });
     const { repo, eligibleLoadCount } = makeRepo([t]);
-    await executeUnifiedSearch(repo, plan({
-      hardFilters: {
-        professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
-        populationSlugs: ["adults"], languageCodes: ["he"],
-        deliveryModes: ["clinic"], cityNames: ["חיפה"], therapistGender: "female",
-      },
-      ...anxietySignal,
-    }));
+    await executeUnifiedSearch(
+      repo,
+      plan({
+        hardFilters: {
+          professionSlugs: ["psychologist"],
+          modalitySlugs: ["cbt"],
+          populationSlugs: ["adults"],
+          languageCodes: ["he"],
+          deliveryModes: ["clinic"],
+          cityNames: ["חיפה"],
+          therapistGender: "female",
+        },
+        ...anxietySignal,
+      }),
+    );
     expect(eligibleLoadCount()).toBe(1);
   });
 });
@@ -550,26 +684,31 @@ describe("executor: safety", () => {
   });
 
   it("unsupported primary + city → zero therapists (unrecognized_query via plan)", async () => {
-    const { repo } = makeRepo([
-      makeTherapist({ id: "a", locations: [{ city: "חיפה", deliveryMode: "clinic" }] }),
-    ]);
+    const { repo } = makeRepo([makeTherapist({ id: "a", locations: [{ city: "חיפה", deliveryMode: "clinic" }] })]);
     const out = await executeUnifiedSearch(repo, plan({ emptyReason: "unrecognized_query" }));
     expect(out.results).toEqual([]);
     expect(out.emptyReason).toBe("unrecognized_query");
   });
 
   it("propagates repository errors (does not silently return empty)", async () => {
-    const { repo } = makeRepo(
-      [makeTherapist({ id: "a", professionSlugs: ["psychologist"] })],
-      { failOn: "idsByProfessions" },
-    );
+    const { repo } = makeRepo([makeTherapist({ id: "a", professionSlugs: ["psychologist"] })], {
+      failOn: "idsByProfessions",
+    });
     await expect(
-      executeUnifiedSearch(repo, plan({
-        hardFilters: {
-          professionSlugs: ["psychologist"], modalitySlugs: [], populationSlugs: [],
-          languageCodes: [], deliveryModes: [], cityNames: [], therapistGender: null,
-        },
-      })),
+      executeUnifiedSearch(
+        repo,
+        plan({
+          hardFilters: {
+            professionSlugs: ["psychologist"],
+            modalitySlugs: [],
+            populationSlugs: [],
+            languageCodes: [],
+            deliveryModes: [],
+            cityNames: [],
+            therapistGender: null,
+          },
+        }),
+      ),
     ).rejects.toThrow("repo failure: idsByProfessions");
   });
 
@@ -577,17 +716,15 @@ describe("executor: safety", () => {
     // Build 600 eligible therapists, all with overlap.
     const many: FakeTherapist[] = [];
     for (let i = 0; i < 600; i++) {
-      many.push(makeTherapist({
-        id: `t${String(i).padStart(3, "0")}`,
-        storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
-      }));
+      many.push(
+        makeTherapist({
+          id: `t${String(i).padStart(3, "0")}`,
+          storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
+        }),
+      );
     }
     const { repo } = makeRepo(many);
-    const out = await executeUnifiedSearch(
-      repo,
-      plan({ semanticSignals: [{ slug: "anxiety", confidence: 1 }] }),
-      50,
-    );
+    const out = await executeUnifiedSearch(repo, plan({ semanticSignals: [{ slug: "anxiety", confidence: 1 }] }), 50);
     // Executor caps at `limit` (50) but must have RANKED over the full 600
     // seed. Deterministic tiebreak by therapistId ascending → t000..t049.
     expect(out.results.length).toBe(50);
@@ -602,35 +739,51 @@ describe("executor: ranking & preferences", () => {
   it("a soft preference never filters a candidate", async () => {
     const noMatch = makeTherapist({
       id: "a",
-      professionSlugs: ["psychologist"], modalitySlugs: [],
+      professionSlugs: ["psychologist"],
+      modalitySlugs: [],
       storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
     });
     const { repo } = makeRepo([noMatch]);
-    const out = await executeUnifiedSearch(repo, plan({
-      softPreferences: {
-        professionSlugs: [], modalitySlugs: ["cbt"],
-        populationSlugs: [], languageCodes: [], cities: [],
-        deliveryModes: [], genders: [],
-      },
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        softPreferences: {
+          professionSlugs: [],
+          modalitySlugs: ["cbt"],
+          populationSlugs: [],
+          languageCodes: [],
+          cities: [],
+          deliveryModes: [],
+          genders: [],
+        },
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["a"]);
   });
 
   it("multiple matches in one preference category contribute one bucket", async () => {
     const t = makeTherapist({
-      id: "a", professionSlugs: ["psychologist", "social-worker"],
+      id: "a",
+      professionSlugs: ["psychologist", "social-worker"],
       storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
     });
     const { repo } = makeRepo([t]);
-    const out = await executeUnifiedSearch(repo, plan({
-      softPreferences: {
-        professionSlugs: ["psychologist", "social-worker"], modalitySlugs: [],
-        populationSlugs: [], languageCodes: [], cities: [],
-        deliveryModes: [], genders: [],
-      },
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        softPreferences: {
+          professionSlugs: ["psychologist", "social-worker"],
+          modalitySlugs: [],
+          populationSlugs: [],
+          languageCodes: [],
+          cities: [],
+          deliveryModes: [],
+          genders: [],
+        },
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     // One category → exactly one point, never two.
     expect(out.results[0].scores.preference).toBe(1);
   });
@@ -638,21 +791,30 @@ describe("executor: ranking & preferences", () => {
   it("a full seven-category preference match scores 7", async () => {
     const t = makeTherapist({
       id: "a",
-      professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
-      populationSlugs: ["adults"], languageCodes: ["he"],
+      professionSlugs: ["psychologist"],
+      modalitySlugs: ["cbt"],
+      populationSlugs: ["adults"],
+      languageCodes: ["he"],
       locations: [{ city: "חיפה", deliveryMode: "online" }],
       gender: "female",
       storedSemanticProfile: [{ slug: "anxiety", weight: 1 }],
     });
     const { repo } = makeRepo([t]);
-    const out = await executeUnifiedSearch(repo, plan({
-      softPreferences: {
-        professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
-        populationSlugs: ["adults"], languageCodes: ["he"],
-        cities: ["חיפה"], deliveryModes: ["online"], genders: ["female"],
-      },
-      semanticSignals: [{ slug: "anxiety", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        softPreferences: {
+          professionSlugs: ["psychologist"],
+          modalitySlugs: ["cbt"],
+          populationSlugs: ["adults"],
+          languageCodes: ["he"],
+          cities: ["חיפה"],
+          deliveryModes: ["online"],
+          genders: ["female"],
+        },
+        semanticSignals: [{ slug: "anxiety", confidence: 1 }],
+      }),
+    );
     // Seven categories × 1 point = 7, the maximum possible score.
     expect(out.results[0].scores.preference).toBe(7);
   });
@@ -661,24 +823,32 @@ describe("executor: ranking & preferences", () => {
     const a = makeTherapist({ id: "zzz", storedSemanticProfile: [{ slug: "x", weight: 1 }] });
     const b = makeTherapist({ id: "aaa", storedSemanticProfile: [{ slug: "x", weight: 1 }] });
     const { repo } = makeRepo([a, b]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "x", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "x", confidence: 1 }],
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["aaa", "zzz"]);
   });
 
   it("display rows returned in a different order are reconstructed in ranked order", async () => {
     const strong = makeTherapist({
-      id: "aaa", storedSemanticProfile: [{ slug: "x", weight: 1 }],
+      id: "aaa",
+      storedSemanticProfile: [{ slug: "x", weight: 1 }],
     });
     const weak = makeTherapist({
-      id: "bbb", storedSemanticProfile: [{ slug: "x", weight: 0.1 }],
+      id: "bbb",
+      storedSemanticProfile: [{ slug: "x", weight: 0.1 }],
     });
     // makeRepo.fetchDisplay reverses; ranked order is strong then weak.
     const { repo } = makeRepo([strong, weak]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "x", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "x", confidence: 1 }],
+      }),
+    );
     expect(out.results.map((r) => r.id)).toEqual(["aaa", "bbb"]);
   });
 
@@ -690,18 +860,23 @@ describe("executor: ranking & preferences", () => {
       id: "short",
       storedSemanticProfile: [{ slug: "x", weight: 1 }],
       yearsExperience: 1,
-      verified: false, bioLength: 0,
+      verified: false,
+      bioLength: 0,
     });
     const long = makeTherapist({
       id: "long",
       storedSemanticProfile: [{ slug: "x", weight: 1 }],
       yearsExperience: 25,
-      verified: false, bioLength: 0,
+      verified: false,
+      bioLength: 0,
     });
     const { repo } = makeRepo([short, long]);
-    const out = await executeUnifiedSearch(repo, plan({
-      semanticSignals: [{ slug: "x", confidence: 1 }],
-    }));
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({
+        semanticSignals: [{ slug: "x", confidence: 1 }],
+      }),
+    );
     expect(out.results[0].id).toBe("long");
     // Also assert equal qualityScore — proving experience does not leak
     // into qualityScore.
