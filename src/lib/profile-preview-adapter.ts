@@ -46,7 +46,7 @@ export type PreviewFormState = {
 export function buildPreviewViewData(
   form: PreviewFormState,
   options: EditorOptions | undefined,
-  saved: { id?: string; verified?: boolean } | null | undefined,
+  saved: { id?: string | null; verified?: boolean | null } | null | undefined,
 ): TherapistProfileViewData {
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
 
