@@ -59,10 +59,7 @@ function TherapistPage() {
   return (
     <div className="min-h-screen bg-brand-soft/30">
       <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
-        <Link
-          to="/"
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
+        <Link to="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
           ← חזרה לחיפוש
         </Link>
 
