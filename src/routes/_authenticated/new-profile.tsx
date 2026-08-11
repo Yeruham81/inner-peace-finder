@@ -14,12 +14,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import { TherapistCredentialPanel } from "@/components/therapist-credential-panel";
-import { TherapistProfileView, type TherapistProfileViewData } from "@/components/therapist-profile-view";
+import {
+  TherapistProfileView,
+  type TherapistProfileViewData,
+} from "@/components/therapist-profile-view";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
@@ -39,7 +48,10 @@ import {
 
 export const Route = createFileRoute("/_authenticated/new-profile")({
   head: () => ({
-    meta: [{ title: "עורך פרופיל מטפל | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
+    meta: [
+      { title: "עורך פרופיל מטפל | Tipulinks" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
   }),
   component: EditorPage,
 });
@@ -286,7 +298,8 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
           city: canonical?.name ?? location.city,
           region: canonical?.region ?? location.region ?? "",
           address: location.address ?? "",
-          accessibility_status: location.accessibility_status as FormLocation["accessibility_status"],
+          accessibility_status:
+            location.accessibility_status as FormLocation["accessibility_status"],
           accessibility_features: location.accessibility_features,
           accessibility_note: location.accessibility_note ?? "",
         };
@@ -316,7 +329,8 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
     lgbtq_affirming: p.lgbtq_affirming,
     offers_free_intro: p.offers_free_intro,
     free_intro_types: p.free_intro_types,
-    free_intro_duration_minutes: p.free_intro_duration_minutes === null ? "" : String(p.free_intro_duration_minutes),
+    free_intro_duration_minutes:
+      p.free_intro_duration_minutes === null ? "" : String(p.free_intro_duration_minutes),
     professional_memberships: p.professional_memberships.map((item) => ({
       ...item,
       member_since: item.member_since === null ? "" : String(item.member_since),
@@ -333,7 +347,6 @@ function EditorPage() {
   const getProfileFn = useServerFn(getMyProfile);
   const getOptionsFn = useServerFn(getEditorOptions);
   const saveFn = useServerFn(saveMyProfile);
-  const getFeedbackFn = useServerFn(getSemanticFeedback);
   const setVisibilityFn = useServerFn(setMyProfileVisibility);
   const deleteProfileFn = useServerFn(deleteMyProfilePermanently);
 
@@ -344,13 +357,6 @@ function EditorPage() {
   const [initialized, setInitialized] = useState(false);
   const [missing, setMissing] = useState<string[] | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-
-  const previewDomains = useQuery({
-    queryKey: ["semantic-feedback", form.full_description.trim()],
-    queryFn: () => getFeedbackFn({ data: { description: form.full_description } }),
-    enabled: previewOpen && form.full_description.trim().length >= 20,
-    staleTime: 30_000,
-  });
 
   useEffect(() => {
     if (initialized || !profile.isSuccess || !options.isSuccess) return;
@@ -429,7 +435,9 @@ function EditorPage() {
   const visibilityMutation = useMutation({
     mutationFn: (visible: boolean) => setVisibilityFn({ data: { visible } }),
     onSuccess: (result) => {
-      toast.success(result.visibility === "visible" ? "הפרופיל הופעל מחדש." : "הפרופיל הוקפא ואינו גלוי כעת.");
+      toast.success(
+        result.visibility === "visible" ? "הפרופיל הופעל מחדש." : "הפרופיל הוקפא ואינו גלוי כעת.",
+      );
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
     },
@@ -479,11 +487,51 @@ function EditorPage() {
     (form.home_visit_available && form.home_visit_regions.length === 0) ||
     (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
 
+  const previewLocations: TherapistProfileViewData["locations"] = [
+    ...form.locations
+      .filter((item) => item.city.trim())
+      .map((item, index) => ({
+        location_type: "clinic" as const,
+        city: item.city.trim(),
+        region: item.region || null,
+        is_primary: index === 0,
+        accessibility_status: item.accessibility_status,
+        accessibility_features: item.accessibility_features,
+        accessibility_note: item.accessibility_note || null,
+      })),
+    ...(form.online_available
+      ? [
+          {
+            location_type: "online" as const,
+            city: null,
+            region: null,
+            is_primary: !hasPhysicalLocation,
+            accessibility_status: "unknown",
+            accessibility_features: [],
+            accessibility_note: null,
+          },
+        ]
+      : []),
+    ...(form.home_visit_available
+      ? (form.home_visit_regions.length > 0 ? form.home_visit_regions : [null]).map((region) => ({
+          location_type: "home_visit" as const,
+          city: null,
+          region,
+          is_primary: false,
+          accessibility_status: "unknown",
+          accessibility_features: [],
+          accessibility_note: null,
+        }))
+      : []),
+  ];
+
   const previewData: TherapistProfileViewData = {
     id: profile.data?.id ?? "preview",
     full_name: form.full_name.trim(),
     professional_title: form.professional_title.trim() || null,
+    short_intro: form.short_intro.trim() || null,
     full_description: form.full_description.trim() || null,
+    background: form.background.trim() || null,
     years_experience: form.years_experience.trim() === "" ? null : Number(form.years_experience),
     city: form.locations.find((location) => location.city.trim())?.city.trim() || null,
     image_url: form.image_url.trim() || null,
@@ -491,18 +539,19 @@ function EditorPage() {
     lgbtq_affirming: form.lgbtq_affirming,
     offers_free_intro: form.offers_free_intro,
     free_intro_types: form.free_intro_types,
-    free_intro_duration_minutes: form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
+    free_intro_duration_minutes: form.free_intro_duration_minutes
+      ? Number(form.free_intro_duration_minutes)
+      : null,
+    professions: (options.data?.professions ?? [])
+      .filter((item) => form.profession_ids.includes(item.id))
+      .map((item) => ({ slug: item.slug, name: item.name_he, is_primary: false })),
+    modalities: (options.data?.modalities ?? [])
+      .filter((item) => form.modality_ids.includes(item.id))
+      .map((item) => ({ slug: item.slug, name: item.name_he })),
     therapy_formats: (options.data?.therapy_formats ?? [])
       .filter((item) => form.therapy_format_ids.includes(item.id))
       .map((item) => ({ slug: item.slug, name: item.name_he })),
-    locations: form.locations
-      .filter((item) => item.city)
-      .map((item) => ({
-        city: item.city,
-        accessibility_status: item.accessibility_status,
-        accessibility_features: item.accessibility_features,
-        accessibility_note: item.accessibility_note || null,
-      })),
+    locations: previewLocations,
     professional_memberships: form.professional_memberships
       .filter((item) => item.organization_name.trim())
       .map((item) => ({
@@ -512,11 +561,9 @@ function EditorPage() {
     service_arrangements: form.service_arrangements
       .filter((item) => item.organization_name.trim())
       .map((item) => ({ organization_name: item.organization_name, note: item.note || null })),
-    problems: (previewDomains.data?.domains ?? []).map((domain) => ({
-      id: domain.slug,
-      slug: domain.slug,
-      name: domain.name,
-    })),
+    // Semantic extraction powers search ranking; it is not a therapist-declared
+    // public field, so the preview must not present it as one.
+    problems: [],
     populations: (options.data?.populations ?? [])
       .filter((population) => form.population_ids.includes(population.id))
       .map((population) => ({ slug: population.slug, name: population.name })),
@@ -535,7 +582,8 @@ function EditorPage() {
                 {isEdit ? "עריכת פרופיל מטפל" : "יצירת פרופיל מטפל חדש"}
               </h1>
               <p className="mt-1 text-base text-muted-foreground">
-                ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום.
+                ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי
+                רק לאחר פרסום.
               </p>
             </div>
             <StatusBadge status={status} />
@@ -587,7 +635,9 @@ function EditorPage() {
                           ] as { id: Gender; label: string }[]
                         }
                         selected={form.gender ? [form.gender] : []}
-                        onChange={(ids) => setForm({ ...form, gender: (ids[0] as Gender | undefined) ?? "" })}
+                        onChange={(ids) =>
+                          setForm({ ...form, gender: (ids[0] as Gender | undefined) ?? "" })
+                        }
                         multiple={false}
                         columns="threeAlways"
                         hint="יש לבחור אפשרות אחת."
@@ -639,13 +689,14 @@ function EditorPage() {
               <Section title="קצת עליי *" action={<DescriptionHelpDialog />}>
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    כתבו תיאור אישי ומקצועי של עצמכם, של דרך העבודה והניסיון שלכם. פרטו באילו מצבים וקשיים אתם מסייעים,
-                    עם אילו אוכלוסיות אתם עובדים ובאילו תחומים צברתם ניסיון. תיאור מדויק ומפורט יסייע להציג את הפרופיל
-                    שלכם לאנשים שמחפשים מענה המתאים לניסיון ולתחומי הטיפול שלכם.
+                    כתבו תיאור אישי ומקצועי של עצמכם, של דרך העבודה והניסיון שלכם. פרטו באילו מצבים
+                    וקשיים אתם מסייעים, עם אילו אוכלוסיות אתם עובדים ובאילו תחומים צברתם ניסיון.
+                    תיאור מדויק ומפורט יסייע להציג את הפרופיל שלכם לאנשים שמחפשים מענה המתאים
+                    לניסיון ולתחומי הטיפול שלכם.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    מומלץ להימנע מניסוחים כלליים כמו "ליווי בתהליכי שינוי” או "טיפול בקשיים רגשיים”, ולפרט ככל האפשר מהם
-                    המצבים שבהם אתם מטפלים.
+                    מומלץ להימנע מניסוחים כלליים כמו "ליווי בתהליכי שינוי” או "טיפול בקשיים רגשיים”,
+                    ולפרט ככל האפשר מהם המצבים שבהם אתם מטפלים.
                   </p>
                 </div>
                 <textarea
@@ -679,7 +730,8 @@ function EditorPage() {
 
               <Section title="השכלה, הכשרה וניסיון מקצועי">
                 <p className="text-sm text-muted-foreground">
-                  פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע רלוונטי.
+                  פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע
+                  רלוונטי.
                 </p>
                 <textarea
                   value={form.background}
@@ -697,7 +749,9 @@ function EditorPage() {
               </Section>
 
               <Section title="איגודים מקצועיים והסדרים">
-                <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.</p>
+                <p className="text-sm text-muted-foreground">
+                  המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.
+                </p>
                 <StringListEditor
                   title="חברות באיגודים מקצועיים"
                   placeholder="שם האיגוד או האגודה"
@@ -785,7 +839,9 @@ function EditorPage() {
                         ...form,
                         offers_free_intro: checked,
                         free_intro_types: checked ? form.free_intro_types : [],
-                        free_intro_duration_minutes: checked ? form.free_intro_duration_minutes : "",
+                        free_intro_duration_minutes: checked
+                          ? form.free_intro_duration_minutes
+                          : "",
                       })
                     }
                     title="פגישת או שיחת היכרות ללא תשלום"
@@ -810,7 +866,9 @@ function EditorPage() {
                           min={5}
                           max={120}
                           value={form.free_intro_duration_minutes}
-                          onChange={(e) => setForm({ ...form, free_intro_duration_minutes: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, free_intro_duration_minutes: e.target.value })
+                          }
                           className="max-w-40 bg-white"
                         />
                       </Field>
@@ -821,8 +879,8 @@ function EditorPage() {
 
               <Section title="מיקום הטיפול *">
                 <p className="text-sm text-muted-foreground">
-                  בחרו את היישוב שבו אתם מקבלים מטופלים. האזור יתעדכן אוטומטית. ניתן להוסיף עד שלושה מיקומים פיזיים,
-                  ולהציע גם טיפול אונליין או ביקורי בית.
+                  בחרו את היישוב שבו אתם מקבלים מטופלים. האזור יתעדכן אוטומטית. ניתן להוסיף עד שלושה
+                  מיקומים פיזיים, ולהציע גם טיפול אונליין או ביקורי בית.
                 </p>
 
                 {options.data?.locality_options_error && (
@@ -841,7 +899,9 @@ function EditorPage() {
                     return (
                       <div key={index} className="rounded-xl border border-border bg-white/60 p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
-                          <h4 className="text-base font-semibold text-foreground">מיקום {index + 1}</h4>
+                          <h4 className="text-base font-semibold text-foreground">
+                            מיקום {index + 1}
+                          </h4>
                           {index > 0 && (
                             <Button
                               type="button"
@@ -851,7 +911,9 @@ function EditorPage() {
                               onClick={() =>
                                 setForm((current) => ({
                                   ...current,
-                                  locations: current.locations.filter((_, locationIndex) => locationIndex !== index),
+                                  locations: current.locations.filter(
+                                    (_, locationIndex) => locationIndex !== index,
+                                  ),
                                 }))
                               }
                             >
@@ -899,7 +961,9 @@ function EditorPage() {
                               setForm((current) => ({
                                 ...current,
                                 locations: current.locations.map((item, locationIndex) =>
-                                  locationIndex === index ? { ...item, address: e.target.value } : item,
+                                  locationIndex === index
+                                    ? { ...item, address: e.target.value }
+                                    : item,
                                 ),
                               }))
                             }
@@ -930,7 +994,8 @@ function EditorPage() {
                                             accessibility_status: (ids[0] ??
                                               "unknown") as FormLocation["accessibility_status"],
                                             accessibility_features:
-                                              ids[0] === "accessible" || ids[0] === "partially_accessible"
+                                              ids[0] === "accessible" ||
+                                              ids[0] === "partially_accessible"
                                                 ? item.accessibility_features
                                                 : [],
                                           }
@@ -952,7 +1017,9 @@ function EditorPage() {
                                   setForm((current) => ({
                                     ...current,
                                     locations: current.locations.map((item, locationIndex) =>
-                                      locationIndex === index ? { ...item, accessibility_features: ids } : item,
+                                      locationIndex === index
+                                        ? { ...item, accessibility_features: ids }
+                                        : item,
                                     ),
                                   }))
                                 }
@@ -968,7 +1035,9 @@ function EditorPage() {
                                   setForm((current) => ({
                                     ...current,
                                     locations: current.locations.map((item, locationIndex) =>
-                                      locationIndex === index ? { ...item, accessibility_note: e.target.value } : item,
+                                      locationIndex === index
+                                        ? { ...item, accessibility_note: e.target.value }
+                                        : item,
                                     ),
                                   }))
                                 }
@@ -1008,7 +1077,9 @@ function EditorPage() {
                       className="mt-0.5 shrink-0"
                     />
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-foreground">אני מציע/ה גם טיפול אונליין</span>
+                      <span className="block text-sm font-medium text-foreground">
+                        אני מציע/ה גם טיפול אונליין
+                      </span>
                       <span className="mt-1 block text-sm text-muted-foreground">
                         פגישות טיפול מרחוק באמצעות שיחת וידאו.
                       </span>
@@ -1028,7 +1099,9 @@ function EditorPage() {
                       className="mt-0.5 shrink-0"
                     />
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-foreground">אני מציע/ה גם ביקורי בית</span>
+                      <span className="block text-sm font-medium text-foreground">
+                        אני מציע/ה גם ביקורי בית
+                      </span>
                       <span className="mt-1 block text-sm text-muted-foreground">
                         מפגשים בבית המטופל באזורים שתבחרו.
                       </span>
@@ -1037,8 +1110,12 @@ function EditorPage() {
 
                   {form.home_visit_available && (
                     <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
-                      <h4 className="text-base font-semibold text-foreground">אזורי ביקורי הבית *</h4>
-                      <p className="mt-1 text-sm text-muted-foreground">ניתן לבחור יותר מאזור אחד.</p>
+                      <h4 className="text-base font-semibold text-foreground">
+                        אזורי ביקורי הבית *
+                      </h4>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        ניתן לבחור יותר מאזור אחד.
+                      </p>
                       <div className="mt-3">
                         <SelectionGrid
                           items={PRODUCT_REGIONS.map((region) => ({ id: region, label: region }))}
@@ -1058,7 +1135,8 @@ function EditorPage() {
                 </div>
 
                 <p className="text-sm text-muted-foreground">
-                  לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור שירות.
+                  לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור
+                  שירות.
                 </p>
               </Section>
 
@@ -1079,10 +1157,16 @@ function EditorPage() {
                       maxLength={160}
                       aria-invalid={emailInvalid}
                       className={`bg-white text-left transition-colors focus:border-brand focus:ring-brand/30 ${
-                        emailInvalid ? "border-destructive focus:border-destructive focus:ring-destructive/20" : ""
+                        emailInvalid
+                          ? "border-destructive focus:border-destructive focus:ring-destructive/20"
+                          : ""
                       }`}
                     />
-                    {emailInvalid && <p className="mt-1.5 text-sm text-destructive">נא להזין כתובת אימייל תקינה.</p>}
+                    {emailInvalid && (
+                      <p className="mt-1.5 text-sm text-destructive">
+                        נא להזין כתובת אימייל תקינה.
+                      </p>
+                    )}
                   </Field>
 
                   <Field label="טלפון לקבלת פניות *">
@@ -1097,10 +1181,14 @@ function EditorPage() {
                       maxLength={40}
                       aria-invalid={phoneInvalid}
                       className={`bg-white text-left transition-colors focus:border-brand focus:ring-brand/30 ${
-                        phoneInvalid ? "border-destructive focus:border-destructive focus:ring-destructive/20" : ""
+                        phoneInvalid
+                          ? "border-destructive focus:border-destructive focus:ring-destructive/20"
+                          : ""
                       }`}
                     />
-                    <p className={`mt-1.5 text-sm ${phoneInvalid ? "text-destructive" : "text-muted-foreground"}`}>
+                    <p
+                      className={`mt-1.5 text-sm ${phoneInvalid ? "text-destructive" : "text-muted-foreground"}`}
+                    >
                       {phoneInvalid
                         ? "נא להזין מספר טלפון תקין."
                         : "אפשר להזין מספר ישראלי עם רווחים או מקפים, או מספר בינלאומי שמתחיל ב־+."}
@@ -1144,7 +1232,10 @@ function EditorPage() {
 
         {isEdit && (
           <div className="mt-10">
-            <DeleteProfilePanel pending={deleteMutation.isPending} onConfirm={() => deleteMutation.mutate()} />
+            <DeleteProfilePanel
+              pending={deleteMutation.isPending}
+              onConfirm={() => deleteMutation.mutate()}
+            />
           </div>
         )}
       </div>
@@ -1156,10 +1247,12 @@ function EditorPage() {
         >
           <DialogHeader className="shrink-0 border-b border-border px-5 py-4 text-right sm:px-6">
             <DialogTitle>תצוגה מקדימה של הפרופיל</DialogTitle>
-            <DialogDescription>כך הפרופיל יוצג למבקרים. שינויים שלא שמרתם מוצגים כאן בלבד.</DialogDescription>
+            <DialogDescription>
+              כך הפרופיל יוצג למבקרים. שינויים שלא שמרתם מוצגים כאן בלבד.
+            </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-brand-soft/50 p-2 sm:p-6">
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-6xl">
               <TherapistProfileView therapist={previewData} interactive={false} />
             </div>
           </div>
@@ -1189,7 +1282,11 @@ function CheckCard({
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white/60 p-4 transition-colors hover:border-brand/50">
-      <Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} className="mt-0.5 shrink-0" />
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(value) => onChange(value === true)}
+        className="mt-0.5 shrink-0"
+      />
       <span>
         <span className="block text-sm font-medium text-foreground">{title}</span>
         <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
@@ -1220,7 +1317,9 @@ function StringListEditor({
               maxLength={160}
               placeholder={placeholder}
               onChange={(e) =>
-                onChange(items.map((value, itemIndex) => (itemIndex === index ? e.target.value : value)))
+                onChange(
+                  items.map((value, itemIndex) => (itemIndex === index ? e.target.value : value)),
+                )
               }
               className="bg-white"
             />
@@ -1326,7 +1425,11 @@ function ProfileActions({
           onClick={() => onVisibilityChange(visibility !== "visible")}
           className="mt-3 w-full"
         >
-          {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
+          {visibilityPending
+            ? "מעדכן…"
+            : visibility === "visible"
+              ? "הקפאת הפרופיל"
+              : "הפעלת הפרופיל מחדש"}
         </Button>
         {visibility === "hidden" && !canReactivate && (
           <p className="mt-2 text-xs text-muted-foreground">ניתן להפעיל מחדש לאחר פרסום הפרופיל.</p>
@@ -1362,7 +1465,10 @@ function ProfileActions({
         </Button>
       </div>
 
-      <Link to="/account" className="mt-4 block text-center text-xs text-muted-foreground underline">
+      <Link
+        to="/account"
+        className="mt-4 block text-center text-xs text-muted-foreground underline"
+      >
         חזרה לחשבון
       </Link>
     </div>
@@ -1387,8 +1493,8 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
     <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5">
       <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או לשחזר את
-        הפרופיל לאחר מכן.
+        המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל
+        את הפעולה או לשחזר את הפרופיל לאחר מכן.
       </p>
       <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
         מחיקת הפרופיל
@@ -1398,12 +1504,19 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
         <DialogContent dir="rtl" className="max-w-lg">
           <DialogHeader>
             <DialogTitle>אישור מחיקה לצמיתות</DialogTitle>
-            <DialogDescription>זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות שחזור.</DialogDescription>
+            <DialogDescription>
+              זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות שחזור.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-              <Checkbox checked={acknowledged} onCheckedChange={(value) => setAcknowledged(value === true)} />
-              <span className="text-sm text-foreground">ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את הפרופיל.</span>
+              <Checkbox
+                checked={acknowledged}
+                onCheckedChange={(value) => setAcknowledged(value === true)}
+              />
+              <span className="text-sm text-foreground">
+                ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את הפרופיל.
+              </span>
             </label>
             <Field label={`כדי לאשר, הקלידו: ${phrase}`}>
               <Input
@@ -1413,7 +1526,12 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
               />
             </Field>
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <Button type="button" variant="outline" disabled={pending} onClick={() => close(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => close(false)}
+              >
                 ביטול
               </Button>
               <Button
@@ -1432,7 +1550,15 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
   );
 }
 
-function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
@@ -1473,7 +1599,9 @@ function ProfessionSelector({
 
     const grouped = PROFESSION_CATEGORIES.map((category) => {
       const categoryNames = new Set(category.professionNames.map(normalizeProfessionName));
-      const items = professions.filter((profession) => categoryNames.has(normalizeProfessionName(profession.name_he)));
+      const items = professions.filter((profession) =>
+        categoryNames.has(normalizeProfessionName(profession.name_he)),
+      );
       items.forEach((profession) => matchedProfessionIds.add(profession.id));
       return { ...category, items };
     });
@@ -1524,7 +1652,9 @@ function ProfessionSelector({
 
   const renderCategoryCard = (category: CategoryWithItems, layoutId: string) => {
     const isOpen = activeCategoryId === category.id;
-    const selectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
+    const selectedCount = category.items.filter((profession) =>
+      selected.includes(profession.id),
+    ).length;
     const isEmpty = category.items.length === 0;
 
     return (
@@ -1570,7 +1700,9 @@ function ProfessionSelector({
   };
 
   const renderCategoryPanel = (category: CategoryWithItems, layoutId: string) => {
-    const categorySelectedCount = category.items.filter((profession) => selected.includes(profession.id)).length;
+    const categorySelectedCount = category.items.filter((profession) =>
+      selected.includes(profession.id),
+    ).length;
 
     return (
       <div
@@ -1580,7 +1712,9 @@ function ProfessionSelector({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-base font-semibold text-foreground">{category.title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">בחרו את כל המקצועות הרלוונטיים לפרופיל שלכם.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              בחרו את כל המקצועות הרלוונטיים לפרופיל שלכם.
+            </p>
           </div>
           <span className="text-xs font-medium text-foreground">
             {categorySelectedCount} מתוך {category.items.length} נבחרו
@@ -1602,7 +1736,9 @@ function ProfessionSelector({
                     : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
                 }`}
               >
-                <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{profession.name_he}</span>
+                <span className="min-w-0 flex-1 text-sm font-medium leading-snug">
+                  {profession.name_he}
+                </span>
                 <span
                   aria-hidden="true"
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
@@ -1620,7 +1756,8 @@ function ProfessionSelector({
 
         {selectedOtherProfession && category.id === "emotional-therapy" && (
           <p className="mt-3 rounded-lg border border-brand/20 bg-brand/5 p-2.5 text-sm text-muted-foreground">
-            אם התחום שלכם אינו מופיע ברשימה, ציינו את ההגדרה המדויקת בשדה „כותרת מקצועית” שבאזור הפרטים האישיים.
+            אם התחום שלכם אינו מופיע ברשימה, ציינו את ההגדרה המדויקת בשדה „כותרת מקצועית” שבאזור
+            הפרטים האישיים.
           </p>
         )}
       </div>
@@ -1760,7 +1897,10 @@ function LocalityCombobox({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const disabledSet = useMemo(() => new Set(disabledValues.map(normalizeLocalitySearch)), [disabledValues]);
+  const disabledSet = useMemo(
+    () => new Set(disabledValues.map(normalizeLocalitySearch)),
+    [disabledValues],
+  );
   const normalizedQuery = normalizeLocalitySearch(query);
 
   const matches = useMemo(() => {
@@ -1797,7 +1937,12 @@ function LocalityCombobox({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
-          <CommandInput value={query} onValueChange={setQuery} placeholder="הקלידו שם יישוב..." autoFocus />
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            placeholder="הקלידו שם יישוב..."
+            autoFocus
+          />
           <CommandList>
             {value && (
               <CommandItem
@@ -1835,7 +1980,9 @@ function LocalityCombobox({
                     }}
                   >
                     <span className="min-w-0 flex-1 truncate">{locality.name}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{locality.region}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {locality.region}
+                    </span>
                     {isSelected && <span className="shrink-0 text-brand">✓</span>}
                   </CommandItem>
                 );
@@ -1863,7 +2010,9 @@ function ModalitySelector({
     const matchedIds = new Set<string>();
 
     const grouped = MODALITY_GROUPS.map((group) => {
-      const items = modalities.filter((modality) => modalityGroupForSlug(modality.slug)?.id === group.id);
+      const items = modalities.filter(
+        (modality) => modalityGroupForSlug(modality.slug)?.id === group.id,
+      );
       items.forEach((modality) => matchedIds.add(modality.id));
       return { ...group, items };
     });
@@ -1886,7 +2035,11 @@ function ModalitySelector({
 
   const selectedModalities = modalities.filter((modality) => selected.includes(modality.id));
   const totalSelectedLabel =
-    selected.length === 1 ? "נבחרה גישה אחת" : selected.length > 1 ? `נבחרו ${selected.length} גישות` : "";
+    selected.length === 1
+      ? "נבחרה גישה אחת"
+      : selected.length > 1
+        ? `נבחרו ${selected.length} גישות`
+        : "";
 
   const toggleModality = (modalityId: string) => {
     onChange(
@@ -1902,7 +2055,9 @@ function ModalitySelector({
 
   const renderCategoryCard = (category: CategoryWithItems, layoutId: string) => {
     const isOpen = activeCategoryId === category.id;
-    const selectedCount = category.items.filter((modality) => selected.includes(modality.id)).length;
+    const selectedCount = category.items.filter((modality) =>
+      selected.includes(modality.id),
+    ).length;
     const isEmpty = category.items.length === 0;
 
     return (
@@ -1948,7 +2103,9 @@ function ModalitySelector({
   };
 
   const renderCategoryPanel = (category: CategoryWithItems, layoutId: string) => {
-    const selectedCount = category.items.filter((modality) => selected.includes(modality.id)).length;
+    const selectedCount = category.items.filter((modality) =>
+      selected.includes(modality.id),
+    ).length;
 
     return (
       <div
@@ -1958,7 +2115,9 @@ function ModalitySelector({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="max-w-2xl">
             <h3 className="text-base font-semibold text-foreground">{category.title}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{category.description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {category.description}
+            </p>
           </div>
           <span className="text-xs font-medium text-foreground">
             {selectedCount} מתוך {category.items.length} נבחרו
@@ -1981,7 +2140,9 @@ function ModalitySelector({
                     : "border-brand/30 bg-brand-soft text-foreground hover:border-brand/60"
                 }`}
               >
-                <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{modality.name_he}</span>
+                <span className="min-w-0 flex-1 text-sm font-medium leading-snug">
+                  {modality.name_he}
+                </span>
                 <span
                   aria-hidden="true"
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs transition ${
@@ -2057,7 +2218,9 @@ function ModalitySelector({
       )}
 
       <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "modality-mobile")}</div>
-      <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "modality-desktop")}</div>
+      <div className="mt-4 hidden space-y-3 md:block">
+        {renderCategoryRows(3, "modality-desktop")}
+      </div>
     </div>
   );
 }
@@ -2082,7 +2245,8 @@ function SelectionGrid({
     four: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
   }[columns];
 
-  const selectedLabel = selected.length === 1 ? "אפשרות אחת נבחרה" : `${selected.length} אפשרויות נבחרו`;
+  const selectedLabel =
+    selected.length === 1 ? "אפשרות אחת נבחרה" : `${selected.length} אפשרויות נבחרו`;
 
   return (
     <div>
@@ -2106,7 +2270,9 @@ function SelectionGrid({
               disabled={item.disabled}
               onClick={() => {
                 if (multiple) {
-                  onChange(active ? selected.filter((id) => id !== item.id) : [...selected, item.id]);
+                  onChange(
+                    active ? selected.filter((id) => id !== item.id) : [...selected, item.id],
+                  );
                   return;
                 }
                 if (!active) onChange([item.id]);
@@ -2149,7 +2315,11 @@ function StatusBadge({ status }: { status: "draft" | "completed" | "published" }
     completed: { l: "מוכן לפרסום", c: "bg-amber-100 text-amber-800" },
     published: { l: "מפורסם", c: "bg-emerald-100 text-emerald-800" },
   } as const;
-  return <span className={`rounded-full px-3 py-1 text-xs font-medium ${map[status].c}`}>{map[status].l}</span>;
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-medium ${map[status].c}`}>
+      {map[status].l}
+    </span>
+  );
 }
 
 /**
@@ -2198,11 +2368,15 @@ function SemanticFeedbackPanel({ description }: { description: string }) {
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
-      <h3 className="text-base font-semibold text-foreground">תחומי טיפול שהמערכת זיהתה בתיאור שלך</h3>
+      <h3 className="text-base font-semibold text-foreground">
+        תחומי טיפול שהמערכת זיהתה בתיאור שלך
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">המערכת מזהה בתיאור את תחומי הטיפול.</p>
       <div className="mt-3">
         {!enabled ? (
-          <p className="text-sm text-muted-foreground">הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.</p>
+          <p className="text-sm text-muted-foreground">
+            הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.
+          </p>
         ) : query.isFetching && domains.length === 0 ? (
           <p className="text-sm text-muted-foreground">מנתח…</p>
         ) : domains.length === 0 ? (
@@ -2251,7 +2425,8 @@ function DescriptionHelpDialog() {
             כתבו באופן טבעי וזורם, כך שאנשים יוכלו להבין אם אתם המטפל המתאים עבורם.
           </p>
           <p className="text-muted-foreground">
-            הימנעו מרשימות של מילות מפתח. פרטי השכלה, הכשרות והסמכות שייכים לשדה "השכלה, הכשרה וניסיון מקצועי".
+            הימנעו מרשימות של מילות מפתח. פרטי השכלה, הכשרות והסמכות שייכים לשדה "השכלה, הכשרה
+            וניסיון מקצועי".
           </p>
         </div>
       </DialogContent>
