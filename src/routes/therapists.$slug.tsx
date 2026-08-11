@@ -57,13 +57,18 @@ function TherapistPage() {
   if (!t) return null;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-        ← דף הבית
-      </Link>
+    <div className="min-h-screen bg-brand-soft/30">
+      <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
+        <Link
+          to="/"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← חזרה לחיפוש
+        </Link>
 
-      <div className="mt-3">
-        <TherapistProfileView therapist={t} />
+        <div className="mt-4">
+          <TherapistProfileView therapist={t} />
+        </div>
       </div>
     </div>
   );
