@@ -14,6 +14,7 @@ export const PUBLIC_THERAPIST_COLUMNS = [
   "professional_title",
   "short_intro",
   "full_description",
+  "background",
   "years_experience",
   "city",
   "image_url",
@@ -42,7 +43,6 @@ export const PRIVATE_THERAPIST_COLUMNS = [
   "license_number",
   "bio_raw",
   "semantic_profile",
-  "background",
   "profile_status",
   "visibility",
   "is_active",
@@ -62,6 +62,7 @@ export type PublicTherapistProfile = {
   professional_title: string | null;
   short_intro: string | null;
   full_description: string | null;
+  background: string | null;
   years_experience: number;
   city: string | null;
   image_url: string | null;
@@ -70,9 +71,14 @@ export type PublicTherapistProfile = {
   offers_free_intro: boolean;
   free_intro_types: string[];
   free_intro_duration_minutes: number | null;
+  professions: { slug: string; name: string; is_primary: boolean }[];
+  modalities: { slug: string; name: string }[];
   therapy_formats: { slug: string; name: string }[];
   locations: {
-    city: string;
+    location_type: "clinic" | "home_visit" | "online" | "hospital" | "other";
+    city: string | null;
+    region: string | null;
+    is_primary: boolean;
     accessibility_status: string;
     accessibility_features: string[];
     accessibility_note: string | null;
