@@ -51,10 +51,10 @@ export function CtaCallButton({
       <button
         type="button"
         onClick={handleClick}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3.5 text-base font-semibold text-brand-foreground shadow-soft transition-all hover:bg-primary active:scale-[0.99] sm:w-auto"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3.5 text-base font-semibold text-brand-foreground shadow-soft transition-all hover:bg-primary active:scale-[0.99]"
       >
         <span aria-hidden>✉️</span>
-        <span>פנו אלי</span>
+        <span>שליחת פנייה</span>
       </button>
       <LeadModal
         open={open}
