@@ -69,6 +69,9 @@ export type DisplayRow = {
   home_visit_regions: string[];
   language_names: string[];
   population_names: string[];
+  modality_names: string[];
+  lgbtq_affirming: boolean;
+  offers_free_intro: boolean;
   /**
    * True when the therapist has active clinics but no `is_primary` marker,
    * so a deterministic read-only fallback picked the primary for display.
@@ -277,6 +280,9 @@ export async function executeUnifiedSearch(
       home_visit_regions: d.home_visit_regions,
       language_names: d.language_names,
       population_names: d.population_names,
+      modality_names: d.modality_names,
+      lgbtq_affirming: d.lgbtq_affirming,
+      offers_free_intro: d.offers_free_intro,
       scores: {
         semantic: r.semanticScore,
         preference: r.preferenceScore,
