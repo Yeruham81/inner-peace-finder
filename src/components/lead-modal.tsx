@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { createLead } from "@/lib/lead.functions";
 import { track } from "@/lib/analytics";
+import { sanitizeSearchReturn } from "@/lib/search-return";
+
+/** Time the success confirmation stays visible before returning to results. */
+export const LEAD_SUCCESS_REDIRECT_MS = 1800;
 
 const PHONE_RE = /^(\+?972|0)(5\d|[23489])\d{7,8}$/;
 
@@ -59,6 +64,11 @@ export function LeadModal({
   const [done, setDone] = useState(false);
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const redirectedRef = useRef(false);
+  const navigate = useNavigate();
+  const returnTo = useRouterState({
+    select: (s) => sanitizeSearchReturn((s.location.search as { ret?: unknown } | undefined)?.ret),
+  });
 
   // Reset state on every open
   useEffect(() => {
@@ -71,6 +81,7 @@ export function LeadModal({
     setError(null);
     setDone(false);
     setSubmitting(false);
+    redirectedRef.current = false;
     setTimeout(() => {
       panelRef.current?.scrollTo({ top: 0 });
       firstFieldRef.current?.focus({ preventScroll: true });
@@ -96,6 +107,22 @@ export function LeadModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // Redirect back to the search results only after a confirmed success.
+  useEffect(() => {
+    if (!open || !done || redirectedRef.current) return;
+    redirectedRef.current = true;
+    const timer = setTimeout(() => {
+      setName("");
+      setPhone("");
+      setChallengeAnswer("");
+      setDone(false);
+      onClose();
+      navigate({ href: returnTo, replace: true });
+    }, LEAD_SUCCESS_REDIRECT_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, done, returnTo]);
 
   const challengeAnswerNum = Number(challengeAnswer);
   const challengeOk =
@@ -194,7 +221,7 @@ export function LeadModal({
               הפנייה נשלחה
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {therapistName} יקבל/ת את הפנייה ויחזור/תחזור אליך בהקדם.
+              הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.
             </p>
             <button
               type="button"
