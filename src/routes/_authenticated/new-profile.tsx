@@ -1413,15 +1413,27 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
   }
 
   return (
-    <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או לשחזר את
-        הפרופיל לאחר מכן.
-      </p>
-      <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
-        מחיקת הפרופיל
-      </Button>
+    <section className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted-foreground marker:content-none">
+          <span>אפשרויות מחיקת הפרופיל</span>
+          <span className="text-xs group-open:hidden">הצגה</span>
+          <span className="hidden text-xs group-open:inline">הסתרה</span>
+        </summary>
+
+        <div className="mt-4 border-t border-destructive/30 pt-4">
+          <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
+
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או
+            לשחזר את הפרופיל לאחר מכן.
+          </p>
+
+          <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
+            מחיקת הפרופיל
+          </Button>
+        </div>
+      </details>
 
       <Dialog open={open} onOpenChange={close}>
         <DialogContent dir="rtl" className="max-w-lg">
