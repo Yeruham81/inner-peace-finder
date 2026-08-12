@@ -61,26 +61,31 @@ describe("contact-flow wiring", () => {
     expect(modal).toContain("navigate({ href: returnTo, replace: true })");
     // done is only set after the server confirms ok
     expect(modal).toContain("setDone(true);");
-    const failurePaths = modal.slice(modal.indexOf("if (!res.ok)"), modal.indexOf("setDone(true);"));
+    const failurePaths = modal.slice(
+      modal.indexOf("if (!res.ok)"),
+      modal.indexOf("setDone(true);"),
+    );
     expect(failurePaths).not.toContain("navigate(");
   });
 
   it("resets the form state as part of the redirect", () => {
     const effect = modal.slice(modal.indexOf("redirectedRef.current = true;"));
     expect(effect).toContain("setDone(false);");
-    expect(effect).toContain("setName(\"\");");
+    expect(effect).toContain('setName("");');
     expect(effect).toContain("onClose();");
   });
 
   it("shows the success confirmation copy before redirecting", () => {
-    expect(modal).toContain("הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.");
+    expect(modal).toContain(
+      "הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.",
+    );
     expect(modal).toContain("LEAD_SUCCESS_REDIRECT_MS");
   });
 
   it("passes the return destination from result cards to the profile route", () => {
     expect(card).toContain("buildSearchReturn(s.location.pathname, s.location.searchStr)");
     expect(card).toContain("search={returnTo ? { ret: returnTo } : {}}");
-    expect(profileRoute).toContain("ret: fallback(z.string(), \"\").default(\"\")");
+    expect(profileRoute).toContain('ret: fallback(z.string(), "").default("")');
   });
 
   it("does not rely on history.back()", () => {

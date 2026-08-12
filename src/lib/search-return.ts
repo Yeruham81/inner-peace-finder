@@ -17,7 +17,8 @@ const SEARCH_PATH = "/search";
  */
 export function buildSearchReturn(pathname: string, searchStr: string): string | undefined {
   if (pathname !== SEARCH_PATH) return undefined;
-  const query = searchStr && searchStr !== "?" ? (searchStr.startsWith("?") ? searchStr : `?${searchStr}`) : "";
+  const query =
+    searchStr && searchStr !== "?" ? (searchStr.startsWith("?") ? searchStr : `?${searchStr}`) : "";
   return `${SEARCH_PATH}${query}`;
 }
 
@@ -30,7 +31,11 @@ export function sanitizeSearchReturn(raw: unknown): string {
   const value = raw.trim();
   if (!value) return DEFAULT_SEARCH_RETURN;
   // Reject protocol-relative, absolute, backslash and control-character forms.
-  if (value.startsWith("//") || value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)) {
+  const hasControlChar = [...value].some((ch) => {
+    const code = ch.charCodeAt(0);
+    return code < 0x20 || code === 0x7f;
+  });
+  if (value.startsWith("//") || value.includes("\\") || hasControlChar) {
     return DEFAULT_SEARCH_RETURN;
   }
   if (!value.startsWith("/")) return DEFAULT_SEARCH_RETURN;
