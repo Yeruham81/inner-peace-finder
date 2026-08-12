@@ -1341,26 +1341,26 @@ function ProfileActions({
         <StatusBadge status={status} />
       </div>
 
-      <div className="mt-4 border-t border-border pt-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
-          />
-          {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+      {status === "published" && (
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
+            />
+            {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={visibilityPending}
+            onClick={() => onVisibilityChange(visibility !== "visible")}
+            className="mt-3 w-full"
+          >
+            {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={visibilityPending || (visibility === "hidden" && !canReactivate)}
-          onClick={() => onVisibilityChange(visibility !== "visible")}
-          className="mt-3 w-full"
-        >
-          {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
-        </Button>
-        {visibility === "hidden" && !canReactivate && (
-          <p className="mt-2 text-xs text-muted-foreground">ניתן להפעיל מחדש לאחר פרסום הפרופיל.</p>
-        )}
-      </div>
+      )}
 
       <div
         className={`mt-4 rounded-xl border p-3 text-sm leading-relaxed ${
