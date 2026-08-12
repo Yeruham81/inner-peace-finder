@@ -23,7 +23,7 @@ export type TherapistProfileViewData = {
   professional_title: string | null;
   short_intro: string | null;
   full_description: string | null;
-  background: string | null;
+  background?: string | null;
   years_experience: number | null;
   city: string | null;
   image_url: string | null;
