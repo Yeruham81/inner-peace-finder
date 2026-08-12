@@ -116,7 +116,11 @@ type FormState = {
   offers_free_intro: boolean;
   free_intro_types: string[];
   free_intro_duration_minutes: string;
-  professional_memberships: { organization_name: string; member_since: string }[];
+  professional_memberships: {
+    organization_name: string;
+    membership_start_date: string;
+    member_since: string;
+  }[];
   service_arrangements: { organization_name: string; note: string }[];
 };
 
@@ -320,6 +324,7 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
     free_intro_duration_minutes: p.free_intro_duration_minutes === null ? "" : String(p.free_intro_duration_minutes),
     professional_memberships: p.professional_memberships.map((item) => ({
       ...item,
+      membership_start_date: item.membership_start_date ?? "",
       member_since: item.member_since === null ? "" : String(item.member_since),
     })),
     service_arrangements: p.service_arrangements.map((item) => ({
@@ -394,7 +399,12 @@ function EditorPage() {
             .filter((item) => item.organization_name.trim())
             .map((item) => ({
               organization_name: item.organization_name,
-              member_since: item.member_since ? Number(item.member_since) : null,
+              membership_start_date: item.membership_start_date || null,
+              member_since: item.membership_start_date
+                ? Number(item.membership_start_date.slice(0, 4))
+                : item.member_since
+                  ? Number(item.member_since)
+                  : null,
             })),
           service_arrangements: form.service_arrangements
             .filter((item) => item.organization_name.trim())
@@ -645,35 +655,11 @@ function EditorPage() {
                 />
               </Section>
 
-              <Section title="איגודים מקצועיים והסדרים">
+              <Section title="איגודים מקצועיים">
                 <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.</p>
-                <StringListEditor
-                  title="חברות באיגודים מקצועיים"
-                  placeholder="שם האיגוד או האגודה"
-                  items={form.professional_memberships.map((item) => item.organization_name)}
-                  onChange={(items) =>
-                    setForm({
-                      ...form,
-                      professional_memberships: items.map((organization_name, index) => ({
-                        organization_name,
-                        member_since: form.professional_memberships[index]?.member_since ?? "",
-                      })),
-                    })
-                  }
-                />
-                <StringListEditor
-                  title="הסדרים עם גופים"
-                  placeholder="לדוגמה: קופת חולים או גוף ציבורי"
-                  items={form.service_arrangements.map((item) => item.organization_name)}
-                  onChange={(items) =>
-                    setForm({
-                      ...form,
-                      service_arrangements: items.map((organization_name, index) => ({
-                        organization_name,
-                        note: form.service_arrangements[index]?.note ?? "",
-                      })),
-                    })
-                  }
+                <MembershipListEditor
+                  items={form.professional_memberships}
+                  onChange={(professional_memberships) => setForm({ ...form, professional_memberships })}
                 />
               </Section>
             </FormArea>
@@ -765,6 +751,22 @@ function EditorPage() {
                       </Field>
                     </div>
                   )}
+                </div>
+                <div className="mt-6 border-t border-border pt-5">
+                  <StringListEditor
+                    title="הסדרים עם גופים"
+                    placeholder="לדוגמה: קופת חולים או גוף ציבורי"
+                    items={form.service_arrangements.map((item) => item.organization_name)}
+                    onChange={(items) =>
+                      setForm({
+                        ...form,
+                        service_arrangements: items.map((organization_name, index) => ({
+                          organization_name,
+                          note: form.service_arrangements[index]?.note ?? "",
+                        })),
+                      })
+                    }
+                  />
                 </div>
               </Section>
 
@@ -1184,6 +1186,84 @@ function StringListEditor({
         ))}
         <Button type="button" variant="outline" onClick={() => onChange([...items, ""])}>
           + הוספה
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+type MembershipEditorItem = {
+  organization_name: string;
+  membership_start_date: string;
+  member_since: string;
+};
+
+function MembershipListEditor({
+  items,
+  onChange,
+}: {
+  items: MembershipEditorItem[];
+  onChange: (items: MembershipEditorItem[]) => void;
+}) {
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium text-foreground">חברות באיגודים מקצועיים</h3>
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div key={index} className="rounded-xl border border-border bg-white/60 p-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-end">
+              <label className="text-sm font-medium">
+                שם האיגוד או האגודה
+                <Input
+                  value={item.organization_name}
+                  maxLength={160}
+                  placeholder="שם האיגוד או האגודה"
+                  onChange={(event) =>
+                    onChange(
+                      items.map((value, itemIndex) =>
+                        itemIndex === index ? { ...value, organization_name: event.target.value } : value,
+                      ),
+                    )
+                  }
+                  className="mt-1.5 bg-white"
+                />
+              </label>
+              <label className="text-sm font-medium">
+                תאריך תחילת החברות
+                <Input
+                  type="date"
+                  value={item.membership_start_date}
+                  onChange={(event) =>
+                    onChange(
+                      items.map((value, itemIndex) =>
+                        itemIndex === index ? { ...value, membership_start_date: event.target.value } : value,
+                      ),
+                    )
+                  }
+                  className="mt-1.5 bg-white"
+                />
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+              >
+                הסרה
+              </Button>
+            </div>
+            {!item.membership_start_date && item.member_since && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                ברשומה הישנה שמורה שנת התחלה: {item.member_since}. ניתן לבחור תאריך מלא כדי לעדכן אותה.
+              </p>
+            )}
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onChange([...items, { organization_name: "", membership_start_date: "", member_since: "" }])}
+        >
+          + הוספת חברות באיגוד
         </Button>
       </div>
     </div>
