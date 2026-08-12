@@ -1,5 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
 
@@ -11,6 +13,12 @@ function therapistQuery(slug: string) {
 }
 
 export const Route = createFileRoute("/therapists/$slug")({
+  validateSearch: zodValidator(
+    z.object({
+      /** Internal search-results URL to return to after a successful lead. */
+      ret: fallback(z.string(), "").default(""),
+    }),
+  ),
   loader: async ({ context, params }) => {
     const t = await context.queryClient.ensureQueryData(therapistQuery(params.slug));
     if (!t) throw notFound();
