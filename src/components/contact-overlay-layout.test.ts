@@ -6,7 +6,10 @@ const read = (file: string) => readFileSync(join(import.meta.dir, file), "utf8")
 
 describe("profile contact layout guards", () => {
   it("keeps the sticky contact card below the site header", () => {
-    expect(read("therapist-profile-view.tsx")).toContain("lg:sticky lg:top-24 lg:self-start");
+    const source = read("therapist-profile-view.tsx");
+    expect(source).toContain("lg:sticky");
+    expect(source).toContain("lg:top-24");
+    expect(source).toContain("lg:self-start");
   });
 
   it("portals the lead dialog above sticky page stacking contexts", () => {
