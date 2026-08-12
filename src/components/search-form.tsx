@@ -91,7 +91,7 @@ type SearchFormProps = {
     problem?: string;
     flow?: string;
   };
-  variant?: "hero" | "compact";
+  variant?: "hero" | "compact" | "simple";
 };
 
 function multiValue(
@@ -116,6 +116,7 @@ export function SearchForm({
 }: SearchFormProps) {
   const navigate = useNavigate();
   const isHero = variant === "hero";
+  const isCompact = variant === "compact";
 
   const appliedContract = resolveSearchContract({
     q: initialQuery,
@@ -601,7 +602,7 @@ export function SearchForm({
         </button>
       </div>
 
-      {!isHero && (
+      {isCompact && (
         <div className="mt-3 border-t border-border pt-3">
           <div className="flex gap-2 overflow-x-auto pb-2" aria-label="מסננים מהירים">
             {[
