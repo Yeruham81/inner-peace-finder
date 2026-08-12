@@ -60,7 +60,11 @@ export type ProfileEditorData = {
   offers_free_intro: boolean;
   free_intro_types: string[];
   free_intro_duration_minutes: number | null;
-  professional_memberships: { organization_name: string; member_since: number | null }[];
+  professional_memberships: {
+    organization_name: string;
+    member_since: number | null;
+    membership_start_date: string | null;
+  }[];
   service_arrangements: { organization_name: string; note: string | null }[];
   credential: {
     id: string;
@@ -70,6 +74,7 @@ export type ProfileEditorData = {
     license_number: string | null;
     document_url: string | null;
     issuing_authority: string | null;
+    issue_date: string | null;
     expires_at: string | null;
     verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
     rejection_reason: string | null;
@@ -207,6 +212,7 @@ const SaveSchema = z.object({
       z.object({
         organization_name: z.string().trim().min(2).max(160),
         member_since: z.number().int().min(1900).max(2100).nullable().optional(),
+        membership_start_date: z.string().date().nullable().optional(),
       }),
     )
     .max(20)
@@ -323,7 +329,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       supabase.from("therapist_therapy_formats").select("therapy_format_id").eq("therapist_id", t.id),
       supabase
         .from("therapist_professional_memberships")
-        .select("organization_name, member_since")
+        .select("organization_name, member_since, membership_start_date")
         .eq("therapist_id", t.id)
         .order("sort_order"),
       supabase
@@ -334,7 +340,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       supabase
         .from("therapist_credentials")
         .select(
-          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, expires_at, verification_status, rejection_reason",
+          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason",
         )
         .eq("therapist_id", t.id)
         .order("updated_at", { ascending: false })
@@ -701,7 +707,7 @@ const CredentialSubmissionSchema = z.object({
   license_number: z.string().trim().min(2).max(120),
   document_url: z.string().trim().min(3).max(500),
   issuing_authority: z.string().trim().min(2).max(160),
-  expires_at: z.string().datetime().nullable().optional(),
+  issue_date: z.string().date().nullable().optional(),
 });
 
 export const submitMyCredential = createServerFn({ method: "POST" })
@@ -723,7 +729,7 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       license_number: data.license_number,
       document_url: data.document_url,
       issuing_authority: data.issuing_authority,
-      expires_at: data.expires_at ?? null,
+      issue_date: data.issue_date ?? null,
       submitted_at: new Date().toISOString(),
       verification_status: "pending_review" as const,
     };
