@@ -39,7 +39,7 @@ export function TherapistCredentialPanel({
   const [licenseNumber, setLicenseNumber] = useState(credential?.license_number ?? "");
   const [issuingAuthority, setIssuingAuthority] = useState(credential?.issuing_authority ?? "");
   const [institution, setInstitution] = useState(credential?.institution ?? "");
-  const [expiresAt, setExpiresAt] = useState(credential?.expires_at?.slice(0, 10) ?? "");
+  const [issueDate, setIssueDate] = useState(credential?.issue_date ?? "");
   const [documentPath, setDocumentPath] = useState(credential?.document_url ?? "");
   const [uploading, setUploading] = useState(false);
 
@@ -54,14 +54,14 @@ export function TherapistCredentialPanel({
           license_number: licenseNumber,
           document_url: documentPath,
           issuing_authority: issuingAuthority,
-          expires_at: expiresAt ? new Date(`${expiresAt}T00:00:00.000Z`).toISOString() : null,
+          issue_date: issueDate || null,
         },
       }),
     onSuccess: () => {
-      toast.success("ההסמכה נשלחה לבדיקה.");
+      toast.success("הפרטים נשלחו לאימות.");
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
     },
-    onError: (error: Error) => toast.error(error.message || "לא ניתן לשלוח את ההסמכה לבדיקה."),
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לשלוח את הפרטים לאימות."),
   });
 
   async function upload(file: File) {
@@ -77,7 +77,7 @@ export function TherapistCredentialPanel({
         .upload(path, file, { contentType: file.type, upsert: false });
       if (error) throw error;
       setDocumentPath(path);
-      toast.success("המסמך הועלה. יש לשלוח את ההסמכה לבדיקה.");
+      toast.success("המסמך הועלה. יש לשלוח את הפרטים לאימות.");
     } catch (error) {
       toast.error((error as Error).message || "העלאת המסמך נכשלה.");
     } finally {
@@ -131,6 +131,10 @@ export function TherapistCredentialPanel({
               סיבת הדחייה: {credential.rejection_reason}
             </div>
           )}
+          <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+            הפרטים והמסמך ישמשו לצורך אימות ההכשרה או ההסמכה ולהצגת תגית &quot;מאומת&quot;. הם לא יוצגו בגלוי בפרופיל
+            הציבורי.
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium">
               מקצוע
@@ -190,12 +194,12 @@ export function TherapistCredentialPanel({
               />
             </label>
             <label className="text-sm font-medium">
-              תאריך תפוגה, אם קיים
+              תאריך קבלת ההסמכה או כניסתה לתוקף
               <Input
                 type="date"
-                value={expiresAt}
+                value={issueDate}
                 disabled={locked}
-                onChange={(e) => setExpiresAt(e.target.value)}
+                onChange={(e) => setIssueDate(e.target.value)}
                 className="mt-1.5 bg-white"
               />
             </label>
@@ -229,7 +233,7 @@ export function TherapistCredentialPanel({
               disabled={!canSubmit || uploading || mutation.isPending}
               onClick={() => mutation.mutate()}
             >
-              {mutation.isPending ? "הבקשה נשלחת…" : "שליחת ההסמכה לבדיקה"}
+              {mutation.isPending ? "הבקשה נשלחת…" : "שליחת הפרטים לאימות"}
             </Button>
           )}
         </div>
