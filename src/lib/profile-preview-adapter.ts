@@ -143,26 +143,3 @@ export function buildPreviewViewData(
       .map((language) => ({ code: language.code, name: language.name })),
   };
 }
-
-describe("permanent profile deletion disclosure", () => {
-  it("keeps the destructive button hidden behind a preliminary native disclosure", () => {
-    const panelStart = editorSource.indexOf("function DeleteProfilePanel");
-    const panelEnd = editorSource.indexOf("function Section", panelStart);
-    const panelSource = editorSource.slice(panelStart, panelEnd);
-    const detailsOpen = panelSource.indexOf('<details className="group">');
-    const summary = panelSource.indexOf("אפשרויות מחיקת הפרופיל", detailsOpen);
-    const destructiveButton = panelSource.indexOf('variant="destructive"', summary);
-    const detailsClose = panelSource.indexOf("</details>", destructiveButton);
-
-    expect(detailsOpen).toBeGreaterThan(-1);
-    expect(summary).toBeGreaterThan(detailsOpen);
-    expect(destructiveButton).toBeGreaterThan(summary);
-    expect(detailsClose).toBeGreaterThan(destructiveButton);
-  });
-
-  it("retains the existing final dialog safeguards after the disclosure", () => {
-    expect(editorSource).toContain("ברור לי שהמחיקה היא לצמיתות");
-    expect(editorSource).toContain("confirmation !== phrase");
-    expect(editorSource).toContain("כן, מחיקת הפרופיל לצמיתות");
-  });
-});
