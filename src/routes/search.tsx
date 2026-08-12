@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContrac
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { track } from "@/lib/analytics";
+import { buildSearchReturn } from "@/lib/search-return";
 
 /**
  * Search-flow switch.
@@ -333,6 +334,9 @@ function UnifiedSearchResults({ search }: { search: SearchParams }) {
 
 function LegacySearchResults({ search }: { search: SearchParams }) {
   const navigate = useNavigate();
+  const returnTo = useRouterState({
+    select: (s) => buildSearchReturn(s.location.pathname, s.location.searchStr),
+  });
   const { data: structuredMatches } = useSuspenseQuery(structuredTherapistQuery(search.q));
   const { data: legacyPipeline } = useSuspenseQuery(resultsQuery(search));
 
@@ -364,6 +368,7 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
                 <Link
                   to="/therapists/$slug"
                   params={{ slug: m.slug }}
+                  search={returnTo ? { ret: returnTo } : {}}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground hover:border-brand hover:bg-brand/5"
                 >
                   <span className="font-medium">{m.full_name}</span>
