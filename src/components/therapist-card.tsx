@@ -1,7 +1,8 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { SearchResultCard } from "@/lib/search-result-card";
 import { track } from "@/lib/analytics";
+import { buildSearchReturn } from "@/lib/search-return";
 import { visibleItemCountForRows } from "@/lib/tag-overflow";
 
 const COMPACT_TAG_CLASS =
@@ -112,6 +113,9 @@ export function TherapistCard({
   pageSource?: string;
 }) {
   const viewedRef = useRef(false);
+  const returnTo = useRouterState({
+    select: (s) => buildSearchReturn(s.location.pathname, s.location.searchStr),
+  });
   useEffect(() => {
     if (viewedRef.current) return;
     viewedRef.current = true;
@@ -138,6 +142,7 @@ export function TherapistCard({
     <Link
       to="/therapists/$slug"
       params={{ slug: t.slug }}
+      search={returnTo ? { ret: returnTo } : {}}
       aria-label={`צפייה בפרופיל של ${t.full_name}`}
       className="group flex h-full flex-col rounded-2xl border border-border bg-surface-elevated p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-brand/40 focus:ring-offset-2 sm:p-5"
     >
