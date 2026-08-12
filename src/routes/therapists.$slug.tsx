@@ -65,13 +65,13 @@ function TherapistPage() {
   if (!t) return null;
 
   return (
-    <div className="min-h-screen bg-brand-soft/30">
-      <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
+    <div className="min-h-screen overflow-x-clip bg-brand-soft/30">
+      <div className="mx-auto w-full min-w-0 max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
         <Link to="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
           ← חזרה לחיפוש
         </Link>
 
-        <div className="mt-4">
+        <div className="mt-4 min-w-0 max-w-full">
           <TherapistProfileView therapist={t} />
         </div>
       </div>
