@@ -1341,26 +1341,26 @@ function ProfileActions({
         <StatusBadge status={status} />
       </div>
 
-      {status === "published" && (
-        <div className="mt-4 border-t border-border pt-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
-            />
-            {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            disabled={visibilityPending}
-            onClick={() => onVisibilityChange(visibility !== "visible")}
-            className="mt-3 w-full"
-          >
-            {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
-          </Button>
+      <div className="mt-4 border-t border-border pt-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
+          />
+          {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
         </div>
-      )}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={visibilityPending || (visibility === "hidden" && !canReactivate)}
+          onClick={() => onVisibilityChange(visibility !== "visible")}
+          className="mt-3 w-full"
+        >
+          {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
+        </Button>
+        {visibility === "hidden" && !canReactivate && (
+          <p className="mt-2 text-xs text-muted-foreground">ניתן להפעיל מחדש לאחר פרסום הפרופיל.</p>
+        )}
+      </div>
 
       <div
         className={`mt-4 rounded-xl border p-3 text-sm leading-relaxed ${
@@ -1370,7 +1370,7 @@ function ProfileActions({
         }`}
       >
         {publishMissing
-          ? "הפרופיל עדיין אינו מוכן לפרסום. ניתן לשמור טיוטה ולהשלים בהמשך."
+          ? "הפרופיל עדיין אינו מוכן לפרסום. ניתן לשמור טיוטה ולהמשיך בהמשך."
           : "כל שדות החובה הושלמו. ניתן לפרסם את הפרופיל."}
       </div>
 
@@ -1413,27 +1413,15 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted-foreground marker:content-none">
-          <span>מחיקת הפרופיל</span>
-          <span className="text-xs group-open:hidden">הצגה</span>
-          <span className="hidden text-xs group-open:inline">הסתרה</span>
-        </summary>
-
-        <div className="mt-4 border-t border-destructive/30 pt-4">
-          <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
-
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או
-            לשחזר את הפרופיל לאחר מכן.
-          </p>
-
-          <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
-            מחיקת הפרופיל
-          </Button>
-        </div>
-      </details>
+    <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5">
+      <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או לשחזר את
+        הפרופיל לאחר מכן.
+      </p>
+      <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
+        מחיקת הפרופיל
+      </Button>
 
       <Dialog open={open} onOpenChange={close}>
         <DialogContent dir="rtl" className="max-w-lg">
