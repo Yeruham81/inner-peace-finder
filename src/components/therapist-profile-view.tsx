@@ -23,7 +23,8 @@ export type TherapistProfileViewData = {
   professional_title: string | null;
   short_intro: string | null;
   full_description: string | null;
-  background?: string | null;
+  education_training: string | null;
+  professional_experience: string | null;
   years_experience: number | null;
   city: string | null;
   image_url: string | null;
@@ -54,7 +55,7 @@ export type TherapistProfileViewData = {
 type TagItem = { key: string; label: string; problemSlug?: string };
 
 const TAG_CLASS =
-  "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 text-sm leading-5 text-foreground";
+  "inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 text-sm leading-5 text-foreground";
 
 /**
  * Returns the largest number of tags that can be shown in `maxRows`, while
@@ -146,8 +147,8 @@ function TwoRowTags({ items, interactive }: { items: TagItem[]; interactive: boo
   const hiddenCount = items.length - visibleCount;
 
   return (
-    <div ref={containerRef} className="relative">
-      <div className="flex flex-wrap gap-2">
+    <div ref={containerRef} className="relative min-w-0 max-w-full overflow-hidden">
+      <div className="flex min-w-0 max-w-full flex-wrap gap-2">
         {shownItems.map((item) =>
           item.problemSlug && interactive ? (
             <Link
@@ -187,7 +188,7 @@ function TwoRowTags({ items, interactive }: { items: TagItem[]; interactive: boo
       <div
         ref={measureRef}
         aria-hidden="true"
-        className="pointer-events-none invisible absolute inset-x-0 top-0 flex flex-wrap gap-2"
+        className="pointer-events-none invisible absolute inset-x-0 top-0 flex max-w-full flex-wrap gap-2 overflow-hidden"
       >
         {items.map((item) => (
           <span key={`measure-${item.key}`} data-measure-tag className={TAG_CLASS}>
@@ -216,8 +217,8 @@ function TwoRowTags({ items, interactive }: { items: TagItem[]; interactive: boo
 function TagGroup({ title, items, interactive }: { title: string; items: TagItem[]; interactive: boolean }) {
   if (items.length === 0) return null;
   return (
-    <div>
-      <h3 className="mb-2.5 text-sm font-semibold text-foreground/75">{title}</h3>
+    <div className="min-w-0 max-w-full">
+      <h3 className="mb-2.5 break-words text-sm font-semibold text-foreground/75">{title}</h3>
       <TwoRowTags items={items} interactive={interactive} />
     </div>
   );
@@ -233,7 +234,7 @@ export function ClinicLocationsCard({ locations }: { locations: TherapistProfile
   if (locations.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-background/70 p-4">
+    <div className="box-border w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
       <div className="flex items-start gap-3">
         <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
@@ -243,8 +244,11 @@ export function ClinicLocationsCard({ locations }: { locations: TherapistProfile
               const accessibilityLabel = clinicAccessibilityLabel(location.accessibility_status);
 
               return (
-                <div key={`clinic-${location.city ?? "location"}-${index}`} className="py-2 first:pt-0 last:pb-0">
-                  {location.city && <p className="text-sm text-muted-foreground">{location.city}</p>}
+                <div
+                  key={`clinic-${location.city ?? "location"}-${index}`}
+                  className="min-w-0 max-w-full py-2 first:pt-0 last:pb-0"
+                >
+                  {location.city && <p className="break-words text-sm text-muted-foreground">{location.city}</p>}
                   {accessibilityLabel && (
                     <p className="mt-0.5 text-xs text-muted-foreground/80">{accessibilityLabel}</p>
                   )}
@@ -283,12 +287,14 @@ function ProfileImage({
 
 function CollapsibleProfessionalSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <details className="group rounded-2xl border border-border bg-background/70">
+    <details className="group min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 font-semibold text-foreground marker:content-none sm:px-5">
-        <span>{title}</span>
+        <span className="min-w-0 break-words">{title}</span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
-      <div className="border-t border-border px-4 py-4 text-sm leading-7 text-foreground/80 sm:px-5">{children}</div>
+      <div className="min-w-0 max-w-full overflow-hidden border-t border-border px-4 py-4 text-sm leading-7 text-foreground/80 sm:px-5">
+        {children}
+      </div>
     </details>
   );
 }
@@ -318,7 +324,8 @@ export function TherapistProfileView({
     t.modalities.length > 0 ||
     t.populations.length > 0 ||
     t.therapy_formats.length > 0;
-  const hasProfessionalDetails = !!t.background || t.professional_memberships.length > 0;
+  const hasProfessionalDetails =
+    !!t.education_training || !!t.professional_experience || t.professional_memberships.length > 0;
   const longAbout = (t.full_description?.length ?? 0) > 420;
 
   const heroServiceTags = useMemo(() => {
@@ -331,14 +338,14 @@ export function TherapistProfileView({
   }, [clinicLocations.length, homeVisitLocations.length, onlineAvailable, t.offers_free_intro]);
 
   return (
-    <article className="space-y-6">
-      <header className="overflow-hidden rounded-3xl border border-border bg-surface-elevated shadow-card">
+    <article className="box-border w-full min-w-0 max-w-full space-y-6 overflow-x-clip">
+      <header className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated shadow-card">
         <div className="bg-gradient-to-br from-brand-soft via-surface-elevated to-surface px-5 py-7 sm:px-9 sm:py-9">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
             <ProfileImage imageUrl={t.image_url} name={t.full_name} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                <h1 className="min-w-0 break-words text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
                   {t.full_name || "שם המטפל/ת"}
                 </h1>
                 {t.verified && (
@@ -347,9 +354,13 @@ export function TherapistProfileView({
                   </span>
                 )}
               </div>
-              <p className="mt-1.5 text-lg font-medium text-foreground/80">{t.professional_title || "כותרת מקצועית"}</p>
+              <p className="mt-1.5 break-words text-lg font-medium text-foreground/80">
+                {t.professional_title || "כותרת מקצועית"}
+              </p>
               {t.short_intro && (
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">{t.short_intro}</p>
+                <p className="mt-3 max-w-3xl break-words text-sm leading-6 text-muted-foreground sm:text-base">
+                  {t.short_intro}
+                </p>
               )}
 
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/75">
@@ -397,13 +408,13 @@ export function TherapistProfileView({
         </div>
       </header>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
-        <main className="min-w-0 space-y-5">
+      <div className="box-border block w-full min-w-0 max-w-full lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-6">
+        <main className="box-border min-w-0 max-w-full space-y-5">
           {t.full_description && (
-            <section className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
+            <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">אודות</h2>
               <p
-                className={`mt-3 whitespace-pre-line text-base leading-8 text-foreground/80 ${
+                className={`mt-3 break-words whitespace-pre-line text-base leading-8 text-foreground/80 ${
                   longAbout && !aboutExpanded ? "line-clamp-5" : ""
                 }`}
               >
@@ -422,9 +433,9 @@ export function TherapistProfileView({
           )}
 
           {hasTreatmentDetails && (
-            <section className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
+            <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">טיפול והתאמה</h2>
-              <div className="mt-5 space-y-5">
+              <div className="mt-5 min-w-0 max-w-full space-y-5">
                 <TagGroup
                   title="מקצועות"
                   interactive={interactive}
@@ -459,12 +470,12 @@ export function TherapistProfileView({
           )}
 
           {t.locations.length > 0 && (
-            <section className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
+            <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">מיקום ואופן הטיפול</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
                 <ClinicLocationsCard locations={clinicLocations} />
                 {onlineAvailable && (
-                  <div className="rounded-2xl border border-border bg-background/70 p-4">
+                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
                     <div className="flex items-start gap-3">
                       <Video className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                       <div>
@@ -475,7 +486,7 @@ export function TherapistProfileView({
                   </div>
                 )}
                 {homeVisitLocations.length > 0 && (
-                  <div className="rounded-2xl border border-border bg-background/70 p-4">
+                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
                     <div className="flex items-start gap-3">
                       <Home className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                       <div>
@@ -492,16 +503,16 @@ export function TherapistProfileView({
           )}
 
           {t.service_arrangements.length > 0 && (
-            <section className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
+            <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">הסדרים עם גופים</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 גופים שדרכם ניתן לקבל טיפול או החזר, בהתאם לתנאי הגוף.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex min-w-0 max-w-full flex-wrap gap-2">
                 {t.service_arrangements.map((item, index) => (
                   <span
                     key={`${item.organization_name}-${index}`}
-                    className="rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-sm text-foreground"
+                    className="max-w-full break-words rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-sm text-foreground"
                     title={item.note ?? undefined}
                   >
                     {item.organization_name}
@@ -513,19 +524,24 @@ export function TherapistProfileView({
           )}
 
           {hasProfessionalDetails && (
-            <section className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
+            <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">מידע מקצועי נוסף</h2>
               <div className="mt-4 space-y-3">
-                {t.background && (
-                  <CollapsibleProfessionalSection title="השכלה, הכשרה וניסיון מקצועי">
-                    <p className="whitespace-pre-line">{t.background}</p>
+                {t.education_training && (
+                  <CollapsibleProfessionalSection title="השכלה והכשרה">
+                    <p className="break-words whitespace-pre-line">{t.education_training}</p>
+                  </CollapsibleProfessionalSection>
+                )}
+                {t.professional_experience && (
+                  <CollapsibleProfessionalSection title="ניסיון מקצועי">
+                    <p className="break-words whitespace-pre-line">{t.professional_experience}</p>
                   </CollapsibleProfessionalSection>
                 )}
                 {t.professional_memberships.length > 0 && (
                   <CollapsibleProfessionalSection title="חברות באיגודים מקצועיים">
                     <ul className="space-y-2">
                       {t.professional_memberships.map((item, index) => (
-                        <li key={`${item.organization_name}-${index}`}>
+                        <li key={`${item.organization_name}-${index}`} className="break-words">
                           {item.organization_name}
                           {item.member_since ? `, משנת ${item.member_since}` : ""}
                         </li>
@@ -538,13 +554,15 @@ export function TherapistProfileView({
           )}
         </main>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-card">
-            <div className="flex items-center gap-3 border-b border-border pb-4">
+        <aside className="box-border mt-6 min-w-0 max-w-full lg:sticky lg:top-24 lg:mt-0 lg:self-start">
+          <div className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-card">
+            <div className="flex min-w-0 max-w-full items-center gap-3 border-b border-border pb-4">
               <ProfileImage imageUrl={t.image_url} name={t.full_name} compact />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="truncate font-bold text-foreground">{t.full_name || "שם המטפל/ת"}</p>
-                <p className="truncate text-sm text-muted-foreground">{t.professional_title || "כותרת מקצועית"}</p>
+                <p className="line-clamp-2 whitespace-normal break-words text-sm leading-snug text-muted-foreground">
+                  {t.professional_title || "כותרת מקצועית"}
+                </p>
                 {displayLocation && (
                   <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" /> {displayLocation}
