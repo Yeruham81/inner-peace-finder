@@ -41,7 +41,7 @@ export type PreviewFormState = {
   free_intro_duration_minutes: string;
   professional_memberships: {
     organization_name: string;
-    membership_start_date?: string;
+    membership_start_date: string;
     member_since: string;
   }[];
   service_arrangements: { organization_name: string; note: string }[];
