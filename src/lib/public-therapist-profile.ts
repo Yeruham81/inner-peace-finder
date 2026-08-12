@@ -14,7 +14,8 @@ export const PUBLIC_THERAPIST_COLUMNS = [
   "professional_title",
   "short_intro",
   "full_description",
-  "background",
+  "education_training",
+  "professional_experience",
   "years_experience",
   "city",
   "image_url",
@@ -62,7 +63,8 @@ export type PublicTherapistProfile = {
   professional_title: string | null;
   short_intro: string | null;
   full_description: string | null;
-  background: string | null;
+  education_training: string | null;
+  professional_experience: string | null;
   years_experience: number;
   city: string | null;
   image_url: string | null;
