@@ -56,15 +56,6 @@ type TagItem = { key: string; label: string; problemSlug?: string };
 const TAG_CLASS =
   "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 text-sm leading-5 text-foreground";
 
-const ACCESSIBILITY_LABELS: Record<string, string> = {
-  step_free_entrance: "כניסה ללא מדרגות",
-  accessible_elevator: "מעלית נגישה",
-  accessible_restroom: "שירותים נגישים",
-  accessible_parking: "חניית נכים",
-  wide_doorways: "פתחים רחבים",
-  hearing_loop: "לולאת השראה",
-};
-
 /**
  * Returns the largest number of tags that can be shown in `maxRows`, while
  * reserving room for the exact "+N נוספים" button when some tags are hidden.
@@ -228,6 +219,41 @@ function TagGroup({ title, items, interactive }: { title: string; items: TagItem
     <div>
       <h3 className="mb-2.5 text-sm font-semibold text-foreground/75">{title}</h3>
       <TwoRowTags items={items} interactive={interactive} />
+    </div>
+  );
+}
+
+function clinicAccessibilityLabel(status: string): string | null {
+  if (status === "accessible") return "קליניקה נגישה";
+  if (status === "partially_accessible") return "קליניקה נגישה חלקית";
+  return null;
+}
+
+export function ClinicLocationsCard({ locations }: { locations: TherapistProfileViewData["locations"] }) {
+  if (locations.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-background/70 p-4">
+      <div className="flex items-start gap-3">
+        <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-foreground">טיפול בקליניקה</p>
+          <div className="mt-2 divide-y divide-border/70">
+            {locations.map((location, index) => {
+              const accessibilityLabel = clinicAccessibilityLabel(location.accessibility_status);
+
+              return (
+                <div key={`clinic-${location.city ?? "location"}-${index}`} className="py-2 first:pt-0 last:pb-0">
+                  {location.city && <p className="text-sm text-muted-foreground">{location.city}</p>}
+                  {accessibilityLabel && (
+                    <p className="mt-0.5 text-xs text-muted-foreground/80">{accessibilityLabel}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -436,41 +462,7 @@ export function TherapistProfileView({
             <section className="rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">מיקום ואופן הטיפול</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {clinicLocations.map((location, index) => (
-                  <div
-                    key={`clinic-${location.city}-${index}`}
-                    className="rounded-2xl border border-border bg-background/70 p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <div>
-                        <p className="font-semibold text-foreground">טיפול בקליניקה</p>
-                        {location.city && <p className="mt-0.5 text-sm text-muted-foreground">{location.city}</p>}
-                      </div>
-                    </div>
-                    {(location.accessibility_status === "accessible" ||
-                      location.accessibility_status === "partially_accessible") && (
-                      <details className="group mt-3 border-t border-border pt-3 text-sm">
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-primary marker:content-none">
-                          <span>
-                            {location.accessibility_status === "accessible" ? "קליניקה נגישה" : "קליניקה נגישה חלקית"}
-                          </span>
-                          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                        </summary>
-                        <div className="mt-2 text-foreground/75">
-                          {location.accessibility_features.length > 0 && (
-                            <p>
-                              {location.accessibility_features
-                                .map((feature) => ACCESSIBILITY_LABELS[feature] ?? feature)
-                                .join(" · ")}
-                            </p>
-                          )}
-                          {location.accessibility_note && <p className="mt-1">{location.accessibility_note}</p>}
-                        </div>
-                      </details>
-                    )}
-                  </div>
-                ))}
+                <ClinicLocationsCard locations={clinicLocations} />
                 {onlineAvailable && (
                   <div className="rounded-2xl border border-border bg-background/70 p-4">
                     <div className="flex items-start gap-3">
