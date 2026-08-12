@@ -1416,7 +1416,7 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
     <section className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted-foreground marker:content-none">
-          <span>אפשרויות מחיקת הפרופיל</span>
+          <span>מחיקת הפרופיל</span>
           <span className="text-xs group-open:hidden">הצגה</span>
           <span className="hidden text-xs group-open:inline">הסתרה</span>
         </summary>
