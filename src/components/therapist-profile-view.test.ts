@@ -1,8 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ClinicLocationsCard, visibleTagCountForRows } from "./therapist-profile-view";
+
+const profileSource = readFileSync(new URL("./therapist-profile-view.tsx", import.meta.url), "utf8");
 
 describe("visibleTagCountForRows", () => {
   it("shows every tag when they fit within two rows", () => {
@@ -75,5 +78,53 @@ describe("ClinicLocationsCard", () => {
 
   it("renders nothing when no clinic locations are provided", () => {
     expect(renderToStaticMarkup(createElement(ClinicLocationsCard, { locations: [] }))).toBe("");
+  });
+});
+
+describe("mobile profile width guards", () => {
+  it("uses normal block sizing on mobile and enables the two-column grid only on desktop", () => {
+    expect(profileSource).toContain(
+      "box-border block w-full min-w-0 max-w-full lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-6",
+    );
+    expect(profileSource).not.toContain('className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]"');
+  });
+
+  it("constrains the main content and contact card to the available mobile width", () => {
+    expect(profileSource).toContain(
+      '<article className="box-border w-full min-w-0 max-w-full space-y-6 overflow-x-clip">',
+    );
+    expect(profileSource).toContain('main className="box-border min-w-0 max-w-full space-y-5"');
+    expect(profileSource).toContain(
+      'aside className="box-border mt-6 min-w-0 max-w-full lg:sticky lg:top-24 lg:mt-0 lg:self-start"',
+    );
+    expect(profileSource).toContain(
+      'className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-card"',
+    );
+  });
+
+  it("constrains every padded profile section instead of relying on its content width", () => {
+    const sectionOpenings = profileSource.match(/<section className="[^"]+"/g) ?? [];
+
+    expect(sectionOpenings).toHaveLength(5);
+    for (const section of sectionOpenings) {
+      expect(section).toContain('className="box-border min-w-0 max-w-full overflow-hidden');
+    }
+  });
+
+  it("constrains tags, location grids and long dynamic text", () => {
+    expect(profileSource).toContain("inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap");
+    expect(profileSource).toContain('className="relative min-w-0 max-w-full overflow-hidden"');
+    expect(profileSource).toContain("grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)]");
+    expect(profileSource).toContain("mt-3 break-words whitespace-pre-line text-base");
+    expect(profileSource).toContain('className="max-w-full break-words rounded-full');
+    expect(profileSource).toContain('className="group min-w-0 max-w-full overflow-hidden');
+  });
+
+  it("prevents a long professional title from widening the compact contact header", () => {
+    expect(profileSource).toContain(
+      'className="flex min-w-0 max-w-full items-center gap-3 border-b border-border pb-4"',
+    );
+    expect(profileSource).toContain('className="min-w-0 flex-1 overflow-hidden"');
+    expect(profileSource).toContain('className="truncate text-sm text-muted-foreground"');
   });
 });
