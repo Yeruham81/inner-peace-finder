@@ -29,7 +29,8 @@ export type ProfileEditorData = {
   professional_title: string | null;
   full_description: string | null;
   short_intro: string | null;
-  background: string | null;
+  education_training: string | null;
+  professional_experience: string | null;
   years_experience: number | null;
   email: string | null;
   phone: string | null;
@@ -145,7 +146,8 @@ const SaveSchema = z.object({
   professional_title: z.string().trim().max(160, "כותרת מקצועית ארוכה מדי.").nullable().optional(),
   full_description: z.string().trim().max(DESCRIPTION_MAX, "התיאור המקצועי ארוך מדי.").nullable().optional(),
   short_intro: z.string().trim().max(400, "תיאור קצר ארוך מדי.").nullable().optional(),
-  background: z.string().trim().max(4000, "טקסט הרקע ארוך מדי.").nullable().optional(),
+  education_training: z.string().trim().max(4000, "טקסט ההשכלה וההכשרה ארוך מדי.").nullable().optional(),
+  professional_experience: z.string().trim().max(4000, "טקסט הניסיון המקצועי ארוך מדי.").nullable().optional(),
   years_experience: z
     .number()
     .int("שנות ניסיון חייבות להיות מספר שלם.")
@@ -367,7 +369,8 @@ export const getMyProfile = createServerFn({ method: "GET" })
       professional_title: t.professional_title,
       full_description: t.full_description,
       short_intro: t.short_intro,
-      background: (t as { background?: string | null }).background ?? null,
+      education_training: t.education_training ?? null,
+      professional_experience: t.professional_experience ?? null,
       years_experience: t.years_experience ?? null,
       email: (t as { email?: string | null }).email ?? null,
       phone: t.phone,
@@ -514,7 +517,8 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       professional_title: data.professional_title?.trim() || null,
       full_description: data.full_description?.trim() || null,
       short_intro: data.short_intro?.trim() || null,
-      background: data.background?.trim() || null,
+      education_training: data.education_training?.trim() || null,
+      professional_experience: data.professional_experience?.trim() || null,
       years_experience: data.years_experience ?? null,
       email: data.email ? data.email.trim() : null,
       phone: data.phone ? data.phone.trim() : null,
