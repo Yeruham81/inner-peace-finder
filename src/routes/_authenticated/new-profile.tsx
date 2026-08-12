@@ -98,7 +98,8 @@ type FormState = {
   professional_title: string;
   full_description: string;
   short_intro: string;
-  background: string;
+  education_training: string;
+  professional_experience: string;
   years_experience: string;
   email: string;
   phone: string;
@@ -130,7 +131,8 @@ const emptyForm: FormState = {
   professional_title: "",
   full_description: "",
   short_intro: "",
-  background: "",
+  education_training: "",
+  professional_experience: "",
   years_experience: "",
   email: "",
   phone: "",
@@ -304,7 +306,8 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
     professional_title: p.professional_title ?? "",
     full_description: p.full_description ?? "",
     short_intro: p.short_intro ?? "",
-    background: p.background ?? "",
+    education_training: p.education_training ?? "",
+    professional_experience: p.professional_experience ?? "",
     years_experience: p.years_experience !== null ? String(p.years_experience) : "",
     email: p.email ?? "",
     phone: p.phone ?? "",
@@ -365,7 +368,8 @@ function EditorPage() {
           professional_title: form.professional_title || null,
           full_description: form.full_description || null,
           short_intro: form.short_intro || null,
-          background: form.background || null,
+          education_training: form.education_training || null,
+          professional_experience: form.professional_experience || null,
           years_experience: form.years_experience ? Number(form.years_experience) : null,
           email: form.email || null,
           phone: form.phone || null,
@@ -636,22 +640,36 @@ function EditorPage() {
                 />
               </Section>
 
-              <Section title="השכלה, הכשרה וניסיון מקצועי">
+              <Section title="השכלה והכשרה">
                 <p className="text-sm text-muted-foreground">
-                  פרטו על תארים אקדמיים, הכשרות מקצועיות, הסמכות, ניסיון תעסוקתי, מקומות עבודה ורקע רלוונטי.
+                  פרטו על תארים אקדמיים, הכשרות מקצועיות, לימודי המשך והסמכות רלוונטיות.
                 </p>
                 <textarea
-                  value={form.background}
-                  onChange={(e) => setForm({ ...form, background: e.target.value })}
+                  value={form.education_training}
+                  onChange={(e) => setForm({ ...form, education_training: e.target.value })}
                   maxLength={4000}
                   rows={6}
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
-                  placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב, הכשרה בטיפול דינמי, ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית."
+                  placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב והכשרה בטיפול דינמי."
                 />
                 <TherapistCredentialPanel
                   therapistId={profile.data?.id ?? null}
                   professions={options.data?.professions ?? []}
                   credential={profile.data?.credential ?? null}
+                />
+              </Section>
+
+              <Section title="ניסיון מקצועי">
+                <p className="text-sm text-muted-foreground">
+                  פרטו על הניסיון התעסוקתי, מקומות עבודה, תחומי אחריות ורקע מקצועי רלוונטי.
+                </p>
+                <textarea
+                  value={form.professional_experience}
+                  onChange={(e) => setForm({ ...form, professional_experience: e.target.value })}
+                  maxLength={4000}
+                  rows={6}
+                  className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                  placeholder="לדוגמה: ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית, בעבודה עם מבוגרים ומתבגרים."
                 />
               </Section>
 
@@ -700,7 +718,7 @@ function EditorPage() {
                   }))}
                   selected={form.therapy_format_ids}
                   onChange={(ids) => setForm({ ...form, therapy_format_ids: ids })}
-                  columns="three"
+                  columns="twoToThree"
                   hint="ניתן לבחור יותר ממסגרת טיפול אחת."
                 />
               </Section>
@@ -1070,7 +1088,6 @@ function EditorPage() {
                 onSaveDraft={() => mutation.mutate(false)}
                 onPublish={() => mutation.mutate(true)}
                 visibility={profile.data?.visibility ?? "hidden"}
-                canReactivate={status === "published"}
                 visibilityPending={visibilityMutation.isPending}
                 onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
               />
@@ -1086,7 +1103,6 @@ function EditorPage() {
               onSaveDraft={() => mutation.mutate(false)}
               onPublish={() => mutation.mutate(true)}
               visibility={profile.data?.visibility ?? "hidden"}
-              canReactivate={status === "published"}
               visibilityPending={visibilityMutation.isPending}
               onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
             />
@@ -1110,7 +1126,7 @@ function EditorPage() {
             <DialogDescription>כך הפרופיל יוצג למבקרים. שינויים שלא שמרתם מוצגים כאן בלבד.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-brand-soft/50 p-2 sm:p-6">
-            <div className="mx-auto max-w-6xl">
+            <div className="mx-auto box-border w-full min-w-0 max-w-6xl">
               <TherapistProfileView therapist={previewData} interactive={false} />
             </div>
           </div>
@@ -1275,7 +1291,7 @@ type SelectionGridProps = {
   selected: string[];
   onChange: (ids: string[]) => void;
   multiple?: boolean;
-  columns?: "one" | "two" | "three" | "threeAlways" | "four";
+  columns?: "one" | "two" | "twoToThree" | "three" | "threeAlways" | "four";
   hint?: string;
   showCount?: boolean;
   emptyMessage?: string;
@@ -1319,7 +1335,6 @@ function ProfileActions({
   onSaveDraft,
   onPublish,
   visibility,
-  canReactivate,
   visibilityPending,
   onVisibilityChange,
 }: {
@@ -1330,7 +1345,6 @@ function ProfileActions({
   onSaveDraft: () => void;
   onPublish: () => void;
   visibility: "visible" | "hidden";
-  canReactivate: boolean;
   visibilityPending: boolean;
   onVisibilityChange: (visible: boolean) => void;
 }) {
@@ -1341,26 +1355,25 @@ function ProfileActions({
         <StatusBadge status={status} />
       </div>
 
-      <div className="mt-4 border-t border-border pt-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
-          />
-          {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+      {status === "published" && (
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
+            />
+            {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={visibilityPending}
+            onClick={() => onVisibilityChange(visibility !== "visible")}
+            className="mt-3 w-full"
+          >
+            {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={visibilityPending || (visibility === "hidden" && !canReactivate)}
-          onClick={() => onVisibilityChange(visibility !== "visible")}
-          className="mt-3 w-full"
-        >
-          {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
-        </Button>
-        {visibility === "hidden" && !canReactivate && (
-          <p className="mt-2 text-xs text-muted-foreground">ניתן להפעיל מחדש לאחר פרסום הפרופיל.</p>
-        )}
-      </div>
+      )}
 
       <div
         className={`mt-4 rounded-xl border p-3 text-sm leading-relaxed ${
@@ -1413,15 +1426,25 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
   }
 
   return (
-    <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או לשחזר את
-        הפרופיל לאחר מכן.
-      </p>
-      <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
-        מחיקת הפרופיל
-      </Button>
+    <section className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted-foreground marker:content-none">
+          <span>אפשרויות מחיקת הפרופיל</span>
+          <span className="text-xs group-open:hidden">הצגה</span>
+          <span className="hidden text-xs group-open:inline">הסתרה</span>
+        </summary>
+
+        <div className="mt-4 border-t border-destructive/30 pt-4">
+          <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או
+            לשחזר את הפרופיל לאחר מכן.
+          </p>
+          <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
+            מחיקת הפרופיל
+          </Button>
+        </div>
+      </details>
 
       <Dialog open={open} onOpenChange={close}>
         <DialogContent dir="rtl" className="max-w-lg">
@@ -2106,6 +2129,7 @@ function SelectionGrid({
   const columnClass = {
     one: "grid-cols-1",
     two: "grid-cols-1 sm:grid-cols-2",
+    twoToThree: "grid-cols-2 lg:grid-cols-3",
     three: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
     threeAlways: "grid-cols-3",
     four: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
@@ -2147,7 +2171,9 @@ function SelectionGrid({
               }`}
             >
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium leading-snug">{item.label}</span>
+                <span className="block min-w-0 whitespace-normal break-words text-sm font-medium leading-snug">
+                  {item.label}
+                </span>
                 {item.description && (
                   <span className="mt-1 block text-sm font-normal leading-relaxed text-muted-foreground">
                     {item.description}
@@ -2280,7 +2306,8 @@ function DescriptionHelpDialog() {
             כתבו באופן טבעי וזורם, כך שאנשים יוכלו להבין אם אתם המטפל המתאים עבורם.
           </p>
           <p className="text-muted-foreground">
-            הימנעו מרשימות של מילות מפתח. פרטי השכלה, הכשרות והסמכות שייכים לשדה "השכלה, הכשרה וניסיון מקצועי".
+            הימנעו מרשימות של מילות מפתח. פרטי השכלה, הכשרות והסמכות שייכים לאזור "השכלה והכשרה", והרקע התעסוקתי שייך
+            לאזור "ניסיון מקצועי".
           </p>
         </div>
       </DialogContent>
