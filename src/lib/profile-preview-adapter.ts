@@ -23,7 +23,8 @@ export type PreviewFormState = {
   professional_title: string;
   full_description: string;
   short_intro: string;
-  background: string;
+  education_training: string;
+  professional_experience: string;
   years_experience: string;
   image_url: string;
   profession_ids: string[];
@@ -100,7 +101,8 @@ export function buildPreviewViewData(
     professional_title: form.professional_title.trim() || null,
     short_intro: form.short_intro.trim() || null,
     full_description: form.full_description.trim() || null,
-    background: form.background.trim() || null,
+    education_training: form.education_training.trim() || null,
+    professional_experience: form.professional_experience.trim() || null,
     years_experience: form.years_experience.trim() === "" ? null : Number(form.years_experience),
     city: form.locations.find((location) => location.city.trim())?.city.trim() || null,
     image_url: form.image_url.trim() || null,
