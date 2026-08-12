@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
+import { sanitizeSearchReturn } from "@/lib/search-return";
 
 function therapistQuery(slug: string) {
   return queryOptions({
@@ -61,13 +62,18 @@ export const Route = createFileRoute("/therapists/$slug")({
 
 function TherapistPage() {
   const { slug } = Route.useParams();
+  const { ret } = Route.useSearch();
+  const backToResults = sanitizeSearchReturn(ret);
   const { data: t } = useSuspenseQuery(therapistQuery(slug));
   if (!t) return null;
 
   return (
     <div className="min-h-screen overflow-x-clip bg-brand-soft/30">
       <div className="mx-auto w-full min-w-0 max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
-        <Link to="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+        <Link
+          href={backToResults}
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
           ← חזרה לחיפוש
         </Link>
 
