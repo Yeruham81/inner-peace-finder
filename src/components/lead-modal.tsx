@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { createLead } from "@/lib/lead.functions";
@@ -6,7 +6,7 @@ import { track } from "@/lib/analytics";
 import { sanitizeSearchReturn } from "@/lib/search-return";
 
 /** Time the success confirmation stays visible before returning to results. */
-export const LEAD_SUCCESS_REDIRECT_MS = 1800;
+export const LEAD_SUCCESS_REDIRECT_MS = 1500;
 
 const PHONE_RE = /^(\+?972|0)(5\d|[23489])\d{7,8}$/;
 
@@ -70,6 +70,32 @@ export function LeadModal({
     select: (s) => sanitizeSearchReturn((s.location.search as { ret?: unknown } | undefined)?.ret),
   });
 
+  const returnToResults = useCallback(() => {
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
+    setName("");
+    setPhone("");
+    setMessage(defaultMessage(problemName, populationName));
+    setChallenge(makeChallenge());
+    setChallengeAnswer("");
+    setError(null);
+    setDone(false);
+    setSubmitting(false);
+    onClose();
+    navigate({ href: returnTo, replace: true });
+  }, [navigate, onClose, populationName, problemName, returnTo]);
+
+  const handleCloseRequest = useCallback(() => {
+    // Once submission starts, keep the dialog open until the server responds.
+    if (submitting) return;
+    // A close attempt after success completes the required return immediately.
+    if (done) {
+      returnToResults();
+      return;
+    }
+    onClose();
+  }, [done, onClose, returnToResults, submitting]);
+
   // Reset state on every open
   useEffect(() => {
     if (!open) return;
@@ -102,27 +128,20 @@ export function LeadModal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleCloseRequest();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [handleCloseRequest, open]);
 
-  // Redirect back to the search results only after a confirmed success.
+  // Redirect back to the search results only after a confirmed success. The
+  // timer deliberately does not depend on `open`, so an external close request
+  // cannot cancel the required return navigation.
   useEffect(() => {
-    if (!open || !done || redirectedRef.current) return;
-    redirectedRef.current = true;
-    const timer = setTimeout(() => {
-      setName("");
-      setPhone("");
-      setChallengeAnswer("");
-      setDone(false);
-      onClose();
-      navigate({ href: returnTo, replace: true });
-    }, LEAD_SUCCESS_REDIRECT_MS);
+    if (!done || redirectedRef.current) return;
+    const timer = setTimeout(returnToResults, LEAD_SUCCESS_REDIRECT_MS);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, done, returnTo]);
+  }, [done, returnToResults]);
 
   const challengeAnswerNum = Number(challengeAnswer);
   const challengeOk =
@@ -198,22 +217,25 @@ export function LeadModal({
       aria-labelledby={titleId}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseRequest} aria-hidden="true" />
       <div
         ref={panelRef}
+        aria-busy={submitting}
         className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-surface-elevated p-6 shadow-card sm:max-h-[calc(100dvh-3rem)]"
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="סגירה"
-          className="absolute top-3 left-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          ✕
-        </button>
+        {!submitting && !done && (
+          <button
+            type="button"
+            onClick={handleCloseRequest}
+            aria-label="סגירה"
+            className="absolute top-3 left-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            ✕
+          </button>
+        )}
 
         {done ? (
-          <div className="py-6 text-center">
+          <div role="status" aria-live="polite" className="py-6 text-center">
             <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-brand-soft text-2xl leading-[3rem] text-primary">
               ✓
             </div>
@@ -223,13 +245,6 @@ export function LeadModal({
             <p className="mt-2 text-sm text-muted-foreground">
               הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.
             </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-5 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
-            >
-              סגירה
-            </button>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
