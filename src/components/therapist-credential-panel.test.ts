@@ -17,7 +17,7 @@ describe("therapist credential verification form", () => {
   it("explains the privacy boundary and uses the approved submission label", () => {
     expect(panelSource).toContain("שליחת הפרטים לאימות");
     expect(panelSource).toContain("אימות ההכשרה או ההסמכה");
-    expect(panelSource).toMatch(/לא\s*\n?\s*יוצגו בגלוי בפרופיל הציבורי/);
+    expect(panelSource).toMatch(/לא\s+יוצגו בגלוי בפרופיל\s+הציבורי/);
   });
 
   it("validates and writes issue_date while leaving verification decisions server-controlled", () => {
