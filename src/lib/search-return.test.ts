@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "fs";
 import { DEFAULT_SEARCH_RETURN, buildSearchReturn, sanitizeSearchReturn } from "./search-return";
 
