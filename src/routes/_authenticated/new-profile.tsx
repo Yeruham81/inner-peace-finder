@@ -285,6 +285,12 @@ function chunkItems<T>(items: readonly T[], size: number): T[][] {
   return rows;
 }
 
+const CATEGORY_CARD_TITLE_CLASS =
+  "min-w-0 flex-1 whitespace-normal break-words text-sm font-medium leading-snug text-foreground";
+
+const SELECTED_OPTION_TAG_CLASS =
+  "inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border border-brand bg-brand px-3.5 py-1 text-sm font-semibold text-brand-foreground shadow-sm transition hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30";
+
 function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormState {
   const locations: FormLocation[] = p.locations.length
     ? p.locations.map((location) => {
@@ -1587,7 +1593,7 @@ function ProfessionSelector({
         aria-controls={`profession-category-${layoutId}-${category.id}`}
         disabled={isEmpty}
         onClick={() => setActiveCategoryId(isOpen ? null : category.id)}
-        className={`group flex h-14 items-center justify-between gap-2 overflow-hidden rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:h-12 ${
+        className={`group flex min-h-14 items-center justify-between gap-2 overflow-hidden rounded-xl border px-3 py-2 text-right transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:min-h-12 ${
           isOpen
             ? "border-brand bg-brand/10 shadow-sm ring-1 ring-brand/20"
             : selectedCount > 0
@@ -1596,9 +1602,7 @@ function ProfessionSelector({
         }`}
       >
         <span className="flex min-w-0 flex-1 items-start gap-1">
-          <span className="min-w-0 flex-1 line-clamp-2 text-base font-semibold leading-snug text-foreground md:line-clamp-1">
-            {category.title}
-          </span>
+          <span className={CATEGORY_CARD_TITLE_CLASS}>{category.title}</span>
 
           {selectedCount > 0 && (
             <span className="mt-0.5 shrink-0 whitespace-nowrap text-sm font-semibold leading-snug text-brand">
@@ -1734,7 +1738,7 @@ function ProfessionSelector({
           {/* מובייל: התגיות עוטפות את תגית הספירה,
         והשורות הבאות מנצלות את מלוא הרוחב */}
           <div className="mt-3 flow-root md:hidden" aria-label="המקצועות שנבחרו">
-            <span className="float-left mb-2 mr-2 inline-flex h-7 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+            <span className="float-left mb-2 mr-2 inline-flex min-h-8 items-center rounded-full border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground">
               {totalSelectedLabel}
             </span>
 
@@ -1743,12 +1747,12 @@ function ProfessionSelector({
                 key={profession.id}
                 type="button"
                 onClick={() => toggleProfession(profession.id)}
-                className="mb-2 ml-2 inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 align-top text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                className={`${SELECTED_OPTION_TAG_CLASS} mb-2 ml-2 align-top`}
                 aria-label={`הסרת ${profession.name_he}`}
               >
-                <span>{profession.name_he}</span>
+                <span className="min-w-0 break-words">{profession.name_he}</span>
 
-                <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+                <span aria-hidden="true" className="shrink-0 text-sm leading-none text-brand-foreground/80">
                   ×
                 </span>
               </button>
@@ -1763,19 +1767,19 @@ function ProfessionSelector({
                   key={profession.id}
                   type="button"
                   onClick={() => toggleProfession(profession.id)}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                  className={SELECTED_OPTION_TAG_CLASS}
                   aria-label={`הסרת ${profession.name_he}`}
                 >
-                  <span>{profession.name_he}</span>
+                  <span className="min-w-0 break-words">{profession.name_he}</span>
 
-                  <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+                  <span aria-hidden="true" className="shrink-0 text-sm leading-none text-brand-foreground/80">
                     ×
                   </span>
                 </button>
               ))}
             </div>
 
-            <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+            <span className="inline-flex min-h-8 shrink-0 items-center rounded-full border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground">
               {totalSelectedLabel}
             </span>
           </div>
@@ -1974,9 +1978,7 @@ function ModalitySelector({
         }`}
       >
         <span className="flex min-w-0 flex-1 items-start gap-1">
-          <span className="min-w-0 flex-1 line-clamp-2 text-base font-semibold leading-snug text-foreground">
-            {category.title}
-          </span>
+          <span className={CATEGORY_CARD_TITLE_CLASS}>{category.title}</span>
 
           {selectedCount > 0 && (
             <span className="mt-0.5 shrink-0 whitespace-nowrap text-sm font-semibold leading-snug text-brand">
@@ -2092,17 +2094,17 @@ function ModalitySelector({
               key={modality.id}
               type="button"
               onClick={() => toggleModality(modality.id)}
-              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-brand/40 bg-brand/5 px-3 text-xs font-medium text-foreground transition hover:border-brand/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+              className={SELECTED_OPTION_TAG_CLASS}
               aria-label={`הסרת ${modality.name_he}`}
             >
-              <span>{modality.name_he}</span>
-              <span aria-hidden="true" className="text-sm leading-none text-muted-foreground">
+              <span className="min-w-0 break-words">{modality.name_he}</span>
+              <span aria-hidden="true" className="shrink-0 text-sm leading-none text-brand-foreground/80">
                 ×
               </span>
             </button>
           ))}
 
-          <span className="inline-flex h-7 items-center rounded-full border border-brand/30 bg-brand/5 px-3 text-xs font-medium text-foreground">
+          <span className="inline-flex min-h-8 items-center rounded-full border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground">
             {totalSelectedLabel}
           </span>
         </div>
