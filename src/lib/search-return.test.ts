@@ -1,10 +1,58 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "fs";
-import { DEFAULT_SEARCH_RETURN, buildSearchReturn, sanitizeSearchReturn } from "./search-return";
+import {
+  DEFAULT_SEARCH_RETURN,
+  buildSearchReturn,
+  sanitizeSearchReturn,
+  searchReturnLinkOptions,
+} from "./search-return";
 
 const modal = readFileSync("src/components/lead-modal.tsx", "utf8");
 const card = readFileSync("src/components/therapist-card.tsx", "utf8");
 const profileRoute = readFileSync("src/routes/therapists.$slug.tsx", "utf8");
+
+describe("back-to-search button", () => {
+  it("restores the exact filtered results state, including sort and page", () => {
+    const ret = "/search?q=%D7%96%D7%95%D7%92&problem=couples_conflict&sort=rank&page=3&online=true";
+    const opts = searchReturnLinkOptions(ret);
+    expect(opts.to).toBe("/search");
+    expect(opts.search).toEqual({
+      q: "זוג",
+      problem: "couples_conflict",
+      sort: "rank",
+      page: 3,
+      online: true,
+    });
+  });
+
+  it("falls back to the default results page for a directly opened or refreshed profile", () => {
+    expect(searchReturnLinkOptions("")).toEqual({ to: "/search", search: {} });
+    expect(searchReturnLinkOptions(undefined)).toEqual({ to: "/search", search: {} });
+    expect(DEFAULT_SEARCH_RETURN).toBe("/search");
+  });
+
+  it("keeps a preserved destination across a refresh (value lives in the URL)", () => {
+    expect(profileRoute).toContain('ret: fallback(z.string(), "").default("")');
+    expect(searchReturnLinkOptions("/search?q=abc").search).toEqual({ q: "abc" });
+  });
+
+  it("rejects external and invalid return destinations", () => {
+    for (const bad of ["https://evil.test/search", "//evil.test/search", "/account", 42, null]) {
+      expect(searchReturnLinkOptions(bad as unknown)).toEqual({ to: "/search", search: {} });
+    }
+  });
+
+  it("never routes the visible button to the homepage", () => {
+    const button = profileRoute.slice(
+      profileRoute.indexOf("function TherapistPage"),
+      profileRoute.indexOf("חזרה לחיפוש"),
+    );
+    expect(button).toContain("searchReturnLinkOptions(ret)");
+    expect(button).toContain("to={backToResults.to}");
+    expect(button).toContain("search={backToResults.search}");
+    expect(button).not.toContain('to="/"');
+  });
+});
 
 describe("buildSearchReturn", () => {
   it("preserves the full search-results URL (query, filters, sort, state)", () => {
