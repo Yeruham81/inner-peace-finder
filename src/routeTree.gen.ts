@@ -19,6 +19,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
 import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
+import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
 import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 
@@ -71,6 +72,11 @@ const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
   path: '/problems/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedNewProfileRoute = AuthenticatedNewProfileRouteImport.update({
+  id: '/new-profile',
+  path: '/new-profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedClaimRoute = AuthenticatedClaimRouteImport.update({
   id: '/claim',
   path: '/claim',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/therapy-information': typeof TherapyInformationRoute
   '/account': typeof AuthenticatedAccountRoute
   '/claim': typeof AuthenticatedClaimRoute
+  '/new-profile': typeof AuthenticatedNewProfileRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
 }
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/therapy-information': typeof TherapyInformationRoute
   '/account': typeof AuthenticatedAccountRoute
   '/claim': typeof AuthenticatedClaimRoute
+  '/new-profile': typeof AuthenticatedNewProfileRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
 }
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/therapy-information': typeof TherapyInformationRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/claim': typeof AuthenticatedClaimRoute
+  '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
 }
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/account'
     | '/claim'
+    | '/new-profile'
     | '/problems/$slug'
     | '/therapists/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/account'
     | '/claim'
+    | '/new-profile'
     | '/problems/$slug'
     | '/therapists/$slug'
   id:
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/_authenticated/account'
     | '/_authenticated/claim'
+    | '/_authenticated/new-profile'
     | '/problems/$slug'
     | '/therapists/$slug'
   fileRoutesById: FileRoutesById
@@ -251,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProblemsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/new-profile': {
+      id: '/_authenticated/new-profile'
+      path: '/new-profile'
+      fullPath: '/new-profile'
+      preLoaderRoute: typeof AuthenticatedNewProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/claim': {
       id: '/_authenticated/claim'
       path: '/claim'
@@ -271,11 +290,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedClaimRoute: typeof AuthenticatedClaimRoute
+  AuthenticatedNewProfileRoute: typeof AuthenticatedNewProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedClaimRoute: AuthenticatedClaimRoute,
+  AuthenticatedNewProfileRoute: AuthenticatedNewProfileRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
