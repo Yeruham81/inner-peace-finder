@@ -56,30 +56,58 @@ describe("sanitizeSearchReturn", () => {
 
 describe("contact-flow wiring", () => {
   it("redirects only after a confirmed success, once, with replace navigation", () => {
-    expect(modal).toContain("if (!open || !done || redirectedRef.current) return;");
+    expect(modal).toContain("if (!done || redirectedRef.current) return;");
     expect(modal).toContain("redirectedRef.current = true;");
     expect(modal).toContain("navigate({ href: returnTo, replace: true })");
     // done is only set after the server confirms ok
     expect(modal).toContain("setDone(true);");
-    const failurePaths = modal.slice(
-      modal.indexOf("if (!res.ok)"),
-      modal.indexOf("setDone(true);"),
-    );
+    const failurePaths = modal.slice(modal.indexOf("if (!res.ok)"), modal.indexOf("setDone(true);"));
     expect(failurePaths).not.toContain("navigate(");
   });
 
   it("resets the form state as part of the redirect", () => {
-    const effect = modal.slice(modal.indexOf("redirectedRef.current = true;"));
-    expect(effect).toContain("setDone(false);");
-    expect(effect).toContain('setName("");');
-    expect(effect).toContain("onClose();");
+    const redirect = modal.slice(modal.indexOf("const returnToResults"), modal.indexOf("const handleCloseRequest"));
+    expect(redirect).toContain("setDone(false);");
+    expect(redirect).toContain('setName("");');
+    expect(redirect).toContain("setMessage(defaultMessage(problemName, populationName));");
+    expect(redirect).toContain("onClose();");
   });
 
-  it("shows the success confirmation copy before redirecting", () => {
-    expect(modal).toContain(
-      "הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.",
+  it("shows the final success confirmation copy for 1.5 seconds before redirecting", () => {
+    expect(modal).toContain("הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.");
+    expect(modal).toContain("LEAD_SUCCESS_REDIRECT_MS = 1500");
+    expect(modal).toContain("setTimeout(returnToResults, LEAD_SUCCESS_REDIRECT_MS)");
+  });
+
+  it("blocks every dialog-close path while the submission is in progress", () => {
+    const closeHandler = modal.slice(
+      modal.indexOf("const handleCloseRequest"),
+      modal.indexOf("// Reset state on every open"),
     );
-    expect(modal).toContain("LEAD_SUCCESS_REDIRECT_MS");
+    expect(closeHandler).toContain("if (submitting) return;");
+    expect(modal).toContain("onClick={handleCloseRequest}");
+    expect(modal).toContain('if (e.key === "Escape") handleCloseRequest();');
+    expect(modal).toContain("{!submitting && !done && (");
+  });
+
+  it("turns a close attempt after success into the same return navigation", () => {
+    const closeHandler = modal.slice(
+      modal.indexOf("const handleCloseRequest"),
+      modal.indexOf("// Reset state on every open"),
+    );
+    expect(closeHandler).toContain("if (done) {");
+    expect(closeHandler).toContain("returnToResults();");
+    const successUi = modal.slice(modal.indexOf("{done ? ("), modal.indexOf(") : (", modal.indexOf("{done ? (")));
+    expect(successUi).not.toContain("סגירה");
+  });
+
+  it("keeps the confirmed-success timer independent of the modal open state", () => {
+    const successEffect = modal.slice(
+      modal.indexOf("// Redirect back to the search results"),
+      modal.indexOf("const challengeAnswerNum"),
+    );
+    expect(successEffect).toContain("if (!done || redirectedRef.current) return;");
+    expect(successEffect).not.toContain("!open");
   });
 
   it("passes the return destination from result cards to the profile route", () => {
