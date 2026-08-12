@@ -344,7 +344,7 @@ function Index() {
           עזרה אתם מחפשים, ומנוע החיפוש ימצא לכם את אנשי המקצוע המתאימים ביותר
         </p>
         <div className="mx-auto mt-7 max-w-3xl text-right">
-          <SearchForm variant="compact" />
+          <SearchForm variant="simple" />
         </div>
         <p className="mx-auto mt-3 max-w-2xl text-xs leading-5 text-muted-foreground sm:text-sm">
           את כל אפשרויות הסינון הנוספות תוכלו לבחור ולשנות בעמוד התוצאות
