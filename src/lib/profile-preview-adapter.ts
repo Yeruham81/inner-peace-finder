@@ -39,7 +39,11 @@ export type PreviewFormState = {
   offers_free_intro: boolean;
   free_intro_types: string[];
   free_intro_duration_minutes: string;
-  professional_memberships: { organization_name: string; member_since: string }[];
+  professional_memberships: {
+    organization_name: string;
+    membership_start_date: string;
+    member_since: string;
+  }[];
   service_arrangements: { organization_name: string; note: string }[];
 };
 
@@ -104,9 +108,7 @@ export function buildPreviewViewData(
     lgbtq_affirming: form.lgbtq_affirming,
     offers_free_intro: form.offers_free_intro,
     free_intro_types: form.free_intro_types,
-    free_intro_duration_minutes: form.free_intro_duration_minutes
-      ? Number(form.free_intro_duration_minutes)
-      : null,
+    free_intro_duration_minutes: form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
     professions: (options?.professions ?? [])
       .filter((item) => form.profession_ids.includes(item.id))
       .map((item) => ({ slug: item.slug, name: item.name_he, is_primary: false })),
@@ -121,7 +123,11 @@ export function buildPreviewViewData(
       .filter((item) => item.organization_name.trim())
       .map((item) => ({
         organization_name: item.organization_name,
-        member_since: item.member_since ? Number(item.member_since) : null,
+        member_since: item.membership_start_date
+          ? Number(item.membership_start_date.slice(0, 4))
+          : item.member_since
+            ? Number(item.member_since)
+            : null,
       })),
     service_arrangements: form.service_arrangements
       .filter((item) => item.organization_name.trim())
