@@ -580,7 +580,9 @@ export function TherapistProfileView({
               <ProfileImage imageUrl={t.image_url} name={t.full_name} compact />
               <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="truncate font-bold text-foreground">{t.full_name || "שם המטפל/ת"}</p>
-                <p className="truncate text-sm text-muted-foreground">{t.professional_title || "כותרת מקצועית"}</p>
+                <p className="whitespace-normal break-words text-sm leading-5 text-muted-foreground">
+                  {t.professional_title || "כותרת מקצועית"}
+                </p>
                 {displayLocation && (
                   <p className="mt-1 flex min-w-0 items-start gap-1 text-xs text-muted-foreground">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
