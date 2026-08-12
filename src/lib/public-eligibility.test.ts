@@ -34,7 +34,8 @@ function therapistRow(over: FakeRow): FakeRow {
     professional_title: "פסיכולוגית",
     short_intro: "מבוא",
     full_description: "תיאור",
-    background: "השכלה וניסיון",
+    education_training: "תואר שני והכשרה קלינית",
+    professional_experience: "שמונה שנות ניסיון",
     years_experience: 8,
     city: "חיפה",
     image_url: null,
@@ -144,7 +145,8 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.problems.map((p) => p.slug)).toEqual(["anxiety"]);
     expect(res?.populations.map((p) => p.slug)).toEqual(["adults"]);
     expect(res?.languages.map((l) => l.code)).toEqual(["he"]);
-    expect(res?.background).toBe("השכלה וניסיון");
+    expect(res?.education_training).toBe("תואר שני והכשרה קלינית");
+    expect(res?.professional_experience).toBe("שמונה שנות ניסיון");
     expect(res?.professions.map((item) => item.slug)).toEqual(["psychologist"]);
     expect(res?.modalities.map((item) => item.slug)).toEqual(["cbt"]);
     expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
