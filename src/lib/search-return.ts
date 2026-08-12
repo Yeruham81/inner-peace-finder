@@ -51,3 +51,31 @@ export function sanitizeSearchReturn(raw: unknown): string {
   if (query.includes("//")) return DEFAULT_SEARCH_RETURN;
   return `${SEARCH_PATH}${query === "?" ? "" : query}`;
 }
+
+/**
+ * Turns a stored return destination into router link options, so navigation
+ * uses the project's typed `<Link to=... search=...>` convention. The value is
+ * sanitized first, so the result always points at the search-results route.
+ */
+export function searchReturnLinkOptions(raw: unknown): {
+  to: typeof SEARCH_PATH;
+  search: Record<string, string | number | boolean>;
+} {
+  const value = sanitizeSearchReturn(raw);
+  const queryIndex = value.indexOf("?");
+  const search: Record<string, string | number | boolean> = {};
+  if (queryIndex !== -1) {
+    const params = new URLSearchParams(value.slice(queryIndex + 1));
+    for (const [key, val] of params.entries()) {
+      if (val === "") continue;
+      if (val === "true" || val === "false") {
+        search[key] = val === "true";
+      } else if (/^-?\d+(\.\d+)?$/.test(val)) {
+        search[key] = Number(val);
+      } else {
+        search[key] = val;
+      }
+    }
+  }
+  return { to: SEARCH_PATH, search };
+}
