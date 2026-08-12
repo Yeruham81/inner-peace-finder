@@ -120,11 +120,24 @@ describe("mobile profile width guards", () => {
     expect(profileSource).toContain('className="group min-w-0 max-w-full overflow-hidden');
   });
 
-  it("prevents a long professional title from widening the compact contact header", () => {
+  it("allows a long professional title to wrap to two lines without widening the compact contact header", () => {
     expect(profileSource).toContain(
       'className="flex min-w-0 max-w-full items-center gap-3 border-b border-border pb-4"',
     );
     expect(profileSource).toContain('className="min-w-0 flex-1 overflow-hidden"');
-    expect(profileSource).toContain('className="truncate text-sm text-muted-foreground"');
+    expect(profileSource).toContain(
+      'className="line-clamp-2 whitespace-normal break-words text-sm leading-snug text-muted-foreground"',
+    );
+    expect(profileSource).not.toContain('className="truncate text-sm text-muted-foreground"');
+  });
+});
+
+describe("professional profile sections", () => {
+  it("renders education and professional experience as separate collapsible sections", () => {
+    expect(profileSource).toContain('title="השכלה והכשרה"');
+    expect(profileSource).toContain("t.education_training");
+    expect(profileSource).toContain('title="ניסיון מקצועי"');
+    expect(profileSource).toContain("t.professional_experience");
+    expect(profileSource).not.toContain("t.background");
   });
 });
