@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { listFilterOptions, classifyAndSearch, type ScoredTherapist } from "@/lib/therapists.functions";
@@ -177,8 +177,20 @@ export function toUnifiedParams(s: SearchParams): UnifiedParams {
  * orchestration regression test can render the real switch and prove that
  * the Legacy queries are never instantiated in production (unified) mode.
  */
-export function SearchResultsSwitch({ flow, search }: { flow: FlowValue; search: SearchParams }) {
-  return flow === "unified" ? <UnifiedSearchResults search={search} /> : <LegacySearchResults search={search} />;
+export function SearchResultsSwitch({
+  flow,
+  search,
+  onQuickFiltersChange,
+}: {
+  flow: FlowValue;
+  search: SearchParams;
+  onQuickFiltersChange?: (filters: string[]) => void;
+}) {
+  return flow === "unified" ? (
+    <UnifiedSearchResults search={search} onQuickFiltersChange={onQuickFiltersChange} />
+  ) : (
+    <LegacySearchResults search={search} />
+  );
 }
 
 /**
@@ -304,11 +316,36 @@ function EmptyState({ reason }: { reason: null | "unrecognized_query" | "no_matc
 /* Unified flow (the ONLY production surface)                          */
 /* ------------------------------------------------------------------ */
 
-function UnifiedSearchResults({ search }: { search: SearchParams }) {
+export function availableQuickFilters(results: SearchResultCard[]): string[] {
+  const available = new Set<string>();
+  for (const result of results) {
+    if (result.clinic_locations.length > 0) available.add("clinic");
+    if (result.online_available) available.add("online");
+    if (result.home_visit_regions.length > 0) available.add("home_visit");
+    if (result.gender) available.add(result.gender);
+    if (result.accessible_clinic) available.add("accessible");
+    if (result.verified) available.add("verified");
+    if (result.lgbtq_affirming) available.add("lgbtqAffirming");
+    if (result.offers_free_intro) available.add("freeIntro");
+  }
+  return [...available].sort();
+}
+
+function UnifiedSearchResults({
+  search,
+  onQuickFiltersChange,
+}: {
+  search: SearchParams;
+  onQuickFiltersChange?: (filters: string[]) => void;
+}) {
   const contract = toUnifiedParams(search);
   const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(contract));
   // No adaptation: the unified pipeline already returns the card contract.
   const results: SearchResultCard[] = pipeline?.results ?? [];
+  const quickFilterKey = availableQuickFilters(results).join(",");
+  useEffect(() => {
+    onQuickFiltersChange?.(quickFilterKey ? quickFilterKey.split(",") : []);
+  }, [onQuickFiltersChange, quickFilterKey]);
   useSearchAnalytics({
     search,
     mode: "unified",
@@ -428,6 +465,7 @@ function SearchPage() {
   const flow = resolveFlowFromEnv(search.flow);
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
   const contract = toUnifiedParams(search);
+  const [quickFilters, setQuickFilters] = useState<string[] | undefined>(undefined);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -456,6 +494,7 @@ function SearchPage() {
         }}
         preserveSearch={import.meta.env.DEV ? { problem: search.problem, flow: search.flow } : undefined}
         variant="compact"
+        availableQuickFilters={flow === "unified" ? quickFilters : undefined}
       />
 
       {import.meta.env.DEV && (
@@ -483,7 +522,7 @@ function SearchPage() {
       {/* Exactly ONE branch is mounted. In production `flow` is always
           "unified", so the Legacy and structured queries are never
           instantiated and a failure there cannot affect Unified. */}
-      <SearchResultsSwitch flow={flow} search={search} />
+      <SearchResultsSwitch flow={flow} search={search} onQuickFiltersChange={setQuickFilters} />
     </div>
   );
 }
