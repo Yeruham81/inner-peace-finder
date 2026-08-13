@@ -178,6 +178,11 @@ export function LeadModal({
         },
       });
       if (!res.ok) {
+        if (res.reason === "therapist_unavailable") {
+          setError(res.message ?? "לא ניתן לשלוח פנייה לפרופיל זה כרגע.");
+          setSubmitting(false);
+          return;
+        }
         if (res.reason === "rate_limit_exceeded") {
           track("lead_rate_limited", {
             therapist_id: therapistId,
