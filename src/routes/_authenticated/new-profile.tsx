@@ -658,7 +658,7 @@ function EditorPage() {
                 <TherapistCredentialPanel
                   therapistId={profile.data?.id ?? null}
                   professions={options.data?.professions ?? []}
-                  credential={profile.data?.credential ?? null}
+                  credentials={profile.data?.credentials ?? []}
                 />
               </Section>
 

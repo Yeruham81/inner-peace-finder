@@ -149,7 +149,16 @@ describe("therapist relation tables — server/client boundary", () => {
     expect(src.includes("trusted-read-client"), "editor must not use the privileged client").toBe(
       false,
     );
-    expect(src.includes("client.server")).toBe(false);
+    // The admin client is allowed for exactly one controlled write — the
+    // credential submission, whose verification columns the authenticated
+    // role intentionally cannot touch — and only via a lazy in-handler import.
+    expect(/^import .*client\.server/m.test(src)).toBe(false);
+    const adminImports = src.match(/client\.server/g) ?? [];
+    expect(adminImports.length).toBe(1);
+    expect(src).toContain('await import("@/integrations/supabase/client.server")');
+    const credentialWrite = src.slice(src.indexOf("export const submitMyCredential"));
+    expect(credentialWrite.includes("client.server")).toBe(true);
+    for (const t of RELATION_TABLES) expect(credentialWrite.includes(t), t).toBe(false);
     // the editor performs delete + insert per relation table, and select on load
     for (const t of RELATION_TABLES) expect(src.includes(t), t).toBe(true);
     expect(statSync(join(SRC, "lib/therapist-profile.functions.ts")).size).toBeGreaterThan(0);
@@ -164,5 +173,5 @@ describe("therapist relation tables — server/client boundary", () => {
     for (const col of ["address", "postal_code", "latitude", "longitude", "region"]) {
       expect(publicList.includes(`"${col}"`), col).toBe(false);
     }
-});
+  });
 });

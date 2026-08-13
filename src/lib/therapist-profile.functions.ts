@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
 import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-feedback";
 import { computeSemanticProfile } from "./profile-semantic-sync";
+import { isOwnedCredentialDocumentPath, type CredentialStatus } from "./credential-workflow";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 import {
   PRODUCT_REGIONS,
@@ -21,6 +22,22 @@ import {
 
 export type ProfileStatus = "draft" | "completed" | "published";
 export type Gender = "male" | "female" | "unspecified";
+
+export type CredentialEditorData = {
+  id: string;
+  profession_id: string | null;
+  credential_type: string;
+  institution: string | null;
+  license_number: string | null;
+  document_url: string | null;
+  issuing_authority: string | null;
+  issue_date: string | null;
+  expires_at: string | null;
+  verification_status: CredentialStatus;
+  rejection_reason: string | null;
+  submitted_at: string | null;
+  updated_at: string;
+};
 
 export type ProfileEditorData = {
   id: string | null;
@@ -67,19 +84,7 @@ export type ProfileEditorData = {
     membership_start_date: string | null;
   }[];
   service_arrangements: { organization_name: string; note: string | null }[];
-  credential: {
-    id: string;
-    profession_id: string | null;
-    credential_type: string;
-    institution: string | null;
-    license_number: string | null;
-    document_url: string | null;
-    issuing_authority: string | null;
-    issue_date: string | null;
-    expires_at: string | null;
-    verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
-    rejection_reason: string | null;
-  } | null;
+  credentials: CredentialEditorData[];
 };
 
 export type EditorOptions = {
@@ -342,12 +347,15 @@ export const getMyProfile = createServerFn({ method: "GET" })
       supabase
         .from("therapist_credentials")
         .select(
-          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason",
+          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason, submitted_at, updated_at",
         )
         .eq("therapist_id", t.id)
         .order("updated_at", { ascending: false })
-        .limit(1),
+        .order("id", { ascending: true }),
     ]);
+
+    // A failed credential query must never be flattened into "no credentials".
+    if (credentials.error) throw new Error(credentials.error.message);
 
     const physicalLocations = (locs.data ?? [])
       .filter((location) => location.location_type === "clinic")
@@ -403,7 +411,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       free_intro_duration_minutes: t.free_intro_duration_minutes,
       professional_memberships: memberships.data ?? [],
       service_arrangements: arrangements.data ?? [],
-      credential: (credentials.data?.[0] as ProfileEditorData["credential"] | undefined) ?? null,
+      credentials: (credentials.data ?? []) as CredentialEditorData[],
     };
   });
 
@@ -719,12 +727,20 @@ export const submitMyCredential = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => CredentialSubmissionSchema.parse(input))
   .handler(async ({ data, context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
-    const { data: profile } = await context.supabase
+    const { data: profile, error: profileError } = await context.supabase
       .from("therapists")
       .select("id")
       .eq("owner_account_id", accountId)
       .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
     if (!profile) throw new Error("יש לבצע שמירת פרופיל לפני הגשת מסמך הסמכה.");
+
+    // The document must live in the authenticated user's own private folder.
+    if (!isOwnedCredentialDocumentPath(data.document_url, context.userId)) {
+      throw new Error("נתיב המסמך אינו תקין.");
+    }
+
+    // Verification columns are server-owned; the client never supplies them.
     const payload = {
       therapist_id: profile.id,
       profession_id: data.profession_id,
@@ -736,21 +752,37 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       issue_date: data.issue_date ?? null,
       submitted_at: new Date().toISOString(),
       verification_status: "pending_review" as const,
+      rejection_reason: null,
+      verified_by: null,
+      verified_at: null,
     };
+
+    // Authentication, ownership and input validation all passed above, so the
+    // controlled write runs through the server-only admin client (the
+    // authenticated role intentionally cannot touch verification columns).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     if (data.credential_id) {
-      const { data: owned } = await context.supabase
+      const { data: owned, error: ownedError } = await context.supabase
         .from("therapist_credentials")
         .select("id, verification_status")
         .eq("id", data.credential_id)
         .eq("therapist_id", profile.id)
         .maybeSingle();
+      if (ownedError) throw new Error(ownedError.message);
       if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
       if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
-      const { error } = await context.supabase.from("therapist_credentials").update(payload).eq("id", owned.id);
+      if (owned.verification_status === "expired") throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
+      const { error } = await supabaseAdmin
+        .from("therapist_credentials")
+        .update(payload)
+        .eq("id", owned.id)
+        .eq("therapist_id", profile.id);
       if (error) throw new Error(error.message);
       return { id: owned.id, verification_status: "pending_review" as const };
     }
-    const { data: created, error } = await context.supabase
+
+    const { data: created, error } = await supabaseAdmin
       .from("therapist_credentials")
       .insert(payload)
       .select("id")
