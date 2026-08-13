@@ -93,12 +93,13 @@ describe("issuance response never leaks the answer", () => {
   });
 
   it("runs the database retention cleanup before issuing a new challenge", () => {
-    const purge = src.indexOf('.rpc("purge_expired_lead_challenges")');
-    const insert = src.indexOf('.from("lead_challenges")\n      .insert');
-    expect(purge).toBeGreaterThan(-1);
-    expect(purge).toBeLessThan(insert);
-    expect(src).toContain("if (purgeErr) throw new Error(purgeErr.message)");
-  });
+  const purge = src.indexOf('.rpc("purge_expired_lead_challenges")');
+  const insert = src.search(/\.from\("lead_challenges"\)\s*\.insert\(/);
+
+  expect(purge).toBeGreaterThan(-1);
+  expect(insert).toBeGreaterThan(-1);
+  expect(purge).toBeLessThan(insert);
+  expect(src).toContain("if (purgeErr) throw new Error(purgeErr.message)");
 });
 
 describe("createLead client contract", () => {
