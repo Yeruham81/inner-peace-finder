@@ -19,7 +19,7 @@ import {
   normalizePunctuation,
   normalizeWhitespace,
   stripNikud,
-} from "./hebrew-normalizer";
+} from "./semantic-engine";
 
 export function normalizeForInterpretation(input: string): string {
   if (!input) return "";
