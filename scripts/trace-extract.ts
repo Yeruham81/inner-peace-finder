@@ -1,7 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../src/integrations/supabase/types";
 import { SemanticEngine, normalizeText, tokenize, matchesText } from "../src/lib/semantic-engine";
 
-const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+const sb = createClient<Database>(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_PUBLISHABLE_KEY!,
+);-
 
 const inputs = [
   "אני מטפל בדיכאון ובדכאונות ממושכים.",
@@ -36,7 +40,7 @@ async function main() {
       console.log(`  - slug=${slug} alias="${a.alias}"`);
     });
 
-    const profile = await SemanticEngine.extractProfile(text, sb as any);
+    const profile = await SemanticEngine.extractProfile(text, sb);
     console.log("→ semantic_profile:", profile);
   }
 }
