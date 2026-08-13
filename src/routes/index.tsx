@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { listFilterOptions } from "@/lib/therapists.functions";
@@ -468,6 +468,19 @@ function ExplorerRows({ items, columns, activeItemId, onItemClick, onClose }: Ex
 }
 
 function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: () => void }) {
+  const navigate = useNavigate();
+  const populationSlug = populationGroups.some((group) => group.id === item.id) ? item.id : undefined;
+
+  function startSearch(problem: string) {
+    navigate({
+      to: "/search",
+      search: {
+        q: problem,
+        population: populationSlug,
+      },
+    });
+  }
+
   return (
     <div className="mt-3 rounded-3xl border border-brand/25 bg-brand-soft/35 p-4 shadow-card sm:p-5">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
@@ -475,6 +488,7 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
           <p className="text-xs font-semibold text-primary">נושאים נפוצים בתחום</p>
           <h3 className="mt-1 text-xl font-bold text-foreground">{item.name}</h3>
         </div>
+
         <button
           type="button"
           onClick={onClose}
@@ -489,6 +503,7 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
           <button
             key={problem}
             type="button"
+            onClick={() => startSearch(problem)}
             className="rounded-xl border border-border bg-surface-elevated px-3 py-3 text-sm font-medium text-foreground transition-all hover:border-brand/35 hover:bg-background hover:text-primary"
           >
             {problem}
