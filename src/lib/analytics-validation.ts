@@ -90,7 +90,7 @@ export async function simulateRapidCTA(
   let errors = 0;
   for (const r of results) {
     if (r.status === "rejected") errors++;
-    else if ((r.value as any)?.billable) billable++;
+    else if ((r.value as { billable?: boolean } | undefined)?.billable) billable++;
   }
   const report = { billable, total: n, errors };
   console.info("[analytics-validation] simulateRapidCTA", report);
@@ -105,7 +105,9 @@ export async function simulateRapidCTA(
  */
 export function assertSessionConsistency(label: string): string {
   const id = getSessionId();
-  const w = window as any;
+  const w = window as Window & {
+    __mt_session_seen?: { id: string; source: string; labels: string[] };
+  };
   if (!w.__mt_session_seen) {
     w.__mt_session_seen = { id, source: getSessionIdSource(), labels: [label] };
   } else {
@@ -126,7 +128,9 @@ export function assertSessionConsistency(label: string): string {
  */
 export function installDebugGlobals() {
   if (typeof window === "undefined" || !isDebug()) return;
-  const w = window as any;
+  const w = window as Window & {
+    mtDebug?: Record<string, unknown>;
+  };
   w.mtDebug = {
     getSessionId,
     getSessionIdSource,
