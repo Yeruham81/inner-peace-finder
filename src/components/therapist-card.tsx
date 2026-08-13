@@ -153,7 +153,7 @@ export function TherapistCard({
 
         <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-bold leading-snug text-foreground sm:text-xl">{t.full_name}</h2>
+            <h2 className="text-lg font-bold leading-snug text-foreground sm:text-2xl">{t.full_name}</h2>
             {t.verified && (
               <span
                 title="הפרופיל אומת על ידי Tipulinks"
@@ -195,7 +195,9 @@ export function TherapistCard({
       </div>
 
       {t.short_intro && (
-        <p className="mt-4 line-clamp-2 text-sm leading-6 text-foreground/85 sm:text-[15px]">{t.short_intro}</p>
+        <div className="mt-4 rounded-xl border-r-4 border-brand bg-brand-soft/40 px-4 py-3">
+          <p className="line-clamp-3 text-base font-medium leading-7 text-foreground">{t.short_intro}</p>
+        </div>
       )}
 
       <ul className="mt-4 space-y-2 text-sm leading-5 text-muted-foreground">
