@@ -94,11 +94,6 @@ function MetaIcon({ children }: { children: React.ReactNode }) {
   );
 }
 
-function additionalLocationsLabel(count: number): string {
-  if (count === 1) return "ועוד מיקום אחד";
-  return `ועוד ${count} מיקומים`;
-}
-
 function experienceSuffix(years: number): string {
   return years === 1 ? "שנת ניסיון" : "שנות ניסיון";
 }
@@ -128,14 +123,7 @@ export function TherapistCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.id]);
 
-  const clinicLabel = t.primary_clinic?.city
-    ? [
-        t.primary_clinic.city,
-        t.additional_clinic_count > 0 ? additionalLocationsLabel(t.additional_clinic_count) : null,
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : null;
+  const clinicLabel = [...new Set(t.clinic_locations.map((location) => location.city).filter(Boolean))].join(", ");
   const fallbackInitial = t.full_name.trim().charAt(0) || "ט";
 
   return (
@@ -181,6 +169,14 @@ export function TherapistCard({
               {t.professional_title}
             </p>
           )}
+          {t.years_experience > 0 && (
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              <span className="ltr-num">{t.years_experience}</span> {experienceSuffix(t.years_experience)}
+            </p>
+          )}
+          {t.language_names.length > 0 && (
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">שפות טיפול: {t.language_names.join(", ")}</p>
+          )}
           {(t.offers_free_intro || t.lgbtq_affirming) && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {t.offers_free_intro && (
@@ -215,20 +211,6 @@ export function TherapistCard({
           </li>
         )}
 
-        {t.years_experience > 0 && (
-          <li className="flex items-start gap-2">
-            <MetaIcon>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7v5l3 2" />
-              </svg>
-            </MetaIcon>
-            <span>
-              <span className="ltr-num">{t.years_experience}</span> {experienceSuffix(t.years_experience)}
-            </span>
-          </li>
-        )}
-
         {t.home_visit_regions.length > 0 && (
           <li className="flex items-start gap-2">
             <MetaIcon>
@@ -240,16 +222,22 @@ export function TherapistCard({
             <span>ביקורי בית: {t.home_visit_regions.join(", ")}</span>
           </li>
         )}
+
+        {t.online_available && (
+          <li className="flex items-start gap-2">
+            <MetaIcon>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+                <rect x="3" y="5" width="18" height="12" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+            </MetaIcon>
+            <span>ניתן לקיים טיפול אונליין</span>
+          </li>
+        )}
       </ul>
 
-      {(t.language_names.length > 0 || t.population_names.length > 0 || t.modality_names.length > 0) && (
+      {(t.population_names.length > 0 || t.modality_names.length > 0) && (
         <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
-          {t.language_names.length > 0 && (
-            <div className="min-w-0">
-              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">שפות</p>
-              <CompactTagRow labels={t.language_names} />
-            </div>
-          )}
           {t.population_names.length > 0 && (
             <div className="min-w-0">
               <p className="mb-1.5 text-xs font-semibold text-muted-foreground">אוכלוסיות</p>
@@ -266,22 +254,7 @@ export function TherapistCard({
       )}
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
-        <div className="flex flex-wrap gap-2">
-          {t.primary_clinic && (
-            <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-foreground ring-1 ring-border">
-              קליניקה
-            </span>
-          )}
-          {t.online_available && (
-            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-primary">
-              טיפול אונליין
-            </span>
-          )}
-          {t.home_visit_regions.length > 0 && (
-            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-primary">ביקורי בית</span>
-          )}
-        </div>
-        <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+        <span className="mr-auto inline-flex items-center gap-1 text-sm font-semibold text-primary">
           לפרופיל המלא
           <span aria-hidden="true" className="transition-transform group-hover:-translate-x-0.5">
             ←
