@@ -27,9 +27,13 @@ export type SearchResultCard = {
   short_intro: string | null;
   /** Primary active clinic, when the therapist has one. */
   primary_clinic: CardClinicLocation | null;
+  /** Every active clinic location, ordered with the primary clinic first. */
+  clinic_locations: CardClinicLocation[];
   /** Active clinic locations beyond the primary one. */
   additional_clinic_count: number;
   online_available: boolean;
+  gender: "male" | "female" | null;
+  accessible_clinic: boolean;
   /** Region labels with active home-visit availability. */
   home_visit_regions: string[];
   language_names: string[];
@@ -46,13 +50,16 @@ export type ActiveLocationRow = {
   city: string | null;
   region: string | null;
   is_primary: boolean | null;
+  accessibility_status?: string | null;
 };
 
 export type CardLocationDisplay = {
   primary_clinic: CardClinicLocation | null;
+  clinic_locations: CardClinicLocation[];
   additional_clinic_count: number;
   online_available: boolean;
   home_visit_regions: string[];
+  accessible_clinic: boolean;
   /** Active clinics exist but none was marked primary (historical data). */
   primary_clinic_fallback_used: boolean;
 };
@@ -89,6 +96,14 @@ export function buildCardLocationDisplay(
       }
     : null;
 
+  const clinic_locations: CardClinicLocation[] = chosen
+    ? [chosen, ...clinics.filter((clinic) => clinic !== chosen)].map((clinic) => ({
+        city: (clinic.city ?? "").trim(),
+        region_slug: resolveRegion(clinic.region).slug,
+        region_label: resolveRegion(clinic.region).label,
+      }))
+    : [];
+
   const home_visit_regions: string[] = [];
   for (const r of rows) {
     if (r.location_type !== "home_visit") continue;
@@ -98,9 +113,11 @@ export function buildCardLocationDisplay(
 
   return {
     primary_clinic,
+    clinic_locations,
     additional_clinic_count: clinics.length > 0 ? clinics.length - 1 : 0,
     online_available: rows.some((r) => r.location_type === "online"),
     home_visit_regions,
+    accessible_clinic: clinics.some((clinic) => clinic.accessibility_status === "accessible"),
     primary_clinic_fallback_used: fallbackUsed,
   };
 }
@@ -151,8 +168,11 @@ export function legacyRowToCard(row: {
     years_experience: row.years_experience,
     short_intro: row.short_intro,
     primary_clinic: row.city ? { city: row.city, region_slug: null, region_label: null } : null,
+    clinic_locations: row.city ? [{ city: row.city, region_slug: null, region_label: null }] : [],
     additional_clinic_count: 0,
     online_available: false,
+    gender: null,
+    accessible_clinic: false,
     home_visit_regions: [],
     language_names: row.language_names ?? [],
     population_names: row.population_names ?? [],
