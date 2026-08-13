@@ -63,7 +63,7 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
   ["archived", { visibility: "archived" }],
 ];
 
-function db(rows: FakeRow[]) {
+function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}) {
   return createFakeSupabase({
     therapists: rows,
     therapist_problems: [
@@ -120,6 +120,7 @@ function db(rows: FakeRow[]) {
     ],
     population_groups: [{ slug: "adults", name: "מבוגרים" }],
     languages: [{ code: "he", name: "עברית" }],
+    ...overrides,
   });
 }
 
@@ -198,16 +199,29 @@ describe("public eligibility — shared predicate", () => {
     expect(await listEligibleTherapistSlugs(db(rows))).toEqual(["eligible-one"]);
   });
 
-  it("listFilterOptions cannot derive cities from ineligible profiles", async () => {
+  it("listFilterOptions derives cities from every active clinic of eligible profiles", async () => {
     const rows = [
-      therapistRow({}),
+      therapistRow({ city: "עיר ישנה שלא נמצאת במיקומים" }),
       therapistRow({ id: "x-1", slug: "draft-1", profile_status: "draft", city: "אילת" }),
       therapistRow({ id: "x-2", slug: "hidden-1", visibility: "hidden", city: "צפת" }),
     ];
-    const opts = await listEligibleFilterOptions(db(rows));
-    expect(opts.cities).toEqual(["חיפה"]);
+    const opts = await listEligibleFilterOptions(
+      db(rows, {
+        therapist_locations: [
+          { therapist_id: "t-1", location_type: "clinic", city: "חיפה", is_active: true },
+          { therapist_id: "t-1", location_type: "clinic", city: " עכו ", is_active: true },
+          { therapist_id: "t-1", location_type: "clinic", city: "אילת", is_active: false },
+          { therapist_id: "t-1", location_type: "online", city: "ירושלים", is_active: true },
+          { therapist_id: "x-1", location_type: "clinic", city: "אילת", is_active: true },
+          { therapist_id: "x-2", location_type: "clinic", city: "צפת", is_active: true },
+        ],
+      }),
+    );
+    expect(opts.cities).toEqual(["חיפה", "עכו"]);
+    expect(opts.cities).not.toContain("עיר ישנה שלא נמצאת במיקומים");
     expect(opts.cities).not.toContain("אילת");
     expect(opts.cities).not.toContain("צפת");
+    expect(opts.cities).not.toContain("ירושלים");
   });
 });
 
