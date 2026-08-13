@@ -229,18 +229,6 @@ export function TherapistCard({
           </li>
         )}
 
-        {t.language_names.length > 0 && (
-          <li className="flex items-start gap-2">
-            <MetaIcon>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18M12 3c2.3 2.5 3.5 5.5 3.5 9S14.3 18.5 12 21M12 3c-2.3 2.5-3.5 5.5-3.5 9S9.7 18.5 12 21" />
-              </svg>
-            </MetaIcon>
-            <span>{t.language_names.join(" · ")}</span>
-          </li>
-        )}
-
         {t.home_visit_regions.length > 0 && (
           <li className="flex items-start gap-2">
             <MetaIcon>
@@ -254,8 +242,14 @@ export function TherapistCard({
         )}
       </ul>
 
-      {(t.population_names.length > 0 || t.modality_names.length > 0) && (
+      {(t.language_names.length > 0 || t.population_names.length > 0 || t.modality_names.length > 0) && (
         <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+          {t.language_names.length > 0 && (
+            <div className="min-w-0">
+              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">שפות</p>
+              <CompactTagRow labels={t.language_names} />
+            </div>
+          )}
           {t.population_names.length > 0 && (
             <div className="min-w-0">
               <p className="mb-1.5 text-xs font-semibold text-muted-foreground">אוכלוסיות</p>

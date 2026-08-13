@@ -14,6 +14,11 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CtaCallButton } from "@/components/cta-call-button";
+import {
+  accessibilityFeatureLabels,
+  clinicAccessibilityLabel,
+  freeIntroTypeLabels,
+} from "@/lib/profile-display-options";
 
 type ProfileLocationType = "clinic" | "home_visit" | "online" | "hospital" | "other";
 
@@ -224,12 +229,6 @@ function TagGroup({ title, items, interactive }: { title: string; items: TagItem
   );
 }
 
-function clinicAccessibilityLabel(status: string): string | null {
-  if (status === "accessible") return "קליניקה נגישה";
-  if (status === "partially_accessible") return "קליניקה נגישה חלקית";
-  return null;
-}
-
 export function ClinicLocationsCard({ locations }: { locations: TherapistProfileViewData["locations"] }) {
   if (locations.length === 0) return null;
 
@@ -242,6 +241,8 @@ export function ClinicLocationsCard({ locations }: { locations: TherapistProfile
           <div className="mt-2 divide-y divide-border/70">
             {locations.map((location, index) => {
               const accessibilityLabel = clinicAccessibilityLabel(location.accessibility_status);
+              const featureLabels = accessibilityFeatureLabels(location.accessibility_features);
+              const accessibilityNote = location.accessibility_note?.trim();
 
               return (
                 <div
@@ -249,8 +250,29 @@ export function ClinicLocationsCard({ locations }: { locations: TherapistProfile
                   className="min-w-0 max-w-full py-2 first:pt-0 last:pb-0"
                 >
                   {location.city && <p className="break-words text-sm text-muted-foreground">{location.city}</p>}
-                  {accessibilityLabel && (
-                    <p className="mt-0.5 text-xs text-muted-foreground/80">{accessibilityLabel}</p>
+                  {(accessibilityLabel || featureLabels.length > 0 || accessibilityNote) && (
+                    <div className="mt-1.5 space-y-1.5">
+                      {accessibilityLabel && (
+                        <p className="text-xs font-medium text-foreground/75">{accessibilityLabel}</p>
+                      )}
+                      {featureLabels.length > 0 && (
+                        <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
+                          {featureLabels.map((feature) => (
+                            <span
+                              key={feature}
+                              className="max-w-full break-words rounded-full border border-brand/20 bg-brand-soft px-2 py-0.5 text-xs text-foreground/75"
+                            >
+                              {feature}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {accessibilityNote && (
+                        <p className="break-words text-xs leading-5 text-muted-foreground">
+                          מידע נוסף: {accessibilityNote}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -327,6 +349,7 @@ export function TherapistProfileView({
   const hasProfessionalDetails =
     !!t.education_training || !!t.professional_experience || t.professional_memberships.length > 0;
   const longAbout = (t.full_description?.length ?? 0) > 420;
+  const freeIntroLabels = freeIntroTypeLabels(t.free_intro_types);
 
   const heroServiceTags = useMemo(() => {
     const tags: { key: string; label: string; icon: React.ReactNode }[] = [];
@@ -594,13 +617,20 @@ export function TherapistProfileView({
             {(t.offers_free_intro || onlineAvailable) && (
               <div className="mt-4 space-y-2 border-t border-border pt-4 text-xs text-foreground/70">
                 {t.offers_free_intro && (
-                  <p className="flex items-start gap-2">
+                  <div className="flex items-start gap-2">
                     <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                    <span>
-                      היכרות ללא תשלום
-                      {t.free_intro_duration_minutes ? ` · ${t.free_intro_duration_minutes} דקות` : ""}
-                    </span>
-                  </p>
+                    <div className="min-w-0">
+                      <p>
+                        היכרות ללא תשלום
+                        {t.free_intro_duration_minutes ? ` · ${t.free_intro_duration_minutes} דקות` : ""}
+                      </p>
+                      {freeIntroLabels.length > 0 && (
+                        <p className="mt-1 break-words text-muted-foreground">
+                          אפשרויות: {freeIntroLabels.join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
                 {onlineAvailable && (
                   <p className="flex items-start gap-2">
