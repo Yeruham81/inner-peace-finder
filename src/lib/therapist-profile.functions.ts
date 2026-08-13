@@ -347,12 +347,15 @@ export const getMyProfile = createServerFn({ method: "GET" })
       supabase
         .from("therapist_credentials")
         .select(
-          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason",
+          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason, submitted_at, updated_at",
         )
         .eq("therapist_id", t.id)
         .order("updated_at", { ascending: false })
-        .limit(1),
+        .order("id", { ascending: true }),
     ]);
+
+    // A failed credential query must never be flattened into "no credentials".
+    if (credentials.error) throw new Error(credentials.error.message);
 
     const physicalLocations = (locs.data ?? [])
       .filter((location) => location.location_type === "clinic")
