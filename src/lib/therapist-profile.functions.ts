@@ -478,7 +478,7 @@ async function resolvePhysicalLocations(
 
 export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
+  .validator((input: unknown) => {
     const parsed = SaveSchema.safeParse(input);
     if (!parsed.success) throw new Error(friendlyZodMessage(parsed.error));
     return parsed.data;
@@ -695,7 +695,7 @@ const ProfileVisibilitySchema = z.object({ visible: z.boolean() });
 
 export const setMyProfileVisibility = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => ProfileVisibilitySchema.parse(input))
+  .validator((input: unknown) => ProfileVisibilitySchema.parse(input))
   .handler(async ({ data, context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
     const { setOwnedProfileVisibility } = await import("./profile-management.server");
@@ -704,7 +704,7 @@ export const setMyProfileVisibility = createServerFn({ method: "POST" })
 
 export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input))
+  .validator((input: unknown) => z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input))
   .handler(async ({ context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
     const { permanentlyDeleteOwnedProfile } = await import("./profile-management.server");
@@ -724,7 +724,7 @@ const CredentialSubmissionSchema = z.object({
 
 export const submitMyCredential = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => CredentialSubmissionSchema.parse(input))
+  .validator((input: unknown) => CredentialSubmissionSchema.parse(input))
   .handler(async ({ data, context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
     const { data: profile, error: profileError } = await context.supabase
@@ -772,7 +772,8 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       if (ownedError) throw new Error(ownedError.message);
       if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
       if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
-      if (owned.verification_status === "expired") throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
+      if (owned.verification_status === "expired")
+        throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
       const { error } = await supabaseAdmin
         .from("therapist_credentials")
         .update(payload)
@@ -802,7 +803,7 @@ export const submitMyCredential = createServerFn({ method: "POST" })
  */
 export const getSemanticFeedback = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z.object({ description: z.string().max(DESCRIPTION_MAX).nullable().optional() }).parse(input),
   )
   .handler(async ({ data, context }): Promise<SemanticFeedback> => {
