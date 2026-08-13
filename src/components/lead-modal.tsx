@@ -132,7 +132,7 @@ export function LeadModal({
       panelRef.current?.scrollTo({ top: 0 });
       firstFieldRef.current?.focus({ preventScroll: true });
     }, 30);
-  }, [open, problemName, populationName]);
+  }, [open, problemName, populationName, requestChallenge]);
 
   // Keep the profile page fixed behind the dialog while it is open.
   useEffect(() => {
