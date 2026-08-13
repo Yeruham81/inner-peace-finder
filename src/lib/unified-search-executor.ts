@@ -64,8 +64,11 @@ export type DisplayRow = {
   verified: boolean;
   short_intro: string | null;
   primary_clinic: CardClinicLocation | null;
+  clinic_locations: CardClinicLocation[];
   additional_clinic_count: number;
   online_available: boolean;
+  gender: TherapistGender | null;
+  accessible_clinic: boolean;
   home_visit_regions: string[];
   language_names: string[];
   population_names: string[];
@@ -275,8 +278,11 @@ export async function executeUnifiedSearch(
       years_experience: r.yearsExperience,
       short_intro: d.short_intro,
       primary_clinic: d.primary_clinic,
+      clinic_locations: d.clinic_locations,
       additional_clinic_count: d.additional_clinic_count,
       online_available: d.online_available,
+      gender: d.gender,
+      accessible_clinic: d.accessible_clinic,
       home_visit_regions: d.home_visit_regions,
       language_names: d.language_names,
       population_names: d.population_names,
