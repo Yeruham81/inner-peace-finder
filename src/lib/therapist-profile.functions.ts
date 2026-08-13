@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
 import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-feedback";
 import { computeSemanticProfile } from "./profile-semantic-sync";
+import { isOwnedCredentialDocumentPath, type CredentialStatus } from "./credential-workflow";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 import {
   PRODUCT_REGIONS,
@@ -21,6 +22,22 @@ import {
 
 export type ProfileStatus = "draft" | "completed" | "published";
 export type Gender = "male" | "female" | "unspecified";
+
+export type CredentialEditorData = {
+  id: string;
+  profession_id: string | null;
+  credential_type: string;
+  institution: string | null;
+  license_number: string | null;
+  document_url: string | null;
+  issuing_authority: string | null;
+  issue_date: string | null;
+  expires_at: string | null;
+  verification_status: CredentialStatus;
+  rejection_reason: string | null;
+  submitted_at: string | null;
+  updated_at: string;
+};
 
 export type ProfileEditorData = {
   id: string | null;
@@ -67,19 +84,7 @@ export type ProfileEditorData = {
     membership_start_date: string | null;
   }[];
   service_arrangements: { organization_name: string; note: string | null }[];
-  credential: {
-    id: string;
-    profession_id: string | null;
-    credential_type: string;
-    institution: string | null;
-    license_number: string | null;
-    document_url: string | null;
-    issuing_authority: string | null;
-    issue_date: string | null;
-    expires_at: string | null;
-    verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
-    rejection_reason: string | null;
-  } | null;
+  credentials: CredentialEditorData[];
 };
 
 export type EditorOptions = {
