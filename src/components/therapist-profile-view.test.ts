@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { ClinicLocationsCard, visibleTagCountForRows } from "./therapist-profile-view";
+import {
+  ClinicLocationsCard,
+  TherapistProfileView,
+  type TherapistProfileViewData,
+  visibleTagCountForRows,
+} from "./therapist-profile-view";
 
 const profileSource = readFileSync(new URL("./therapist-profile-view.tsx", import.meta.url), "utf8");
 
@@ -40,7 +45,7 @@ describe("ClinicLocationsCard", () => {
             region: "מרכז והשפלה",
             is_primary: true,
             accessibility_status: "accessible",
-            accessibility_features: ["step_free_entrance"],
+            accessibility_features: ["step_free_entrance", "accessible_parking"],
             accessibility_note: "כניסה מהחניה",
           },
           {
@@ -61,6 +66,15 @@ describe("ClinicLocationsCard", () => {
             accessibility_features: [],
             accessibility_note: null,
           },
+          {
+            location_type: "clinic",
+            city: "בת ים",
+            region: "תל אביב וגוש דן",
+            is_primary: false,
+            accessibility_status: "not_accessible",
+            accessibility_features: [],
+            accessibility_note: "יש מדרגות בכניסה",
+          },
         ],
       }),
     );
@@ -68,16 +82,67 @@ describe("ClinicLocationsCard", () => {
     expect(html.match(/טיפול בקליניקה/g)).toHaveLength(1);
     expect(html).toContain("רחובות");
     expect(html).toContain("קליניקה נגישה");
+    expect(html).toContain("כניסה ללא מדרגות");
+    expect(html).toContain("חניית נכים");
+    expect(html).toContain("מידע נוסף: כניסה מהחניה");
     expect(html).toContain("ראשון לציון");
     expect(html).toContain("קליניקה נגישה חלקית");
     expect(html).toContain("חולון");
+    expect(html).toContain("בת ים");
+    expect(html).toContain("הקליניקה אינה נגישה");
+    expect(html).toContain("מידע נוסף: יש מדרגות בכניסה");
     expect(html).not.toContain("step_free_entrance");
-    expect(html).not.toContain("כניסה מהחניה");
     expect(html).not.toContain("<details");
   });
 
   it("renders nothing when no clinic locations are provided", () => {
     expect(renderToStaticMarkup(createElement(ClinicLocationsCard, { locations: [] }))).toBe("");
+  });
+});
+
+describe("free introductory session details", () => {
+  it("renders every selected introductory-session type with the duration", () => {
+    const therapist: TherapistProfileViewData = {
+      id: "t-1",
+      full_name: "רות לוי",
+      professional_title: "פסיכולוגית קלינית",
+      short_intro: null,
+      full_description: null,
+      education_training: null,
+      professional_experience: null,
+      years_experience: 10,
+      city: null,
+      image_url: null,
+      verified: false,
+      lgbtq_affirming: false,
+      offers_free_intro: true,
+      free_intro_types: ["phone", "video", "in_person"],
+      free_intro_duration_minutes: 20,
+      professions: [],
+      modalities: [],
+      therapy_formats: [],
+      locations: [],
+      professional_memberships: [],
+      service_arrangements: [],
+      problems: [],
+      populations: [],
+      languages: [],
+    };
+
+    const html = renderToStaticMarkup(createElement(TherapistProfileView, { therapist, interactive: false }));
+
+    expect(html).toContain("היכרות ללא תשלום · 20 דקות");
+    expect(html).toContain("אפשרויות: טלפון · וידאו · פגישה בקליניקה");
+  });
+});
+
+describe("result-card language presentation", () => {
+  const cardSource = readFileSync(new URL("./therapist-card.tsx", import.meta.url), "utf8");
+
+  it("renders languages through the compact overflow-tag row", () => {
+    expect(cardSource).toContain("<CompactTagRow labels={t.language_names} />");
+    expect(cardSource).toContain(">שפות</p>");
+    expect(cardSource).not.toContain('{t.language_names.join(" · ")}');
   });
 });
 
