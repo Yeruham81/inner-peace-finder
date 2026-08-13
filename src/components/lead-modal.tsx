@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { createLead } from "@/lib/lead.functions";
+import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
 import { track } from "@/lib/analytics";
 import { sanitizeSearchReturn } from "@/lib/search-return";
 
@@ -10,17 +11,14 @@ export const LEAD_SUCCESS_REDIRECT_MS = 1500;
 
 const PHONE_RE = /^(\+?972|0)(5\d|[23489])\d{7,8}$/;
 
-type Challenge = { text: string; expected: number };
+/** Server-issued challenge. The expected answer never reaches the browser. */
+type Challenge = { id: string; prompt: string };
 
-function makeChallenge(): Challenge {
-  const a = Math.floor(Math.random() * 8) + 2; // 2..9
-  const b = Math.floor(Math.random() * 8) + 2;
-  const plus = Math.random() < 0.5;
-  if (plus) return { text: `${a} + ${b}`, expected: a + b };
-  const hi = Math.max(a, b);
-  const lo = Math.min(a, b);
-  return { text: `${hi} - ${lo}`, expected: hi - lo };
-}
+export const CHALLENGE_ERROR_MESSAGES = {
+  failed: "האימות נכשל. נסו לפתור את התרגיל החדש.",
+  expired: "תוקף האימות פג. הוצג תרגיל חדש.",
+  rateLimited: "נשלחו מספר פניות בזמן קצר. ניתן לנסות שוב מאוחר יותר.",
+} as const;
 
 function defaultMessage(problemName?: string | null, populationName?: string | null): string {
   const base = "היי, הגעתי אליך דרך טיפולינקס.";
@@ -57,7 +55,8 @@ export function LeadModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState(() => defaultMessage(problemName, populationName));
-  const [challenge, setChallenge] = useState<Challenge>(() => makeChallenge());
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [challengeLoading, setChallengeLoading] = useState(false);
   const [challengeAnswer, setChallengeAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +75,7 @@ export function LeadModal({
     setName("");
     setPhone("");
     setMessage(defaultMessage(problemName, populationName));
-    setChallenge(makeChallenge());
+    setChallenge(null);
     setChallengeAnswer("");
     setError(null);
     setDone(false);
@@ -97,17 +96,38 @@ export function LeadModal({
   }, [done, onClose, returnToResults, submitting]);
 
   // Reset state on every open
+  /** Ask the server for a fresh challenge; the answer stays server-side. */
+  const requestChallenge = useCallback(async () => {
+    setChallengeLoading(true);
+    setChallengeAnswer("");
+    try {
+      const res = await issueLeadChallenge();
+      if (res.ok) {
+        setChallenge({ id: res.challengeId, prompt: res.prompt });
+      } else {
+        setChallenge(null);
+        setError(CHALLENGE_ERROR_MESSAGES.rateLimited);
+      }
+    } catch {
+      setChallenge(null);
+      setError("אירעה שגיאה בטעינת האימות. נסו שוב.");
+    } finally {
+      setChallengeLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     setName("");
     setPhone("");
     setMessage(defaultMessage(problemName, populationName));
-    setChallenge(makeChallenge());
+    setChallenge(null);
     setChallengeAnswer("");
     setError(null);
     setDone(false);
     setSubmitting(false);
     redirectedRef.current = false;
+    void requestChallenge();
     setTimeout(() => {
       panelRef.current?.scrollTo({ top: 0 });
       firstFieldRef.current?.focus({ preventScroll: true });
@@ -145,7 +165,10 @@ export function LeadModal({
 
   const challengeAnswerNum = Number(challengeAnswer);
   const challengeOk =
-    challengeAnswer.trim() !== "" && Number.isFinite(challengeAnswerNum) && challengeAnswerNum === challenge.expected;
+    challenge !== null &&
+    !challengeLoading &&
+    challengeAnswer.trim() !== "" &&
+    Number.isFinite(challengeAnswerNum);
 
   const phoneOk = PHONE_RE.test(phone.trim());
   const nameOk = name.trim().length >= 2;
@@ -172,9 +195,8 @@ export function LeadModal({
           visitorName: name.trim(),
           visitorPhone: phone.trim(),
           message: message.trim(),
-          challengePresented: challenge.text,
+          challengeId: challenge!.id,
           challengeAnswer: challengeAnswerNum,
-          challengeExpected: challenge.expected,
         },
       });
       if (!res.ok) {
@@ -188,14 +210,18 @@ export function LeadModal({
             therapist_id: therapistId,
             page_source: pageSource ?? null,
           });
-          setError(res.message ?? "שלחתם כבר מספר פניות. נסו שוב בעוד כמה דקות.");
+          setError(res.message ?? CHALLENGE_ERROR_MESSAGES.rateLimited);
           setSubmitting(false);
           return;
         }
-        setError("האימות נכשל. נסו שוב.");
-        setChallenge(makeChallenge());
+        setError(
+          res.reason === "challenge_expired"
+            ? CHALLENGE_ERROR_MESSAGES.expired
+            : CHALLENGE_ERROR_MESSAGES.failed,
+        );
         setChallengeAnswer("");
         setSubmitting(false);
+        void requestChallenge();
         return;
       }
       track("lead_created", {
@@ -313,7 +339,7 @@ export function LeadModal({
               <label className="block text-sm font-medium text-foreground" htmlFor="lead-cap">
                 אימות אנושי: כמה זה{" "}
                 <span dir="ltr" className="ltr-num">
-                  {challenge.text}
+                  {challenge?.prompt ?? "…"}
                 </span>{" "}
                 ?
               </label>
@@ -323,6 +349,8 @@ export function LeadModal({
                 onChange={(e) => setChallengeAnswer(e.target.value.replace(/[^\d-]/g, ""))}
                 inputMode="numeric"
                 required
+                disabled={challengeLoading || challenge === null}
+                aria-busy={challengeLoading}
                 dir="ltr"
                 className="mt-1 w-28 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-brand focus:outline-none"
               />
