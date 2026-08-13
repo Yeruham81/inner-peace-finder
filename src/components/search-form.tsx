@@ -276,8 +276,8 @@ export function SearchForm({
         label: "מגדר המטפל/ת",
         placeholder: "ללא העדפה",
         options: [
-          { value: "female", label: "אישה" },
-          { value: "male", label: "גבר" },
+          { value: "female", label: "מטפלת אישה" },
+          { value: "male", label: "מטפל גבר" },
         ],
       },
     ],
@@ -286,7 +286,7 @@ export function SearchForm({
 
   const visibleFilters = isHero
     ? filters.filter((filter) => ["regions", "language", "population", "serviceType"].includes(filter.key))
-    : filters;
+    : filters.filter((filter) => filter.key !== "gender" && filter.key !== "serviceType");
   const activeFilter = visibleFilters.find((filter) => filter.key === openFilter);
 
   function selectedValues(key: FilterKey): string[] {
@@ -406,8 +406,8 @@ export function SearchForm({
       label: "ביקורי בית",
       active: appliedContract.serviceTypes.includes("home_visit"),
     },
-    { key: "female", label: "אישה", active: appliedContract.gender === "female" },
-    { key: "male", label: "גבר", active: appliedContract.gender === "male" },
+    { key: "female", label: "מטפלת אישה", active: appliedContract.gender === "female" },
+    { key: "male", label: "מטפל גבר", active: appliedContract.gender === "male" },
     { key: "accessible", label: "קליניקה נגישה", active: appliedContract.accessible },
     { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
     { key: "lgbtqAffirming", label: "מותאם לקהילה הגאה", active: appliedContract.lgbtqAffirming },
@@ -645,7 +645,7 @@ export function SearchForm({
           </div>
 
           <div id="search-filter-controls" className={`${mobileFiltersOpen ? "block" : "hidden"} lg:block`}>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-9">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-7 lg:gap-3">
               {visibleFilters.map((filter) => {
                 const values = selectedValues(filter.key);
                 const isOpen = openFilter === filter.key;
