@@ -360,7 +360,12 @@ function Index() {
 
           <div className="mx-auto mt-8 max-w-4xl">
             {/* SearchForm owns the four homepage filters; no duplicate filter row is rendered in this file. */}
-            <SearchForm cities={filters.cities} populations={filters.populations} languages={filters.languages} />
+            <SearchForm
+              cities={filters.cities}
+              cityRegions={filters.cityRegions}
+              populations={filters.populations}
+              languages={filters.languages}
+            />
           </div>
 
           <p className="mt-4 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
@@ -455,7 +460,7 @@ const trustItems = [
   },
   {
     title: "שקיפות מקצועית",
-    description: "חפשו את הסימון \"מאומת\" בפרופילים של מטפלים שהסמכתם אומתה ע\"י צוות האתר.\u00a0",
+    description: 'חפשו את הסימון "מאומת" בפרופילים של מטפלים שהסמכתם אומתה ע"י צוות האתר.\u00a0',
   },
   {
     title: "חיפוש ללא התחייבות",
