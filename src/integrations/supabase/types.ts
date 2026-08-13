@@ -112,6 +112,36 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_challenges: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expected_answer: number
+          expires_at: string
+          id: string
+          ip_hash: string
+          prompt: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expected_answer: number
+          expires_at: string
+          id?: string
+          ip_hash: string
+          prompt: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expected_answer?: number
+          expires_at?: string
+          id?: string
+          ip_hash?: string
+          prompt?: string
+        }
+        Relationships: []
+      }
       lead_events: {
         Row: {
           challenge_passed: boolean
@@ -180,6 +210,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_submission_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string
+          outcome: string
+          session_hash: string
+          therapist_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash: string
+          outcome: string
+          session_hash: string
+          therapist_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string
+          outcome?: string
+          session_hash?: string
+          therapist_id?: string | null
+        }
+        Relationships: []
       }
       notification_events: {
         Row: {
@@ -1184,6 +1241,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      authorize_lead_submission: {
+        Args: {
+          _answer: number
+          _challenge_id: string
+          _ip_hash: string
+          _session_hash: string
+          _therapist_id: string
+        }
+        Returns: {
+          allowed: boolean
+          reason: string
+        }[]
+      }
+      purge_expired_lead_challenges: { Args: never; Returns: number }
       record_cta_click: {
         Args: {
           _cta_id?: string
