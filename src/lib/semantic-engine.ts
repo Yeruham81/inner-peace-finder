@@ -25,22 +25,30 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
+  collapseRepeatedChars,
   flexibleHebrewMatch,
+  foldSofit,
+  isLatinToken,
   lightNormalizeHebrew,
+  normalizePunctuation,
+  normalizeWhitespace,
+  stripHebrewPrefix,
+  stripNikud,
   tokenizeHebrew,
 } from "./hebrew-normalizer";
-import {
-  parseStoredProfile,
-  type SemanticProfileEntry,
-} from "./therapist-semantic-profile";
-import {
-  DEPRECATED_SLUGS,
-  PROFILE_ONLY_SLUGS,
-  buildParentOf,
-  isBlockedForClassify,
-} from "./semantic-ontology";
+import { parseStoredProfile, type SemanticProfileEntry } from "./therapist-semantic-profile";
+import { DEPRECATED_SLUGS, PROFILE_ONLY_SLUGS, buildParentOf, isBlockedForClassify } from "./semantic-ontology";
 
 export type { SemanticProfileEntry };
+export {
+  collapseRepeatedChars,
+  foldSofit,
+  isLatinToken,
+  normalizePunctuation,
+  normalizeWhitespace,
+  stripHebrewPrefix,
+  stripNikud,
+};
 
 /** A classification result for a user query. */
 export type SemanticResult = { slug: string; confidence: number };
@@ -146,18 +154,30 @@ const PARENT_SUPPRESS_RATIO = 0.5;
  * explicitly.
  */
 const EXTRACTION_GENERIC_ANCHORS: ReadonlySet<string> = new Set([
-  "עצמי", "עצמית", "עצמו", "עצמה",
-  "משבר", "משברים",
-  "כאב", "כאבים",
+  "עצמי",
+  "עצמית",
+  "עצמו",
+  "עצמה",
+  "משבר",
+  "משברים",
+  "כאב",
+  "כאבים",
   "חיים",
-  "חברתי", "חברתית",
-  "התפתחות", "התפתחותי",
+  "חברתי",
+  "חברתית",
+  "התפתחות",
+  "התפתחותי",
   "זהות",
-  "זוגי", "זוגית",
+  "זוגי",
+  "זוגית",
   "יחסים",
-  "רגשי", "רגשית",
-  "נפשי", "נפשית",
-  "טיפול", "טיפולי", "טיפולית",
+  "רגשי",
+  "רגשית",
+  "נפשי",
+  "נפשית",
+  "טיפול",
+  "טיפולי",
+  "טיפולית",
   "הבנה",
   "קשר",
   "צמיחה",
@@ -263,9 +283,7 @@ export type CanonicalProblemEntry = {
  * Database errors propagate (Q1 behavior): a catalog read failure must never
  * degrade into a valid empty catalog.
  */
-async function loadCanonicalProblems(
-  sb: SupabaseClient<Database>,
-): Promise<CanonicalProblemEntry[]> {
+async function loadCanonicalProblems(sb: SupabaseClient<Database>): Promise<CanonicalProblemEntry[]> {
   const vocab = await fetchVocabulary(sb);
   const aliasesById = new Map<string, string[]>();
   for (const a of vocab.aliases) {
@@ -354,7 +372,10 @@ function scoreEvidenceQuality(
     for (const t of pTokens) {
       if (t.length < 4) continue;
       for (const h of qTokenSet) {
-        if (h.length >= 4 && (h.includes(t) || t.includes(h))) { overlap += 0.5; break; }
+        if (h.length >= 4 && (h.includes(t) || t.includes(h))) {
+          overlap += 0.5;
+          break;
+        }
       }
     }
   }
@@ -372,10 +393,19 @@ function scoreEvidenceQuality(
       for (const h of qTokenSet) {
         const hf = stripYv(h);
         if (hf.length < 3) continue;
-        if (tf === hf) { hit = true; break; }
-        if (tf.length >= 4 && hf.length >= 4 && (hf.includes(tf) || tf.includes(hf))) { hit = true; break; }
+        if (tf === hf) {
+          hit = true;
+          break;
+        }
+        if (tf.length >= 4 && hf.length >= 4 && (hf.includes(tf) || tf.includes(hf))) {
+          hit = true;
+          break;
+        }
       }
-      if (hit) { overlap += 0.5; break; }
+      if (hit) {
+        overlap += 0.5;
+        break;
+      }
     }
   }
   const ratio = overlap / pTokens.length;
@@ -383,10 +413,7 @@ function scoreEvidenceQuality(
   // only proportionally. This keeps recall (evidence isn't lost) while
   // sharply penalizing single-token filler overlaps.
   const quality = ratio > 0 ? Math.max(0.05, ratio * ratio) : 0;
-  const proximate =
-    pTokens.length <= 1
-      ? true
-      : hasProximityMatch(pTokens, qTokensOrdered);
+  const proximate = pTokens.length <= 1 ? true : hasProximityMatch(pTokens, qTokensOrdered);
   return { quality, full: false, tokens: tokenCount, proximate };
 }
 
@@ -650,11 +677,7 @@ export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
   for (const e of evidences) {
     if (e.kind === "intent") continue;
     if (e.full) return true;
-    if (
-      e.tokens >= 2 &&
-      e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY &&
-      e.proximate
-    ) {
+    if (e.tokens >= 2 && e.quality >= EXTRACTION_MIN_MULTI_TOKEN_QUALITY && e.proximate) {
       // Multi-token generic-anchor protection: reject when at least half
       // of the phrase's meaningful tokens are generic anchors. Such
       // phrases (e.g. "משבר זהות", "הצפה רגשית", "משבר זוגי") match too
@@ -682,8 +705,7 @@ export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
       const toks = tokenizeHebrew(e.phrase);
       if (toks.length === 1) {
         const t = toks[0];
-        const rawIsGeneric =
-          raw.length === 1 && EXTRACTION_GENERIC_ANCHORS.has(raw[0]);
+        const rawIsGeneric = raw.length === 1 && EXTRACTION_GENERIC_ANCHORS.has(raw[0]);
         const tokIsGeneric = EXTRACTION_GENERIC_ANCHORS.has(t);
         if (t.length >= 3 && !rawIsGeneric && !tokIsGeneric) return true;
       }
@@ -731,10 +753,7 @@ function applyParentSuppression(
  *   4. Apply parent → child suppression conservatively.
  *   5. Return top MAX_MATCHES ordered by confidence.
  */
-async function classify(
-  input: string,
-  sb: SupabaseClient<Database>,
-): Promise<SemanticResult[]> {
+async function classify(input: string, sb: SupabaseClient<Database>): Promise<SemanticResult[]> {
   const q = normalizeText(input);
   if (q.length < 2) return [];
 
@@ -880,8 +899,8 @@ export const SemanticEngine = {
   normalizeText,
   matchesText,
   tokenize,
-  extractDomains,   // deprecated alias
-  matchProfiles,    // deprecated alias
+  extractDomains, // deprecated alias
+  matchProfiles, // deprecated alias
   parseProfile,
 } as const;
 
