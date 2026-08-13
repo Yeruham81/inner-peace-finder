@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { describe, expect, it } from "bun:test";
 import { SemanticEngine } from "./semantic-engine";
 
@@ -39,14 +41,12 @@ async function slugs(text: string): Promise<string[]> {
 
 describe("extractProfile — proximity + anchor-heavy guard", () => {
   it("rejects משבר זהות when tokens co-occur far apart", async () => {
-    const text =
-      "אני מלווה מטופלים בהתמודדות עם משברים שונים ובעבודה על תחושת זהות עצמית. אני מטפלת מזה שנים רבות.";
+    const text = "אני מלווה מטופלים בהתמודדות עם משברים שונים ובעבודה על תחושת זהות עצמית. אני מטפלת מזה שנים רבות.";
     expect(await slugs(text)).not.toContain("identity_crisis");
   });
 
   it("rejects הצפה רגשית when tokens are only incidentally near each other", async () => {
-    const text =
-      "אני מציעה עזרה במצוקה רגשית עמוקה והצפה של רגשות שקשה להכיל בכוחות עצמך.";
+    const text = "אני מציעה עזרה במצוקה רגשית עמוקה והצפה של רגשות שקשה להכיל בכוחות עצמך.";
     expect(await slugs(text)).not.toContain("emotional_overwhelm");
   });
 
