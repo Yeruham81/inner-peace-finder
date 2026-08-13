@@ -92,6 +92,7 @@ type SearchFormProps = {
     flow?: string;
   };
   variant?: "hero" | "compact" | "simple";
+  availableQuickFilters?: string[];
 };
 
 function multiValue(
@@ -113,6 +114,7 @@ export function SearchForm({
   initialFilters = {},
   preserveSearch,
   variant = "hero",
+  availableQuickFilters,
 }: SearchFormProps) {
   const navigate = useNavigate();
   const isHero = variant === "hero";
@@ -284,7 +286,7 @@ export function SearchForm({
 
   const visibleFilters = isHero
     ? filters.filter((filter) => ["regions", "language", "population", "serviceType"].includes(filter.key))
-    : filters.filter((filter) => filter.key !== "serviceType" && filter.key !== "gender");
+    : filters;
   const activeFilter = visibleFilters.find((filter) => filter.key === openFilter);
 
   function selectedValues(key: FilterKey): string[] {
@@ -391,6 +393,26 @@ export function SearchForm({
     Number(appliedContract.verified) +
     Number(appliedContract.lgbtqAffirming) +
     Number(appliedContract.freeIntro);
+
+  const quickFilters = [
+    {
+      key: "clinic",
+      label: "פגישה בקליניקה",
+      active: appliedContract.serviceTypes.includes("clinic"),
+    },
+    { key: "online", label: "אונליין", active: appliedContract.serviceTypes.includes("online") },
+    {
+      key: "home_visit",
+      label: "ביקורי בית",
+      active: appliedContract.serviceTypes.includes("home_visit"),
+    },
+    { key: "female", label: "אישה", active: appliedContract.gender === "female" },
+    { key: "male", label: "גבר", active: appliedContract.gender === "male" },
+    { key: "accessible", label: "קליניקה נגישה", active: appliedContract.accessible },
+    { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
+    { key: "lgbtqAffirming", label: "מותאם לקהילה הגאה", active: appliedContract.lgbtqAffirming },
+    { key: "freeIntro", label: "היכרות ללא תשלום", active: appliedContract.freeIntro },
+  ].filter((item) => item.active || !availableQuickFilters || availableQuickFilters.includes(item.key));
 
   function navigateToContract(input: {
     q: string;
@@ -604,47 +626,7 @@ export function SearchForm({
 
       {isCompact && (
         <div className="mt-3 border-t border-border pt-3">
-          <div className="flex gap-2 overflow-x-auto pb-2" aria-label="מסננים מהירים">
-            {[
-              {
-                key: "clinic",
-                label: "פגישה בקליניקה",
-                active: appliedContract.serviceTypes.includes("clinic"),
-              },
-              {
-                key: "online",
-                label: "אונליין",
-                active: appliedContract.serviceTypes.includes("online"),
-              },
-              {
-                key: "home_visit",
-                label: "ביקורי בית",
-                active: appliedContract.serviceTypes.includes("home_visit"),
-              },
-              { key: "female", label: "אישה", active: appliedContract.gender === "female" },
-              { key: "male", label: "גבר", active: appliedContract.gender === "male" },
-              { key: "accessible", label: "קליניקה נגישה", active: appliedContract.accessible },
-              { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
-              {
-                key: "lgbtqAffirming",
-                label: "מותאם לקהילה הגאה",
-                active: appliedContract.lgbtqAffirming,
-              },
-              { key: "freeIntro", label: "היכרות ללא תשלום", active: appliedContract.freeIntro },
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                aria-pressed={item.active}
-                onClick={() => toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])}
-                className={`shrink-0 rounded-full border px-3 py-2 text-xs font-medium transition-colors ${item.active ? "border-brand bg-brand text-brand-foreground" : "border-border bg-background text-foreground hover:border-brand/50"}`}
-              >
-                {item.active && <span aria-hidden="true">✓ </span>}
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="lg:hidden">
             <button
               type="button"
               aria-expanded={mobileFiltersOpen}
@@ -662,35 +644,8 @@ export function SearchForm({
             </button>
           </div>
 
-          {appliedChips.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-0 sm:mb-3">
-              <span className="text-xs font-medium text-muted-foreground">סינון פעיל:</span>
-              {appliedChips.map((chip) => (
-                <button
-                  key={`${chip.key}-${chip.value}`}
-                  type="button"
-                  onClick={() => removeAppliedChip(chip)}
-                  aria-label={`הסרת הסינון ${chip.label}`}
-                  className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-brand/25 bg-brand-soft px-3 py-1 text-xs font-medium text-primary transition-colors hover:border-brand/50 hover:bg-brand-soft/80"
-                >
-                  <span>{chip.label}</span>
-                  <span aria-hidden="true" className="text-base leading-none">
-                    ×
-                  </span>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={clearAppliedFilters}
-                className="min-h-8 px-1 text-xs font-medium text-primary hover:underline"
-              >
-                ניקוי כל המסננים
-              </button>
-            </div>
-          )}
-
-          <div id="search-filter-controls" className={mobileFiltersOpen ? "block" : "hidden"}>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div id="search-filter-controls" className={`${mobileFiltersOpen ? "block" : "hidden"} lg:block`}>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-9">
               {visibleFilters.map((filter) => {
                 const values = selectedValues(filter.key);
                 const isOpen = openFilter === filter.key;
@@ -717,6 +672,50 @@ export function SearchForm({
               />
             )}
           </div>
+
+          {quickFilters.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="מסננים זמינים בתוצאות הנוכחיות">
+              {quickFilters.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  aria-pressed={item.active}
+                  onClick={() => toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])}
+                  className={`rounded-full border px-3 py-2 text-xs font-medium transition-colors ${item.active ? "border-brand bg-brand text-brand-foreground" : "border-border bg-background text-foreground hover:border-brand/50"}`}
+                >
+                  {item.active && <span aria-hidden="true">✓ </span>}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {appliedChips.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">סינון פעיל:</span>
+              {appliedChips.map((chip) => (
+                <button
+                  key={`${chip.key}-${chip.value}`}
+                  type="button"
+                  onClick={() => removeAppliedChip(chip)}
+                  aria-label={`הסרת הסינון ${chip.label}`}
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-brand/25 bg-brand-soft px-3 py-1 text-xs font-medium text-primary transition-colors hover:border-brand/50 hover:bg-brand-soft/80"
+                >
+                  <span>{chip.label}</span>
+                  <span aria-hidden="true" className="text-base leading-none">
+                    ×
+                  </span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearAppliedFilters}
+                className="min-h-8 px-1 text-xs font-medium text-primary hover:underline"
+              >
+                ניקוי כל המסננים
+              </button>
+            </div>
+          )}
         </div>
       )}
 
