@@ -39,16 +39,14 @@ const DEDUPE_WINDOWS_MS: Partial<Record<AnalyticsEventName, number>> = {
 };
 
 function isDebug(): boolean {
-  try {
-    if (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_ANALYTICS_DEBUG === "true") {
-      return true;
-    }
-  } catch {}
+  if (import.meta.env.VITE_ANALYTICS_DEBUG === "true") return true;
   try {
     if (typeof window !== "undefined" && window.localStorage.getItem("analytics_debug") === "1") {
       return true;
     }
-  } catch {}
+  } catch {
+    // localStorage may be unavailable in restricted browser environments.
+  }
   return false;
 }
 
