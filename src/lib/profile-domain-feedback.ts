@@ -13,13 +13,7 @@
  * distance, no token-set overlap, no single generic token.
  */
 
-import {
-  collapseRepeatedChars,
-  foldSofit,
-  isLatinToken,
-  stripHebrewPrefix,
-  stripNikud,
-} from "./hebrew-normalizer";
+import { collapseRepeatedChars, foldSofit, isLatinToken, stripHebrewPrefix, stripNikud } from "./semantic-engine";
 
 /* ------------------------------------------------------------------ */
 /* Normalization (editor-local)                                       */
@@ -103,10 +97,40 @@ export function latinSkeleton(input: string): string {
  */
 const UNSAFE_SINGLE_TOKENS = new Set(
   [
-    "אבל", "אובדן", "שכול", "עצמי", "עצמית", "משבר", "משברים", "שינוי", "שינויים",
-    "הורים", "הורות", "כפייתיות", "כפייתי", "לחץ", "סטרס", "פחד", "פחדים", "דאגנות",
-    "סמים", "טיפול", "טיפולי", "יחסים", "קשר", "רגשי", "רגשית", "סיוטים", "פלאשבקים",
-    "משפחה", "זהות", "דימוי", "התמודדות", "אדם", "נפש", "נפשית",
+    "אבל",
+    "אובדן",
+    "שכול",
+    "עצמי",
+    "עצמית",
+    "משבר",
+    "משברים",
+    "שינוי",
+    "שינויים",
+    "הורים",
+    "הורות",
+    "כפייתיות",
+    "כפייתי",
+    "לחץ",
+    "סטרס",
+    "פחד",
+    "פחדים",
+    "דאגנות",
+    "סמים",
+    "טיפול",
+    "טיפולי",
+    "יחסים",
+    "קשר",
+    "רגשי",
+    "רגשית",
+    "סיוטים",
+    "פלאשבקים",
+    "משפחה",
+    "זהות",
+    "דימוי",
+    "התמודדות",
+    "אדם",
+    "נפש",
+    "נפשית",
   ].map((w) => normalizeFeedbackText(w)),
 );
 
@@ -132,10 +156,7 @@ export function preparePhrase(phrase: string): PreparedPhrase | null {
     const min = isLatinToken(t) ? MIN_LATIN_SINGLE_TOKEN : MIN_HEBREW_SINGLE_TOKEN;
     if (t.length < min) return null;
   }
-  const joined =
-    tokens.length > 1 && tokens.every((t) => t.length >= MIN_JOINED_PART)
-      ? tokens.join("")
-      : null;
+  const joined = tokens.length > 1 && tokens.every((t) => t.length >= MIN_JOINED_PART) ? tokens.join("") : null;
   return { original: phrase, tokens, joined };
 }
 
@@ -227,7 +248,10 @@ export async function loadFeedbackCatalog(db: FeedbackDb): Promise<FeedbackCatal
   const aliasRes = await db
     .from("problem_aliases")
     .select("problem_id, alias")
-    .in("problem_id", problems.map((p) => Number(p.id)));
+    .in(
+      "problem_id",
+      problems.map((p) => Number(p.id)),
+    );
   if (aliasRes.error) throw new Error(`problem_aliases: ${aliasRes.error.message}`);
   const aliases: CatalogAlias[] = (aliasRes.data ?? []).map((a) => ({
     problem_id: String(a["problem_id"]),
@@ -253,10 +277,7 @@ function phrasesBySlug(catalog: FeedbackCatalog): Map<string, string[]> {
   return map;
 }
 
-export function findDirectEvidence(
-  description: string,
-  catalog: FeedbackCatalog,
-): DirectEvidence[] {
+export function findDirectEvidence(description: string, catalog: FeedbackCatalog): DirectEvidence[] {
   const descTokens = tokenizeFeedback(description);
   if (descTokens.length === 0) return [];
   const byPhrase = phrasesBySlug(catalog);
@@ -274,18 +295,14 @@ export function findDirectEvidence(
     }
     if (best) out.push(best);
   }
-  return out.sort(
-    (a, b) => a.firstMatchIndex - b.firstMatchIndex || a.slug.localeCompare(b.slug),
-  );
+  return out.sort((a, b) => a.firstMatchIndex - b.firstMatchIndex || a.slug.localeCompare(b.slug));
 }
 
 export type FeedbackDomain = { slug: string; name: string };
 
 /** Deterministic order for semantic-only results: weight desc, then slug. */
 export function orderSemanticOnly(entries: SemanticEntry[]): SemanticEntry[] {
-  return [...entries].sort(
-    (a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.slug.localeCompare(b.slug),
-  );
+  return [...entries].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.slug.localeCompare(b.slug));
 }
 
 /**
@@ -310,9 +327,7 @@ export function combineFeedbackDomains(
   const semanticOnly = orderSemanticOnly(
     semantic
       .filter((e) => nameBySlug.has(e.slug) && !directSlugs.has(e.slug))
-      .filter((e) =>
-        (phrases.get(e.slug) ?? []).some((p) => phraseHasDirectEvidence(p, description)),
-      ),
+      .filter((e) => (phrases.get(e.slug) ?? []).some((p) => phraseHasDirectEvidence(p, description))),
   );
 
   const seen = new Set<string>();
