@@ -2,15 +2,13 @@
 // Uses the live publishable Data API to fetch vocab, then executes
 // SemanticEngine.classify against CLASSIFICATION_CASES.
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../src/integrations/supabase/types";
 import { SemanticEngine } from "../src/lib/semantic-engine";
-import {
-  CLASSIFICATION_CASES,
-  PROFILE_EXTRACTION_CASES,
-} from "../src/lib/semantic-evaluation-corpus";
+import { CLASSIFICATION_CASES, PROFILE_EXTRACTION_CASES } from "../src/lib/semantic-evaluation-corpus";
 
 const url = process.env.SUPABASE_URL!;
 const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-const sb = createClient(url, key);
+const sb = createClient<Database>(url, key);
 
 type Row = {
   input: string;
@@ -30,7 +28,7 @@ async function run() {
     // Bypass MAX=3 cap by calling twice? No — engine returns top 3. We
     // approximate top-5 by re-scoring; simpler: since engine caps at 3, we
     // report top-1/top-3 fairly; top-5 falls back to top-3.
-    const res = await SemanticEngine.classify(c.input, sb as any);
+    const res = await SemanticEngine.classify(c.input, sb);
     const slugs = res.map((r) => r.slug);
     const setA = new Set(slugs);
     const subsetOk = c.expected.every((s) => setA.has(s));
@@ -42,7 +40,7 @@ async function run() {
       top1: c.expected.length > 0 && slugs[0] === c.expected[0],
       top3: c.expected.length > 0 && slugs.slice(0, 3).includes(c.expected[0]),
       top5: c.expected.length > 0 && slugs.slice(0, 5).includes(c.expected[0]),
-      pass: c.expected.length === 0 ? slugs.length === 0 || (c as any).allowLowConfidence : subsetOk,
+      pass: c.expected.length === 0 ? slugs.length === 0 || !!c.allowLowConfidence : subsetOk,
       confTop: res[0]?.confidence ?? 0,
     });
   }
@@ -50,7 +48,7 @@ async function run() {
   // ---------- profile ----------
   const profRows: { pass: boolean; extra: number; expected: string[]; actual: string[] }[] = [];
   for (const p of PROFILE_EXTRACTION_CASES) {
-    const prof = await SemanticEngine.extractProfile(p.input, sb as any);
+    const prof = await SemanticEngine.extractProfile(p.input, sb);
     const slugs = prof.map((e) => e.slug);
     const setA = new Set(slugs);
     profRows.push({
@@ -70,10 +68,11 @@ async function run() {
 
   // Mean Reciprocal Rank of the first expected slug in `actual`.
   const mrrEligible = rows.filter((r) => r.expected.length > 0);
-  const mrr = mrrEligible.reduce((sum, r) => {
-    const idx = r.actual.indexOf(r.expected[0]);
-    return sum + (idx >= 0 ? 1 / (idx + 1) : 0);
-  }, 0) / Math.max(1, mrrEligible.length);
+  const mrr =
+    mrrEligible.reduce((sum, r) => {
+      const idx = r.actual.indexOf(r.expected[0]);
+      return sum + (idx >= 0 ? 1 / (idx + 1) : 0);
+    }, 0) / Math.max(1, mrrEligible.length);
 
   // Candidate count distribution.
   const candCounts = rows.map((r) => r.actual.length);
@@ -82,13 +81,19 @@ async function run() {
   for (const c of candCounts) dist[Math.min(3, c)]++;
 
   // Confidence distribution buckets.
-  const confBuckets: Record<string, number> = { "0.00-0.40": 0, "0.40-0.55": 0, "0.55-0.70": 0, "0.70-0.85": 0, "0.85-1.00": 0 };
+  const confBuckets: Record<string, number> = {
+    "0.00-0.40": 0,
+    "0.40-0.55": 0,
+    "0.55-0.70": 0,
+    "0.70-0.85": 0,
+    "0.85-1.00": 0,
+  };
   for (const r of rows) {
     const c = r.confTop;
     if (c === 0) confBuckets["0.00-0.40"]++;
     else if (c < 0.4) confBuckets["0.00-0.40"]++;
     else if (c < 0.55) confBuckets["0.40-0.55"]++;
-    else if (c < 0.70) confBuckets["0.55-0.70"]++;
+    else if (c < 0.7) confBuckets["0.55-0.70"]++;
     else if (c < 0.85) confBuckets["0.70-0.85"]++;
     else confBuckets["0.85-1.00"]++;
   }
@@ -103,7 +108,7 @@ async function run() {
     byCat.set(r.category, b);
   }
 
-  const pct = (n: number, d: number) => d ? ((n / d) * 100).toFixed(1) + "%" : "n/a";
+  const pct = (n: number, d: number) => (d ? ((n / d) * 100).toFixed(1) + "%" : "n/a");
 
   console.log("=== CLASSIFICATION ===");
   console.log(`Total: ${passed}/${total} pass (${pct(passed, total)})`);
@@ -117,7 +122,9 @@ async function run() {
   for (const [k, v] of Object.entries(confBuckets)) console.log(`  ${k}: ${v}`);
   console.log("\nBy category (pass | top1 | top3):");
   for (const [cat, b] of Array.from(byCat.entries()).sort()) {
-    console.log(`  ${cat.padEnd(20)} ${b.pass}/${b.total} ${pct(b.pass, b.total).padStart(6)} | top1 ${pct(b.top1, b.total).padStart(6)} | top3 ${pct(b.top3, b.total).padStart(6)}`);
+    console.log(
+      `  ${cat.padEnd(20)} ${b.pass}/${b.total} ${pct(b.pass, b.total).padStart(6)} | top1 ${pct(b.top1, b.total).padStart(6)} | top3 ${pct(b.top3, b.total).padStart(6)}`,
+    );
   }
 
   // Per-slug recall (expected slug appears in top-3)
@@ -139,7 +146,9 @@ async function run() {
   // Failures
   console.log("\n--- FAILURES ---");
   for (const r of rows.filter((x) => !x.pass)) {
-    console.log(`[${r.category}] "${r.input}" exp=${JSON.stringify(r.expected)} got=${JSON.stringify(r.actual)} conf=${r.confTop}`);
+    console.log(
+      `[${r.category}] "${r.input}" exp=${JSON.stringify(r.expected)} got=${JSON.stringify(r.actual)} conf=${r.confTop}`,
+    );
   }
 
   console.log("\n=== PROFILE EXTRACTION ===");
@@ -150,10 +159,26 @@ async function run() {
 
   // JSON summary for later comparison
   const summary = {
-    classification: { total, passed, top1, top3, top5, mrr, avgCand, candDistribution: dist, confDistribution: confBuckets, byCategory: Object.fromEntries(byCat) },
+    classification: {
+      total,
+      passed,
+      top1,
+      top3,
+      top5,
+      mrr,
+      avgCand,
+      candDistribution: dist,
+      confDistribution: confBuckets,
+      byCategory: Object.fromEntries(byCat),
+    },
     profile: { total: profRows.length, passed: pPass, avgExtracted: avgExtra },
   };
-  await import("fs/promises").then((fs) => fs.writeFile(process.argv[2] ?? "/tmp/eval.json", JSON.stringify(summary, null, 2)));
+  await import("fs/promises").then((fs) =>
+    fs.writeFile(process.argv[2] ?? "/tmp/eval.json", JSON.stringify(summary, null, 2)),
+  );
 }
 
-run().catch((e) => { console.error(e); process.exit(1); });
+run().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
