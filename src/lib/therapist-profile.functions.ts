@@ -411,7 +411,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       free_intro_duration_minutes: t.free_intro_duration_minutes,
       professional_memberships: memberships.data ?? [],
       service_arrangements: arrangements.data ?? [],
-      credential: (credentials.data?.[0] as ProfileEditorData["credential"] | undefined) ?? null,
+      credentials: (credentials.data ?? []) as CredentialEditorData[],
     };
   });
 
