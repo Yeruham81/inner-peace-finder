@@ -22,20 +22,6 @@ import {
 export type ProfileStatus = "draft" | "completed" | "published";
 export type Gender = "male" | "female" | "unspecified";
 
-export type CredentialEditorData = {
-  id: string;
-  profession_id: string | null;
-  credential_type: string;
-  institution: string | null;
-  license_number: string | null;
-  document_url: string | null;
-  issuing_authority: string | null;
-  issue_date: string | null;
-  expires_at: string | null;
-  verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
-  rejection_reason: string | null;
-};
-
 export type ProfileEditorData = {
   id: string | null;
   full_name: string;
@@ -81,7 +67,19 @@ export type ProfileEditorData = {
     membership_start_date: string | null;
   }[];
   service_arrangements: { organization_name: string; note: string | null }[];
-  credentials: CredentialEditorData[];
+  credential: {
+    id: string;
+    profession_id: string | null;
+    credential_type: string;
+    institution: string | null;
+    license_number: string | null;
+    document_url: string | null;
+    issuing_authority: string | null;
+    issue_date: string | null;
+    expires_at: string | null;
+    verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
+    rejection_reason: string | null;
+  } | null;
 };
 
 export type EditorOptions = {
@@ -347,7 +345,8 @@ export const getMyProfile = createServerFn({ method: "GET" })
           "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason",
         )
         .eq("therapist_id", t.id)
-        .order("created_at", { ascending: true }),
+        .order("updated_at", { ascending: false })
+        .limit(1),
     ]);
 
     const physicalLocations = (locs.data ?? [])
@@ -404,7 +403,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       free_intro_duration_minutes: t.free_intro_duration_minutes,
       professional_memberships: memberships.data ?? [],
       service_arrangements: arrangements.data ?? [],
-      credentials: (credentials.data ?? []) as ProfileEditorData["credentials"],
+      credential: (credentials.data?.[0] as ProfileEditorData["credential"] | undefined) ?? null,
     };
   });
 
@@ -701,7 +700,7 @@ export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
     const { permanentlyDeleteOwnedProfile } = await import("./profile-management.server");
-    return permanentlyDeleteOwnedProfile(accountId, context.userId);
+    return permanentlyDeleteOwnedProfile(accountId);
   });
 
 const CredentialSubmissionSchema = z.object({
@@ -726,7 +725,6 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       .eq("owner_account_id", accountId)
       .maybeSingle();
     if (!profile) throw new Error("יש לבצע שמירת פרופיל לפני הגשת מסמך הסמכה.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload = {
       therapist_id: profile.id,
       profession_id: data.profession_id,
@@ -738,33 +736,21 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       issue_date: data.issue_date ?? null,
       submitted_at: new Date().toISOString(),
       verification_status: "pending_review" as const,
-      rejection_reason: null,
-      verified_at: null,
-      verified_by: null,
     };
     if (data.credential_id) {
-      const { data: owned } = await supabaseAdmin
+      const { data: owned } = await context.supabase
         .from("therapist_credentials")
-        .select("id, document_url, verification_status")
+        .select("id, verification_status")
         .eq("id", data.credential_id)
         .eq("therapist_id", profile.id)
         .maybeSingle();
       if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
-      if (data.document_url !== owned.document_url && !data.document_url.startsWith(`${context.userId}/`))
-        throw new Error("נתיב מסמך ההסמכה אינו שייך למשתמש המחובר.");
-      if (owned.verification_status === "verified" || owned.verification_status === "expired")
-        throw new Error("לא ניתן לשנות הסמכה מאומתת או הסמכה שפג תוקפה.");
-      const { error } = await supabaseAdmin
-        .from("therapist_credentials")
-        .update(payload)
-        .eq("id", owned.id)
-        .eq("therapist_id", profile.id);
+      if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
+      const { error } = await context.supabase.from("therapist_credentials").update(payload).eq("id", owned.id);
       if (error) throw new Error(error.message);
       return { id: owned.id, verification_status: "pending_review" as const };
     }
-    if (!data.document_url.startsWith(`${context.userId}/`))
-      throw new Error("נתיב מסמך ההסמכה אינו שייך למשתמש המחובר.");
-    const { data: created, error } = await supabaseAdmin
+    const { data: created, error } = await context.supabase
       .from("therapist_credentials")
       .insert(payload)
       .select("id")
