@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { listFilterOptions } from "@/lib/therapists.functions";
 import { SearchForm } from "@/components/search-form";
 
@@ -282,18 +282,14 @@ const populationGroups: ExplorerItem[] = [
 ];
 
 const popularSearches = [
-  "טיפול לחרדה חברתית בגיל ההתבגרות",
-  "מטפלת זוגית מנוסה באזור השרון",
-  "קלינאית תקשורת מומחית להפרעות דיבור בפעוטות בפתח תקווה",
-  "פסיכולוג ילדים לקשיי קשב וריכוז בתל אביב",
-  "טיפול אונליין בעברית להתמודדות עם דיכאון",
-  "מטפל בטראומה ופוסט־טראומה באזור ירושלים",
-  "פסיכולוגית דוברת רוסית לנשים אחרי לידה באזור חיפה",
-  "הדרכת הורים לילדים עם התפרצויות זעם באזור המרכז",
-  "עובד סוציאלי לטיפול באבל ובאובדן לגיל השלישי בבאר שבע",
-  "טיפול משפחתי בבית למשפחה במשבר באזור הצפון",
-  "מטפלת בהפרעות אכילה לצעירות באזור תל אביב",
-  "טיפול זוגי אונליין באנגלית",
+  "טיפול בחרדה חברתית לבני נוער",
+  "טיפול זוגי באזור השרון",
+  "קלינאית תקשורת לפעוטות בפתח תקווה",
+  "פסיכולוג ילדים לקשב וריכוז בתל אביב",
+  "טיפול אונליין בדיכאון בעברית",
+  "טיפול בטראומה באזור ירושלים",
+  "פסיכולוגית דוברת רוסית באזור חיפה",
+  "הדרכת הורים להתפרצויות זעם",
 ];
 
 export const Route = createFileRoute("/")({
@@ -356,6 +352,10 @@ function Index() {
             <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
               תארו במילים שלכם מה מטריד אתכם, איזה טיפול אתם מחפשים או עם איזה איש מקצוע תרצו ליצור קשר
             </p>
+
+            <p className="mx-auto mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">
+              אין צורך להזין שם, פרטי קשר או מידע מזהה. מומלץ לתאר בקצרה רק את סוג העזרה שמחפשים
+            </p>
           </div>
 
           <div className="mx-auto mt-8 max-w-4xl">
@@ -364,31 +364,16 @@ function Index() {
           </div>
 
           <p className="mt-4 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
-            אפשר להתחיל רק מתיאור חופשי. הסינונים הנוספים הם אופציונליים וניתנים לשינוי&nbsp;בעמוד התוצאות
-          </p>
-
-          <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">
-            אין צורך להזין שם, פרטי קשר או מידע מזהה. מומלץ לתאר בקצרה רק את סוג העזרה שמחפשים
+            אפשר להתחיל מתיאור חופשי בלבד. מסננים נוספים זמינים בעמוד התוצאות
           </p>
 
           <PopularSearches />
         </div>
       </section>
 
-      <ExplorerSection
-        eyebrow="חיפוש לפי נושא"
-        title="באיזה תחום אתם מחפשים טיפול?"
-        description=""
-        items={problemDomains}
-      />
+      <ExplorerSection eyebrow="" title="חיפוש לפי נושא" description="" items={problemDomains} />
 
-      <ExplorerSection
-        eyebrow="חיפוש לפי אוכלוסייה"
-        title="למי מיועד הטיפול?"
-        description=""
-        items={populationGroups}
-        alternate
-      />
+      <ExplorerSection eyebrow="" title="חיפוש לפי אוכלוסייה" description="" items={populationGroups} alternate />
 
       <HowItWorks />
 
@@ -420,18 +405,18 @@ function Index() {
 const howItWorksSteps = [
   {
     number: "1",
-    title: "מתארים מה מחפשים",
+    title: "מתארים את הטיפול שמחפשים",
     description: "כותבים במילים שלכם מה מטריד אתכם, או מתחילים מבחירת נושא או אוכלוסייה.",
   },
   {
     number: "2",
-    title: "מקבלים תוצאות רלוונטיות",
-    description: "החיפוש משקלל את התיאור ואת הסינונים שבחרתם ומציג פרופילים רלוונטיים.",
+    title: "בוחרים מתוך מאגר המטפלים",
+    description: "משווים בין פרופילים רלוונטיים לפי התיאור והסינונים שבחרתם.",
   },
   {
     number: "3",
-    title: "משווים ובוחרים למי לפנות",
-    description: "עוברים על המידע בפרופילים ופונים ישירות לאנשי המקצוע שנראים לכם מתאימים.",
+    title: "יוצרים קשר ומתאמים טיפול",
+    description: "פונים ישירות לאיש או לאשת המקצוע שבחרתם ומבררים את המשך התהליך.",
   },
 ];
 
@@ -489,13 +474,16 @@ function TrustSection() {
           </h2>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {trustItems.map((item) => (
-            <article key={item.title} className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-card">
-              <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
-            </article>
-          ))}
+        <div className="mx-auto mt-8 max-w-4xl rounded-3xl border border-border bg-surface-elevated p-6 shadow-card sm:p-8">
+          <ul className="grid gap-6 text-right md:grid-cols-3">
+            {trustItems.map((item) => (
+              <li key={item.title} className="relative pr-7">
+                <span aria-hidden="true" className="absolute right-0 top-2 h-3 w-3 rounded-full bg-brand" />
+                <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
@@ -564,17 +552,154 @@ function FrequentlyAskedQuestions() {
 }
 
 function CrisisNotice() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen]);
+
   return (
-    <aside className="border-t border-border/60 bg-background" aria-labelledby="crisis-notice-title">
-      <div className="mx-auto max-w-5xl px-4 py-8 text-center sm:px-6">
-        <h2 id="crisis-notice-title" className="text-sm font-bold text-foreground">
-          זקוקים לעזרה מיידית?
-        </h2>
-        <p className="mx-auto mt-2 max-w-3xl text-xs leading-5 text-muted-foreground sm:text-sm">
-          טיפולינקס אינו שירות חירום. במקרה של סכנה מיידית או מצוקה חריפה יש לפנות לשירותי החירום או לקו סיוע מתאים.
-        </p>
+    <>
+      <aside className="border-t border-border/60 bg-background" aria-labelledby="crisis-notice-title">
+        <div className="mx-auto max-w-5xl px-4 py-8 text-center sm:px-6">
+          <h2 id="crisis-notice-title" className="text-sm font-bold text-foreground">
+            זקוקים לעזרה מיידית?
+          </h2>
+          <p className="mx-auto mt-2 max-w-3xl text-xs leading-5 text-muted-foreground sm:text-sm">
+            טיפולינקס אינו שירות חירום. במקרה של סכנה מיידית או מצוקה חריפה יש לפנות לשירותי החירום או ל
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="font-semibold text-primary underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+            >
+              מוקד סיוע מתאים
+            </button>
+            .
+          </p>
+        </div>
+      </aside>
+
+      {isOpen ? <SupportHotlinesModal onClose={() => setIsOpen(false)} /> : null}
+    </>
+  );
+}
+
+type SupportHotline = {
+  name: string;
+  phone: string;
+  description: string;
+  href?: string;
+  phoneLinks?: Array<{ label: string; href: string }>;
+};
+
+const supportHotlines: SupportHotline[] = [
+  {
+    name: "ער״ן — עזרה ראשונה נפשית",
+    phone: "1201",
+    href: "tel:1201",
+    description: "סיוע נפשי ותמיכה רגשית אנונימית לכל אדם, בכל גיל ובכל סוג של מצוקה.",
+  },
+  {
+    name: "נט״ל",
+    phone: "1-800-363-363",
+    href: "tel:1800363363",
+    description: "סיוע לנפגעות ולנפגעי טראומה על רקע מלחמה וטרור ולבני משפחותיהם.",
+  },
+  {
+    name: "מוקד משרד הרווחה",
+    phone: "118",
+    href: "tel:118",
+    description: "מידע וסיוע במצבי אלימות במשפחה, פגיעה, הזנחה ומצבי חירום חברתיים.",
+  },
+  {
+    name: "מרכזי הסיוע לנפגעות ולנפגעי תקיפה מינית",
+    phone: "1202 / 1203",
+    phoneLinks: [
+      { label: "1202 — מענה על ידי נשים", href: "tel:1202" },
+      { label: "1203 — מענה על ידי גברים", href: "tel:1203" },
+    ],
+    description: "סיוע אנונימי לנפגעות ולנפגעי פגיעה מינית, לפי העדפת מגדר המסייעת או המסייע.",
+  },
+  {
+    name: "שירותי החירום",
+    phone: "100 / 101",
+    phoneLinks: [
+      { label: "100 — משטרת ישראל", href: "tel:100" },
+      { label: "101 — מגן דוד אדום", href: "tel:101" },
+    ],
+    description: "במקרה של סכנה מיידית, איום על החיים או צורך רפואי דחוף.",
+  },
+];
+
+function SupportHotlinesModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="support-hotlines-title"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border bg-background p-5 text-right shadow-2xl sm:p-7"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="support-hotlines-title" className="text-xl font-bold text-foreground sm:text-2xl">
+              מוקדי סיוע וחירום
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">בחרו במוקד המתאים למצב ולחצו על המספר לחיוג.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="סגירת חלון מוקדי הסיוע"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-xl text-foreground hover:bg-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+          >
+            ×
+          </button>
+        </div>
+
+        <ul className="mt-6 space-y-3">
+          {supportHotlines.map((hotline) => (
+            <li key={hotline.name} className="rounded-2xl border border-border bg-surface-elevated p-4 sm:p-5">
+              <h3 className="font-bold text-foreground">{hotline.name}</h3>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{hotline.description}</p>
+              {hotline.phoneLinks ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {hotline.phoneLinks.map((phoneLink) => (
+                    <a
+                      key={phoneLink.href}
+                      href={phoneLink.href}
+                      className="inline-flex min-h-11 items-center rounded-xl border border-brand/25 bg-brand-soft px-4 py-2 text-sm font-bold text-primary hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                    >
+                      {phoneLink.label}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <a
+                  href={hotline.href}
+                  className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-brand/25 bg-brand-soft px-4 py-2 text-base font-bold text-primary hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                >
+                  {hotline.phone}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -592,16 +717,30 @@ function PopularSearches() {
     <div className="mx-auto mt-8 max-w-5xl border-t border-border/60 pt-7 text-center">
       <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים לדוגמה</h2>
 
-      <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-2.5 lg:hidden">
+        {popularSearches.slice(0, 6).map((query) => (
+          <button
+            key={query}
+            type="button"
+            aria-label={`חיפוש ישיר: ${query}`}
+            onClick={() => startSearch(query)}
+            className="flex min-h-[4.75rem] w-full cursor-pointer items-center justify-center rounded-2xl border border-brand/20 bg-surface-elevated px-3 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+          >
+            <span className="line-clamp-3">{query}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-5 hidden grid-cols-4 gap-3 lg:grid">
         {popularSearches.map((query) => (
           <button
             key={query}
             type="button"
             aria-label={`חיפוש ישיר: ${query}`}
             onClick={() => startSearch(query)}
-            className="flex min-h-14 w-full cursor-pointer items-center justify-center rounded-full border border-brand/20 bg-surface-elevated px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+            className="flex min-h-[4.5rem] w-full cursor-pointer items-center justify-center rounded-2xl border border-brand/20 bg-surface-elevated px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
           >
-            {query}
+            <span className="line-clamp-2">{query}</span>
           </button>
         ))}
       </div>
@@ -624,8 +763,10 @@ function ExplorerSection({ eyebrow, title, description, items, alternate = false
     <section className={alternate ? "border-y border-border/60 bg-surface-elevated/35" : "bg-transparent"}>
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">{eyebrow}</p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{title}</h2>
+          {eyebrow ? <p className="text-sm font-semibold text-primary">{eyebrow}</p> : null}
+          <h2 className={`${eyebrow ? "mt-2" : ""} text-2xl font-bold tracking-tight text-foreground sm:text-3xl`}>
+            {title}
+          </h2>
           {description ? (
             <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
           ) : null}
