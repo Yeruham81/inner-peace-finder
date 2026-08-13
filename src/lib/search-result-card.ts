@@ -16,6 +16,19 @@ export type CardClinicLocation = {
   region_label: string | null;
 };
 
+export type TreatmentDomainTag = {
+  slug: string;
+  name: string;
+  weight: number;
+  matched: boolean;
+};
+
+export type PopulationTag = {
+  slug: string;
+  name: string;
+  matched: boolean;
+};
+
 export type SearchResultCard = {
   id: string;
   slug: string;
@@ -38,7 +51,9 @@ export type SearchResultCard = {
   home_visit_regions: string[];
   language_names: string[];
   population_names: string[];
+  population_tags: PopulationTag[];
   modality_names: string[];
+  treatment_domains: TreatmentDomainTag[];
   lgbtq_affirming: boolean;
   offers_free_intro: boolean;
   /** Internal ranking scores already required by the executor. */
@@ -176,7 +191,9 @@ export function legacyRowToCard(row: {
     home_visit_regions: [],
     language_names: row.language_names ?? [],
     population_names: row.population_names ?? [],
+    population_tags: [],
     modality_names: [],
+    treatment_domains: [],
     lgbtq_affirming: false,
     offers_free_intro: false,
     scores: { semantic: row.score ?? 0, preference: 0, quality: 0 },
