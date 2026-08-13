@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { CANONICAL_LANGUAGES } from "@/lib/language-options";
 import { REGION_DEFINITIONS, REGION_SLUGS } from "@/lib/locality-options";
 import { resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
@@ -65,6 +65,7 @@ const serviceTypeOptions: FilterOption[] = [
 type SearchFormProps = {
   initialQuery?: string;
   cities?: string[];
+  cityRegions?: Record<string, string[]>;
   populations?: { slug: string; name: string }[];
   languages?: { code: string; name: string }[];
   professions?: { slug: string; name: string }[];
@@ -106,6 +107,7 @@ function multiValue(
 export function SearchForm({
   initialQuery = "",
   cities = [],
+  cityRegions = {},
   populations = [],
   languages = [],
   professions = [],
@@ -195,9 +197,21 @@ export function SearchForm({
   ]);
 
   const cityOptions = useMemo<FilterOption[]>(() => {
-    const unique = new Set(cities.map((value) => value.trim()).filter(Boolean));
+    const visibleCities =
+      selectedRegions.length === 0
+        ? cities
+        : cities.filter((cityName) =>
+            (cityRegions[cityName] ?? []).some((regionSlug) => selectedRegions.includes(regionSlug)),
+          );
+    const unique = new Set(visibleCities.map((value) => value.trim()).filter(Boolean));
     return [...unique].sort((a, b) => a.localeCompare(b, "he")).map((value) => ({ value, label: value }));
-  }, [cities]);
+  }, [cities, cityRegions, selectedRegions]);
+
+  useEffect(() => {
+    if (city && selectedRegions.length > 0 && !cityOptions.some((option) => option.value === city)) {
+      setCity("");
+    }
+  }, [city, cityOptions, selectedRegions.length]);
 
   const languageOptions = useMemo<FilterOption[]>(
     () =>
@@ -650,27 +664,33 @@ export function SearchForm({
                 const values = selectedValues(filter.key);
                 const isOpen = openFilter === filter.key;
                 return (
-                  <FilterButton
-                    key={filter.key}
-                    filter={filter}
-                    summary={filterSummary(filter)}
-                    count={filter.multiple ? values.length : 0}
-                    isOpen={isOpen}
-                    onClick={() => setOpenFilter(isOpen ? null : filter.key)}
-                  />
+                  <Fragment key={filter.key}>
+                    <FilterButton
+                      filter={filter}
+                      summary={filterSummary(filter)}
+                      count={filter.multiple ? values.length : 0}
+                      isOpen={isOpen}
+                      onClick={() => setOpenFilter(isOpen ? null : filter.key)}
+                    />
+                    {isOpen && (
+                      <div className="relative col-span-full mt-1 lg:order-2 lg:mt-0">
+                        <span
+                          aria-hidden="true"
+                          className="absolute right-6 top-0 z-10 h-4 w-4 -translate-y-1/2 rotate-45 border-l border-t border-brand/25 bg-brand-soft lg:hidden"
+                        />
+                        <FilterOptions
+                          filter={filter}
+                          selected={values}
+                          onToggle={(value) => toggleOption(filter, value)}
+                          onClear={() => clearDraftFilter(filter.key)}
+                          onClose={() => setOpenFilter(null)}
+                        />
+                      </div>
+                    )}
+                  </Fragment>
                 );
               })}
             </div>
-
-            {activeFilter && (
-              <FilterOptions
-                filter={activeFilter}
-                selected={selectedValues(activeFilter.key)}
-                onToggle={(value) => toggleOption(activeFilter, value)}
-                onClear={() => clearDraftFilter(activeFilter.key)}
-                onClose={() => setOpenFilter(null)}
-              />
-            )}
           </div>
 
           {quickFilters.length > 0 && (
@@ -772,7 +792,7 @@ function FilterButton({
       aria-expanded={isOpen}
       aria-controls="search-filter-options"
       onClick={onClick}
-      className={`min-w-0 rounded-xl border px-3 py-2.5 text-right transition-colors sm:px-4 ${
+      className={`min-w-0 rounded-xl border px-3 py-2.5 text-right transition-colors sm:px-4 lg:order-1 ${
         isOpen
           ? "border-brand bg-brand-soft shadow-sm"
           : count > 0 || summary !== filter.placeholder
