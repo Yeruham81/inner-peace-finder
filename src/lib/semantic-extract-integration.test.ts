@@ -20,8 +20,7 @@ function makeSb(rows: {
     from: (t: string) => ({
       select: () => Promise.resolve({ data: map[t] ?? [] }),
     }),
-    // deno-lint-ignore no-explicit-any
-  } as any;
+  } as unknown as SupabaseClient<Database>;
 }
 
 const vocab = {
