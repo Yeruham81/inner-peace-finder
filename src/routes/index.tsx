@@ -350,11 +350,11 @@ function Index() {
             </h1>
 
             <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-              תארו במילים שלכם מה מטריד אתכם, איזה טיפול אתם מחפשים או עם איזה איש מקצוע תרצו ליצור קשר
+              תארו במילים שלכם מה מטריד אתכם, מהו הטיפול המבוקש או איזה איש מקצוע אתם מחפשים
             </p>
 
             <p className="mx-auto mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">
-              אין צורך להזין שם, פרטי קשר או מידע מזהה. מומלץ לתאר בקצרה רק את סוג העזרה שמחפשים
+              אין צורך להזין שם, פרטי קשר או כל מידע מזהה אחר
             </p>
           </div>
 
