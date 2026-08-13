@@ -416,7 +416,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           sb
             .from("therapists")
             .select(
-              "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience, gender, lgbtq_affirming, offers_free_intro",
+              "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience, gender, lgbtq_affirming, offers_free_intro, semantic_profile",
             ),
         ).in("id", ids),
         sb
@@ -425,7 +425,10 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .eq("is_active", true)
           .in("therapist_id", ids),
         sb.from("therapist_languages").select("therapist_id, languages!inner(name)").in("therapist_id", ids),
-        sb.from("therapist_populations").select("therapist_id, population_groups!inner(name)").in("therapist_id", ids),
+        sb
+          .from("therapist_populations")
+          .select("therapist_id, population_groups!inner(slug, name)")
+          .in("therapist_id", ids),
         sb
           .from("therapist_modalities")
           .select("therapist_id, treatment_modalities!inner(name:name_he, sort_order, is_active)")
@@ -436,6 +439,29 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const err = (r as any).error;
         if (err) throw err;
+      }
+
+      const semanticProfiles = new Map<string, ReturnType<typeof parseStoredProfile>>();
+      const semanticSlugs = new Set<string>();
+      for (const row of (tRes.data ?? []) as Array<{ id: string; semantic_profile: unknown }>) {
+        const profile = parseStoredProfile(row.semantic_profile).sort(
+          (a, b) => b.weight - a.weight || a.slug.localeCompare(b.slug),
+        );
+        semanticProfiles.set(row.id, profile);
+        for (const entry of profile) semanticSlugs.add(entry.slug);
+      }
+      const problemNames = new Map<string, string>();
+      if (semanticSlugs.size > 0) {
+        const problemRows = unwrap(
+          (await sb
+            .from("problems")
+            .select("slug, name_he")
+            .in("slug", [...semanticSlugs])) as unknown as {
+            data: Array<{ slug: string; name_he: string }> | null;
+            error: unknown;
+          },
+        );
+        for (const problem of problemRows) problemNames.set(problem.slug, problem.name_he);
       }
 
       const locBy = new Map<string, ActiveLocationRow[]>();
@@ -468,14 +494,20 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         langBy.set(r.therapist_id, list);
       }
       const popBy = new Map<string, string[]>();
+      const populationTagsBy = new Map<string, Array<{ slug: string; name: string }>>();
       for (const r of (popRes.data ?? []) as Array<{
         therapist_id: string;
-        population_groups: { name: string } | null;
+        population_groups: { slug: string; name: string } | null;
       }>) {
         if (!r.population_groups?.name) continue;
         const list = popBy.get(r.therapist_id) ?? [];
         if (!list.includes(r.population_groups.name)) list.push(r.population_groups.name);
         popBy.set(r.therapist_id, list);
+        const tags = populationTagsBy.get(r.therapist_id) ?? [];
+        if (!tags.some((tag) => tag.slug === r.population_groups?.slug)) {
+          tags.push({ slug: r.population_groups.slug, name: r.population_groups.name });
+        }
+        populationTagsBy.set(r.therapist_id, tags);
       }
       const modalityBy = new Map<string, Array<{ name: string; sort_order: number }>>();
       for (const r of (modRes.data ?? []) as Array<{
@@ -504,6 +536,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         gender: string | null;
         lgbtq_affirming: boolean | null;
         offers_free_intro: boolean | null;
+        semantic_profile: unknown;
       }>) {
         const loc = buildCardLocationDisplay(locBy.get(r.id) ?? [], resolveStoredRegion);
         map.set(r.id, {
@@ -522,9 +555,15 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           home_visit_regions: loc.home_visit_regions,
           language_names: langBy.get(r.id) ?? [],
           population_names: popBy.get(r.id) ?? [],
+          population_tags: populationTagsBy.get(r.id) ?? [],
           modality_names: (modalityBy.get(r.id) ?? [])
             .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "he"))
             .map((item) => item.name),
+          treatment_domains: (semanticProfiles.get(r.id) ?? []).map((entry) => ({
+            slug: entry.slug,
+            name: problemNames.get(entry.slug) ?? entry.slug,
+            weight: entry.weight,
+          })),
           lgbtq_affirming: !!r.lgbtq_affirming,
           offers_free_intro: !!r.offers_free_intro,
           primary_clinic_fallback_used: loc.primary_clinic_fallback_used,
