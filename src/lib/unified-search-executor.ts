@@ -21,6 +21,7 @@ import {
 import type { SemanticProfileEntry } from "./therapist-semantic-profile";
 import type { TherapistGender, TherapistSearchPlan } from "./query-interpreter.types";
 import type { CardClinicLocation, SearchResultCard } from "./search-result-card";
+import { resolveDeprecatedSlug } from "./semantic-ontology";
 
 export type DeliveryMode = "clinic" | "home_visit" | "online" | "hospital" | "other";
 
@@ -72,7 +73,9 @@ export type DisplayRow = {
   home_visit_regions: string[];
   language_names: string[];
   population_names: string[];
+  population_tags: Array<{ slug: string; name: string }>;
   modality_names: string[];
+  treatment_domains: Array<{ slug: string; name: string; weight: number }>;
   lgbtq_affirming: boolean;
   offers_free_intro: boolean;
   /**
@@ -257,6 +260,8 @@ export async function executeUnifiedSearch(
   }
 
   const display = await repo.fetchDisplay(top.map((r) => r.therapistId));
+  const matchedDomainSlugs = new Set(plan.semanticSignals.map((signal) => resolveDeprecatedSlug(signal.slug)));
+  const matchedPopulationSlugs = new Set(plan.hardFilters.populationSlugs);
 
   // Preserve the executor's ranked order — the DB does not guarantee row
   // order for `IN (...)` queries, so we rebuild the array from the ranked
@@ -286,7 +291,15 @@ export async function executeUnifiedSearch(
       home_visit_regions: d.home_visit_regions,
       language_names: d.language_names,
       population_names: d.population_names,
+      population_tags: d.population_tags.map((population) => ({
+        ...population,
+        matched: matchedPopulationSlugs.has(population.slug),
+      })),
       modality_names: d.modality_names,
+      treatment_domains: d.treatment_domains.map((domain) => ({
+        ...domain,
+        matched: matchedDomainSlugs.has(resolveDeprecatedSlug(domain.slug)),
+      })),
       lgbtq_affirming: d.lgbtq_affirming,
       offers_free_intro: d.offers_free_intro,
       scores: {
