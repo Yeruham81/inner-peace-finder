@@ -1074,9 +1074,6 @@ function EditorPage() {
                 <div className="mt-6 space-y-3">
                   <div>
                     <h4 className="text-base font-semibold text-foreground">דרך התקשרות מועדפת</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      בהמשך ניתן יהיה לבחור כיצד לקבל פניות חדשות. אפשרות זו עדיין אינה פעילה.
-                    </p>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-3">
