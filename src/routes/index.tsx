@@ -364,7 +364,7 @@ function Index() {
           </div>
 
           <p className="mt-4 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
-            אפשר להתחיל מתיאור חופשי בלבד. מסננים נוספים זמינים בעמוד התוצאות
+            אפשר להתחיל מתיאור חופשי. מסננים נוספים בעמוד התוצאות
           </p>
 
           <PopularSearches />
