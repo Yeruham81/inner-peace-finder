@@ -2,12 +2,12 @@ import { getSessionId, getSessionIdSource, track } from "./analytics";
 import { recordCtaClick } from "./therapists.functions";
 
 function isDebug(): boolean {
-  try {
-    if ((import.meta as any)?.env?.VITE_ANALYTICS_DEBUG === "true") return true;
-  } catch {}
+  if (import.meta.env.VITE_ANALYTICS_DEBUG === "true") return true;
   try {
     if (typeof window !== "undefined" && window.localStorage.getItem("analytics_debug") === "1") return true;
-  } catch {}
+  } catch {
+    // localStorage may be unavailable in restricted browser environments.
+  }
   return false;
 }
 
@@ -95,10 +95,7 @@ export async function simulateRapidCTA(
   const report = { billable, total: n, errors };
   console.info("[analytics-validation] simulateRapidCTA", report);
   if (billable !== 1) {
-    console.error(
-      "[analytics-validation] CTA dedupe FAILED — expected exactly 1 billable click, got",
-      billable,
-    );
+    console.error("[analytics-validation] CTA dedupe FAILED — expected exactly 1 billable click, got", billable);
   }
   return report;
 }
