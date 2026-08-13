@@ -324,7 +324,7 @@ function Index() {
 
       <ExplorerSection
         eyebrow="חיפוש לפי נושא"
-        title="באיזה תחום אתם זקוקים לעזרה?"
+        title="באיזה תחום אתם מחפשים טיפול?"
         description=""
         items={problemDomains}
       />
