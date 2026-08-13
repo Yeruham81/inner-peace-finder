@@ -36,13 +36,16 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../../src/integrations/supabase/types.ts";
 import { handleClassifyRequest, type ClassifyDeps } from "../../../src/lib/llm-classify-service.ts";
 import { createOpenAiTransport } from "../../../src/lib/llm-gateway-transport.ts";
 import { envFromRecord, loadProviderConfigFromEnv } from "../../../src/lib/llm-provider-config.ts";
 import { SemanticEngine } from "../../../src/lib/semantic-engine.ts";
 
-// deno-lint-ignore no-explicit-any
-declare const Deno: any;
+declare const Deno: {
+  env: { get(name: string): string | undefined };
+  serve(handler: (req: Request) => Response | Promise<Response>): void;
+};
 
 Deno.serve(async (req: Request): Promise<Response> => {
   const json = (status: number, body: unknown) =>
@@ -70,11 +73,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
      * Callers cannot supply, extend, shrink, rename, or replace the catalog.
      * Catalog read failures propagate as catalog_error.
      */
-    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
-      auth: {
-        persistSession: false,
+    const supabase = createClient<Database>(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          persistSession: false,
+        },
       },
-    });
+    );
 
     deps = {
       config,
