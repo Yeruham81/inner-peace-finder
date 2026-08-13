@@ -727,12 +727,20 @@ export const submitMyCredential = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => CredentialSubmissionSchema.parse(input))
   .handler(async ({ data, context }) => {
     const accountId = await resolveAccount(context.supabase, context.userId);
-    const { data: profile } = await context.supabase
+    const { data: profile, error: profileError } = await context.supabase
       .from("therapists")
       .select("id")
       .eq("owner_account_id", accountId)
       .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
     if (!profile) throw new Error("יש לבצע שמירת פרופיל לפני הגשת מסמך הסמכה.");
+
+    // The document must live in the authenticated user's own private folder.
+    if (!isOwnedCredentialDocumentPath(data.document_url, context.userId)) {
+      throw new Error("נתיב המסמך אינו תקין.");
+    }
+
+    // Verification columns are server-owned; the client never supplies them.
     const payload = {
       therapist_id: profile.id,
       profession_id: data.profession_id,
@@ -744,21 +752,37 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       issue_date: data.issue_date ?? null,
       submitted_at: new Date().toISOString(),
       verification_status: "pending_review" as const,
+      rejection_reason: null,
+      verified_by: null,
+      verified_at: null,
     };
+
+    // Authentication, ownership and input validation all passed above, so the
+    // controlled write runs through the server-only admin client (the
+    // authenticated role intentionally cannot touch verification columns).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     if (data.credential_id) {
-      const { data: owned } = await context.supabase
+      const { data: owned, error: ownedError } = await context.supabase
         .from("therapist_credentials")
         .select("id, verification_status")
         .eq("id", data.credential_id)
         .eq("therapist_id", profile.id)
         .maybeSingle();
+      if (ownedError) throw new Error(ownedError.message);
       if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
       if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
-      const { error } = await context.supabase.from("therapist_credentials").update(payload).eq("id", owned.id);
+      if (owned.verification_status === "expired") throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
+      const { error } = await supabaseAdmin
+        .from("therapist_credentials")
+        .update(payload)
+        .eq("id", owned.id)
+        .eq("therapist_id", profile.id);
       if (error) throw new Error(error.message);
       return { id: owned.id, verification_status: "pending_review" as const };
     }
-    const { data: created, error } = await context.supabase
+
+    const { data: created, error } = await supabaseAdmin
       .from("therapist_credentials")
       .insert(payload)
       .select("id")
