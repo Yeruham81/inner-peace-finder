@@ -181,7 +181,7 @@ export function TherapistCard({
             </p>
           )}
           {t.language_names.length > 0 && (
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">שפות טיפול: {t.language_names.join(", ")}</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">שפות: {t.language_names.join(", ")}</p>
           )}
           {(t.offers_free_intro || t.lgbtq_affirming) && (
             <div className="mt-2 flex flex-wrap gap-1.5">
