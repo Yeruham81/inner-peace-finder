@@ -14,7 +14,18 @@ type ExplorerItem = {
   name: string;
   description: string;
   problems: string[];
+  populationSlug?: PopulationSlug;
 };
+
+type PopulationSlug =
+  | "infants"
+  | "children"
+  | "adolescents"
+  | "young-adults"
+  | "adults"
+  | "older-adults"
+  | "couples"
+  | "parents-families";
 
 const problemDomains: ExplorerItem[] = [
   {
@@ -142,6 +153,7 @@ const problemDomains: ExplorerItem[] = [
 const populationGroups: ExplorerItem[] = [
   {
     id: "infants",
+    populationSlug: "infants",
     name: "תינוקות ופעוטות",
     description: "גילאי 0–5",
     problems: [
@@ -157,6 +169,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "children",
+    populationSlug: "children",
     name: "ילדים",
     description: "גילאי 6–12",
     problems: [
@@ -172,6 +185,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "adolescents",
+    populationSlug: "adolescents",
     name: "בני נוער",
     description: "גילאי 13–17",
     problems: [
@@ -187,6 +201,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "young-adults",
+    populationSlug: "young-adults",
     name: "צעירים",
     description: "גילאי 18–30",
     problems: [
@@ -202,6 +217,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "adults",
+    populationSlug: "adults",
     name: "מבוגרים",
     description: "גילאי 31–64",
     problems: [
@@ -217,6 +233,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "older-adults",
+    populationSlug: "older-adults",
     name: "הגיל השלישי",
     description: "גילאי 65 ומעלה",
     problems: [
@@ -232,6 +249,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "couples",
+    populationSlug: "couples",
     name: "זוגות",
     description: "טיפול זוגי ומערכות יחסים",
     problems: [
@@ -247,6 +265,7 @@ const populationGroups: ExplorerItem[] = [
   },
   {
     id: "parents-families",
+    populationSlug: "parents-families",
     name: "הורים ומשפחות",
     description: "הדרכת הורים וטיפול משפחתי",
     problems: [
@@ -300,10 +319,19 @@ export const Route = createFileRoute("/")({
     await context.queryClient.ensureQueryData(filterOptionsQuery);
   },
   component: Index,
-  errorComponent: ({ error }) => (
+  errorComponent: () => (
     <div className="mx-auto max-w-2xl p-6 text-center text-foreground">
       <h1 className="text-xl font-semibold">לא הצלחנו לטעון את העמוד</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        אירעה שגיאה זמנית בטעינת אפשרויות החיפוש. נסו לרענן את העמוד.
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+      >
+        רענון העמוד
+      </button>
     </div>
   ),
 });
@@ -339,6 +367,10 @@ function Index() {
             אפשר להתחיל רק מתיאור חופשי. הסינונים הנוספים הם אופציונליים וניתנים לשינוי&nbsp;בעמוד התוצאות
           </p>
 
+          <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">
+            אין צורך להזין שם, פרטי קשר או מידע מזהה. מומלץ לתאר בקצרה רק את סוג העזרה שמחפשים
+          </p>
+
           <PopularSearches />
         </div>
       </section>
@@ -358,11 +390,19 @@ function Index() {
         alternate
       />
 
+      <HowItWorks />
+
+      <TrustSection />
+
+      <ChoosingTherapistSection />
+
+      <FrequentlyAskedQuestions />
+
       <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20">
         <h2 className="text-2xl font-bold text-foreground sm:text-3xl">לא בטוחים מאיפה להתחיל?</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-          אתם לא חייבים לדעת איך קוראים לבעיה שלכם או איזה סוג טיפול עשוי לעזור לכם. פשוט תארו מה מטריד אתכם או איזו
-          עזרה אתם מחפשים, ומנוע החיפוש ימצא לכם את אנשי המקצוע המתאימים ביותר
+          אתם לא חייבים לדעת איך קוראים לבעיה או איזה סוג טיפול עשוי להתאים. פשוט תארו מה מטריד אתכם או איזו עזרה אתם
+          מחפשים, והחיפוש יציג אנשי מקצוע רלוונטיים לפי התיאור שלכם
         </p>
         <div className="mx-auto mt-7 max-w-3xl text-right">
           <SearchForm variant="simple" />
@@ -371,7 +411,170 @@ function Index() {
           את כל אפשרויות הסינון הנוספות תוכלו לבחור ולשנות בעמוד התוצאות
         </p>
       </section>
+
+      <CrisisNotice />
     </main>
+  );
+}
+
+const howItWorksSteps = [
+  {
+    number: "1",
+    title: "מתארים מה מחפשים",
+    description: "כותבים במילים שלכם מה מטריד אתכם, או מתחילים מבחירת נושא או אוכלוסייה.",
+  },
+  {
+    number: "2",
+    title: "מקבלים תוצאות רלוונטיות",
+    description: "החיפוש משקלל את התיאור ואת הסינונים שבחרתם ומציג פרופילים רלוונטיים.",
+  },
+  {
+    number: "3",
+    title: "משווים ובוחרים למי לפנות",
+    description: "עוברים על המידע בפרופילים ופונים ישירות לאנשי המקצוע שנראים לכם מתאימים.",
+  },
+];
+
+function HowItWorks() {
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20" aria-labelledby="how-it-works-title">
+      <div className="mx-auto max-w-3xl text-center">
+        <p className="text-sm font-semibold text-primary">שלושה צעדים פשוטים</p>
+        <h2 id="how-it-works-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          איך החיפוש בטיפולינקס עובד?
+        </h2>
+      </div>
+
+      <ol className="mt-8 grid gap-4 md:grid-cols-3">
+        {howItWorksSteps.map((step) => (
+          <li
+            key={step.number}
+            className="rounded-2xl border border-border bg-surface-elevated p-6 text-center shadow-card"
+          >
+            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-brand-soft text-base font-bold text-primary">
+              {step.number}
+            </span>
+            <h3 className="mt-4 text-lg font-bold text-foreground">{step.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+const trustItems = [
+  {
+    title: "מידע שעוזר לבחור",
+    description: "משווים בין תחומי טיפול, ניסיון, שפות, אוכלוסיות, מיקום ואפשרויות טיפול.",
+  },
+  {
+    title: "שקיפות מקצועית",
+    description: "סימון אימות מוצג רק לצד פרטים ומסמכים שנבדקו ואושרו בפועל.",
+  },
+  {
+    title: "חיפוש ללא התחייבות",
+    description: "אפשר לעיין בפרופילים ולהחליט בנחת אם ולמי מתאים לכם לפנות.",
+  },
+];
+
+function TrustSection() {
+  return (
+    <section className="border-y border-border/60 bg-surface-elevated/35" aria-labelledby="trust-title">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-sm font-semibold text-primary">יותר מידע, בחירה מודעת יותר</p>
+          <h2 id="trust-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            מוצאים את המידע שחשוב לפני שפונים
+          </h2>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {trustItems.map((item) => (
+            <article key={item.title} className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-card">
+              <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ChoosingTherapistSection() {
+  return (
+    <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20" aria-labelledby="choosing-title">
+      <p className="text-sm font-semibold text-primary">בחירה שמתאימה לכם</p>
+      <h2 id="choosing-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        מה כדאי לבדוק כשבוחרים מטפל?
+      </h2>
+      <p className="mx-auto mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+        בדקו את תחומי הניסיון, האוכלוסיות שבהן המטפל עוסק, שפת הטיפול, המיקום ואפשרויות הטיפול מרחוק. לצד ההתאמה
+        המקצועית, חשוב שתרגישו בנוח לשאול שאלות ולהבין כיצד התהליך צפוי להתנהל.
+      </p>
+    </section>
+  );
+}
+
+const frequentlyAskedQuestions = [
+  {
+    question: "האם צריך לדעת מראש איזה סוג טיפול לחפש?",
+    answer: "לא. אפשר להתחיל מתיאור חופשי של מה שמטריד אתכם, גם בלי להכיר שמות של שיטות טיפול או מקצועות.",
+  },
+  {
+    question: "כיצד נקבעות התוצאות?",
+    answer: "החיפוש משקלל את התיאור שכתבתם ואת הסינונים שבחרתם כדי להציג פרופילים רלוונטיים.",
+  },
+  {
+    question: "האם אפשר לשנות את הסינונים לאחר החיפוש?",
+    answer: "כן. ניתן להוסיף, להסיר ולשנות את הסינונים בעמוד התוצאות.",
+  },
+  {
+    question: "האם אפשר למצוא טיפול אונליין?",
+    answer: "כן. אפשר לבחור טיפול אונליין בסינוני החיפוש ולראות אנשי מקצוע שמציעים שירות זה.",
+  },
+];
+
+function FrequentlyAskedQuestions() {
+  return (
+    <section className="border-y border-border/60 bg-surface-elevated/35" aria-labelledby="faq-title">
+      <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="text-center">
+          <p className="text-sm font-semibold text-primary">מידע שימושי לפני שמתחילים</p>
+          <h2 id="faq-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            שאלות נפוצות
+          </h2>
+        </div>
+
+        <dl className="mt-8 space-y-3">
+          {frequentlyAskedQuestions.map((item) => (
+            <div
+              key={item.question}
+              className="rounded-2xl border border-border bg-surface-elevated p-5 shadow-sm sm:p-6"
+            >
+              <dt className="text-base font-bold text-foreground sm:text-lg">{item.question}</dt>
+              <dd className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">{item.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function CrisisNotice() {
+  return (
+    <aside className="border-t border-border/60 bg-background" aria-labelledby="crisis-notice-title">
+      <div className="mx-auto max-w-5xl px-4 py-8 text-center sm:px-6">
+        <h2 id="crisis-notice-title" className="text-sm font-bold text-foreground">
+          זקוקים לעזרה מיידית?
+        </h2>
+        <p className="mx-auto mt-2 max-w-3xl text-xs leading-5 text-muted-foreground sm:text-sm">
+          טיפולינקס אינו שירות חירום. במקרה של סכנה מיידית או מצוקה חריפה יש לפנות לשירותי החירום או לקו סיוע מתאים.
+        </p>
+      </div>
+    </aside>
   );
 }
 
@@ -387,7 +590,7 @@ function PopularSearches() {
 
   return (
     <div className="mx-auto mt-8 max-w-5xl border-t border-border/60 pt-7 text-center">
-      <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים נפוצים</h2>
+      <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים לדוגמה</h2>
 
       <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {popularSearches.map((query) => (
@@ -480,14 +683,16 @@ function ExplorerRows({ items, columns, activeItemId, onItemClick, onClose }: Ex
                 return (
                   <button
                     key={item.id}
+                    id={`explorer-button-${item.id}`}
                     type="button"
                     aria-expanded={isActive}
+                    aria-controls={`explorer-panel-${item.id}`}
                     onClick={() => onItemClick(item.id)}
                     className={`group relative min-h-36 cursor-pointer rounded-2xl border p-4 text-center shadow-card transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 sm:min-h-40 sm:p-5 ${
                       isActive
                         ? "z-10 -translate-y-0.5 border-brand bg-brand-soft/70 shadow-lg ring-2 ring-brand/20"
                         : "border-border bg-surface-elevated hover:-translate-y-1 hover:border-brand/50 hover:bg-brand-soft/35 hover:shadow-lg"
-                    } ${isDimmed ? "opacity-45 saturate-50 hover:opacity-90 hover:saturate-100" : "opacity-100"}`}
+                    } ${isDimmed ? "opacity-70 hover:opacity-100" : "opacity-100"}`}
                   >
                     <span className="flex h-full flex-col items-center justify-center">
                       <span
@@ -523,7 +728,7 @@ function ExplorerRows({ items, columns, activeItemId, onItemClick, onClose }: Ex
 
 function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: () => void }) {
   const navigate = useNavigate();
-  const populationSlug = populationGroups.some((group) => group.id === item.id) ? item.id : undefined;
+  const populationSlug = item.populationSlug;
 
   function startSearch(problem: string) {
     navigate({
@@ -536,7 +741,12 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
   }
 
   return (
-    <div className="mt-3 rounded-3xl border border-brand/25 bg-brand-soft/35 p-4 shadow-card sm:p-5">
+    <div
+      id={`explorer-panel-${item.id}`}
+      role="region"
+      aria-labelledby={`explorer-button-${item.id}`}
+      className="mt-3 rounded-3xl border border-brand/25 bg-brand-soft/35 p-4 shadow-card sm:p-5"
+    >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div>
           <p className="text-xs font-semibold text-primary">נושאים נפוצים בתחום</p>
@@ -546,7 +756,7 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
         <button
           type="button"
           onClick={onClose}
-          className="mt-2 self-start text-xs font-medium text-primary hover:underline sm:mt-0 sm:self-auto"
+          className="mt-2 inline-flex min-h-11 items-center self-start rounded-lg px-3 text-sm font-medium text-primary hover:bg-brand-soft hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 sm:mt-0 sm:self-auto"
         >
           סגירה
         </button>
