@@ -416,12 +416,12 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           sb
             .from("therapists")
             .select(
-              "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience, lgbtq_affirming, offers_free_intro",
+              "id, slug, full_name, professional_title, image_url, verified, short_intro, years_experience, gender, lgbtq_affirming, offers_free_intro",
             ),
         ).in("id", ids),
         sb
           .from("therapist_locations")
-          .select("therapist_id, location_type, city, region, is_primary")
+          .select("therapist_id, location_type, city, region, is_primary, accessibility_status")
           .eq("is_active", true)
           .in("therapist_id", ids),
         sb.from("therapist_languages").select("therapist_id, languages!inner(name)").in("therapist_id", ids),
@@ -445,6 +445,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         city: string | null;
         region: string | null;
         is_primary: boolean | null;
+        accessibility_status: string | null;
       }>) {
         const list = locBy.get(r.therapist_id) ?? [];
         list.push({
@@ -452,6 +453,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           city: r.city,
           region: r.region,
           is_primary: r.is_primary,
+          accessibility_status: r.accessibility_status,
         });
         locBy.set(r.therapist_id, list);
       }
@@ -499,6 +501,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         image_url: string | null;
         verified: boolean | null;
         short_intro: string | null;
+        gender: string | null;
         lgbtq_affirming: boolean | null;
         offers_free_intro: boolean | null;
       }>) {
@@ -511,8 +514,11 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           verified: !!r.verified,
           short_intro: r.short_intro,
           primary_clinic: loc.primary_clinic,
+          clinic_locations: loc.clinic_locations,
           additional_clinic_count: loc.additional_clinic_count,
           online_available: loc.online_available,
+          gender: r.gender === "male" || r.gender === "female" ? r.gender : null,
+          accessible_clinic: loc.accessible_clinic,
           home_visit_regions: loc.home_visit_regions,
           language_names: langBy.get(r.id) ?? [],
           population_names: popBy.get(r.id) ?? [],
