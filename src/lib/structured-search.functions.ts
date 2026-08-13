@@ -98,9 +98,7 @@ export type StructuredResult =
 const Schema = z.object({
   query: z.string().trim().min(1).max(80),
   limit: z.number().int().min(1).max(20).optional(),
-  types: z
-    .array(z.enum(["therapist", "profession", "modality", "location"]))
-    .optional(),
+  types: z.array(z.enum(["therapist", "profession", "modality", "location"])).optional(),
 });
 
 function escapeIlike(s: string): string {
@@ -121,277 +119,265 @@ function scoreText(target: string, ql: string): number {
  * entity types via `types`; default is all supported types.
  */
 async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<StructuredResult[]> {
-    const sb = await publicClient();
-    const q = data.query.trim();
-    if (q.length < 2) return [];
-    const ql = q.toLowerCase();
-    const like = `%${escapeIlike(q)}%`;
-    const limit = data.limit ?? 10;
-    const types = new Set<StructuredEntityType>(
-      data.types ?? ["therapist", "profession", "modality", "location"],
+  const sb = await publicClient();
+  const q = data.query.trim();
+  if (q.length < 2) return [];
+  const ql = q.toLowerCase();
+  const like = `%${escapeIlike(q)}%`;
+  const limit = data.limit ?? 10;
+  const types = new Set<StructuredEntityType>(data.types ?? ["therapist", "profession", "modality", "location"]);
+
+  // --- profession lookups (authoritative: professions + therapist_professions) ---
+  let professionMatches: { id: string; slug: string; name_he: string; name_en: string | null; score: number }[] = [];
+  const therapistIdsByProfession = new Set<string>();
+  if (types.has("profession") || types.has("therapist")) {
+    const profs = unwrap(
+      await sb
+        .from("professions")
+        .select("id, slug, name_he, name_en")
+        .eq("is_active", true)
+        .or(`name_he.ilike.${like},name_en.ilike.${like},slug.ilike.${like}`)
+        .limit(20),
+    );
+    professionMatches = (profs ?? []).map((p) => ({
+      ...p,
+      score: Math.max(scoreText(p.name_he, ql), scoreText(p.name_en ?? "", ql), scoreText(p.slug, ql)),
+    }));
+
+    if (professionMatches.length > 0) {
+      const ids = professionMatches.map((p) => p.id);
+      const joins = unwrap(
+        await applyEligibility(
+          sb
+            .from("therapist_professions")
+            .select("therapist_id, profession_id, therapists!inner(id, is_active, profile_status, visibility)")
+            .in("profession_id", ids),
+          "therapists!inner",
+        ),
+      );
+      for (const row of joins ?? []) therapistIdsByProfession.add(row.therapist_id);
+    }
+  }
+
+  // --- modality lookups (authoritative: treatment_modalities + therapist_modalities) ---
+  let modalityMatches: { id: string; slug: string; name_he: string; name_en: string | null; score: number }[] = [];
+  const therapistIdsByModality = new Set<string>();
+  if (types.has("modality") || types.has("therapist")) {
+    const mods = unwrap(
+      await sb
+        .from("treatment_modalities")
+        .select("id, slug, name_he, name_en")
+        .eq("is_active", true)
+        .or(`name_he.ilike.${like},name_en.ilike.${like},slug.ilike.${like}`)
+        .limit(20),
+    );
+    modalityMatches = (mods ?? []).map((m) => ({
+      ...m,
+      score: Math.max(scoreText(m.name_he, ql), scoreText(m.name_en ?? "", ql), scoreText(m.slug, ql)),
+    }));
+
+    if (modalityMatches.length > 0) {
+      const ids = modalityMatches.map((m) => m.id);
+      const joins = unwrap(
+        await applyEligibility(
+          sb
+            .from("therapist_modalities")
+            .select("therapist_id, modality_id, therapists!inner(id, is_active, profile_status, visibility)")
+            .in("modality_id", ids),
+          "therapists!inner",
+        ),
+      );
+      for (const row of joins ?? []) therapistIdsByModality.add(row.therapist_id);
+    }
+  }
+
+  // --- location lookups (authoritative: therapist_locations) ---
+  let locationMatches: { city: string; region: string | null; therapist_count: number; score: number }[] = [];
+  const therapistIdsByLocation = new Set<string>();
+  if (types.has("location") || types.has("therapist")) {
+    const locs = unwrap(
+      await applyEligibility(
+        sb
+          .from("therapist_locations")
+          .select("therapist_id, city, region, therapists!inner(id, is_active, profile_status, visibility)")
+          .eq("is_active", true),
+        "therapists!inner",
+      )
+        .ilike("city", like)
+        .limit(200),
+    );
+    const cityAgg = new Map<string, { region: string | null; therapists: Set<string> }>();
+    for (const row of locs ?? []) {
+      if (!row.city) continue;
+      therapistIdsByLocation.add(row.therapist_id);
+      const key = row.city;
+      const cur = cityAgg.get(key) ?? { region: row.region, therapists: new Set<string>() };
+      cur.therapists.add(row.therapist_id);
+      cityAgg.set(key, cur);
+    }
+    locationMatches = Array.from(cityAgg.entries()).map(([city, v]) => ({
+      city,
+      region: v.region,
+      therapist_count: v.therapists.size,
+      score: scoreText(city, ql),
+    }));
+  }
+
+  // --- therapist lookups: name match + structured joins ---
+  const results: StructuredResult[] = [];
+  if (types.has("therapist")) {
+    const nameLike = `%${escapeIlike(q)}%`;
+    const byName = unwrap(
+      await applyEligibility(
+        sb.from("therapists").select("id, slug, full_name, professional_title, city, image_url, verified"),
+      )
+        .ilike("full_name", nameLike)
+        .limit(limit * 2),
     );
 
-    // --- profession lookups (authoritative: professions + therapist_professions) ---
-    let professionMatches: { id: string; slug: string; name_he: string; name_en: string | null; score: number }[] = [];
-    let therapistIdsByProfession = new Set<string>();
-    if (types.has("profession") || types.has("therapist")) {
-      const profs = unwrap(
-        await sb
-          .from("professions")
-          .select("id, slug, name_he, name_en")
-          .eq("is_active", true)
-          .or(`name_he.ilike.${like},name_en.ilike.${like},slug.ilike.${like}`)
-          .limit(20),
-      );
-      professionMatches = (profs ?? []).map((p) => ({
-        ...p,
-        score: Math.max(scoreText(p.name_he, ql), scoreText(p.name_en ?? "", ql), scoreText(p.slug, ql)),
-      }));
+    const seen = new Map<string, TherapistStructuredResult>();
+    for (const r of byName ?? []) {
+      const score = scoreText(r.full_name ?? "", ql);
+      if (score > 0) {
+        seen.set(r.id, {
+          type: "therapist",
+          id: r.id,
+          slug: r.slug,
+          full_name: r.full_name,
+          professional_title: r.professional_title,
+          city: r.city,
+          image_url: r.image_url,
+          verified: !!r.verified,
+          score,
+          match_field: "full_name",
+        });
+      }
+    }
 
-      if (professionMatches.length > 0) {
-        const ids = professionMatches.map((p) => p.id);
-        const joins = unwrap(
-          await applyEligibility(
+    const structuredTherapistIds = new Set<string>([
+      ...therapistIdsByProfession,
+      ...therapistIdsByModality,
+      ...therapistIdsByLocation,
+    ]);
+    // Remove ones already surfaced by higher-priority name match.
+    for (const id of seen.keys()) structuredTherapistIds.delete(id);
+
+    if (structuredTherapistIds.size > 0) {
+      const byStructured = unwrap(
+        await applyEligibility(
+          sb.from("therapists").select("id, slug, full_name, professional_title, city, image_url, verified"),
+        ).in("id", Array.from(structuredTherapistIds).slice(0, 40)),
+      );
+      for (const r of byStructured ?? []) {
+        let field: TherapistStructuredResult["match_field"] = "profession";
+        let score = 0.5;
+        if (therapistIdsByProfession.has(r.id)) {
+          field = "profession";
+          score = 0.55;
+        } else if (therapistIdsByModality.has(r.id)) {
+          field = "modality";
+          score = 0.5;
+        } else if (therapistIdsByLocation.has(r.id)) {
+          field = "location";
+          score = 0.4;
+        }
+        seen.set(r.id, {
+          type: "therapist",
+          id: r.id,
+          slug: r.slug,
+          full_name: r.full_name,
+          professional_title: r.professional_title,
+          city: r.city,
+          image_url: r.image_url,
+          verified: !!r.verified,
+          score,
+          match_field: field,
+        });
+      }
+    }
+
+    const therapists = Array.from(seen.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+    results.push(...therapists);
+  }
+
+  if (types.has("profession")) {
+    // annotate therapist_count for each profession via a single join query
+    const withCounts = await Promise.all(
+      professionMatches
+        .filter((p) => p.score > 0)
+        .map(async (p) => {
+          const res = await applyEligibility(
             sb
               .from("therapist_professions")
-              .select(
-                "therapist_id, profession_id, therapists!inner(id, is_active, profile_status, visibility)",
-              )
-              .in("profession_id", ids),
+              .select("therapist_id, therapists!inner(id, is_active, profile_status, visibility)", {
+                head: true,
+                count: "exact",
+              })
+              .eq("profession_id", p.id),
             "therapists!inner",
-          ),
-        );
-        for (const row of joins ?? []) therapistIdsByProfession.add(row.therapist_id);
-      }
-    }
+          );
+          if (res.error) throw res.error;
+          const count = res.count;
+          const r: ProfessionStructuredResult = {
+            type: "profession",
+            id: p.id,
+            slug: p.slug,
+            name_he: p.name_he,
+            name_en: p.name_en,
+            therapist_count: count ?? 0,
+            score: p.score,
+          };
+          return r;
+        }),
+    );
+    results.push(...withCounts.sort((a, b) => b.score - a.score).slice(0, limit));
+  }
 
-    // --- modality lookups (authoritative: treatment_modalities + therapist_modalities) ---
-    let modalityMatches: { id: string; slug: string; name_he: string; name_en: string | null; score: number }[] = [];
-    let therapistIdsByModality = new Set<string>();
-    if (types.has("modality") || types.has("therapist")) {
-      const mods = unwrap(
-        await sb
-          .from("treatment_modalities")
-          .select("id, slug, name_he, name_en")
-          .eq("is_active", true)
-          .or(`name_he.ilike.${like},name_en.ilike.${like},slug.ilike.${like}`)
-          .limit(20),
-      );
-      modalityMatches = (mods ?? []).map((m) => ({
-        ...m,
-        score: Math.max(scoreText(m.name_he, ql), scoreText(m.name_en ?? "", ql), scoreText(m.slug, ql)),
-      }));
-
-      if (modalityMatches.length > 0) {
-        const ids = modalityMatches.map((m) => m.id);
-        const joins = unwrap(
-          await applyEligibility(
+  if (types.has("modality")) {
+    const withCounts = await Promise.all(
+      modalityMatches
+        .filter((m) => m.score > 0)
+        .map(async (m) => {
+          const res = await applyEligibility(
             sb
               .from("therapist_modalities")
-              .select(
-                "therapist_id, modality_id, therapists!inner(id, is_active, profile_status, visibility)",
-              )
-              .in("modality_id", ids),
+              .select("therapist_id, therapists!inner(id, is_active, profile_status, visibility)", {
+                head: true,
+                count: "exact",
+              })
+              .eq("modality_id", m.id),
             "therapists!inner",
-          ),
-        );
-        for (const row of joins ?? []) therapistIdsByModality.add(row.therapist_id);
-      }
-    }
+          );
+          if (res.error) throw res.error;
+          const count = res.count;
+          const r: ModalityStructuredResult = {
+            type: "modality",
+            id: m.id,
+            slug: m.slug,
+            name_he: m.name_he,
+            name_en: m.name_en,
+            therapist_count: count ?? 0,
+            score: m.score,
+          };
+          return r;
+        }),
+    );
+    results.push(...withCounts.sort((a, b) => b.score - a.score).slice(0, limit));
+  }
 
-    // --- location lookups (authoritative: therapist_locations) ---
-    let locationMatches: { city: string; region: string | null; therapist_count: number; score: number }[] = [];
-    let therapistIdsByLocation = new Set<string>();
-    if (types.has("location") || types.has("therapist")) {
-      const locs = unwrap(
-        await applyEligibility(
-          sb
-            .from("therapist_locations")
-            .select(
-              "therapist_id, city, region, therapists!inner(id, is_active, profile_status, visibility)",
-            )
-            .eq("is_active", true),
-          "therapists!inner",
-        )
-          .ilike("city", like)
-          .limit(200),
-      );
-      const cityAgg = new Map<string, { region: string | null; therapists: Set<string> }>();
-      for (const row of locs ?? []) {
-        if (!row.city) continue;
-        therapistIdsByLocation.add(row.therapist_id);
-        const key = row.city;
-        const cur = cityAgg.get(key) ?? { region: row.region, therapists: new Set<string>() };
-        cur.therapists.add(row.therapist_id);
-        cityAgg.set(key, cur);
-      }
-      locationMatches = Array.from(cityAgg.entries()).map(([city, v]) => ({
-        city,
-        region: v.region,
-        therapist_count: v.therapists.size,
-        score: scoreText(city, ql),
-      }));
-    }
-
-    // --- therapist lookups: name match + structured joins ---
-    const results: StructuredResult[] = [];
-    if (types.has("therapist")) {
-      const nameLike = `%${escapeIlike(q)}%`;
-      const byName = unwrap(
-        await applyEligibility(
-          sb
-            .from("therapists")
-            .select("id, slug, full_name, professional_title, city, image_url, verified"),
-        )
-          .ilike("full_name", nameLike)
-          .limit(limit * 2),
-      );
-
-      const seen = new Map<string, TherapistStructuredResult>();
-      for (const r of byName ?? []) {
-        const score = scoreText(r.full_name ?? "", ql);
-        if (score > 0) {
-          seen.set(r.id, {
-            type: "therapist",
-            id: r.id,
-            slug: r.slug,
-            full_name: r.full_name,
-            professional_title: r.professional_title,
-            city: r.city,
-            image_url: r.image_url,
-            verified: !!r.verified,
-            score,
-            match_field: "full_name",
-          });
-        }
-      }
-
-      const structuredTherapistIds = new Set<string>([
-        ...therapistIdsByProfession,
-        ...therapistIdsByModality,
-        ...therapistIdsByLocation,
-      ]);
-      // Remove ones already surfaced by higher-priority name match.
-      for (const id of seen.keys()) structuredTherapistIds.delete(id);
-
-      if (structuredTherapistIds.size > 0) {
-        const byStructured = unwrap(
-          await applyEligibility(
-            sb
-              .from("therapists")
-              .select("id, slug, full_name, professional_title, city, image_url, verified"),
-          ).in("id", Array.from(structuredTherapistIds).slice(0, 40)),
-        );
-        for (const r of byStructured ?? []) {
-          let field: TherapistStructuredResult["match_field"] = "profession";
-          let score = 0.5;
-          if (therapistIdsByProfession.has(r.id)) {
-            field = "profession";
-            score = 0.55;
-          } else if (therapistIdsByModality.has(r.id)) {
-            field = "modality";
-            score = 0.5;
-          } else if (therapistIdsByLocation.has(r.id)) {
-            field = "location";
-            score = 0.4;
-          }
-          seen.set(r.id, {
-            type: "therapist",
-            id: r.id,
-            slug: r.slug,
-            full_name: r.full_name,
-            professional_title: r.professional_title,
-            city: r.city,
-            image_url: r.image_url,
-            verified: !!r.verified,
-            score,
-            match_field: field,
-          });
-        }
-      }
-
-      const therapists = Array.from(seen.values())
+  if (types.has("location")) {
+    results.push(
+      ...locationMatches
+        .filter((l) => l.score > 0)
+        .map<LocationStructuredResult>((l) => ({ type: "location", ...l }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
-      results.push(...therapists);
-    }
+        .slice(0, limit),
+    );
+  }
 
-    if (types.has("profession")) {
-      // annotate therapist_count for each profession via a single join query
-      const withCounts = await Promise.all(
-        professionMatches
-          .filter((p) => p.score > 0)
-          .map(async (p) => {
-            const res = await applyEligibility(
-              sb
-                .from("therapist_professions")
-                .select(
-                  "therapist_id, therapists!inner(id, is_active, profile_status, visibility)",
-                  { head: true, count: "exact" },
-                )
-                .eq("profession_id", p.id),
-              "therapists!inner",
-            );
-            if (res.error) throw res.error;
-            const count = res.count;
-            const r: ProfessionStructuredResult = {
-              type: "profession",
-              id: p.id,
-              slug: p.slug,
-              name_he: p.name_he,
-              name_en: p.name_en,
-              therapist_count: count ?? 0,
-              score: p.score,
-            };
-            return r;
-          }),
-      );
-      results.push(...withCounts.sort((a, b) => b.score - a.score).slice(0, limit));
-    }
-
-    if (types.has("modality")) {
-      const withCounts = await Promise.all(
-        modalityMatches
-          .filter((m) => m.score > 0)
-          .map(async (m) => {
-            const res = await applyEligibility(
-              sb
-                .from("therapist_modalities")
-                .select(
-                  "therapist_id, therapists!inner(id, is_active, profile_status, visibility)",
-                  { head: true, count: "exact" },
-                )
-                .eq("modality_id", m.id),
-              "therapists!inner",
-            );
-            if (res.error) throw res.error;
-            const count = res.count;
-            const r: ModalityStructuredResult = {
-              type: "modality",
-              id: m.id,
-              slug: m.slug,
-              name_he: m.name_he,
-              name_en: m.name_en,
-              therapist_count: count ?? 0,
-              score: m.score,
-            };
-            return r;
-          }),
-      );
-      results.push(...withCounts.sort((a, b) => b.score - a.score).slice(0, limit));
-    }
-
-    if (types.has("location")) {
-      results.push(
-        ...locationMatches
-          .filter((l) => l.score > 0)
-          .map<LocationStructuredResult>((l) => ({ type: "location", ...l }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, limit),
-      );
-    }
-
-    return results;
+  return results;
 }
 
 export const searchStructured = createServerFn({ method: "POST" })
