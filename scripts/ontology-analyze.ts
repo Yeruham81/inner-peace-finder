@@ -5,16 +5,14 @@
 //
 // Does not modify DB, vocab, engine, scoring, matcher, normalization.
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../src/integrations/supabase/types";
 import { writeFile, mkdir } from "fs/promises";
 import { SemanticEngine } from "../src/lib/semantic-engine";
-import {
-  CLASSIFICATION_CASES,
-  PROFILE_EXTRACTION_CASES,
-} from "../src/lib/semantic-evaluation-corpus";
+import { CLASSIFICATION_CASES, PROFILE_EXTRACTION_CASES } from "../src/lib/semantic-evaluation-corpus";
 
 const url = process.env.SUPABASE_URL!;
 const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-const sb = createClient(url, key);
+const sb = createClient<Database>(url, key);
 
 /* ---------- Manually curated hypothesis sets (analysis input) ---------- */
 const MERGE_CANDIDATES: [string, string][] = [
@@ -66,15 +64,17 @@ type SlugStats = {
   expectedTotal: number; // cases where slug is the primary expected
   top1Hit: number;
   top3Hit: number;
-  timesReturned: number;         // # of cases where slug appears in actual
-  timesReturnedCorrect: number;  // when it was actually expected
-  timesReturnedWrong: number;    // when it wasn't
+  timesReturned: number; // # of cases where slug appears in actual
+  timesReturnedCorrect: number; // when it was actually expected
+  timesReturnedWrong: number; // when it wasn't
   falseNegatives: number;
   confusedWith: Map<string, number>; // slug returned instead of this one
   avgTopConfWhenReturned: number;
 };
 
-function pct(n: number, d: number) { return d ? ((n / d) * 100).toFixed(1) + "%" : "n/a"; }
+function pct(n: number, d: number) {
+  return d ? ((n / d) * 100).toFixed(1) + "%" : "n/a";
+}
 
 async function main() {
   // ---- Vocabulary (for alias/intent counts) ----
@@ -110,21 +110,24 @@ async function main() {
   };
   const rows: Row[] = [];
   for (const c of CLASSIFICATION_CASES) {
-    const res = await SemanticEngine.classify(c.input, sb as any);
+    const res = await SemanticEngine.classify(c.input, sb);
     rows.push({
       input: c.input,
       category: c.category ?? "unknown",
       expected: c.expected,
       actual: res.map((r) => r.slug),
       confs: res.map((r) => r.confidence),
-      allowLow: !!(c as any).allowLowConfidence,
+      allowLow: !!c.allowLowConfidence,
     });
   }
 
   // ---- Per-slug stats ----
   const allSlugs = new Set<string>();
   problems.forEach((p) => allSlugs.add(p.slug));
-  rows.forEach((r) => { r.expected.forEach((s) => allSlugs.add(s)); r.actual.forEach((s) => allSlugs.add(s)); });
+  rows.forEach((r) => {
+    r.expected.forEach((s) => allSlugs.add(s));
+    r.actual.forEach((s) => allSlugs.add(s));
+  });
 
   const stats = new Map<string, SlugStats>();
   const init = (s: string): SlugStats => {
@@ -132,13 +135,18 @@ async function main() {
       slug: s,
       aliasCount: aliasCountBySlug.get(s) ?? 0,
       intentCount: intentCountBySlug.get(s) ?? 0,
-      expectedTotal: 0, top1Hit: 0, top3Hit: 0,
-      timesReturned: 0, timesReturnedCorrect: 0, timesReturnedWrong: 0,
+      expectedTotal: 0,
+      top1Hit: 0,
+      top3Hit: 0,
+      timesReturned: 0,
+      timesReturnedCorrect: 0,
+      timesReturnedWrong: 0,
       falseNegatives: 0,
       confusedWith: new Map(),
       avgTopConfWhenReturned: 0,
     };
-    stats.set(s, v); return v;
+    stats.set(s, v);
+    return v;
   };
   allSlugs.forEach(init);
 
@@ -162,7 +170,9 @@ async function main() {
       else s.timesReturnedWrong++;
       if (idx === 0) {
         const b = topConfSum.get(got) ?? { sum: 0, n: 0 };
-        b.sum += r.confs[0] ?? 0; b.n++; topConfSum.set(got, b);
+        b.sum += r.confs[0] ?? 0;
+        b.n++;
+        topConfSum.set(got, b);
       }
       // Confusion: when got is returned but the expected primary is different
       // and primary is not present anywhere in actual, credit "got" as the
@@ -196,7 +206,13 @@ async function main() {
   const conflictPairs = Array.from(pairMap.values()).sort((x, y) => y.count - x.count);
 
   // ---- Health score ----
-  function health(s: SlugStats): { score: number; precision: number; recall: number; uniqueness: number; penalty: number } {
+  function health(s: SlugStats): {
+    score: number;
+    precision: number;
+    recall: number;
+    uniqueness: number;
+    penalty: number;
+  } {
     const precision = s.timesReturned ? s.timesReturnedCorrect / s.timesReturned : 0;
     const recall = s.expectedTotal ? s.top3Hit / s.expectedTotal : 0;
     // Uniqueness: fraction of times it was the sole top-1 vs shared-list.
@@ -274,29 +290,42 @@ async function main() {
       let cls = "ok";
       if (missing.length === 0) cls = "pass";
       else if (r.actual.length >= 3 && missing.length > 0) cls = "MAX_MATCHES limitation";
-      else if (missing.some((m) => KNOWN_PARENT_OF[m] && setA.has(KNOWN_PARENT_OF[m]))) cls = "parent suppression issue";
-      else if (r.actual.some((a) => a && r.expected.length > 0 && !r.expected.includes(a))) cls = "wrong ranking / ontology overlap";
+      else if (missing.some((m) => KNOWN_PARENT_OF[m] && setA.has(KNOWN_PARENT_OF[m])))
+        cls = "parent suppression issue";
+      else if (r.actual.some((a) => a && r.expected.length > 0 && !r.expected.includes(a)))
+        cls = "wrong ranking / ontology overlap";
       else cls = "missing candidate";
       return { input: r.input, expected: r.expected, actual: r.actual, classification: cls };
     });
 
   /* ------------------------- Emit markdown report ------------------------ */
-  const slugRows = Array.from(stats.values())
-    .sort((a, b) => (a.expectedTotal === b.expectedTotal ? a.slug.localeCompare(b.slug) : b.expectedTotal - a.expectedTotal));
+  const slugRows = Array.from(stats.values()).sort((a, b) =>
+    a.expectedTotal === b.expectedTotal ? a.slug.localeCompare(b.slug) : b.expectedTotal - a.expectedTotal,
+  );
 
   const lines: string[] = [];
   const push = (s: string) => lines.push(s);
   push(`# Phase 17C.4A — Ontology Validation Report\n`);
-  push(`Analysis only — no production behavior changes. Baseline: Phase 17C.3 (92.6% pass / 78.7% top-1 / MRR 0.867).\n`);
+  push(
+    `Analysis only — no production behavior changes. Baseline: Phase 17C.3 (92.6% pass / 78.7% top-1 / MRR 0.867).\n`,
+  );
   push(`Total slugs in vocab: **${problems.length}**. Corpus cases: **${rows.length}**.\n`);
 
   push(`\n## 1. Slug Ontology Report\n`);
-  push(`| slug | aliases | intents | expected | top-1 | top-3 recall | precision | avg top-conf | FP | FN | top confused |`);
+  push(
+    `| slug | aliases | intents | expected | top-1 | top-3 recall | precision | avg top-conf | FP | FN | top confused |`,
+  );
   push(`|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|`);
   for (const s of slugRows) {
     const h = health(s);
-    const conf = Array.from(s.confusedWith.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k}(${v})`).join(", ");
-    push(`| ${s.slug} | ${s.aliasCount} | ${s.intentCount} | ${s.expectedTotal} | ${pct(s.top1Hit, s.expectedTotal)} | ${pct(s.top3Hit, s.expectedTotal)} | ${(h.precision * 100).toFixed(0)}% | ${s.avgTopConfWhenReturned.toFixed(2)} | ${s.timesReturnedWrong} | ${s.falseNegatives} | ${conf || "—"} |`);
+    const conf = Array.from(s.confusedWith.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([k, v]) => `${k}(${v})`)
+      .join(", ");
+    push(
+      `| ${s.slug} | ${s.aliasCount} | ${s.intentCount} | ${s.expectedTotal} | ${pct(s.top1Hit, s.expectedTotal)} | ${pct(s.top3Hit, s.expectedTotal)} | ${(h.precision * 100).toFixed(0)}% | ${s.avgTopConfWhenReturned.toFixed(2)} | ${s.timesReturnedWrong} | ${s.falseNegatives} | ${conf || "—"} |`,
+    );
   }
 
   push(`\n## 2. Semantic Conflict Matrix (top 20 pairs)\n`);
@@ -322,14 +351,21 @@ async function main() {
   push(`\n## 5. Umbrella Domain Analysis\n`);
   push(`| Slug | Returned | FP | Expected in corpus | Profile-only candidate? |`);
   push(`|---|---:|---:|---:|:---:|`);
-  for (const u of umbrella as any[]) {
-    if (u.note) { push(`| ${u.slug} | — | — | — | ${u.note} |`); continue; }
-    push(`| ${u.slug} | ${u.timesReturned} | ${u.falsePositives} | ${u.expectedTotal} | ${u.profileOnlyCandidate ? "✓" : ""} |`);
+  for (const u of umbrella) {
+    if (u.note) {
+      push(`| ${u.slug} | — | — | — | ${u.note} |`);
+      continue;
+    }
+    push(
+      `| ${u.slug} | ${u.timesReturned} | ${u.falsePositives} | ${u.expectedTotal} | ${u.profileOnlyCandidate ? "✓" : ""} |`,
+    );
   }
 
   push(`\n## 6. Multi-domain Failure Analysis\n`);
   for (const m of multi) {
-    push(`- \`${m.input}\`\n  - expected: ${JSON.stringify(m.expected)}\n  - actual:   ${JSON.stringify(m.actual)}\n  - class:    **${m.classification}**`);
+    push(
+      `- \`${m.input}\`\n  - expected: ${JSON.stringify(m.expected)}\n  - actual:   ${JSON.stringify(m.actual)}\n  - class:    **${m.classification}**`,
+    );
   }
 
   push(`\n## 7. Slug Health Score (bottom 15)\n`);
@@ -341,16 +377,28 @@ async function main() {
   push(`| slug | score | precision | recall | uniqueness | conflict penalty |`);
   push(`|---|---:|---:|---:|---:|---:|`);
   for (const h of healthList) {
-    push(`| ${h.slug} | ${h.score.toFixed(2)} | ${(h.precision*100).toFixed(0)}% | ${(h.recall*100).toFixed(0)}% | ${h.uniqueness.toFixed(2)} | ${h.penalty} |`);
+    push(
+      `| ${h.slug} | ${h.score.toFixed(2)} | ${(h.precision * 100).toFixed(0)}% | ${(h.recall * 100).toFixed(0)}% | ${h.uniqueness.toFixed(2)} | ${h.penalty} |`,
+    );
   }
 
   push(`\n## 8. Recommended Phase 17C.4B Changes\n`);
   push(`_Recommendations only — do not implement in this phase._\n`);
-  push(`1. **Parent-suppression additions** — extend engine \`PARENT_OF\` with the "New candidates" from §3 that pass a manual review (e.g. \`bereavement → grief_loss\`, \`complex_trauma → trauma\`, \`generalized_anxiety → anxiety\`, \`major_life_change → life_transitions\`, \`parent_child_conflict → family_parenting\`).`);
-  push(`2. **Merges** — for pairs in §4 marked "merge" or "sibling suppression", promote one slug and make the other an alias/child. Priority candidates: \`burnout_depression\` (empty domain), \`loss\` (subsumed by \`grief_loss\`), \`identity_crisis\`/\`self_identity\` (near-synonyms).`);
-  push(`3. **Umbrella domains** — slugs in §5 with high FP and zero expected corpus targets (see profile-only column) should be **excluded from classify() output** and kept only for \`extractProfile()\` therapist tagging.`);
-  push(`4. **Multi-domain lift** — cases classified as "MAX_MATCHES limitation" in §6 will not be solvable by ontology alone; retain them for a future \`MAX_MATCHES=5\` experiment (Phase 17C.5).`);
-  push(`5. **Low-health slugs** in §7 with precision <50% are candidates for alias pruning; low-recall slugs are candidates for hierarchy re-parenting rather than more aliases.`);
+  push(
+    `1. **Parent-suppression additions** — extend engine \`PARENT_OF\` with the "New candidates" from §3 that pass a manual review (e.g. \`bereavement → grief_loss\`, \`complex_trauma → trauma\`, \`generalized_anxiety → anxiety\`, \`major_life_change → life_transitions\`, \`parent_child_conflict → family_parenting\`).`,
+  );
+  push(
+    `2. **Merges** — for pairs in §4 marked "merge" or "sibling suppression", promote one slug and make the other an alias/child. Priority candidates: \`burnout_depression\` (empty domain), \`loss\` (subsumed by \`grief_loss\`), \`identity_crisis\`/\`self_identity\` (near-synonyms).`,
+  );
+  push(
+    `3. **Umbrella domains** — slugs in §5 with high FP and zero expected corpus targets (see profile-only column) should be **excluded from classify() output** and kept only for \`extractProfile()\` therapist tagging.`,
+  );
+  push(
+    `4. **Multi-domain lift** — cases classified as "MAX_MATCHES limitation" in §6 will not be solvable by ontology alone; retain them for a future \`MAX_MATCHES=5\` experiment (Phase 17C.5).`,
+  );
+  push(
+    `5. **Low-health slugs** in §7 with precision <50% are candidates for alias pruning; low-recall slugs are candidates for hierarchy re-parenting rather than more aliases.`,
+  );
 
   await mkdir(".lovable/reports", { recursive: true });
   const md = lines.join("\n");
@@ -362,10 +410,17 @@ async function main() {
     slugStats: slugRows.map((s) => {
       const h = health(s);
       return {
-        slug: s.slug, aliases: s.aliasCount, intents: s.intentCount,
-        expected: s.expectedTotal, top1: s.top1Hit, top3: s.top3Hit,
-        timesReturned: s.timesReturned, correct: s.timesReturnedCorrect, wrong: s.timesReturnedWrong,
-        falseNegatives: s.falseNegatives, avgTopConf: s.avgTopConfWhenReturned,
+        slug: s.slug,
+        aliases: s.aliasCount,
+        intents: s.intentCount,
+        expected: s.expectedTotal,
+        top1: s.top1Hit,
+        top3: s.top3Hit,
+        timesReturned: s.timesReturned,
+        correct: s.timesReturnedCorrect,
+        wrong: s.timesReturnedWrong,
+        falseNegatives: s.falseNegatives,
+        avgTopConf: s.avgTopConfWhenReturned,
         confusedWith: Object.fromEntries(s.confusedWith),
         health: h,
       };
@@ -383,4 +438,7 @@ async function main() {
   console.log(`Slugs analyzed: ${slugRows.length}. Conflict pairs: ${conflictPairs.length}.`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
