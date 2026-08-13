@@ -261,6 +261,16 @@ const populationGroups: ExplorerItem[] = [
     ],
   },
 ];
+
+const popularSearches = [
+  "טיפול לחרדה חברתית בגיל ההתבגרות",
+  "מטפלת זוגית מנוסה באזור השרון",
+  "קלינאית תקשורת מומחית להפרעות דיבור בפעוטות בפתח תקווה",
+  "פסיכולוג ילדים לקשיי קשב וריכוז בתל אביב",
+  "טיפול אונליין בעברית להתמודדות עם דיכאון",
+  "מטפל בטראומה ופוסט־טראומה באזור ירושלים",
+];
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -270,7 +280,10 @@ export const Route = createFileRoute("/")({
         content:
           "תארו במילים שלכם מה מטריד אתכם ומצאו מטפלים ואנשי מקצוע לפי הבעיה, המיקום, שפת הטיפול, קהל היעד ואופן הטיפול.",
       },
-      { property: "og:title", content: "טיפולינקס — פשוט למצוא את הטיפול שמתאים לכם" },
+      {
+        property: "og:title",
+        content: "טיפולינקס — פשוט למצוא את הטיפול שמתאים לכם",
+      },
       {
         property: "og:description",
         content: "חיפוש חכם וגמיש של מטפלים לפי הצורך האישי שלכם.",
@@ -322,6 +335,8 @@ function Index() {
         </div>
       </section>
 
+      <PopularSearches />
+
       <ExplorerSection
         eyebrow="חיפוש לפי נושא"
         title="באיזה תחום אתם מחפשים טיפול?"
@@ -354,6 +369,45 @@ function Index() {
   );
 }
 
+function PopularSearches() {
+  const navigate = useNavigate();
+
+  function startSearch(query: string) {
+    navigate({
+      to: "/search",
+      search: { q: query },
+    });
+  }
+
+  return (
+    <section className="border-b border-border/60 bg-surface-elevated/60">
+      <div className="mx-auto max-w-5xl px-4 py-9 sm:px-6 sm:py-11">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-sm font-semibold text-primary">חיפוש מהיר</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">חיפושים נפוצים</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
+            לחצו על חיפוש מוכן, או קבלו רעיון למה שאפשר לכתוב בשדה החיפוש
+          </p>
+        </div>
+
+        <div className="mx-auto mt-6 flex max-w-4xl flex-wrap justify-center gap-2.5">
+          {popularSearches.map((query) => (
+            <button
+              key={query}
+              type="button"
+              aria-label={`חיפוש ישיר: ${query}`}
+              onClick={() => startSearch(query)}
+              className="inline-flex cursor-pointer items-center justify-center rounded-full border border-brand/20 bg-background px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+            >
+              {query}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 type ExplorerSectionProps = {
   eyebrow: string;
   title: string;
@@ -366,12 +420,14 @@ function ExplorerSection({ eyebrow, title, description, items, alternate = false
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   return (
-    <section className="bg-transparent">
+    <section className={alternate ? "border-y border-border/60 bg-surface-elevated/35" : "bg-transparent"}>
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold text-primary">{eyebrow}</p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{title}</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
+          {description ? (
+            <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
+          ) : null}
         </div>
 
         {/* Two cards per row on smaller screens. The active panel is inserted directly below its row. */}
@@ -429,21 +485,21 @@ function ExplorerRows({ items, columns, activeItemId, onItemClick, onClose }: Ex
                     type="button"
                     aria-expanded={isActive}
                     onClick={() => onItemClick(item.id)}
-                    className={`group relative min-h-36 rounded-2xl border p-4 text-right shadow-card transition-all sm:min-h-40 sm:p-5 ${
+                    className={`group relative min-h-36 cursor-pointer rounded-2xl border p-4 text-center shadow-card transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 sm:min-h-40 sm:p-5 ${
                       isActive
-                        ? "z-10 border-brand bg-brand-soft/70 ring-2 ring-brand/20"
-                        : "border-border bg-surface-elevated hover:-translate-y-0.5 hover:border-brand/35"
-                    } ${isDimmed ? "opacity-45 saturate-50 hover:opacity-75" : "opacity-100"}`}
+                        ? "z-10 -translate-y-0.5 border-brand bg-brand-soft/70 shadow-lg ring-2 ring-brand/20"
+                        : "border-border bg-surface-elevated hover:-translate-y-1 hover:border-brand/50 hover:bg-brand-soft/35 hover:shadow-lg"
+                    } ${isDimmed ? "opacity-45 saturate-50 hover:opacity-90 hover:saturate-100" : "opacity-100"}`}
                   >
-                    <span className="flex h-full flex-col">
+                    <span className="flex h-full flex-col items-center justify-center">
                       <span
-                        className={`text-base font-bold transition-colors sm:text-lg ${
+                        className={`text-lg font-bold leading-snug transition-colors sm:text-xl ${
                           isActive ? "text-primary" : "text-foreground group-hover:text-primary"
                         }`}
                       >
                         {item.name}
                       </span>
-                      <span className="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground sm:text-sm">
+                      <span className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground sm:text-base">
                         {item.description}
                       </span>
                     </span>
@@ -504,7 +560,7 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
             key={problem}
             type="button"
             onClick={() => startSearch(problem)}
-            className="rounded-xl border border-border bg-surface-elevated px-3 py-3 text-sm font-medium text-foreground transition-all hover:border-brand/35 hover:bg-background hover:text-primary"
+            className="flex min-h-14 cursor-pointer items-center justify-center rounded-2xl border border-border bg-surface-elevated px-4 py-3 text-center text-base font-semibold leading-6 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/60 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
           >
             {problem}
           </button>
