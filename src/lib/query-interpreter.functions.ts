@@ -546,14 +546,14 @@ export async function runUnifiedSearch(
 }
 
 export const interpretQueryFn = createServerFn({ method: "POST" })
-  .validator((input: unknown) => InterpretInput.parse(input))
+  .inputValidator((input: unknown) => InterpretInput.parse(input))
   .handler(async ({ data }): Promise<InterpretationResult> => {
     const catalog = await loadSearchCatalog();
     return interpretQuery(data.query, catalog);
   });
 
 export const unifiedSearch = createServerFn({ method: "POST" })
-  .validator((input: unknown) => Input.parse(input))
+  .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<UnifiedSearchResult> => {
     return runUnifiedSearch({
       query: data.query,

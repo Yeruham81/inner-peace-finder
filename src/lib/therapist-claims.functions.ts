@@ -2,10 +2,18 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type ClaimStatus = "pending" | "approved" | "rejected" | "cancelled" | "needs_information";
+export type ClaimStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "needs_information";
 
 export type ClaimRequestType = "claim_profile" | "remove_profile";
-export type VerificationMethod = "license_number" | "professional_email" | "manual_review";
+export type VerificationMethod =
+  | "license_number"
+  | "professional_email"
+  | "manual_review";
 
 export type ClaimRequest = {
   id: string;
@@ -39,7 +47,11 @@ const IdSchema = z.object({ therapistId: z.string().uuid() });
 const CreateSchema = z.object({
   therapistId: z.string().uuid(),
   requestType: z.enum(["claim_profile", "remove_profile"]),
-  verificationMethod: z.enum(["license_number", "professional_email", "manual_review"]),
+  verificationMethod: z.enum([
+    "license_number",
+    "professional_email",
+    "manual_review",
+  ]),
   licenseNumber: z.string().trim().min(2).max(60).optional(),
   professionId: z.string().uuid().optional(),
   professionalEmail: z.string().trim().email().max(120).optional(),
@@ -47,7 +59,10 @@ const CreateSchema = z.object({
 });
 const CancelSchema = z.object({ claimId: z.string().uuid() });
 
-async function ensureAccount(supabase: import("@supabase/supabase-js").SupabaseClient, userId: string) {
+async function ensureAccount(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  userId: string,
+) {
   const { data: existing } = await supabase
     .from("therapist_accounts")
     .select("id")
@@ -65,7 +80,7 @@ async function ensureAccount(supabase: import("@supabase/supabase-js").SupabaseC
 
 export const submitClaimRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => CreateSchema.parse(input))
+  .inputValidator((input: unknown) => CreateSchema.parse(input))
   .handler(async ({ data, context }): Promise<ClaimRequest> => {
     const { supabase, userId } = context;
     const accountId = await ensureAccount(supabase, userId);
@@ -156,7 +171,7 @@ export const listMyClaimRequests = createServerFn({ method: "GET" })
 
 export const cancelClaimRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => CancelSchema.parse(input))
+  .inputValidator((input: unknown) => CancelSchema.parse(input))
   .handler(async ({ data, context }): Promise<ClaimRequest> => {
     const { supabase } = context;
     const { data: row, error } = await supabase
@@ -172,7 +187,7 @@ export const cancelClaimRequest = createServerFn({ method: "POST" })
 
 export const getClaimableTherapist = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => IdSchema.parse(input))
+  .inputValidator((input: unknown) => IdSchema.parse(input))
   .handler(async ({ data, context }): Promise<ClaimableTherapist | null> => {
     // Explicit safe projection of a profile the caller does not own; read
     // through the trusted server client because owner-scoped RLS hides it.
@@ -200,11 +215,18 @@ export const getClaimableTherapist = createServerFn({ method: "POST" })
 // -----------------------------------------------------------------
 export type ProfessionOption = { id: string; name_he: string; slug: string };
 
-export const listProfessions = createServerFn({ method: "GET" }).handler(async (): Promise<ProfessionOption[]> => {
-  const { createClient } = await import("@supabase/supabase-js");
-  const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+export const listProfessions = createServerFn({ method: "GET" })
+  .handler(async (): Promise<ProfessionOption[]> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
+    );
+    const { data } = await sb
+      .from("professions")
+      .select("id, name_he, slug")
+      .eq("is_active", true)
+      .order("name_he");
+    return (data ?? []) as ProfessionOption[];
   });
-  const { data } = await sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("name_he");
-  return (data ?? []) as ProfessionOption[];
-});
