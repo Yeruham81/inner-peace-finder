@@ -450,16 +450,16 @@ function HowItWorks() {
 
 const trustItems = [
   {
-    title: "מידע שעוזר לבחור",
-    description: "משווים בין תחומי טיפול, ניסיון, שפות, אוכלוסיות, מיקום ואפשרויות טיפול.",
+    title: "מידע ברור ומפורט",
+    description: "סננו לפי מגוון רחב של פרמטרים כדי למצוא את המטפלים המתאימים לכם ביותר.\u00a0",
   },
   {
     title: "שקיפות מקצועית",
-    description: "סימון אימות מוצג רק לצד פרטים ומסמכים שנבדקו ואושרו בפועל.",
+    description: "חפשו את הסימון \"מאומת\" בפרופילים של מטפלים שהסמכתם אומתה ע\"י צוות האתר.\u00a0",
   },
   {
     title: "חיפוש ללא התחייבות",
-    description: "אפשר לעיין בפרופילים ולהחליט בנחת אם ולמי מתאים לכם לפנות.",
+    description: "עיינו בפרופילים והחליטו עם איזה מטפלים אתם מעוניינים ליצור קשר.",
   },
 ];
 
@@ -468,9 +468,9 @@ function TrustSection() {
     <section className="border-y border-border/60 bg-surface-elevated/35" aria-labelledby="trust-title">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">יותר מידע, בחירה מודעת יותר</p>
+          <p className="text-sm font-semibold text-primary">כל המידע במקום אחד</p>
           <h2 id="trust-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            מוצאים את המידע שחשוב לפני שפונים
+            בודקים, משווים ומחליטים למי לפנות
           </h2>
         </div>
 
