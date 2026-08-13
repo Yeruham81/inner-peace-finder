@@ -11,12 +11,12 @@ import {
 import { getSessionId, getSessionIdSource } from "@/lib/analytics";
 
 function isDebug(): boolean {
-  try {
-    if ((import.meta as any)?.env?.VITE_ANALYTICS_DEBUG === "true") return true;
-  } catch {}
+  if (import.meta.env.VITE_ANALYTICS_DEBUG === "true") return true;
   try {
     if (typeof window !== "undefined" && window.localStorage.getItem("analytics_debug") === "1") return true;
-  } catch {}
+  } catch {
+    // localStorage may be unavailable in restricted browser environments.
+  }
   return false;
 }
 
@@ -107,11 +107,7 @@ function AnalyticsDebugPanelInner() {
             overflow: "auto",
           }}
         >
-          {!enabled && (
-            <div style={{ color: "#fbbf24" }}>
-              server ANALYTICS_DEBUG=false — events not fetched
-            </div>
-          )}
+          {!enabled && <div style={{ color: "#fbbf24" }}>server ANALYTICS_DEBUG=false — events not fetched</div>}
           <div>
             session_id: <span style={{ color: "#93c5fd" }}>{sid}</span> ({source})
           </div>
@@ -143,7 +139,15 @@ function AnalyticsDebugPanelInner() {
           </div>
           <button
             onClick={refresh}
-            style={{ marginTop: 6, background: "#374151", color: "white", border: 0, padding: "4px 8px", borderRadius: 4, cursor: "pointer" }}
+            style={{
+              marginTop: 6,
+              background: "#374151",
+              color: "white",
+              border: 0,
+              padding: "4px 8px",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
           >
             refresh
           </button>
