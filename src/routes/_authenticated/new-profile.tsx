@@ -1,50 +1,97 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-export async function setOwnedProfileVisibility(accountId: string, visible: boolean) {
-  const { data: profile, error } = await supabaseAdmin
-    .from("therapists")
-    .select("id, profile_status")
-    .eq("owner_account_id", accountId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!profile) throw new Error("לא נמצא פרופיל לניהול.");
-  if (visible && profile.profile_status !== "published") throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
-  const visibility = visible ? ("visible" as const) : ("hidden" as const);
-  const updated = await supabaseAdmin.from("therapists").update({ visibility }).eq("id", profile.id);
-  if (updated.error) throw new Error(updated.error.message);
-  return { visibility };
-}
+const sql = readFileSync(
+  join(import.meta.dir, "../../supabase/migrations/20260810120000_profile_discovery_and_credentials.sql"),
+  "utf8",
+);
+const dateFieldsSql = readFileSync(
+  join(import.meta.dir, "../../supabase/migrations/20260812150000_credential_issue_and_membership_start_dates.sql"),
+  "utf8",
+);
+const credentialSyncSql = readFileSync(
+  join(import.meta.dir, "../../supabase/migrations/20260813120000_multiple_credentials_verification_sync.sql"),
+  "utf8",
+);
 
-export async function permanentlyDeleteOwnedProfile(accountId: string, authUserId: string) {
-  const { data: profile, error } = await supabaseAdmin
-    .from("therapists")
-    .select("id")
-    .eq("owner_account_id", accountId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!profile) throw new Error("לא נמצא פרופיל למחיקה.");
-  const hidden = await supabaseAdmin.from("therapists").update({ visibility: "hidden" }).eq("id", profile.id);
-  if (hidden.error) throw new Error(hidden.error.message);
-  const storagePrefixes = {
-    "therapist-credentials": [...new Set([authUserId, profile.id])],
-    "therapist-images": [profile.id],
-  } as const;
-  for (const [bucket, prefixes] of Object.entries(storagePrefixes)) {
-    for (const prefix of prefixes) {
-      const listed = await supabaseAdmin.storage.from(bucket).list(prefix, { limit: 1000 });
-      if (listed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listed.error.message}`);
-      const paths = (listed.data ?? []).filter((file) => file.name).map((file) => `${prefix}/${file.name}`);
-      if (paths.length) {
-        const removed = await supabaseAdmin.storage.from(bucket).remove(paths);
-        if (removed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removed.error.message}`);
-      }
+describe("profile discovery schema", () => {
+  it("is transactional and seeds every canonical therapy format", () => {
+    expect(sql).toMatch(/^BEGIN;/);
+    expect(sql).toMatch(/COMMIT;\s*$/);
+    for (const slug of ["individual", "couples", "family", "parent_child", "group", "parent_guidance"]) {
+      expect(sql).toContain(`('${slug}'`);
     }
-  }
-  const deleted = await supabaseAdmin.from("therapists").delete().eq("id", profile.id);
-  if (deleted.error) throw new Error(deleted.error.message);
-  await supabaseAdmin
-    .from("therapist_accounts")
-    .update({ account_status: "active", onboarding_completed: false })
-    .eq("id", accountId);
-  return { deleted: true as const };
-}
+  });
+
+  it("keeps therapist-owned relation tables private and owner scoped", () => {
+    for (const table of [
+      "therapist_therapy_formats",
+      "therapist_professional_memberships",
+      "therapist_service_arrangements",
+    ]) {
+      expect(sql).toContain(`public.${table}`);
+    }
+    expect(sql).toContain("REVOKE ALL PRIVILEGES ON TABLE public.therapist_therapy_formats FROM anon");
+    expect(sql).toContain("a.auth_user_id = auth.uid()");
+  });
+
+  it("stores accessibility per location and only supports known features", () => {
+    expect(sql).toContain("ALTER TABLE public.therapist_locations");
+    expect(sql).toContain("accessibility_status");
+    expect(sql).toContain("accessibility_features");
+    expect(sql).toContain("accessibility_note");
+    expect(sql).toContain("step_free_entrance");
+    expect(sql).toContain("hearing_loop");
+  });
+
+  it("creates a private credential bucket and never grants owners verification columns", () => {
+    expect(sql).toContain("'therapist-credentials', 'therapist-credentials', false");
+    const ownerUpdateGrant = sql.slice(
+      sql.indexOf("GRANT UPDATE ("),
+      sql.indexOf(") ON public.therapist_credentials", sql.indexOf("GRANT UPDATE (")),
+    );
+    expect(ownerUpdateGrant).not.toContain("verification_status");
+    expect(ownerUpdateGrant).not.toContain("verified_by");
+    expect(ownerUpdateGrant).not.toContain("verified_at");
+  });
+});
+
+describe("credential and membership dates", () => {
+  it("adds real date fields without reinterpreting or dropping the legacy values", () => {
+    expect(dateFieldsSql).toContain("ADD COLUMN IF NOT EXISTS issue_date date");
+    expect(dateFieldsSql).toContain("ADD COLUMN IF NOT EXISTS membership_start_date date");
+    expect(dateFieldsSql).not.toContain("DROP COLUMN");
+    expect(dateFieldsSql).not.toMatch(/UPDATE[\s\S]+expires_at/i);
+    expect(dateFieldsSql).not.toMatch(/UPDATE[\s\S]+member_since/i);
+  });
+
+  it("allows profile owners to submit the issue date without granting verification fields", () => {
+    expect(dateFieldsSql).toContain("GRANT INSERT (issue_date) ON public.therapist_credentials TO authenticated");
+    expect(dateFieldsSql).toContain("GRANT UPDATE (issue_date) ON public.therapist_credentials TO authenticated");
+    expect(dateFieldsSql).not.toContain("GRANT UPDATE (verification_status)");
+    expect(dateFieldsSql).not.toContain("GRANT UPDATE (verified_at)");
+    expect(dateFieldsSql).not.toContain("GRANT UPDATE (verified_by)");
+  });
+});
+
+describe("multiple credential verification sync", () => {
+  it("is transactional and updates the public verified flag after credential decisions", () => {
+    expect(credentialSyncSql).toMatch(/^BEGIN;/);
+    expect(credentialSyncSql).toMatch(/COMMIT;\s*$/);
+    expect(credentialSyncSql).toContain("sync_therapist_verified_from_credentials");
+    expect(credentialSyncSql).toContain("AFTER INSERT OR DELETE OR UPDATE OF verification_status");
+    expect(credentialSyncSql).toContain("SET verified = EXISTS");
+    expect(credentialSyncSql).toContain("credential.verification_status = 'verified'");
+  });
+
+  it("uses a protected trigger function and preserves existing legacy verification flags", () => {
+    expect(credentialSyncSql).toContain("SECURITY DEFINER");
+    expect(credentialSyncSql).toContain(
+      "REVOKE ALL ON FUNCTION public.sync_therapist_verified_from_credentials() FROM PUBLIC",
+    );
+    expect(credentialSyncSql).toContain("SET verified = true");
+    expect(credentialSyncSql).not.toContain("SET verified = false");
+    expect(credentialSyncSql).not.toContain("GRANT UPDATE (verification_status)");
+  });
+});
