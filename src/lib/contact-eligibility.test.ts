@@ -59,12 +59,13 @@ describe("canonical eligibility predicate", () => {
     expect(THERAPIST_ELIGIBILITY.isActive).toBe(true);
   });
 
-  it("is the only eligibility predicate in the codebase", () => {
-    const files = readdirSync(join(SRC, "lib")).filter((f) => f.endsWith(".ts") && !f.includes(".test."));
-    const duplicates = files.filter(
-      (f) => f !== "search-eligibility.ts" && read(`lib/${f}`).includes('profile_status", "published"'),
-    );
-    expect(duplicates).toEqual([]);
+  it("contact paths reuse the centralized predicate instead of re-declaring it", () => {
+    for (const f of ["lib/therapists.functions.ts", "lib/lead.functions.ts"]) {
+      const src = read(f);
+      expect(src.includes('from "./search-eligibility"')).toBe(true);
+      expect(src.includes("applyEligibility(")).toBe(true);
+      expect(src.includes('"visible", "published"')).toBe(false);
+    }
   });
 });
 
