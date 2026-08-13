@@ -82,14 +82,18 @@ export function getSessionId(): string {
       // mirror to cookie for the server-side CTA dedupe
       try {
         document.cookie = `${SID_KEY}=${encodeURIComponent(existing)}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-      } catch {}
+      } catch {
+        // Continue with localStorage if cookies are unavailable.
+      }
       return existing;
     }
     const fresh = genId();
     window.localStorage.setItem(SID_KEY, fresh);
     try {
       document.cookie = `${SID_KEY}=${encodeURIComponent(fresh)}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-    } catch {}
+    } catch {
+      // Continue with localStorage if cookies are unavailable.
+    }
     cachedSessionId = fresh;
     sessionIdSource = "localStorage";
     return fresh;
