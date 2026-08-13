@@ -19,7 +19,7 @@ const LeadSchema = z.object({
 });
 
 export const createLead = createServerFn({ method: "POST" })
-  .validator((input: unknown) => LeadSchema.parse(input))
+  .inputValidator((input: unknown) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
     const req = getRequest();
     const headers = req?.headers;
@@ -33,13 +33,16 @@ export const createLead = createServerFn({ method: "POST" })
 
     // 2) Atomic server-side challenge consumption + IP rate limiting. This must
     //    run before any billing, lead insertion, contact resolution or dispatch.
-    const { data: authRows, error: authErr } = await supabaseAdmin.rpc("authorize_lead_submission", {
-      _challenge_id: data.challengeId,
-      _answer: data.challengeAnswer,
-      _ip_hash: ipHash,
-      _session_hash: sessionHash,
-      _therapist_id: data.therapistId,
-    });
+    const { data: authRows, error: authErr } = await supabaseAdmin.rpc(
+      "authorize_lead_submission",
+      {
+        _challenge_id: data.challengeId,
+        _answer: data.challengeAnswer,
+        _ip_hash: ipHash,
+        _session_hash: sessionHash,
+        _therapist_id: data.therapistId,
+      },
+    );
     if (authErr) throw new Error(authErr.message);
     const authRow = Array.isArray(authRows) ? authRows[0] : authRows;
     if (!authRow?.allowed) {
@@ -115,7 +118,10 @@ export const createLead = createServerFn({ method: "POST" })
     const billable = !!ctaRow?.billable;
 
     // 4) Resolve channel + destination
-    const channel = (therapist.preferred_contact_channel ?? "whatsapp") as "whatsapp" | "sms" | "email";
+    const channel = (therapist.preferred_contact_channel ?? "whatsapp") as
+      | "whatsapp"
+      | "sms"
+      | "email";
     const destination = therapist.contact_destination ?? therapist.phone ?? "";
 
     // 5) Insert lead row
