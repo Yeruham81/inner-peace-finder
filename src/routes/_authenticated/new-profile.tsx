@@ -1074,7 +1074,7 @@ function EditorPage() {
                 <div className="mt-6 space-y-3">
                   <div>
                     <h4 className="text-base font-semibold text-foreground">דרך התקשרות מועדפת</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">איך אתם מעוניינים לאפשר למשתמשים לפנות אליכם?</p>
+                    <p className="mt-1 text-sm text-muted-foreground">בחרו איך אתם מעוניינים לקבל פניות</p>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-3">
