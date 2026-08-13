@@ -19,7 +19,7 @@ const LeadSchema = z.object({
 });
 
 export const createLead = createServerFn({ method: "POST" })
-  .validator((input: unknown) => LeadSchema.parse(input))
+  .inputValidator((input: unknown) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
     const req = getRequest();
     const headers = req?.headers;
