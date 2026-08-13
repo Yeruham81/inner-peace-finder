@@ -9,7 +9,13 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
-import { generateChallenge, deriveRequestIdentity, hashValue, CHALLENGE_TTL_MS, CHALLENGE_ISSUE_LIMIT } from "./lead-challenge.server";
+import {
+  generateChallenge,
+  deriveRequestIdentity,
+  hashValue,
+  CHALLENGE_TTL_MS,
+  CHALLENGE_ISSUE_LIMIT,
+} from "./lead-challenge.server";
 
 const SRC = join(import.meta.dir, "..");
 const read = (p: string) => readFileSync(join(SRC, p), "utf8");
@@ -48,9 +54,7 @@ describe("challenge generation (server-only)", () => {
 
 describe("server-derived identity", () => {
   it("derives the IP hash from proxy headers, never from client input", () => {
-    const id = deriveRequestIdentity(
-      new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1", cookie: "mt_sid=abc" }),
-    );
+    const id = deriveRequestIdentity(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1", cookie: "mt_sid=abc" }));
     expect(id.ip).toBe("203.0.113.7");
     expect(id.ipHash).toBe(hashValue("203.0.113.7"));
     expect(id.sessionHash).toBe(hashValue("abc"));
@@ -86,6 +90,14 @@ describe("issuance response never leaks the answer", () => {
   it("uses the server-only admin client and server-derived IP hash", () => {
     expect(src).toContain('await import("@/integrations/supabase/client.server")');
     expect(src).toContain("deriveRequestIdentity(getRequest()?.headers)");
+  });
+
+  it("runs the database retention cleanup before issuing a new challenge", () => {
+    const purge = src.indexOf('.rpc("purge_expired_lead_challenges")');
+    const insert = src.indexOf('.from("lead_challenges")\n      .insert');
+    expect(purge).toBeGreaterThan(-1);
+    expect(purge).toBeLessThan(insert);
+    expect(src).toContain("if (purgeErr) throw new Error(purgeErr.message)");
   });
 });
 
@@ -159,7 +171,7 @@ describe("modal challenge lifecycle", () => {
     expect(modal).toContain("תוקף האימות פג. הוצג תרגיל חדש.");
     expect(modal).toContain("נשלחו מספר פניות בזמן קצר. ניתן לנסות שוב מאוחר יותר.");
     const submitTail = modal.slice(modal.indexOf("CHALLENGE_ERROR_MESSAGES.failed,"));
-    expect(submitTail).toContain("setChallengeAnswer(\"\")");
+    expect(submitTail).toContain('setChallengeAnswer("")');
     expect(submitTail).toContain("void requestChallenge()");
   });
 
@@ -180,13 +192,9 @@ describe("migration: private tables", () => {
 
   it("enables RLS with no anon/authenticated policies and revokes access", () => {
     expect(challengeMigration).toContain("ALTER TABLE public.lead_challenges ENABLE ROW LEVEL SECURITY");
-    expect(challengeMigration).toContain(
-      "ALTER TABLE public.lead_submission_attempts ENABLE ROW LEVEL SECURITY",
-    );
+    expect(challengeMigration).toContain("ALTER TABLE public.lead_submission_attempts ENABLE ROW LEVEL SECURITY");
     expect(challengeMigration).toContain("REVOKE ALL ON public.lead_challenges FROM anon, authenticated");
-    expect(challengeMigration).toContain(
-      "REVOKE ALL ON public.lead_submission_attempts FROM anon, authenticated",
-    );
+    expect(challengeMigration).toContain("REVOKE ALL ON public.lead_submission_attempts FROM anon, authenticated");
     expect(challengeMigration).toContain("GRANT ALL ON public.lead_challenges TO service_role");
     expect(challengeMigration).not.toMatch(/CREATE POLICY[^;]*lead_challenges/);
     expect(challengeMigration).not.toMatch(/CREATE POLICY[^;]*lead_submission_attempts/);
@@ -240,9 +248,7 @@ describe("migration: authorize_lead_submission", () => {
   });
 
   it("serializes concurrent consumption with a row lock", () => {
-    expect(challengeMigration).toMatch(
-      /SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/,
-    );
+    expect(challengeMigration).toMatch(/SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/);
     expect(challengeMigration).toContain("SET consumed_at = now()");
   });
 
