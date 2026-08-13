@@ -1070,6 +1070,32 @@ function EditorPage() {
                     </p>
                   </Field>
                 </div>
+
+                <div className="mt-6 space-y-3">
+                  <div>
+                    <h4 className="text-base font-semibold text-foreground">דרך התקשרות מועדפת</h4>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      בהמשך ניתן יהיה לבחור כיצד לקבל פניות חדשות. אפשרות זו עדיין אינה פעילה.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {["WhatsApp", "SMS", "אימייל"].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="flex min-h-12 cursor-not-allowed items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-right text-sm font-medium text-muted-foreground opacity-75"
+                      >
+                        <span>{method}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                          בקרוב
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </Section>
             </FormArea>
 
