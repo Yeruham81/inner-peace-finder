@@ -8,6 +8,7 @@
 
 import { applyEligibility } from "./search-eligibility";
 import { PUBLIC_THERAPIST_SELECT, type PublicTherapistProfile } from "./public-therapist-profile";
+import { regionSlugForStoredValue } from "./locality-options";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type PublicReadClient = { from: (table: string) => any };
@@ -122,33 +123,46 @@ export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<
   return (rows ?? []).map((r) => r.slug).filter(Boolean);
 }
 
-async function listEligibleClinicCities(sb: PublicReadClient): Promise<string[]> {
+async function listEligibleClinicCities(
+  sb: PublicReadClient,
+): Promise<{ cities: string[]; cityRegions: Record<string, string[]> }> {
   const eligibleTherapists = unwrap(await applyEligibility(sb.from("therapists").select("id"))) as Array<{
     id: string;
   }> | null;
   const eligibleIds = (eligibleTherapists ?? []).map((row) => row.id);
-  if (eligibleIds.length === 0) return [];
+  if (eligibleIds.length === 0) return { cities: [], cityRegions: {} };
 
   const locations = unwrap(
     await sb
       .from("therapist_locations")
-      .select("city")
+      .select("city, region")
       .in("therapist_id", eligibleIds)
       .eq("location_type", "clinic")
       .eq("is_active", true),
-  ) as Array<{ city: string | null }> | null;
+  ) as Array<{ city: string | null; region: string | null }> | null;
 
   const citySet = new Set<string>();
+  const regionSets = new Map<string, Set<string>>();
   for (const location of locations ?? []) {
     const city = location.city?.trim();
-    if (city) citySet.add(city);
+    if (!city) continue;
+    citySet.add(city);
+    const regionSlug = regionSlugForStoredValue(location.region);
+    if (regionSlug) {
+      const regions = regionSets.get(city) ?? new Set<string>();
+      regions.add(regionSlug);
+      regionSets.set(city, regions);
+    }
   }
-  return Array.from(citySet).sort((a, b) => a.localeCompare(b, "he"));
+  return {
+    cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "he")),
+    cityRegions: Object.fromEntries([...regionSets].map(([city, regions]) => [city, [...regions]])),
+  };
 }
 
 /** Filter options. Cities come from every active clinic of eligible profiles. */
 export async function listEligibleFilterOptions(sb: PublicReadClient) {
-  const [cities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
+  const [clinicCities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
     listEligibleClinicCities(sb),
     sb.from("population_groups").select("slug, name").order("sort_order"),
     sb.from("languages").select("code, name").order("name"),
@@ -157,7 +171,8 @@ export async function listEligibleFilterOptions(sb: PublicReadClient) {
     sb.from("therapy_formats").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
   ]);
   return {
-    cities,
+    cities: clinicCities.cities,
+    cityRegions: clinicCities.cityRegions,
     populations: (populations?.data ?? []) as Array<{ slug: string; name: string }>,
     languages: (languages?.data ?? []) as Array<{ code: string; name: string }>,
     professions: (professions?.data ?? []) as Array<{ slug: string; name: string }>,
