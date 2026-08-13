@@ -472,6 +472,7 @@ function SearchPage() {
       <SearchForm
         initialQuery={contract.q}
         cities={filters.cities}
+        cityRegions={filters.cityRegions}
         populations={filters.populations}
         languages={filters.languages}
         professions={filters.professions}
