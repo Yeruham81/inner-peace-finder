@@ -386,17 +386,17 @@ function PopularSearches() {
   }
 
   return (
-    <div className="mx-auto mt-8 max-w-4xl border-t border-border/60 pt-7 text-center">
+    <div className="mx-auto mt-8 max-w-5xl border-t border-border/60 pt-7 text-center">
       <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים נפוצים</h2>
 
-      <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+      <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {popularSearches.map((query) => (
           <button
             key={query}
             type="button"
             aria-label={`חיפוש ישיר: ${query}`}
             onClick={() => startSearch(query)}
-            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-brand/20 bg-surface-elevated px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+            className="flex min-h-14 w-full cursor-pointer items-center justify-center rounded-full border border-brand/20 bg-surface-elevated px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
           >
             {query}
           </button>
