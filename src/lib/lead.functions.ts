@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
+import { applyEligibility } from "./search-eligibility";
 
 const LeadSchema = z.object({
   therapistId: z.string().uuid(),
@@ -69,14 +70,23 @@ export const createLead = createServerFn({ method: "POST" })
       };
     }
 
-    // 2) Load therapist contact prefs (server-only; phone never returned to client)
-    const { data: therapist, error: tErr } = await supabaseAdmin
-      .from("therapists")
-      .select("id, full_name, phone, preferred_contact_channel, contact_destination")
-      .eq("id", data.therapistId)
-      .maybeSingle();
+    // 2) Eligibility gate — before billing, lead insertion, contact resolution
+    //    or dispatch. Missing and ineligible therapists get the same generic
+    //    response so profile state is never revealed.
+    const { data: therapist, error: tErr } = await applyEligibility(
+      supabaseAdmin
+        .from("therapists")
+        .select("id, full_name, phone, preferred_contact_channel, contact_destination")
+        .eq("id", data.therapistId),
+    ).maybeSingle();
     if (tErr) throw new Error(tErr.message);
-    if (!therapist) throw new Error("Therapist not found");
+    if (!therapist) {
+      return {
+        ok: false as const,
+        reason: "therapist_unavailable" as const,
+        message: "לא ניתן לשלוח פנייה לפרופיל זה כרגע.",
+      };
+    }
 
     // 3) Bill via atomic RPC (only once per session+therapist+cta)
     const { data: rpcRows, error: rpcErr } = await supabaseAdmin.rpc("record_cta_click", {

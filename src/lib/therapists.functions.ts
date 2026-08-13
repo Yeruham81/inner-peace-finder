@@ -554,13 +554,33 @@ const CtaSchema = z.object({
   ctaId: z.string().trim().min(1).max(64).optional(),
 });
 
+export type RecordCtaClickResult =
+  | {
+      ok: true;
+      phone: string | null;
+      sessionId: string;
+      billable: boolean;
+      alreadyExists: boolean;
+    }
+  | {
+      ok: false;
+      reason: "therapist_unavailable";
+      phone: null;
+      billable: false;
+      alreadyExists: false;
+    };
+
 /**
  * Records a CTA click. Billable at most once per (therapist, session) per 24h.
  * Returns the therapist phone so the client can initiate the call.
+ *
+ * Contact data is released ONLY for publicly eligible therapists
+ * (see `applyEligibility`). Missing and ineligible therapists are treated
+ * identically and never produce a phone number or a billable CTA event.
  */
 export const recordCtaClick = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => CtaSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<RecordCtaClickResult> => {
     const req = getRequest();
     const headers = req?.headers;
     const userAgent = headers?.get("user-agent") ?? null;
@@ -575,14 +595,21 @@ export const recordCtaClick = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Load phone first (also validates therapist exists)
-    const { data: therapist, error: tErr } = await supabaseAdmin
-      .from("therapists")
-      .select("phone")
-      .eq("id", data.therapistId)
-      .maybeSingle();
+    // Eligibility gate: only publicly eligible therapists may release contact
+    // data or create a billable CTA event.
+    const { data: therapist, error: tErr } = await applyEligibility(
+      supabaseAdmin.from("therapists").select("phone").eq("id", data.therapistId),
+    ).maybeSingle();
     if (tErr) throw new Error(tErr.message);
-    if (!therapist) throw new Error("Therapist not found");
+    if (!therapist) {
+      return {
+        ok: false as const,
+        reason: "therapist_unavailable" as const,
+        phone: null,
+        billable: false as const,
+        alreadyExists: false as const,
+      };
+    }
 
     // Atomic, DB-enforced idempotency: UNIQUE(session_id, therapist_id, cta_id)
     // guarantees only the first call ever returns billable=true.
@@ -597,6 +624,7 @@ export const recordCtaClick = createServerFn({ method: "POST" })
     if (rpcErr) throw new Error(rpcErr.message);
     const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
     return {
+      ok: true as const,
       phone: therapist.phone,
       sessionId,
       billable: !!row?.billable,
