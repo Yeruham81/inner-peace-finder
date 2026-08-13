@@ -122,22 +122,42 @@ export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<
   return (rows ?? []).map((r) => r.slug).filter(Boolean);
 }
 
-/** Filter options. Cities are derived from eligible profiles only. */
+async function listEligibleClinicCities(sb: PublicReadClient): Promise<string[]> {
+  const eligibleTherapists = unwrap(await applyEligibility(sb.from("therapists").select("id"))) as Array<{
+    id: string;
+  }> | null;
+  const eligibleIds = (eligibleTherapists ?? []).map((row) => row.id);
+  if (eligibleIds.length === 0) return [];
+
+  const locations = unwrap(
+    await sb
+      .from("therapist_locations")
+      .select("city")
+      .in("therapist_id", eligibleIds)
+      .eq("location_type", "clinic")
+      .eq("is_active", true),
+  ) as Array<{ city: string | null }> | null;
+
+  const citySet = new Set<string>();
+  for (const location of locations ?? []) {
+    const city = location.city?.trim();
+    if (city) citySet.add(city);
+  }
+  return Array.from(citySet).sort((a, b) => a.localeCompare(b, "he"));
+}
+
+/** Filter options. Cities come from every active clinic of eligible profiles. */
 export async function listEligibleFilterOptions(sb: PublicReadClient) {
   const [cities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
-    applyEligibility(sb.from("therapists").select("city")),
+    listEligibleClinicCities(sb),
     sb.from("population_groups").select("slug, name").order("sort_order"),
     sb.from("languages").select("code, name").order("name"),
     sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
     sb.from("treatment_modalities").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
     sb.from("therapy_formats").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
   ]);
-  const citySet = new Set<string>();
-  ((unwrap(cities) ?? []) as Array<{ city: string | null }>).forEach((r) => {
-    if (r.city) citySet.add(r.city);
-  });
   return {
-    cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "he")),
+    cities,
     populations: (populations?.data ?? []) as Array<{ slug: string; name: string }>,
     languages: (languages?.data ?? []) as Array<{ code: string; name: string }>,
     professions: (professions?.data ?? []) as Array<{ slug: string; name: string }>,
