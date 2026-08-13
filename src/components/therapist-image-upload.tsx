@@ -68,7 +68,6 @@ export function TherapistImageUpload({
       <div className="flex items-center gap-3">
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface">
           {value ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="תמונת פרופיל" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
@@ -97,13 +96,7 @@ export function TherapistImageUpload({
             {uploading ? "מעלה…" : value ? "החלפת תמונה" : "העלאת תמונה"}
           </Button>
           {value && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={uploading}
-              onClick={() => onChange(null)}
-            >
+            <Button type="button" variant="ghost" size="sm" disabled={uploading} onClick={() => onChange(null)}>
               הסרה
             </Button>
           )}
