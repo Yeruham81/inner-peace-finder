@@ -179,7 +179,12 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
           home_visit_regions: [],
           language_names: [],
           population_names: [],
+          population_tags: t.populationSlugs.map((slug) => ({ slug, name: slug })),
           modality_names: [],
+          treatment_domains: parseStoredProfile(t.storedSemanticProfile).map((entry) => ({
+            ...entry,
+            name: entry.slug,
+          })),
           lgbtq_affirming: false,
           offers_free_intro: false,
         });
