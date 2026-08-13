@@ -109,7 +109,7 @@ describe("createLead client contract", () => {
 
   it("authorizes before billing, insertion and dispatch", () => {
     const auth = src.indexOf("authorize_lead_submission");
-    const eligibility = src.indexOf("applyEligibility");
+    const eligibility = src.indexOf("applyEligibility(");
     const cta = src.indexOf("record_cta_click");
     const insert = src.indexOf('.from("lead_events")\n      .insert');
     const dispatch = src.indexOf("dispatchLead");
