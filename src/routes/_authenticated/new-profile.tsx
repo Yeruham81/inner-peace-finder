@@ -25,6 +25,11 @@ import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
 import {
+  ACCESSIBILITY_FEATURE_OPTIONS,
+  ACCESSIBILITY_STATUS_OPTIONS,
+  FREE_INTRO_TYPE_OPTIONS,
+} from "@/lib/profile-display-options";
+import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
   getEditorOptions,
@@ -57,14 +62,6 @@ type FormLocation = {
 };
 
 const MAX_PHYSICAL_LOCATIONS = 3;
-const ACCESSIBILITY_FEATURES = [
-  { id: "step_free_entrance", label: "כניסה ללא מדרגות" },
-  { id: "accessible_elevator", label: "מעלית נגישה" },
-  { id: "accessible_restroom", label: "שירותים נגישים" },
-  { id: "accessible_parking", label: "חניית נכים" },
-  { id: "wide_doorways", label: "פתחים רחבים" },
-  { id: "hearing_loop", label: "לולאת השראה" },
-];
 
 function blankLocation(): FormLocation {
   return {
@@ -753,11 +750,7 @@ function EditorPage() {
                   {form.offers_free_intro && (
                     <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
                       <SelectionGrid
-                        items={[
-                          { id: "phone", label: "טלפון" },
-                          { id: "video", label: "וידאו" },
-                          { id: "in_person", label: "פגישה בקליניקה" },
-                        ]}
+                        items={FREE_INTRO_TYPE_OPTIONS}
                         selected={form.free_intro_types}
                         onChange={(ids) => setForm({ ...form, free_intro_types: ids })}
                         columns="three"
@@ -888,12 +881,7 @@ function EditorPage() {
                           <div className="mt-4 border-t border-border pt-4">
                             <Field label="נגישות הקליניקה">
                               <SelectionGrid
-                                items={[
-                                  { id: "accessible", label: "נגישה" },
-                                  { id: "partially_accessible", label: "נגישה חלקית" },
-                                  { id: "not_accessible", label: "אינה נגישה" },
-                                  { id: "unknown", label: "לא ידוע" },
-                                ]}
+                                items={ACCESSIBILITY_STATUS_OPTIONS}
                                 selected={[location.accessibility_status]}
                                 onChange={(ids) =>
                                   setForm((current) => ({
@@ -921,7 +909,7 @@ function EditorPage() {
                             {(location.accessibility_status === "accessible" ||
                               location.accessibility_status === "partially_accessible") && (
                               <SelectionGrid
-                                items={ACCESSIBILITY_FEATURES}
+                                items={ACCESSIBILITY_FEATURE_OPTIONS}
                                 selected={location.accessibility_features}
                                 onChange={(ids) =>
                                   setForm((current) => ({
