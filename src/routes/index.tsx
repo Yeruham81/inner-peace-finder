@@ -470,7 +470,7 @@ function TrustSection() {
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold text-primary">כל המידע במקום אחד</p>
           <h2 id="trust-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            בודקים, משווים ומחליטים למי לפנות
+            בודקים, משווים ומחליטים
           </h2>
         </div>
 
