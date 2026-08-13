@@ -8,13 +8,13 @@ import { visibleItemCountForRows } from "@/lib/tag-overflow";
 const COMPACT_TAG_CLASS =
   "inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap rounded-full border border-border px-2.5 py-1 text-xs leading-4";
 
-function CompactTagRow({ labels, tone = "neutral" }: { labels: string[]; tone?: "neutral" | "brand" }) {
-  const uniqueLabels = [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+type HighlightableTag = { slug: string; name: string; matched: boolean };
+
+function HighlightableTagRow({ items }: { items: HighlightableTag[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  const [visibleCount, setVisibleCount] = useState(Math.min(uniqueLabels.length, 1));
-  const signature = uniqueLabels.join("|");
-  const toneClass = tone === "brand" ? "border-brand/20 bg-brand-soft text-primary" : "bg-background text-foreground";
+  const [visibleCount, setVisibleCount] = useState(Math.min(items.length, 1));
+  const signature = items.map((item) => `${item.slug}:${item.matched}`).join("|");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -29,7 +29,7 @@ function CompactTagRow({ labels, tone = "neutral" }: { labels: string[]; tone?: 
       measurement.querySelectorAll<HTMLElement>("[data-measure-more]").forEach((node) => {
         moreWidths[Number(node.dataset.measureMore)] = node.getBoundingClientRect().width;
       });
-      setVisibleCount(visibleItemCountForRows(itemWidths, container.getBoundingClientRect().width, moreWidths, 1, 6));
+      setVisibleCount(visibleItemCountForRows(itemWidths, container.getBoundingClientRect().width, moreWidths, 2, 6));
     };
 
     measure();
@@ -39,19 +39,25 @@ function CompactTagRow({ labels, tone = "neutral" }: { labels: string[]; tone?: 
     return () => observer?.disconnect();
   }, [signature]);
 
-  if (uniqueLabels.length === 0) return null;
-  const hiddenCount = uniqueLabels.length - visibleCount;
+  if (items.length === 0) return null;
+  const hiddenCount = items.length - visibleCount;
+  const tagClass = (matched: boolean) =>
+    `${COMPACT_TAG_CLASS} ${
+      matched
+        ? "border-brand/30 bg-brand-soft font-semibold text-primary"
+        : "border-border bg-background text-foreground"
+    }`;
 
   return (
     <div ref={containerRef} className="relative min-w-0 overflow-hidden">
-      <div className="flex flex-nowrap gap-1.5">
-        {uniqueLabels.slice(0, visibleCount).map((label) => (
-          <span key={label} title={label} className={`${COMPACT_TAG_CLASS} ${toneClass}`}>
-            {label}
+      <div className="flex flex-wrap gap-1.5">
+        {items.slice(0, visibleCount).map((item) => (
+          <span key={item.slug} title={item.name} className={tagClass(item.matched)}>
+            {item.name}
           </span>
         ))}
         {hiddenCount > 0 && (
-          <span className={`${COMPACT_TAG_CLASS} border-brand/20 bg-brand-soft font-medium text-primary`}>
+          <span className={`${COMPACT_TAG_CLASS} border-border bg-background font-medium text-muted-foreground`}>
             +{hiddenCount} נוספים
           </span>
         )}
@@ -62,19 +68,19 @@ function CompactTagRow({ labels, tone = "neutral" }: { labels: string[]; tone?: 
         aria-hidden="true"
         className="pointer-events-none invisible absolute inset-x-0 top-0 flex flex-wrap gap-1.5"
       >
-        {uniqueLabels.map((label) => (
-          <span key={`measure-${label}`} data-measure-item className={`${COMPACT_TAG_CLASS} ${toneClass}`}>
-            {label}
+        {items.map((item) => (
+          <span key={`measure-${item.slug}`} data-measure-item className={tagClass(item.matched)}>
+            {item.name}
           </span>
         ))}
         <div className="absolute left-0 top-0 flex flex-col items-start gap-1">
-          {uniqueLabels.map((_, index) => {
+          {items.map((_, index) => {
             const hidden = index + 1;
             return (
               <span
                 key={`measure-more-${hidden}`}
                 data-measure-more={hidden}
-                className={`${COMPACT_TAG_CLASS} border-brand/20 bg-brand-soft font-medium text-primary`}
+                className={`${COMPACT_TAG_CLASS} border-border bg-background font-medium text-muted-foreground`}
               >
                 +{hidden} נוספים
               </span>
@@ -153,7 +159,7 @@ export function TherapistCard({
 
         <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-bold leading-snug text-foreground sm:text-2xl">{t.full_name}</h2>
+            <h2 className="text-xl font-bold leading-snug text-foreground sm:text-2xl">{t.full_name}</h2>
             {t.verified && (
               <span
                 title="הפרופיל אומת על ידי Tipulinks"
@@ -175,7 +181,7 @@ export function TherapistCard({
             </p>
           )}
           {t.language_names.length > 0 && (
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">שפות: {t.language_names.join(", ")}</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">שפות טיפול: {t.language_names.join(", ")}</p>
           )}
           {(t.offers_free_intro || t.lgbtq_affirming) && (
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -233,23 +239,23 @@ export function TherapistCard({
                 <path d="M8 21h8M12 17v4" />
               </svg>
             </MetaIcon>
-            <span>טיפול אונליין</span>
+            <span>ניתן לקיים טיפול אונליין</span>
           </li>
         )}
       </ul>
 
-      {(t.population_names.length > 0 || t.modality_names.length > 0) && (
+      {(t.population_tags.length > 0 || t.treatment_domains.length > 0) && (
         <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
-          {t.population_names.length > 0 && (
+          {t.population_tags.length > 0 && (
             <div className="min-w-0">
               <p className="mb-1.5 text-xs font-semibold text-muted-foreground">אוכלוסיות</p>
-              <CompactTagRow labels={t.population_names} />
+              <HighlightableTagRow items={t.population_tags} />
             </div>
           )}
-          {t.modality_names.length > 0 && (
+          {t.treatment_domains.length > 0 && (
             <div className="min-w-0">
-              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">גישות ושיטות</p>
-              <CompactTagRow labels={t.modality_names} tone="brand" />
+              <p className="mb-1.5 text-xs font-semibold text-muted-foreground">תחומי טיפול</p>
+              <HighlightableTagRow items={t.treatment_domains} />
             </div>
           )}
         </div>
