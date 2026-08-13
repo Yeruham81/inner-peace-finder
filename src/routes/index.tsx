@@ -269,6 +269,12 @@ const popularSearches = [
   "פסיכולוג ילדים לקשיי קשב וריכוז בתל אביב",
   "טיפול אונליין בעברית להתמודדות עם דיכאון",
   "מטפל בטראומה ופוסט־טראומה באזור ירושלים",
+  "פסיכולוגית דוברת רוסית לנשים אחרי לידה באזור חיפה",
+  "הדרכת הורים לילדים עם התפרצויות זעם באזור המרכז",
+  "עובד סוציאלי לטיפול באבל ובאובדן לגיל השלישי בבאר שבע",
+  "טיפול משפחתי בבית למשפחה במשבר באזור הצפון",
+  "מטפלת בהפרעות אכילה לצעירות באזור תל אביב",
+  "טיפול זוגי אונליין באנגלית",
 ];
 
 export const Route = createFileRoute("/")({
@@ -332,10 +338,10 @@ function Index() {
           <p className="mt-4 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
             אפשר להתחיל רק מתיאור חופשי. הסינונים הנוספים הם אופציונליים וניתנים לשינוי&nbsp;בעמוד התוצאות
           </p>
+
+          <PopularSearches />
         </div>
       </section>
-
-      <PopularSearches />
 
       <ExplorerSection
         eyebrow="חיפוש לפי נושא"
@@ -380,31 +386,23 @@ function PopularSearches() {
   }
 
   return (
-    <section className="border-b border-border/60 bg-surface-elevated/60">
-      <div className="mx-auto max-w-5xl px-4 py-9 sm:px-6 sm:py-11">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">חיפוש מהיר</p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">חיפושים נפוצים</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-            לחצו על חיפוש מוכן, או קבלו רעיון למה שאפשר לכתוב בשדה החיפוש
-          </p>
-        </div>
+    <div className="mx-auto mt-8 max-w-4xl border-t border-border/60 pt-7 text-center">
+      <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים נפוצים</h2>
 
-        <div className="mx-auto mt-6 flex max-w-4xl flex-wrap justify-center gap-2.5">
-          {popularSearches.map((query) => (
-            <button
-              key={query}
-              type="button"
-              aria-label={`חיפוש ישיר: ${query}`}
-              onClick={() => startSearch(query)}
-              className="inline-flex cursor-pointer items-center justify-center rounded-full border border-brand/20 bg-background px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
-            >
-              {query}
-            </button>
-          ))}
-        </div>
+      <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+        {popularSearches.map((query) => (
+          <button
+            key={query}
+            type="button"
+            aria-label={`חיפוש ישיר: ${query}`}
+            onClick={() => startSearch(query)}
+            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-brand/20 bg-surface-elevated px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+          >
+            {query}
+          </button>
+        ))}
       </div>
-    </section>
+    </div>
   );
 }
 
