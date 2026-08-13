@@ -10,6 +10,10 @@ const dateFieldsSql = readFileSync(
   join(import.meta.dir, "../../supabase/migrations/20260812150000_credential_issue_and_membership_start_dates.sql"),
   "utf8",
 );
+const credentialSyncSql = readFileSync(
+  join(import.meta.dir, "../../supabase/migrations/20260813120000_multiple_credentials_verification_sync.sql"),
+  "utf8",
+);
 
 describe("profile discovery schema", () => {
   it("is transactional and seeds every canonical therapy format", () => {
@@ -68,5 +72,26 @@ describe("credential and membership dates", () => {
     expect(dateFieldsSql).not.toContain("GRANT UPDATE (verification_status)");
     expect(dateFieldsSql).not.toContain("GRANT UPDATE (verified_at)");
     expect(dateFieldsSql).not.toContain("GRANT UPDATE (verified_by)");
+  });
+});
+
+describe("multiple credential verification sync", () => {
+  it("is transactional and updates the public verified flag after credential decisions", () => {
+    expect(credentialSyncSql).toMatch(/^BEGIN;/);
+    expect(credentialSyncSql).toMatch(/COMMIT;\s*$/);
+    expect(credentialSyncSql).toContain("sync_therapist_verified_from_credentials");
+    expect(credentialSyncSql).toContain("AFTER INSERT OR DELETE OR UPDATE OF verification_status");
+    expect(credentialSyncSql).toContain("SET verified = EXISTS");
+    expect(credentialSyncSql).toContain("credential.verification_status = 'verified'");
+  });
+
+  it("uses a protected trigger function and preserves existing legacy verification flags", () => {
+    expect(credentialSyncSql).toContain("SECURITY DEFINER");
+    expect(credentialSyncSql).toContain(
+      "REVOKE ALL ON FUNCTION public.sync_therapist_verified_from_credentials() FROM PUBLIC",
+    );
+    expect(credentialSyncSql).toContain("SET verified = true");
+    expect(credentialSyncSql).not.toContain("SET verified = false");
+    expect(credentialSyncSql).not.toContain("GRANT UPDATE (verification_status)");
   });
 });
