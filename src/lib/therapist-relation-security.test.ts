@@ -173,5 +173,5 @@ describe("therapist relation tables — server/client boundary", () => {
     for (const col of ["address", "postal_code", "latitude", "longitude", "region"]) {
       expect(publicList.includes(`"${col}"`), col).toBe(false);
     }
-});
+  });
 });

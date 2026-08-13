@@ -76,7 +76,9 @@ export function TherapistCredentialPanel({
         className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-brand-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-base font-semibold text-foreground">הסמכה מקצועית מאומתת</span>
+          <span className="block text-base font-semibold text-foreground">
+            הסמכה מקצועית מאומתת
+          </span>
           <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
             {credentials.length === 0
               ? "בעלי רישיון מקצועי יכולים להגיש פרטי רישיון ומסמך לצורך אימות."
@@ -84,7 +86,9 @@ export function TherapistCredentialPanel({
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_COPY[aggregate][1]}`}>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_COPY[aggregate][1]}`}
+          >
             {STATUS_COPY[aggregate][0]}
           </span>
           <span
@@ -99,8 +103,8 @@ export function TherapistCredentialPanel({
       {expanded && (
         <div id="professional-credential-form" className="border-t border-brand/20 p-4">
           <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-            הפרטים והמסמך ישמשו לצורך אימות ההכשרה או ההסמכה ולהצגת תגית &quot;מאומת&quot;. הם לא יוצגו בגלוי בפרופיל
-            הציבורי.
+            הפרטים והמסמך ישמשו לצורך אימות ההכשרה או ההסמכה ולהצגת תגית &quot;מאומת&quot;. הם לא
+            יוצגו בגלוי בפרופיל הציבורי.
           </p>
 
           {credentials.length > 0 && (
@@ -111,12 +115,18 @@ export function TherapistCredentialPanel({
                   <li key={credential.id} className="rounded-lg border border-border bg-white p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">{credential.credential_type}</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {credential.credential_type}
+                        </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {[
-                            credential.profession_id ? professionName.get(credential.profession_id) : null,
+                            credential.profession_id
+                              ? professionName.get(credential.profession_id)
+                              : null,
                             credential.issuing_authority,
-                            credential.license_number ? `רישיון ${credential.license_number}` : null,
+                            credential.license_number
+                              ? `רישיון ${credential.license_number}`
+                              : null,
                           ]
                             .filter(Boolean)
                             .join(" · ")}
@@ -128,20 +138,25 @@ export function TherapistCredentialPanel({
                         {STATUS_COPY[credential.verification_status][0]}
                       </span>
                     </div>
-                    {credential.verification_status === "rejected" && credential.rejection_reason && (
-                      <p className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-900">
-                        סיבת הדחייה: {credential.rejection_reason}
-                      </p>
-                    )}
+                    {credential.verification_status === "rejected" &&
+                      credential.rejection_reason && (
+                        <p className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-900">
+                          סיבת הדחייה: {credential.rejection_reason}
+                        </p>
+                      )}
                     {credential.verification_status === "verified" ? (
-                      <p className="mt-2 text-xs text-muted-foreground">הסמכה מאומתת — לא ניתן לעריכה.</p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        הסמכה מאומתת — לא ניתן לעריכה.
+                      </p>
                     ) : editable ? (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         className="mt-2"
-                        onClick={() => setEditing(editing === credential.id ? undefined : credential.id)}
+                        onClick={() =>
+                          setEditing(editing === credential.id ? undefined : credential.id)
+                        }
                       >
                         {editing === credential.id ? "סגירת העריכה" : "עריכה ושליחה מחדש"}
                       </Button>
@@ -323,11 +338,18 @@ function CredentialForm({
             if (file) void upload(file);
           }}
         />
-        <Button type="button" variant="outline" disabled={uploading} onClick={() => inputRef.current?.click()}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
           {uploading ? "המסמך מועלה…" : draft.document_url ? "החלפת מסמך" : "העלאת מסמך"}
         </Button>
         {draft.document_url && <span className="text-sm text-emerald-700">✓ מסמך הועלה</span>}
-        {!therapistId && <span className="text-xs text-muted-foreground">יש לבצע תחילה שמירת פרופיל.</span>}
+        {!therapistId && (
+          <span className="text-xs text-muted-foreground">יש לבצע תחילה שמירת פרופיל.</span>
+        )}
       </div>
       <Button
         type="button"

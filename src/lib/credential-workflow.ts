@@ -5,12 +5,22 @@
  * set a verification status other than the submission status.
  */
 
-export const CREDENTIAL_STATUSES = ["unverified", "pending_review", "verified", "rejected", "expired"] as const;
+export const CREDENTIAL_STATUSES = [
+  "unverified",
+  "pending_review",
+  "verified",
+  "rejected",
+  "expired",
+] as const;
 
 export type CredentialStatus = (typeof CREDENTIAL_STATUSES)[number];
 
 /** Statuses a profile owner may submit or resubmit. */
-export const EDITABLE_CREDENTIAL_STATUSES: readonly CredentialStatus[] = ["unverified", "pending_review", "rejected"];
+export const EDITABLE_CREDENTIAL_STATUSES: readonly CredentialStatus[] = [
+  "unverified",
+  "pending_review",
+  "rejected",
+];
 
 export function isEditableCredentialStatus(status: CredentialStatus): boolean {
   return EDITABLE_CREDENTIAL_STATUSES.includes(status);
@@ -25,7 +35,9 @@ const STATUS_PRECEDENCE: readonly CredentialStatus[] = [
   "unverified",
 ];
 
-export function aggregateCredentialStatus(credentials: { verification_status: CredentialStatus }[]): CredentialStatus {
+export function aggregateCredentialStatus(
+  credentials: { verification_status: CredentialStatus }[],
+): CredentialStatus {
   for (const status of STATUS_PRECEDENCE) {
     if (credentials.some((credential) => credential.verification_status === status)) return status;
   }
@@ -33,7 +45,11 @@ export function aggregateCredentialStatus(credentials: { verification_status: Cr
 }
 
 export const CREDENTIAL_MAX_BYTES = 10 * 1024 * 1024;
-export const CREDENTIAL_ACCEPTED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
+export const CREDENTIAL_ACCEPTED_MIME_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+] as const;
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "application/pdf": "pdf",
@@ -45,7 +61,10 @@ export type UploadRejection = { ok: false; reason: string };
 export type UploadAcceptance = { ok: true; extension: string };
 
 /** Client-side gate: only PDF/JPEG/PNG up to 10MB. */
-export function validateCredentialUpload(file: { type: string; size: number }): UploadAcceptance | UploadRejection {
+export function validateCredentialUpload(file: {
+  type: string;
+  size: number;
+}): UploadAcceptance | UploadRejection {
   if (!(CREDENTIAL_ACCEPTED_MIME_TYPES as readonly string[]).includes(file.type)) {
     return { ok: false, reason: "ניתן להעלות PDF, JPG או PNG בלבד." };
   }
@@ -58,7 +77,11 @@ export function validateCredentialUpload(file: { type: string; size: number }): 
  * The therapist id is deliberately NOT used as the folder — storage policies
  * are scoped to the authenticated user's own folder.
  */
-export function buildCredentialObjectPath(authUserId: string, fileId: string, extension: string): string {
+export function buildCredentialObjectPath(
+  authUserId: string,
+  fileId: string,
+  extension: string,
+): string {
   return `${authUserId}/${fileId}.${extension}`;
 }
 

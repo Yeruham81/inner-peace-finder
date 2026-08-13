@@ -11,8 +11,14 @@ import {
 } from "@/lib/credential-workflow";
 
 const panelSource = readFileSync(join(import.meta.dir, "therapist-credential-panel.tsx"), "utf8");
-const serverSource = readFileSync(join(import.meta.dir, "..", "lib", "therapist-profile.functions.ts"), "utf8");
-const editorSource = readFileSync(join(import.meta.dir, "..", "routes", "_authenticated", "new-profile.tsx"), "utf8");
+const serverSource = readFileSync(
+  join(import.meta.dir, "..", "lib", "therapist-profile.functions.ts"),
+  "utf8",
+);
+const editorSource = readFileSync(
+  join(import.meta.dir, "..", "routes", "_authenticated", "new-profile.tsx"),
+  "utf8",
+);
 
 const UID = "11111111-2222-3333-4444-555555555555";
 const OTHER_UID = "99999999-2222-3333-4444-555555555555";
@@ -29,7 +35,9 @@ describe("credential data contract", () => {
   it("loads every credential without limit(1) and propagates query errors", () => {
     expect(serverSource).not.toContain(".limit(1)");
     expect(serverSource).toContain('.order("updated_at", { ascending: false })');
-    expect(serverSource).toContain("if (credentials.error) throw new Error(credentials.error.message)");
+    expect(serverSource).toContain(
+      "if (credentials.error) throw new Error(credentials.error.message)",
+    );
     expect(serverSource).toContain("credentials: (credentials.data ?? [])");
   });
 
@@ -56,7 +64,13 @@ describe("credential submission security", () => {
       serverSource.indexOf("const CredentialSubmissionSchema"),
       serverSource.indexOf("export const submitMyCredential"),
     );
-    for (const field of ["verification_status", "verified_by", "verified_at", "rejection_reason", "therapist_id"]) {
+    for (const field of [
+      "verification_status",
+      "verified_by",
+      "verified_at",
+      "rejection_reason",
+      "therapist_id",
+    ]) {
       expect(schema).not.toContain(field);
     }
   });
@@ -70,12 +84,16 @@ describe("credential submission security", () => {
 
   it("rejects foreign or malformed document paths server-side", () => {
     expect(isOwnedCredentialDocumentPath(`${UID}/${crypto.randomUUID()}.pdf`, UID)).toBe(true);
-    expect(isOwnedCredentialDocumentPath(`${OTHER_UID}/${crypto.randomUUID()}.pdf`, UID)).toBe(false);
+    expect(isOwnedCredentialDocumentPath(`${OTHER_UID}/${crypto.randomUUID()}.pdf`, UID)).toBe(
+      false,
+    );
     expect(isOwnedCredentialDocumentPath(`${UID}/../${OTHER_UID}/a.pdf`, UID)).toBe(false);
     expect(isOwnedCredentialDocumentPath(`${UID}/sub/a.pdf`, UID)).toBe(false);
     expect(isOwnedCredentialDocumentPath(`${UID}/evil.exe`, UID)).toBe(false);
     expect(isOwnedCredentialDocumentPath("", UID)).toBe(false);
-    expect(serverSource).toContain("isOwnedCredentialDocumentPath(data.document_url, context.userId)");
+    expect(serverSource).toContain(
+      "isOwnedCredentialDocumentPath(data.document_url, context.userId)",
+    );
   });
 });
 
@@ -94,7 +112,9 @@ describe("private document upload", () => {
   it("rejects invalid mime types and files over 10MB", () => {
     expect(validateCredentialUpload({ type: "application/pdf", size: 1000 }).ok).toBe(true);
     expect(validateCredentialUpload({ type: "image/gif", size: 1000 }).ok).toBe(false);
-    expect(validateCredentialUpload({ type: "image/png", size: 10 * 1024 * 1024 + 1 }).ok).toBe(false);
+    expect(validateCredentialUpload({ type: "image/png", size: 10 * 1024 * 1024 + 1 }).ok).toBe(
+      false,
+    );
   });
 });
 
@@ -124,7 +144,9 @@ describe("multiple-credential interface", () => {
   });
 
   it("awaits my-profile invalidation after a successful submission", () => {
-    expect(panelSource).toContain('await queryClient.invalidateQueries({ queryKey: ["my-profile"] })');
+    expect(panelSource).toContain(
+      'await queryClient.invalidateQueries({ queryKey: ["my-profile"] })',
+    );
   });
 
   it("adds no approval or rejection controls", () => {
@@ -133,18 +155,30 @@ describe("multiple-credential interface", () => {
   });
 
   it("uses the aggregate status precedence for the section", () => {
-    expect(aggregateCredentialStatus([{ verification_status: "rejected" }, { verification_status: "verified" }])).toBe(
-      "verified",
-    );
     expect(
-      aggregateCredentialStatus([{ verification_status: "rejected" }, { verification_status: "pending_review" }]),
+      aggregateCredentialStatus([
+        { verification_status: "rejected" },
+        { verification_status: "verified" },
+      ]),
+    ).toBe("verified");
+    expect(
+      aggregateCredentialStatus([
+        { verification_status: "rejected" },
+        { verification_status: "pending_review" },
+      ]),
     ).toBe("pending_review");
-    expect(aggregateCredentialStatus([{ verification_status: "expired" }, { verification_status: "rejected" }])).toBe(
-      "rejected",
-    );
-    expect(aggregateCredentialStatus([{ verification_status: "unverified" }, { verification_status: "expired" }])).toBe(
-      "expired",
-    );
+    expect(
+      aggregateCredentialStatus([
+        { verification_status: "expired" },
+        { verification_status: "rejected" },
+      ]),
+    ).toBe("rejected");
+    expect(
+      aggregateCredentialStatus([
+        { verification_status: "unverified" },
+        { verification_status: "expired" },
+      ]),
+    ).toBe("expired");
     expect(aggregateCredentialStatus([])).toBe("unverified");
   });
 
