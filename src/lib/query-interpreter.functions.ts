@@ -36,6 +36,8 @@ import { buildCardLocationDisplay, type ActiveLocationRow, type SearchResultCard
 import type {
   InterpretationResult,
   SemanticSignal,
+  SoftPreferences,
+  StructuredFilters,
   TherapistGender,
   TherapistSearchPlan,
 } from "./query-interpreter.types";
@@ -60,6 +62,16 @@ const Input = z.object({
 
 const InterpretInput = z.object({
   query: z.string().trim().min(1).max(200),
+});
+
+const ProblemSearchInput = z.object({
+  problemSlug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/),
+  limit: z.number().int().min(1).max(50).optional(),
 });
 
 async function serverClient(): Promise<SupabaseClient<Database>> {
@@ -115,6 +127,67 @@ async function buildPlan(
     filterConflicts: merged.conflicts,
   };
   return { plan, interpretation };
+}
+
+/**
+ * Builds a semantic-only plan for a canonical problem landing page.
+ *
+ * The route already knows the exact active problem slug, so sending the
+ * problem name through free-text interpretation/classification would add
+ * ambiguity and duplicate work. The canonical slug is injected as a trusted
+ * semantic signal and the normal unified executor performs eligibility,
+ * semantic gating, ranking and display hydration.
+ */
+export function buildProblemSearchPlan(problem: { slug: string; name: string }): TherapistSearchPlan {
+  const hardFilters: StructuredFilters = {
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    deliveryModes: [],
+    cityNames: [],
+    therapistGender: null,
+    regionSlugs: [],
+    therapyFormatSlugs: [],
+    accessibleClinic: false,
+    verifiedOnly: false,
+    lgbtqAffirming: false,
+    freeIntroOnly: false,
+  };
+  const softPreferences: SoftPreferences = {
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    cities: [],
+    deliveryModes: [],
+    genders: [],
+  };
+  const interpretation: InterpretationResult = {
+    raw: problem.name,
+    normalized: SemanticEngine.normalize(problem.name),
+    intent: "semantic",
+    unresolvedPrimary: false,
+    primaryHead: null,
+    hardFilters,
+    softPreferences,
+    therapistNameIds: [],
+    semanticRemainder: problem.name,
+    genderEvidence: [],
+    unresolvedCodes: [],
+  };
+
+  return {
+    interpretation,
+    semanticSignals: [{ slug: problem.slug, confidence: 1 }],
+    hardFilters,
+    softPreferences,
+    therapistNameIds: [],
+    emptyReason: null,
+    browseAll: false,
+    explicitFilters: null,
+    filterConflicts: [],
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -574,14 +647,13 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
   };
 }
 
-export async function runUnifiedSearch(
-  args: { query: string; explicit: RawExplicitFilters; limit: number },
-  client?: SupabaseClient<Database>,
+async function executeUnifiedPlan(
+  plan: TherapistSearchPlan,
+  limit: number,
+  sb: SupabaseClient<Database>,
 ): Promise<UnifiedSearchResult> {
-  const sb = client ?? (await serverClient());
-  const { plan } = await buildPlan(args.query, args.explicit, sb);
   const repo = createSupabaseRepo(sb);
-  const out = await executeUnifiedSearch(repo, plan, args.limit);
+  const out = await executeUnifiedSearch(repo, plan, limit);
   return {
     plan,
     results: out.results,
@@ -590,11 +662,47 @@ export async function runUnifiedSearch(
   };
 }
 
+export async function runUnifiedSearch(
+  args: { query: string; explicit: RawExplicitFilters; limit: number },
+  client?: SupabaseClient<Database>,
+): Promise<UnifiedSearchResult> {
+  const sb = client ?? (await serverClient());
+  const { plan } = await buildPlan(args.query, args.explicit, sb);
+  return executeUnifiedPlan(plan, args.limit, sb);
+}
+
+export async function runUnifiedProblemSearch(
+  args: { problemSlug: string; limit: number },
+  client?: SupabaseClient<Database>,
+): Promise<UnifiedSearchResult> {
+  const sb = client ?? (await serverClient());
+  const { data: problem, error } = await sb
+    .from("problems")
+    .select("slug, name_he")
+    .eq("slug", args.problemSlug)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!problem) throw new Error("הבעיה לא נמצאה או אינה פעילה.");
+
+  const plan = buildProblemSearchPlan({ slug: problem.slug, name: problem.name_he });
+  return executeUnifiedPlan(plan, args.limit, sb);
+}
+
 export const interpretQueryFn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InterpretInput.parse(input))
   .handler(async ({ data }): Promise<InterpretationResult> => {
     const catalog = await loadSearchCatalog();
     return interpretQuery(data.query, catalog);
+  });
+
+export const searchProblemResults = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => ProblemSearchInput.parse(input))
+  .handler(async ({ data }): Promise<UnifiedSearchResult> => {
+    return runUnifiedProblemSearch({
+      problemSlug: data.problemSlug,
+      limit: data.limit ?? 20,
+    });
   });
 
 export const unifiedSearch = createServerFn({ method: "POST" })
