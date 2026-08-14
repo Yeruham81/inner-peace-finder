@@ -81,6 +81,7 @@ describe("resolveSearchContract", () => {
   it("an empty request produces a fully empty contract", () => {
     expect(resolveSearchContract({})).toEqual({
       q: "",
+      problemSlugs: [],
       city: "",
       population: "",
       language: "",
@@ -95,5 +96,12 @@ describe("resolveSearchContract", () => {
       lgbtqAffirming: false,
       freeIntro: false,
     });
+  });
+
+  it("normalizes canonical problem slugs from curated navigation", () => {
+    const contract = resolveSearchContract({
+      problem: "sleep_difficulties,anxiety,sleep_difficulties",
+    });
+    expect(contract.problemSlugs).toEqual(["anxiety", "sleep_difficulties"]);
   });
 });

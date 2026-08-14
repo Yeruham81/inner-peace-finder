@@ -121,6 +121,8 @@ export function normalizeLegacyCityParam(raw: string | null | undefined): {
 
 export type ExplicitSearchContract = {
   q: string;
+  /** Trusted canonical treatment-domain slugs supplied by curated UI. */
+  problemSlugs: string[];
   city: string;
   population: string;
   language: string;
@@ -142,6 +144,8 @@ export type ExplicitSearchContract = {
  */
 export function resolveSearchContract(input: {
   q?: string | null;
+  problem?: MultiValueInput;
+  problemSlugs?: MultiValueInput;
   city?: string | null;
   population?: string | null;
   language?: string | null;
@@ -163,6 +167,7 @@ export function resolveSearchContract(input: {
   const regions = fromParam.length > 0 ? fromParam : legacy.regions;
   return {
     q: (input.q ?? "").trim(),
+    problemSlugs: normalizeSlugList(input.problem ?? input.problemSlugs),
     city: legacy.city,
     population: (input.population ?? "").trim(),
     language: (input.language ?? "").trim(),
@@ -184,6 +189,7 @@ export function resolveSearchContract(input: {
 export function hasAnyExplicitFilter(c: ExplicitSearchContract): boolean {
   return Boolean(
     c.city ||
+    c.problemSlugs.length ||
     c.population ||
     c.language ||
     c.regions.length ||

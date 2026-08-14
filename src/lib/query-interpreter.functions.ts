@@ -44,6 +44,7 @@ import type {
 
 const Input = z.object({
   query: z.string().trim().max(200).optional().default(""),
+  problems: z.union([z.string().max(240), z.array(z.string().max(80)).max(5)]).optional(),
   city: z.string().trim().max(80).optional().default(""),
   population: z.string().trim().max(40).optional().default(""),
   language: z.string().trim().max(8).optional().default(""),
@@ -101,11 +102,35 @@ async function buildPlan(
   query: string,
   explicitRaw: RawExplicitFilters,
   sb: SupabaseClient<Database>,
+  requestedProblemSlugs: readonly string[] = [],
 ): Promise<{ plan: TherapistSearchPlan; interpretation: InterpretationResult }> {
   const catalog = await loadSearchCatalog(sb);
   const interpretation = interpretQuery(query, catalog);
+  const hasRequestedProblem = requestedProblemSlugs.some((slug) => slug.trim().length > 0);
+  const normalizedRequested = [
+    ...new Set(
+      requestedProblemSlugs
+        .map((slug) => slug.trim().toLowerCase())
+        .filter((slug) => /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/.test(slug)),
+    ),
+  ];
   let semanticSignals: SemanticSignal[] = [];
-  if (interpretation.semanticRemainder.length > 0 && !interpretation.unresolvedPrimary) {
+  if (normalizedRequested.length > 0) {
+    const { data: activeProblems, error } = await sb
+      .from("problems")
+      .select("slug")
+      .in("slug", normalizedRequested)
+      .eq("is_active", true);
+    if (error) throw error;
+    const active = new Set((activeProblems ?? []).map((problem) => problem.slug));
+    semanticSignals = normalizedRequested.filter((slug) => active.has(slug)).map((slug) => ({ slug, confidence: 1 }));
+  }
+  if (
+    semanticSignals.length === 0 &&
+    !hasRequestedProblem &&
+    interpretation.semanticRemainder.length > 0 &&
+    !interpretation.unresolvedPrimary
+  ) {
     const classified = await SemanticEngine.classify(interpretation.semanticRemainder, sb);
     semanticSignals = classified.map((c) => ({ slug: c.slug, confidence: c.confidence }));
   }
@@ -121,8 +146,11 @@ async function buildPlan(
     hardFilters: merged.hardFilters,
     softPreferences: merged.softPreferences,
     therapistNameIds: interpretation.therapistNameIds,
-    emptyReason: interpretation.unresolvedPrimary ? "unrecognized_query" : null,
-    browseAll: query.trim().length === 0 && !hasExplicitFilters(explicitRaw),
+    emptyReason:
+      semanticSignals.length === 0 && (hasRequestedProblem || interpretation.unresolvedPrimary)
+        ? "unrecognized_query"
+        : null,
+    browseAll: query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
     explicitFilters: explicit,
     filterConflicts: merged.conflicts,
   };
@@ -663,11 +691,16 @@ async function executeUnifiedPlan(
 }
 
 export async function runUnifiedSearch(
-  args: { query: string; explicit: RawExplicitFilters; limit: number },
+  args: {
+    query: string;
+    explicit: RawExplicitFilters;
+    limit: number;
+    problemSlugs?: readonly string[];
+  },
   client?: SupabaseClient<Database>,
 ): Promise<UnifiedSearchResult> {
   const sb = client ?? (await serverClient());
-  const { plan } = await buildPlan(args.query, args.explicit, sb);
+  const { plan } = await buildPlan(args.query, args.explicit, sb, args.problemSlugs);
   return executeUnifiedPlan(plan, args.limit, sb);
 }
 
@@ -710,6 +743,7 @@ export const unifiedSearch = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<UnifiedSearchResult> => {
     return runUnifiedSearch({
       query: data.query,
+      problemSlugs: typeof data.problems === "string" ? data.problems.split(",") : data.problems,
       explicit: {
         city: data.city,
         population: data.population,
