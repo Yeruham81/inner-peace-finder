@@ -64,13 +64,8 @@ mock.module("@/lib/query-interpreter.functions", () => ({
 
 const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
 const { renderToStaticMarkup } = await import("react-dom/server");
-const {
-  SearchResultsSwitch,
-  resolveFlow,
-  unifiedResultsQuery,
-  structuredTherapistQuery,
-  toUnifiedParams,
-} = await import("./search");
+const { SearchResultsSwitch, resolveFlow, unifiedResultsQuery, structuredTherapistQuery, toUnifiedParams } =
+  await import("./search");
 
 const search = {
   q: "פסיכולוג",
@@ -107,6 +102,12 @@ describe("search flow isolation", () => {
     expect(resolveFlow("legacy", { isDev: false })).toBe("unified");
   });
 
+  it("Preview defaults to unified unless legacy is requested explicitly", () => {
+    expect(resolveFlow("", { isDev: true })).toBe("unified");
+    expect(resolveFlow("unified", { isDev: true })).toBe("unified");
+    expect(resolveFlow("unexpected", { isDev: true })).toBe("unified");
+  });
+
   it("unified mode mounts only UnifiedSearchResults and calls only unifiedSearch", async () => {
     const { html } = await renderUnified();
     expect(html).toContain("יעל כהן");
@@ -126,7 +127,10 @@ describe("search flow isolation", () => {
 
   it("the legacy query caches are never populated in unified mode", async () => {
     const { qc } = await renderUnified();
-    const keys = qc.getQueryCache().getAll().map((q) => JSON.stringify(q.queryKey));
+    const keys = qc
+      .getQueryCache()
+      .getAll()
+      .map((q) => JSON.stringify(q.queryKey));
     expect(keys.some((k) => k.includes("unified-search"))).toBe(true);
     expect(keys.some((k) => k.includes("structured-search"))).toBe(false);
     expect(keys.some((k) => k.startsWith('["search"'))).toBe(false);
