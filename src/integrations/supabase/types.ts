@@ -1265,6 +1265,23 @@ export type Database = {
         Args: { _actor: string }
         Returns: Json
       }
+      issue_lead_challenge: {
+        Args: {
+          _expected: number
+          _ip_hash: string
+          _issue_limit?: number
+          _prompt: string
+          _ttl_seconds?: number
+          _window_seconds?: number
+        }
+        Returns: {
+          allowed: boolean
+          challenge_id: string
+          expires_at: string
+          prompt: string
+          reason: string
+        }[]
+      }
       purge_expired_lead_challenges: { Args: never; Returns: number }
       record_cta_click: {
         Args: {
