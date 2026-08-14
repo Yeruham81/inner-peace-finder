@@ -66,12 +66,6 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
 function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}) {
   return createFakeSupabase({
     therapists: rows,
-    therapist_problems: [
-      {
-        therapist_id: "t-1",
-        problems: { id: "p1", name: "חרדה", slug: "anxiety", parent_id: null },
-      },
-    ],
     therapist_populations: [{ therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } }],
     therapist_languages: [{ therapist_id: "t-1", languages: { code: "he", name: "עברית" } }],
     therapist_professions: [
@@ -121,6 +115,7 @@ function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}) {
     therapist_credentials: [],
     population_groups: [{ slug: "adults", name: "מבוגרים" }],
     languages: [{ code: "he", name: "עברית" }],
+    problems: [{ id: "p1", slug: "anxiety", name: "חרדה", parent_id: null, is_active: true }],
     ...overrides,
   });
 }
@@ -152,6 +147,22 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.professions.map((item) => item.slug)).toEqual(["psychologist"]);
     expect(res?.modalities.map((item) => item.slug)).toEqual(["cbt"]);
     expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
+  });
+
+  it("uses only the canonical semantic profile for public treatment domains", async () => {
+    const client = db([therapistRow({ semantic_profile: [] })], {
+      therapist_problems: [
+        {
+          therapist_id: "t-1",
+          problems: { id: "legacy-1", name: "תחום ישן", slug: "legacy-domain", parent_id: null },
+        },
+      ],
+    });
+
+    const res = await fetchPublicTherapistBySlug(client, "eligible-one");
+
+    expect(res?.problems).toEqual([]);
+    expect(client.reads).not.toContain("therapist_problems");
   });
 
   it("grants the public verified badge when a credential was verified", async () => {
@@ -263,6 +274,12 @@ describe("public eligibility — centralization", () => {
     for (const f of [...PUBLIC_QUERY_FILES, "routes/therapists.$slug.tsx"]) {
       expect(read(f).includes('select("*")'), f).toBe(false);
     }
+  });
+
+  it("the public profile has no legacy therapist_problems fallback", () => {
+    const src = read("lib/public-therapist-queries.ts");
+    expect(src).not.toContain('.from("therapist_problems")');
+    expect(src).not.toContain("legacyProblems");
   });
 
   it("the public select statement lists only allowlisted columns", () => {
