@@ -118,6 +118,7 @@ function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}) {
     therapist_service_arrangements: [
       { therapist_id: "t-1", organization_name: "גוף מסדיר", note: "בכפוף לזכאות", sort_order: 0 },
     ],
+    therapist_credentials: [],
     population_groups: [{ slug: "adults", name: "מבוגרים" }],
     languages: [{ code: "he", name: "עברית" }],
     ...overrides,
@@ -151,6 +152,16 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.professions.map((item) => item.slug)).toEqual(["psychologist"]);
     expect(res?.modalities.map((item) => item.slug)).toEqual(["cbt"]);
     expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
+  });
+
+  it("grants the public verified badge when a credential was verified", async () => {
+    const res = await fetchPublicTherapistBySlug(
+      db([therapistRow({ verified: false })], {
+        therapist_credentials: [{ therapist_id: "t-1", id: "credential-1", verification_status: "verified" }],
+      }),
+      "eligible-one",
+    );
+    expect(res?.verified).toBe(true);
   });
 
   it("the public profile response contains every field the route consumes", async () => {
