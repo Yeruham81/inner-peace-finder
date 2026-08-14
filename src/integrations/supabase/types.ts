@@ -1257,6 +1257,14 @@ export type Database = {
           reason: string
         }[]
       }
+      begin_therapist_profile_deletion: {
+        Args: { _actor: string }
+        Returns: Json
+      }
+      finalize_therapist_profile_deletion: {
+        Args: { _actor: string }
+        Returns: Json
+      }
       purge_expired_lead_challenges: { Args: never; Returns: number }
       record_cta_click: {
         Args: {
@@ -1272,6 +1280,10 @@ export type Database = {
           billable: boolean
           click_id: string
         }[]
+      }
+      save_therapist_profile: {
+        Args: { _actor: string; _payload: Json }
+        Returns: Json
       }
       set_claim_request_status: {
         Args: {
