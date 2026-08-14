@@ -232,7 +232,7 @@ export function ClinicLocationsCard({ locations }: { locations: TherapistProfile
   if (locations.length === 0) return null;
 
   return (
-    <div className="box-border w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
+    <div className="box-border h-full w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
       <div className="flex items-start gap-3">
         <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
@@ -405,16 +405,12 @@ export function TherapistProfileView({
                 <div className="mt-3 flex min-w-0 max-w-full items-start gap-1.5 text-sm text-foreground/75">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <div className="flex min-w-0 flex-wrap gap-x-2 gap-y-1">
-                    {clinicLocations.map((location, index) => {
-                      const accessibilityLabel = clinicAccessibilityLabel(location.accessibility_status);
-                      return (
-                        <span key={`hero-location-${location.city ?? index}`} className="break-words">
-                          {location.city || "מיקום קליניקה"}
-                          {accessibilityLabel ? ` · ${accessibilityLabel}` : ""}
-                          {index < clinicLocations.length - 1 ? " | " : ""}
-                        </span>
-                      );
-                    })}
+                    {clinicLocations.map((location, index) => (
+                      <span key={`hero-location-${location.city ?? index}`} className="break-words">
+                        {location.city || "מיקום קליניקה"}
+                        {index < clinicLocations.length - 1 ? " | " : ""}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
@@ -507,30 +503,44 @@ export function TherapistProfileView({
             <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">מיקום ואופן הטיפול</h2>
               {t.locations.length > 0 && (
-                <div className="mt-4 grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
-                  <ClinicLocationsCard locations={clinicLocations} />
-                  {onlineAvailable && (
-                    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
-                      <div className="flex items-start gap-3">
-                        <Video className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                        <div>
-                          <p className="font-semibold text-foreground">טיפול אונליין</p>
-                          <p className="mt-0.5 text-sm text-muted-foreground">מכל מקום בארץ</p>
+                <div
+                  className={`mt-4 grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] items-stretch gap-3 ${
+                    clinicLocations.length > 0 && (onlineAvailable || homeVisitLocations.length > 0)
+                      ? "sm:grid-cols-2"
+                      : ""
+                  }`}
+                >
+                  {clinicLocations.length > 0 && <ClinicLocationsCard locations={clinicLocations} />}
+                  {(onlineAvailable || homeVisitLocations.length > 0) && (
+                    <div
+                      className={`grid min-w-0 max-w-full gap-3 ${
+                        onlineAvailable && homeVisitLocations.length > 0 ? "grid-rows-2" : "grid-rows-1"
+                      }`}
+                    >
+                      {onlineAvailable && (
+                        <div className="h-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
+                          <div className="flex items-start gap-3">
+                            <Video className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                            <div>
+                              <p className="font-semibold text-foreground">טיפול אונליין</p>
+                              <p className="mt-0.5 text-sm text-muted-foreground">מכל מקום בארץ</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-                  {homeVisitLocations.length > 0 && (
-                    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
-                      <div className="flex items-start gap-3">
-                        <Home className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                        <div>
-                          <p className="font-semibold text-foreground">ביקורי בית</p>
-                          {homeVisitRegions.length > 0 && (
-                            <p className="mt-0.5 text-sm text-muted-foreground">{homeVisitRegions.join(" · ")}</p>
-                          )}
+                      )}
+                      {homeVisitLocations.length > 0 && (
+                        <div className="h-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
+                          <div className="flex items-start gap-3">
+                            <Home className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                            <div>
+                              <p className="font-semibold text-foreground">ביקורי בית</p>
+                              {homeVisitRegions.length > 0 && (
+                                <p className="mt-0.5 text-sm text-muted-foreground">{homeVisitRegions.join(" · ")}</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
