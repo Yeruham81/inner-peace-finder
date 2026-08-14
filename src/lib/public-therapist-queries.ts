@@ -1,3 +1,8 @@
+
+/
+public-therapist-queries.ts
+
+
 /**
  * Public therapist reads, expressed as plain functions over a Supabase-like
  * client so they can be exercised in tests without a database.
@@ -31,7 +36,6 @@ export async function fetchPublicTherapistBySlug(
   if (!t) return null;
 
   const [
-    tps,
     pops,
     langs,
     professions,
@@ -44,7 +48,6 @@ export async function fetchPublicTherapistBySlug(
     semanticSource,
     problemCatalog,
   ] = await Promise.all([
-    sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
     sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
     sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
     sb
@@ -121,8 +124,6 @@ export async function fetchPublicTherapistBySlug(
       slug: problem.slug,
       parent_id: problem.parent_id === null ? null : String(problem.parent_id),
     }));
-  const legacyProblems = ((tps?.data ?? []) as any[]).map((row) => row.problems).filter(Boolean);
-
   // Explicit projection — never spread the database row.
   return {
     id: t.id,
@@ -149,9 +150,10 @@ export async function fetchPublicTherapistBySlug(
     locations: (locations?.data ?? []) as any[],
     professional_memberships: (memberships?.data ?? []) as any[],
     service_arrangements: (arrangements?.data ?? []) as any[],
-    // Use the same extracted domains that power search-result cards. Keep the
-    // legacy relation only as a fallback for profiles not backfilled yet.
-    problems: extractedProblems.length > 0 ? extractedProblems : legacyProblems,
+    // Use the same canonical semantic profile that powers search-result cards.
+    // An empty semantic profile intentionally produces no treatment domains;
+    // the legacy therapist_problems relation is not a second source of truth.
+    problems: extractedProblems,
     populations: ((pops?.data ?? []) as any[]).map((r) => r.population_groups).filter(Boolean),
     languages: ((langs?.data ?? []) as any[]).map((r) => r.languages).filter(Boolean),
   };
