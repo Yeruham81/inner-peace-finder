@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { SearchResultCard } from "@/lib/search-result-card";
 import { track } from "@/lib/analytics";
-import { buildSearchReturn } from "@/lib/search-return";
+import { buildResultsReturn } from "@/lib/search-return";
 import { visibleItemCountForRows } from "@/lib/tag-overflow";
 
 const COMPACT_TAG_CLASS =
@@ -115,7 +115,7 @@ export function TherapistCard({
 }) {
   const viewedRef = useRef(false);
   const returnTo = useRouterState({
-    select: (s) => buildSearchReturn(s.location.pathname, s.location.searchStr),
+    select: (s) => buildResultsReturn(s.location.pathname, s.location.searchStr),
   });
   useEffect(() => {
     if (viewedRef.current) return;
