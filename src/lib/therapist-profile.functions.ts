@@ -268,11 +268,12 @@ async function resolveAccount(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   userId: string,
 ): Promise<string> {
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("therapist_accounts")
     .select("id")
     .eq("auth_user_id", userId)
     .maybeSingle();
+  if (existingError) throw new Error(`therapist_accounts: ${existingError.message}`);
   if (existing) return existing.id as string;
   const { data: created, error } = await supabase
     .from("therapist_accounts")
@@ -324,7 +325,12 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<ProfileEditorData | null> => {
     const { supabase, userId } = context;
     const accountId = await resolveAccount(supabase, userId);
-    const { data: t } = await supabase.from("therapists").select("*").eq("owner_account_id", accountId).maybeSingle();
+    const { data: t, error: profileError } = await supabase
+      .from("therapists")
+      .select("*")
+      .eq("owner_account_id", accountId)
+      .maybeSingle();
+    if (profileError) throw new Error(`therapists: ${profileError.message}`);
     if (!t) return null;
 
     const [profs, mods, langs, pops, locs, formats, memberships, arrangements, credentials] = await Promise.all([
@@ -354,8 +360,22 @@ export const getMyProfile = createServerFn({ method: "GET" })
         .order("id", { ascending: true }),
     ]);
 
-    // A failed credential query must never be flattened into "no credentials".
-    if (credentials.error) throw new Error(credentials.error.message);
+    // A failed relation query must never be flattened into an empty editor
+    // field. That would let a temporary read failure look like saved data was
+    // deleted and could cause the next save to overwrite valid relations.
+    for (const [relation, result] of [
+      ["therapist_professions", profs],
+      ["therapist_modalities", mods],
+      ["therapist_languages", langs],
+      ["therapist_populations", pops],
+      ["therapist_locations", locs],
+      ["therapist_therapy_formats", formats],
+      ["therapist_professional_memberships", memberships],
+      ["therapist_service_arrangements", arrangements],
+      ["therapist_credentials", credentials],
+    ] as const) {
+      if (result.error) throw new Error(`${relation}: ${result.error.message}`);
+    }
 
     const physicalLocations = (locs.data ?? [])
       .filter((location) => location.location_type === "clinic")
