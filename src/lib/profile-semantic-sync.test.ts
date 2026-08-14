@@ -148,15 +148,15 @@ describe("saveMyProfile — semantic wiring", () => {
     expect(compute).toBeLessThan(firstWrite);
   });
 
-  it("includes semantic_profile in the shared payload used by insert and update", () => {
+  it("includes semantic_profile in the single transactional save payload", () => {
     expect(saveSource).toContain("semantic_profile: semanticProfile");
-    const payloadStart = saveSource.indexOf("const basePayload = {");
-    const payloadEnd = saveSource.indexOf("let therapistId");
-    expect(saveSource.slice(payloadStart, payloadEnd)).toContain(
-      "semantic_profile: semanticProfile",
-    );
-    // Both write paths spread basePayload.
-    expect(saveSource).toContain("...basePayload");
+    const payloadStart = saveSource.indexOf("const payload = {");
+    const payloadEnd = saveSource.indexOf('.rpc("save_therapist_profile"');
+    expect(payloadStart).toBeGreaterThan(-1);
+    expect(payloadEnd).toBeGreaterThan(payloadStart);
+    expect(saveSource.slice(payloadStart, payloadEnd)).toContain("semantic_profile: semanticProfile");
+    // Create and update share one atomic database operation.
+    expect(saveSource).toContain("_payload: payload as never");
   });
 
   it("does not swallow extraction failures in the save flow", () => {
