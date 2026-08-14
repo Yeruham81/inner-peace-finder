@@ -1,11 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import {
-  getProblemBySlug,
-  searchTherapists,
-} from "@/lib/therapists.functions";
+import { getProblemBySlug } from "@/lib/therapists.functions";
+import { searchProblemResults } from "@/lib/query-interpreter.functions";
 import { TherapistCard } from "@/components/therapist-card";
-import { legacyRowToCard } from "@/lib/search-result-card";
 
 function problemQuery(slug: string) {
   return queryOptions({
@@ -15,8 +12,8 @@ function problemQuery(slug: string) {
 }
 function problemTherapistsQuery(slug: string) {
   return queryOptions({
-    queryKey: ["problem-therapists", slug],
-    queryFn: () => searchTherapists({ data: { problemSlug: slug } }),
+    queryKey: ["unified-problem-therapists", slug],
+    queryFn: () => searchProblemResults({ data: { problemSlug: slug, limit: 20 } }),
   });
 }
 
@@ -29,9 +26,7 @@ export const Route = createFileRoute("/problems/$slug")({
   },
   head: ({ loaderData }) => {
     const name = loaderData?.name ?? "בעיה";
-    const desc =
-      loaderData?.description?.slice(0, 155) ??
-      `מטפלים מומחים בטיפול ב${name} בישראל.`;
+    const desc = loaderData?.description?.slice(0, 155) ?? `מטפלים מומחים בטיפול ב${name} בישראל.`;
     return {
       meta: [
         { title: `${name} — מטפלים מומחים` },
@@ -61,8 +56,9 @@ export const Route = createFileRoute("/problems/$slug")({
 function ProblemPage() {
   const { slug } = Route.useParams();
   const { data: problem } = useSuspenseQuery(problemQuery(slug));
-  const { data: therapists } = useSuspenseQuery(problemTherapistsQuery(slug));
+  const { data: pipeline } = useSuspenseQuery(problemTherapistsQuery(slug));
   if (!problem) return null;
+  const therapists = pipeline.results;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -70,21 +66,15 @@ function ProblemPage() {
         ← דף הבית
       </Link>
       <header className="mt-3 rounded-3xl bg-gradient-to-br from-brand-soft to-background p-8 sm:p-10">
-        <h1 className="text-3xl font-extrabold text-foreground sm:text-4xl">
-          {problem.name}
-        </h1>
+        <h1 className="text-3xl font-extrabold text-foreground sm:text-4xl">{problem.name}</h1>
         {problem.description && (
-          <p className="mt-3 max-w-3xl text-base text-foreground/80 sm:text-lg">
-            {problem.description}
-          </p>
+          <p className="mt-3 max-w-3xl text-base text-foreground/80 sm:text-lg">{problem.description}</p>
         )}
       </header>
 
       {problem.children && problem.children.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">
-            תתי-קטגוריות
-          </h2>
+          <h2 className="mb-3 text-lg font-semibold text-foreground">תתי-קטגוריות</h2>
           <div className="flex flex-wrap gap-2">
             {problem.children.map((c: { id: string | number; slug: string; name: string | null }) => (
               <Link
@@ -113,8 +103,8 @@ function ProblemPage() {
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {therapists.map((t) => (
-              <TherapistCard key={t.id} t={legacyRowToCard(t)} />
+            {therapists.map((therapist, index) => (
+              <TherapistCard key={therapist.id} t={therapist} rankPosition={index + 1} pageSource="problem" />
             ))}
           </div>
         )}
