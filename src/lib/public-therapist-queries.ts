@@ -9,6 +9,7 @@
 import { applyEligibility } from "./search-eligibility";
 import { PUBLIC_THERAPIST_SELECT, type PublicTherapistProfile } from "./public-therapist-profile";
 import { regionSlugForStoredValue } from "./locality-options";
+import { parseStoredProfile } from "./therapist-semantic-profile";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type PublicReadClient = { from: (table: string) => any };
@@ -40,6 +41,8 @@ export async function fetchPublicTherapistBySlug(
     memberships,
     arrangements,
     verifiedCredentials,
+    semanticSource,
+    problemCatalog,
   ] = await Promise.all([
     sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
     sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
@@ -78,6 +81,10 @@ export async function fetchPublicTherapistBySlug(
       .eq("therapist_id", t.id)
       .eq("verification_status", "verified")
       .limit(1),
+    // Read the raw semantic profile only inside the trusted server function.
+    // The explicit public projection below returns mapped problem fields only.
+    sb.from("therapists").select("semantic_profile").eq("id", t.id).maybeSingle(),
+    sb.from("problems").select("id, slug, name:name_he, parent_id").eq("is_active", true),
   ]);
 
   type MappedProfession = { slug: string; name: string; is_primary: boolean; sort_order: number };
@@ -101,6 +108,20 @@ export async function fetchPublicTherapistBySlug(
     .filter(Boolean)
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map(({ slug, name }) => ({ slug, name }));
+
+  const catalogBySlug = new Map(
+    ((problemCatalog?.data ?? []) as any[]).map((problem) => [problem.slug, problem] as const),
+  );
+  const extractedProblems = parseStoredProfile(semanticSource?.data?.semantic_profile)
+    .map((entry) => catalogBySlug.get(entry.slug))
+    .filter(Boolean)
+    .map((problem) => ({
+      id: String(problem.id),
+      name: problem.name,
+      slug: problem.slug,
+      parent_id: problem.parent_id === null ? null : String(problem.parent_id),
+    }));
+  const legacyProblems = ((tps?.data ?? []) as any[]).map((row) => row.problems).filter(Boolean);
 
   // Explicit projection — never spread the database row.
   return {
@@ -128,7 +149,9 @@ export async function fetchPublicTherapistBySlug(
     locations: (locations?.data ?? []) as any[],
     professional_memberships: (memberships?.data ?? []) as any[],
     service_arrangements: (arrangements?.data ?? []) as any[],
-    problems: ((tps?.data ?? []) as any[]).map((r) => r.problems).filter(Boolean),
+    // Use the same extracted domains that power search-result cards. Keep the
+    // legacy relation only as a fallback for profiles not backfilled yet.
+    problems: extractedProblems.length > 0 ? extractedProblems : legacyProblems,
     populations: ((pops?.data ?? []) as any[]).map((r) => r.population_groups).filter(Boolean),
     languages: ((langs?.data ?? []) as any[]).map((r) => r.languages).filter(Boolean),
   };
