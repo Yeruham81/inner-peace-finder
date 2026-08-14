@@ -3,10 +3,9 @@
  *
  * Pure data module. Encodes:
  *
- *   - DEPRECATED_SLUGS: slug → canonical replacement. Applied only in the
- *     `classify()` pipeline. Legacy stored slugs remain interpretable and
- *     `extractProfile()` output is left untouched so historical therapist
- *     tagging (and the profile-extraction regression suite) doesn't drift.
+ *   - DEPRECATED_SLUGS: inactive/historical slug → active canonical
+ *     replacement. Used as a compatibility bridge for stored profiles and
+ *     any legacy signal that reaches downstream ranking/display.
  *
  *   - HIERARCHY_PARENT_OF: extends the engine's child → parent map used
  *     by parent-suppression. Additions are conservative — only pairs the
@@ -30,29 +29,58 @@
  */
 
 /**
- * Deprecated slugs and their canonical replacement. Applied ONLY in
- * `classify()` — the deprecated slug never appears in classifier output;
- * its evidence is merged into the replacement slug's evidence bucket.
- *
- * Not applied in `extractProfile()`, so therapist profiles that already
- * store the deprecated slug (or new profiles whose full_description
- * literally names it) continue to round-trip unchanged. This is a
- * migration layer, not a destructive delete.
+ * Deprecated/inactive slugs and their active canonical replacement.
+ * Classification and new profile extraction now load active problems only;
+ * this map remains the compatibility bridge for historical stored profiles
+ * and any legacy signal that reaches a downstream consumer.
  */
 export const DEPRECATED_SLUGS: Readonly<Record<string, string>> = Object.freeze({
-  // Empty vocab domain that only produced FPs against the "burnout" cluster.
-  burnout_depression: "burnout",
-  // Near-synonyms subsumed by grief_loss.
+  burnout_depression: "performance_functioning",
+  burnout: "performance_functioning",
+  procrastination: "performance_functioning",
+  career_change: "performance_functioning",
   loss: "grief_loss",
   bereavement: "grief_loss",
-  // Trauma subtypes — retained in extractProfile, unified in classify.
   complex_trauma: "trauma",
-  // Anxiety subtype without independent vocabulary — folds into anxiety.
+  childhood_trauma: "trauma",
+  ptsd: "trauma",
   generalized_anxiety: "anxiety",
-  // Life-transitions duplicate.
+  panic: "anxiety",
+  social_anxiety: "anxiety",
+  health_anxiety: "anxiety",
+  performance_anxiety: "anxiety",
   major_life_change: "life_transitions",
-  // Loneliness sibling with zero vocabulary + FP against loneliness.
-  social_isolation: "loneliness",
+  acute_crisis: "life_transitions",
+  social_isolation: "social_belonging",
+  loneliness: "social_belonging",
+  low_self_esteem: "self_identity",
+  identity_crisis: "self_identity",
+  low_mood: "depression",
+  anhedonia: "depression",
+  couples_conflict: "relationships",
+  divorce: "relationships",
+  breakup: "relationships",
+  trust_issues: "relationships",
+  attachment_issues: "relationships",
+  intimacy_issues: "sexuality_intimacy",
+  sexual_dysfunction: "sexuality_intimacy",
+  substance_use: "addiction",
+  behavioral_addiction: "addiction",
+  body_image: "eating_body",
+  binge_eating: "eating_body",
+  parenting_stress: "family_parenting",
+  parent_child_conflict: "family_parenting",
+  anger: "emotional_regulation",
+  emotional_overwhelm: "emotional_regulation",
+  psychosomatic: "somatic",
+  intrusive_thoughts: "ocd_compulsions",
+  compulsions: "ocd_compulsions",
+  adhd: "neurodiversity",
+  autism: "neurodiversity",
+  childhood_development: "developmental",
+  communication_difficulties: "communication_expression",
+  existential_anxiety: "existential",
+  meaning_crisis: "existential",
 });
 
 /**
@@ -103,7 +131,7 @@ export const BLOCKED_CLASSIFY_PHRASES: Readonly<Record<string, ReadonlySet<strin
   // handled by the depression → low_mood parent suppression already
   // in PARENT_OF (semantic-engine.ts).
   identity_crisis: new Set([
-    "אני מחפש את עצמי",   // life-transition phrasing → over-fires
+    "אני מחפש את עצמי", // life-transition phrasing → over-fires
     "אני מחפשת את עצמי",
   ]),
   loneliness: new Set([
@@ -113,14 +141,14 @@ export const BLOCKED_CLASSIFY_PHRASES: Readonly<Record<string, ReadonlySet<strin
     // profile-only and no longer competes at classify time).
   ]),
   social_anxiety: new Set([
-    "פחד מאנשים",         // fires on generic "afraid of people"
+    "פחד מאנשים", // fires on generic "afraid of people"
   ]),
   psychosomatic: new Set([
-    "כאב ראש מלחץ",       // short overlap with stress/burnout queries
+    "כאב ראש מלחץ", // short overlap with stress/burnout queries
     "כאבי בטן מלחץ",
   ]),
   trust_issues: new Set([
-    "קשה לי לסמוך",       // near-duplicate of relationships alias
+    "קשה לי לסמוך", // near-duplicate of relationships alias
   ]),
 });
 
@@ -147,7 +175,5 @@ export const ONTOLOGY_MANIFEST = Object.freeze({
   deprecated: DEPRECATED_SLUGS,
   hierarchyAdditions: HIERARCHY_PARENT_OF,
   profileOnly: Array.from(PROFILE_ONLY_SLUGS),
-  blockedForClassify: Object.fromEntries(
-    Object.entries(BLOCKED_CLASSIFY_PHRASES).map(([k, v]) => [k, Array.from(v)]),
-  ),
+  blockedForClassify: Object.fromEntries(Object.entries(BLOCKED_CLASSIFY_PHRASES).map(([k, v]) => [k, Array.from(v)])),
 });
