@@ -5,7 +5,7 @@
  * hash and the session hash are derived here and are never accepted from, or
  * returned to, client input.
  */
-import { createHash, randomInt, randomUUID } from "crypto";
+import { createHmac, randomInt, randomUUID } from "crypto";
 
 /** A challenge is valid for 10 minutes. */
 export const CHALLENGE_TTL_MS = 10 * 60 * 1000;
@@ -15,9 +15,18 @@ export const CHALLENGE_ISSUE_WINDOW_MS = 15 * 60 * 1000;
 /** Expired/old challenge rows are removed after 24 hours. */
 export const CHALLENGE_RETENTION_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Keyed hash of a visitor identifier. The key is a server-only secret, so the
+ * mapping cannot be reproduced (or brute-forced from a known project id) by
+ * anyone without the secret. A missing secret is a hard failure: silently
+ * falling back to a guessable salt would make the rate limits bypassable.
+ */
 export function hashValue(value: string): string {
-  const salt = process.env["SUPABASE_PROJECT_ID"] ?? "salt";
-  return createHash("sha256").update(`${value}:${salt}`).digest("hex");
+  const secret = process.env["LEAD_IDENTITY_HMAC_SECRET"];
+  if (!secret || secret.length < 16) {
+    throw new Error("LEAD_IDENTITY_HMAC_SECRET is not configured");
+  }
+  return createHmac("sha256", secret).update(value).digest("hex");
 }
 
 /** Extract the caller IP from trusted proxy headers (never from the body). */

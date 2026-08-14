@@ -143,23 +143,32 @@ describe("therapist relation tables — server/client boundary", () => {
     }
   });
 
-  it("the profile editor mutates relation tables only through the authenticated owner client", () => {
+  it("the profile editor never mutates therapist tables directly from application code", () => {
     const src = read("lib/therapist-profile.functions.ts");
     expect(src).toContain("requireSupabaseAuth");
     expect(src.includes("trusted-read-client"), "editor must not use the privileged client").toBe(
       false,
     );
-    // The admin client is allowed for exactly one controlled write — the
-    // credential submission, whose verification columns the authenticated
-    // role intentionally cannot touch — and only via a lazy in-handler import.
+    // Admin access is only ever reached through lazy in-handler imports.
     expect(/^import .*client\.server/m.test(src)).toBe(false);
-    const adminImports = src.match(/client\.server/g) ?? [];
-    expect(adminImports.length).toBe(1);
     expect(src).toContain('await import("@/integrations/supabase/client.server")');
-    const credentialWrite = src.slice(src.indexOf("export const submitMyCredential"));
-    expect(credentialWrite.includes("client.server")).toBe(true);
-    for (const t of RELATION_TABLES) expect(credentialWrite.includes(t), t).toBe(false);
-    // the editor performs delete + insert per relation table, and select on load
+
+    // Profile + relation writes happen exclusively inside one transactional
+    // database operation; application code performs no insert/update/delete on
+    // therapist tables at all.
+    // (therapist_credentials is the one exception: verification columns are
+    // written through the admin client after ownership + document checks.)
+    expect(src).toContain('.rpc("save_therapist_profile"');
+    // (therapist_accounts: only the self-row creation insert, whose status
+    // columns a database trigger forces back to the platform defaults.)
+    const editorWrites =
+      src.match(
+        /\.from\("(therapists|therapist_(?!credentials|accounts)[a-z_]*)"\)\s*\n?\s*\.(insert|update|delete)\(/g,
+      ) ?? [];
+    expect(editorWrites).toEqual([]);
+    expect(src).not.toMatch(/\.from\("therapist_accounts"\)\s*\n?\s*\.(update|delete)\(/);
+
+    // Relation tables are still read (owner-scoped SELECT) when loading the editor.
     for (const t of RELATION_TABLES) expect(src.includes(t), t).toBe(true);
     expect(statSync(join(SRC, "lib/therapist-profile.functions.ts")).size).toBeGreaterThan(0);
   });
