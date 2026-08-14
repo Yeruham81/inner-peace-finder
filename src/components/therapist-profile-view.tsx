@@ -8,7 +8,6 @@ import {
   Languages,
   MapPin,
   MessageCircle,
-  ShieldCheck,
   Video,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -339,7 +338,7 @@ export function TherapistProfileView({
     clinicLocations.find((location) => location.is_primary)?.city ??
     clinicLocations.find((location) => location.city)?.city ??
     t.city;
-  const treatmentProblems = t.problems.filter((problem) => problem.slug !== "anxiety");
+  const treatmentProblems = t.problems;
   const hasTreatmentDetails =
     t.professions.length > 0 ||
     treatmentProblems.length > 0 ||
@@ -356,9 +355,8 @@ export function TherapistProfileView({
     if (clinicLocations.length > 0) tags.push({ key: "clinic", label: "טיפול בקליניקה", icon: <Building2 /> });
     if (onlineAvailable) tags.push({ key: "online", label: "טיפול אונליין", icon: <Video /> });
     if (homeVisitLocations.length > 0) tags.push({ key: "home", label: "ביקורי בית", icon: <Home /> });
-    if (t.offers_free_intro) tags.push({ key: "intro", label: "היכרות ללא תשלום", icon: <MessageCircle /> });
     return tags;
-  }, [clinicLocations.length, homeVisitLocations.length, onlineAvailable, t.offers_free_intro]);
+  }, [clinicLocations.length, homeVisitLocations.length, onlineAvailable]);
 
   return (
     <article className="box-border w-full min-w-0 max-w-full space-y-6 overflow-x-clip">
@@ -387,11 +385,6 @@ export function TherapistProfileView({
               )}
 
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/75">
-                {displayLocation && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary" /> {displayLocation}
-                  </span>
-                )}
                 {t.years_experience !== null && (
                   <span className="inline-flex items-center gap-1.5">
                     <Clock3 className="h-4 w-4 text-primary" />
@@ -408,6 +401,24 @@ export function TherapistProfileView({
                 )}
               </div>
 
+              {clinicLocations.length > 0 && (
+                <div className="mt-3 flex min-w-0 max-w-full items-start gap-1.5 text-sm text-foreground/75">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div className="flex min-w-0 flex-wrap gap-x-2 gap-y-1">
+                    {clinicLocations.map((location, index) => {
+                      const accessibilityLabel = clinicAccessibilityLabel(location.accessibility_status);
+                      return (
+                        <span key={`hero-location-${location.city ?? index}`} className="break-words">
+                          {location.city || "מיקום קליניקה"}
+                          {accessibilityLabel ? ` · ${accessibilityLabel}` : ""}
+                          {index < clinicLocations.length - 1 ? " | " : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {(heroServiceTags.length > 0 || t.lgbtq_affirming) && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {heroServiceTags.map((tag) => (
@@ -420,7 +431,7 @@ export function TherapistProfileView({
                     </span>
                   ))}
                   {t.lgbtq_affirming && (
-                    <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-800">
+                    <span className="rounded-full border border-white/70 bg-[linear-gradient(90deg,rgba(239,68,68,.18),rgba(245,158,11,.18),rgba(34,197,94,.18),rgba(59,130,246,.18),rgba(168,85,247,.18))] px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm">
                       טיפול מותאם לקהילה הגאה
                     </span>
                   )}
@@ -435,7 +446,7 @@ export function TherapistProfileView({
         <main className="box-border min-w-0 max-w-full space-y-5">
           {t.full_description && (
             <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
-              <h2 className="text-xl font-bold text-foreground">אודות</h2>
+              <h2 className="text-xl font-bold text-foreground">קצת עלי</h2>
               <p
                 className={`mt-3 break-words whitespace-pre-line text-base leading-8 text-foreground/80 ${
                   longAbout && !aboutExpanded ? "line-clamp-5" : ""
@@ -492,57 +503,55 @@ export function TherapistProfileView({
             </section>
           )}
 
-          {t.locations.length > 0 && (
+          {(t.locations.length > 0 || t.service_arrangements.length > 0) && (
             <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
               <h2 className="text-xl font-bold text-foreground">מיקום ואופן הטיפול</h2>
-              <div className="mt-4 grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
-                <ClinicLocationsCard locations={clinicLocations} />
-                {onlineAvailable && (
-                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
-                    <div className="flex items-start gap-3">
-                      <Video className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <div>
-                        <p className="font-semibold text-foreground">טיפול אונליין</p>
-                        <p className="mt-0.5 text-sm text-muted-foreground">מכל מקום בארץ</p>
+              {t.locations.length > 0 && (
+                <div className="mt-4 grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
+                  <ClinicLocationsCard locations={clinicLocations} />
+                  {onlineAvailable && (
+                    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
+                      <div className="flex items-start gap-3">
+                        <Video className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                        <div>
+                          <p className="font-semibold text-foreground">טיפול אונליין</p>
+                          <p className="mt-0.5 text-sm text-muted-foreground">מכל מקום בארץ</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-                {homeVisitLocations.length > 0 && (
-                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
-                    <div className="flex items-start gap-3">
-                      <Home className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <div>
-                        <p className="font-semibold text-foreground">ביקורי בית</p>
-                        {homeVisitRegions.length > 0 && (
-                          <p className="mt-0.5 text-sm text-muted-foreground">{homeVisitRegions.join(" · ")}</p>
-                        )}
+                  )}
+                  {homeVisitLocations.length > 0 && (
+                    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-background/70 p-4">
+                      <div className="flex items-start gap-3">
+                        <Home className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                        <div>
+                          <p className="font-semibold text-foreground">ביקורי בית</p>
+                          {homeVisitRegions.length > 0 && (
+                            <p className="mt-0.5 text-sm text-muted-foreground">{homeVisitRegions.join(" · ")}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
+              {t.service_arrangements.length > 0 && (
+                <div className="mt-5 border-t border-border pt-4">
+                  <h3 className="text-sm font-semibold text-foreground/75">הסדרים עם גופים</h3>
+                  <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap gap-2">
+                    {t.service_arrangements.map((item, index) => (
+                      <span
+                        key={`${item.organization_name}-${index}`}
+                        className="inline-flex max-w-full items-center break-words rounded-full border border-brand/20 bg-surface-elevated/80 px-3 py-1.5 text-xs font-medium text-foreground/80"
+                        title={item.note ?? undefined}
+                      >
+                        {item.organization_name}
+                        {item.note ? ` · ${item.note}` : ""}
+                      </span>
+                    ))}
                   </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {t.service_arrangements.length > 0 && (
-            <section className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-7">
-              <h2 className="text-xl font-bold text-foreground">הסדרים עם גופים</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                גופים שדרכם ניתן לקבל טיפול או החזר, בהתאם לתנאי הגוף.
-              </p>
-              <div className="mt-4 flex min-w-0 max-w-full flex-wrap gap-2">
-                {t.service_arrangements.map((item, index) => (
-                  <span
-                    key={`${item.organization_name}-${index}`}
-                    className="max-w-full break-words rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-sm text-foreground"
-                    title={item.note ?? undefined}
-                  >
-                    {item.organization_name}
-                    {item.note ? ` · ${item.note}` : ""}
-                  </span>
-                ))}
-              </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -586,17 +595,56 @@ export function TherapistProfileView({
                 <p className="line-clamp-2 whitespace-normal break-words text-sm leading-snug text-muted-foreground">
                   {t.professional_title || "כותרת מקצועית"}
                 </p>
-                {displayLocation && (
-                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" /> {displayLocation}
-                  </p>
-                )}
               </div>
             </div>
 
-            <h2 className="mt-5 text-lg font-bold text-foreground">רוצים ליצור קשר?</h2>
+            {(clinicLocations.length > 0 || onlineAvailable || homeVisitLocations.length > 0) && (
+              <div className="mt-4 space-y-2 text-xs leading-5 text-muted-foreground">
+                {clinicLocations.map((location, index) => (
+                  <div key={`contact-location-${location.city ?? index}`} className="flex min-w-0 items-start gap-1.5">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    <span className="min-w-0 break-words">
+                      {location.city || "מיקום קליניקה"}
+                      {clinicAccessibilityLabel(location.accessibility_status)
+                        ? ` · ${clinicAccessibilityLabel(location.accessibility_status)}`
+                        : ""}
+                    </span>
+                  </div>
+                ))}
+                {onlineAvailable && (
+                  <p className="flex items-start gap-1.5">
+                    <Video className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> טיפול אונליין
+                  </p>
+                )}
+                {homeVisitLocations.length > 0 && (
+                  <p className="flex items-start gap-1.5">
+                    <Home className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    <span>ביקורי בית{homeVisitRegions.length > 0 ? ` · ${homeVisitRegions.join(" · ")}` : ""}</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {t.offers_free_intro && (
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-900">
+                <p className="flex items-start gap-2 font-semibold">
+                  <MessageCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    פגישת או שיחת היכרות ללא תשלום
+                    {t.free_intro_duration_minutes ? ` · ${t.free_intro_duration_minutes} דקות` : ""}
+                  </span>
+                </p>
+                {freeIntroLabels.length > 0 && (
+                  <p className="mt-1.5 break-words pr-6 text-xs leading-5 text-emerald-800">
+                    {freeIntroLabels.join(" · ")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <h2 className="mt-5 text-lg font-bold text-foreground">רוצים לתאם טיפול עם {firstName(t.full_name)}?</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              שלחו ל{firstName(t.full_name)} הודעה קצרה כדי לבדוק התאמה וזמינות.
+              שלחו ל{firstName(t.full_name)} הודעה כדי לבדוק התאמה וזמינות.
             </p>
             <div className="mt-4">
               {interactive ? (
@@ -613,35 +661,6 @@ export function TherapistProfileView({
                 </button>
               )}
             </div>
-
-            {(t.offers_free_intro || onlineAvailable) && (
-              <div className="mt-4 space-y-2 border-t border-border pt-4 text-xs text-foreground/70">
-                {t.offers_free_intro && (
-                  <div className="flex items-start gap-2">
-                    <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                    <div className="min-w-0">
-                      <p>
-                        היכרות ללא תשלום
-                        {t.free_intro_duration_minutes ? ` · ${t.free_intro_duration_minutes} דקות` : ""}
-                      </p>
-                      {freeIntroLabels.length > 0 && (
-                        <p className="mt-1 break-words text-muted-foreground">
-                          אפשרויות: {freeIntroLabels.join(" · ")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {onlineAvailable && (
-                  <p className="flex items-start gap-2">
-                    <Video className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> טיפול אונליין זמין
-                  </p>
-                )}
-              </div>
-            )}
-            <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> פרטי הקשר שלכם יישלחו למטפל/ת רק עם שליחת הפנייה.
-            </p>
           </div>
         </aside>
       </div>
