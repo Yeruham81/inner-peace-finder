@@ -112,7 +112,6 @@ function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}) {
     therapist_service_arrangements: [
       { therapist_id: "t-1", organization_name: "גוף מסדיר", note: "בכפוף לזכאות", sort_order: 0 },
     ],
-    therapist_credentials: [],
     population_groups: [{ slug: "adults", name: "מבוגרים" }],
     languages: [{ code: "he", name: "עברית" }],
     problems: [{ id: "p1", slug: "anxiety", name: "חרדה", parent_id: null, is_active: true }],
@@ -165,14 +164,15 @@ describe("public eligibility — shared predicate", () => {
     expect(client.reads).not.toContain("therapist_problems");
   });
 
-  it("grants the public verified badge when a credential was verified", async () => {
-    const res = await fetchPublicTherapistBySlug(
-      db([therapistRow({ verified: false })], {
-        therapist_credentials: [{ therapist_id: "t-1", id: "credential-1", verification_status: "verified" }],
-      }),
-      "eligible-one",
-    );
-    expect(res?.verified).toBe(true);
+  it("uses only the synchronized therapists.verified projection for the public badge", async () => {
+    const client = db([therapistRow({ verified: false })], {
+      therapist_credentials: [{ therapist_id: "t-1", id: "credential-1", verification_status: "verified" }],
+    });
+
+    const res = await fetchPublicTherapistBySlug(client, "eligible-one");
+
+    expect(res?.verified).toBe(false);
+    expect(client.reads).not.toContain("therapist_credentials");
   });
 
   it("the public profile response contains every field the route consumes", async () => {
@@ -280,6 +280,13 @@ describe("public eligibility — centralization", () => {
     const src = read("lib/public-therapist-queries.ts");
     expect(src).not.toContain('.from("therapist_problems")');
     expect(src).not.toContain("legacyProblems");
+  });
+
+  it("the public profile uses the synchronized verified projection without querying credentials", () => {
+    const src = read("lib/public-therapist-queries.ts");
+    expect(src).not.toContain('.from("therapist_credentials")');
+    expect(src).not.toContain("verifiedCredentials");
+    expect(src).toContain("verified: !!t.verified");
   });
 
   it("the public select statement lists only allowlisted columns", () => {
