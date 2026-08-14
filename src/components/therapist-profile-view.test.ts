@@ -140,10 +140,10 @@ describe("free introductory session details", () => {
 describe("result-card language presentation", () => {
   const cardSource = readFileSync(new URL("./therapist-card.tsx", import.meta.url), "utf8");
 
-  it("renders languages through the compact overflow-tag row", () => {
-    expect(cardSource).toContain("<CompactTagRow labels={t.language_names} />");
-    expect(cardSource).toContain(">שפות</p>");
-    expect(cardSource).not.toContain('{t.language_names.join(" · ")}');
+  it("renders languages as plain text instead of overflow tags", () => {
+    expect(cardSource).toContain('{t.language_names.join(", ")}');
+    expect(cardSource).toContain("שפות:");
+    expect(cardSource).not.toContain("<CompactTagRow labels={t.language_names} />");
   });
 });
 

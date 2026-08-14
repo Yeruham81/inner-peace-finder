@@ -20,7 +20,7 @@ describe("resolveFlow — production forces unified, DEV honors the URL param", 
   it("DEV + flow=unified → unified", () => {
     expect(resolveFlow("unified", { isDev: true })).toBe("unified");
   });
-  it("DEV + invalid param → legacy default", () => {
-    expect(resolveFlow("bogus", { isDev: true })).toBe("legacy");
+  it("DEV + invalid param → unified default", () => {
+    expect(resolveFlow("bogus", { isDev: true })).toBe("unified");
   });
 });

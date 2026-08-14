@@ -8,7 +8,7 @@
  * used by `SearchPage`); only the server-function modules are doubled.
  */
 
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
 
 const calls: string[] = [];
 
@@ -49,15 +49,28 @@ mock.module("@/lib/query-interpreter.functions", () => ({
           full_name: "יעל כהן",
           professional_title: "פסיכולוגית",
           image_url: null,
-          city: "חיפה",
           verified: true,
-          semanticScore: 0,
-          preferenceScore: 0,
-          qualityScore: 5,
-          yearsExperience: 10,
+          years_experience: 10,
+          short_intro: null,
+          primary_clinic: null,
+          clinic_locations: [],
+          additional_clinic_count: 0,
+          online_available: false,
+          gender: null,
+          accessible_clinic: false,
+          home_visit_regions: [],
+          language_names: [],
+          population_names: [],
+          population_tags: [],
+          modality_names: [],
+          treatment_domains: [],
+          lgbtq_affirming: false,
+          offers_free_intro: false,
+          scores: { semantic: 0, preference: 0, quality: 5 },
         },
       ],
       emptyReason: null,
+      primaryClinicFallbackCount: 0,
     });
   },
 }));
@@ -78,6 +91,12 @@ const search = {
 
 afterEach(() => {
   calls.length = 0;
+});
+
+afterAll(() => {
+  // Bun module mocks are process-wide. Restore them so this isolation suite
+  // cannot replace query-interpreter exports used by later test files.
+  mock.restore();
 });
 
 async function renderUnified() {

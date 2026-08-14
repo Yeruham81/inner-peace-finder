@@ -18,10 +18,9 @@ describe("SearchForm variants", () => {
     expect(html).not.toContain("מסננים נוספים");
   });
 
-  it("keeps the quick and additional filters in compact mode", () => {
+  it("keeps the additional filters in compact mode", () => {
     const html = renderToStaticMarkup(<SearchForm variant="compact" />);
 
-    expect(html).toContain("מסננים מהירים");
     expect(html).toContain("מסננים נוספים");
   });
 
@@ -31,7 +30,7 @@ describe("SearchForm variants", () => {
 
     expect(homepageSource.match(/<SearchForm variant="simple" \/>/g)).toHaveLength(1);
     expect(homepageSource).toMatch(
-      /<SearchForm\s+cities=\{filters\.cities\}\s+populations=\{filters\.populations\}\s+languages=\{filters\.languages\}\s*\/>/,
+      /<SearchForm\s+cities=\{filters\.cities\}\s+cityRegions=\{filters\.cityRegions\}\s+populations=\{filters\.populations\}\s+languages=\{filters\.languages\}\s*\/>/,
     );
     expect(searchPageSource).toContain('variant="compact"');
   });
