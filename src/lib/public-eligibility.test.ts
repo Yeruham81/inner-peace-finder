@@ -63,60 +63,65 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
   ["archived", { visibility: "archived" }],
 ];
 
-function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}) {
-  return createFakeSupabase({
-    therapists: rows,
-    therapist_populations: [{ therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } }],
-    therapist_languages: [{ therapist_id: "t-1", languages: { code: "he", name: "עברית" } }],
-    therapist_professions: [
-      {
-        therapist_id: "t-1",
-        is_primary: true,
-        professions: { slug: "psychologist", name: "פסיכולוגית", sort_order: 1, is_active: true },
-      },
-    ],
-    therapist_modalities: [
-      {
-        therapist_id: "t-1",
-        treatment_modalities: { slug: "cbt", name: "CBT", sort_order: 1, is_active: true },
-      },
-    ],
-    therapist_therapy_formats: [{ therapist_id: "t-1", therapy_formats: { slug: "individual", name: "טיפול פרטני" } }],
-    therapist_locations: [
-      {
-        therapist_id: "t-1",
-        location_type: "clinic",
-        city: "חיפה",
-        region: "חיפה והקריות",
-        is_primary: true,
-        is_active: true,
-        accessibility_status: "accessible",
-        accessibility_features: ["step_free_entrance"],
-        accessibility_note: null,
-      },
-      {
-        therapist_id: "t-1",
-        location_type: "online",
-        city: null,
-        region: null,
-        is_primary: false,
-        is_active: true,
-        accessibility_status: "unknown",
-        accessibility_features: [],
-        accessibility_note: null,
-      },
-    ],
-    therapist_professional_memberships: [
-      { therapist_id: "t-1", organization_name: "איגוד מקצועי", member_since: 2020, sort_order: 0 },
-    ],
-    therapist_service_arrangements: [
-      { therapist_id: "t-1", organization_name: "גוף מסדיר", note: "בכפוף לזכאות", sort_order: 0 },
-    ],
-    population_groups: [{ slug: "adults", name: "מבוגרים" }],
-    languages: [{ code: "he", name: "עברית" }],
-    problems: [{ id: "p1", slug: "anxiety", name: "חרדה", parent_id: null, is_active: true }],
-    ...overrides,
-  });
+function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}, errors: Record<string, unknown> = {}) {
+  return createFakeSupabase(
+    {
+      therapists: rows,
+      therapist_populations: [{ therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } }],
+      therapist_languages: [{ therapist_id: "t-1", languages: { code: "he", name: "עברית" } }],
+      therapist_professions: [
+        {
+          therapist_id: "t-1",
+          is_primary: true,
+          professions: { slug: "psychologist", name: "פסיכולוגית", sort_order: 1, is_active: true },
+        },
+      ],
+      therapist_modalities: [
+        {
+          therapist_id: "t-1",
+          treatment_modalities: { slug: "cbt", name: "CBT", sort_order: 1, is_active: true },
+        },
+      ],
+      therapist_therapy_formats: [
+        { therapist_id: "t-1", therapy_formats: { slug: "individual", name: "טיפול פרטני" } },
+      ],
+      therapist_locations: [
+        {
+          therapist_id: "t-1",
+          location_type: "clinic",
+          city: "חיפה",
+          region: "חיפה והקריות",
+          is_primary: true,
+          is_active: true,
+          accessibility_status: "accessible",
+          accessibility_features: ["step_free_entrance"],
+          accessibility_note: null,
+        },
+        {
+          therapist_id: "t-1",
+          location_type: "online",
+          city: null,
+          region: null,
+          is_primary: false,
+          is_active: true,
+          accessibility_status: "unknown",
+          accessibility_features: [],
+          accessibility_note: null,
+        },
+      ],
+      therapist_professional_memberships: [
+        { therapist_id: "t-1", organization_name: "איגוד מקצועי", member_since: 2020, sort_order: 0 },
+      ],
+      therapist_service_arrangements: [
+        { therapist_id: "t-1", organization_name: "גוף מסדיר", note: "בכפוף לזכאות", sort_order: 0 },
+      ],
+      population_groups: [{ slug: "adults", name: "מבוגרים" }],
+      languages: [{ code: "he", name: "עברית" }],
+      problems: [{ id: "p1", slug: "anxiety", name: "חרדה", parent_id: null, is_active: true }],
+      ...overrides,
+    },
+    errors,
+  );
 }
 
 describe("public eligibility — shared predicate", () => {
@@ -173,6 +178,15 @@ describe("public eligibility — shared predicate", () => {
 
     expect(res?.verified).toBe(false);
     expect(client.reads).not.toContain("therapist_credentials");
+  });
+
+  it("propagates relation-query failures instead of rendering an empty public section", async () => {
+    await expect(
+      fetchPublicTherapistBySlug(
+        db([therapistRow({})], {}, { therapist_languages: new Error("boom") }),
+        "eligible-one",
+      ),
+    ).rejects.toThrow("therapist_languages: boom");
   });
 
   it("the public profile response contains every field the route consumes", async () => {
@@ -287,6 +301,25 @@ describe("public eligibility — centralization", () => {
     expect(src).not.toContain('.from("therapist_credentials")');
     expect(src).not.toContain("verifiedCredentials");
     expect(src).toContain("verified: !!t.verified");
+  });
+
+  it("the public profile checks every related query before using data fallbacks", () => {
+    const src = read("lib/public-therapist-queries.ts");
+    for (const relation of [
+      "therapist_populations",
+      "therapist_languages",
+      "therapist_professions",
+      "therapist_modalities",
+      "therapist_therapy_formats",
+      "therapist_locations",
+      "therapist_professional_memberships",
+      "therapist_service_arrangements",
+      "therapists.semantic_profile",
+      "problems",
+    ]) {
+      expect(src).toContain(`["${relation}",`);
+    }
+    expect(src).toContain("if (result.error) throw new Error");
   });
 
   it("the public select statement lists only allowlisted columns", () => {
