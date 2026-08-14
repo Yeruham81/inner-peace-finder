@@ -29,7 +29,18 @@ export async function fetchPublicTherapistBySlug(
   const t = unwrap(res) as Record<string, any> | null;
   if (!t) return null;
 
-  const [tps, pops, langs, professions, modalities, formats, locations, memberships, arrangements] = await Promise.all([
+  const [
+    tps,
+    pops,
+    langs,
+    professions,
+    modalities,
+    formats,
+    locations,
+    memberships,
+    arrangements,
+    verifiedCredentials,
+  ] = await Promise.all([
     sb.from("therapist_problems").select("problems(id, name, slug, parent_id)").eq("therapist_id", t.id),
     sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
     sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
@@ -61,6 +72,12 @@ export async function fetchPublicTherapistBySlug(
       .select("organization_name, note")
       .eq("therapist_id", t.id)
       .order("sort_order"),
+    sb
+      .from("therapist_credentials")
+      .select("id")
+      .eq("therapist_id", t.id)
+      .eq("verification_status", "verified")
+      .limit(1),
   ]);
 
   type MappedProfession = { slug: string; name: string; is_primary: boolean; sort_order: number };
@@ -98,7 +115,9 @@ export async function fetchPublicTherapistBySlug(
     years_experience: t.years_experience ?? 0,
     city: t.city ?? null,
     image_url: t.image_url ?? null,
-    verified: !!t.verified,
+    // Preserve the existing profile-level verification flag while also
+    // granting the public badge when at least one credential was verified.
+    verified: !!t.verified || (verifiedCredentials?.data?.length ?? 0) > 0,
     lgbtq_affirming: !!t.lgbtq_affirming,
     offers_free_intro: !!t.offers_free_intro,
     free_intro_types: t.free_intro_types ?? [],
