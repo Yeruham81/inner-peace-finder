@@ -75,16 +75,16 @@ describe("issuance response never leaks the answer", () => {
   const src = read("lib/lead-challenge.functions.ts");
 
   it("returns only challengeId, prompt and expiresAt", () => {
-    expect(src).toMatch(/challengeId: data\.id/);
-    expect(src).toMatch(/prompt: data\.prompt/);
-    expect(src).toMatch(/expiresAt: data\.expires_at/);
+    expect(src).toMatch(/challengeId: row\.challenge_id/);
+    expect(src).toMatch(/prompt: row\.prompt/);
+    expect(src).toMatch(/expiresAt: row\.expires_at/);
     expect(src).not.toMatch(/expected_answer:\s*data/);
     expect(src).not.toMatch(/expectedAnswer/);
   });
 
-  it("selects only non-secret columns from the challenge row", () => {
-    expect(src).toContain('.select("id, prompt, expires_at")');
-    expect(src).not.toMatch(/select\([^)]*expected_answer/);
+  it("never reads the expected answer back from the database", () => {
+    expect(src).not.toMatch(/expected_answer/);
+    expect(src).not.toMatch(/row\.expected/);
   });
 
   it("uses the server-only admin client and server-derived IP hash", () => {
@@ -92,14 +92,13 @@ describe("issuance response never leaks the answer", () => {
     expect(src).toContain("deriveRequestIdentity(getRequest()?.headers)");
   });
 
-  it("runs the database retention cleanup before issuing a new challenge", () => {
-    const purge = src.indexOf('.rpc("purge_expired_lead_challenges")');
-    const insert = src.search(/\.from\("lead_challenges"\)\s*\.insert\(/);
-
-    expect(purge).toBeGreaterThan(-1);
-    expect(insert).toBeGreaterThan(-1);
-    expect(purge).toBeLessThan(insert);
-    expect(src).toContain("if (purgeErr) throw new Error(purgeErr.message)");
+  it("issues through one atomic database operation (purge + limit + insert)", () => {
+    expect(src).toContain('.rpc("issue_lead_challenge"');
+    // No application-side counting or inserting that could be raced.
+    expect(src).not.toMatch(/\.from\("lead_challenges"\)/);
+    expect(src).toContain("if (error) throw new Error(error.message)");
+    expect(challengeIssuanceMigration).toContain("pg_advisory_xact_lock");
+    expect(challengeIssuanceMigration).toMatch(/issued >= _issue_limit/);
   });
 });
 
@@ -144,9 +143,12 @@ describe("createLead client contract", () => {
     expect(src).toContain("applyEligibility(");
   });
 
-  it("preserves the session-based distinct-therapist limit", () => {
-    expect(src).toContain('.eq("session_id", sessionId)');
-    expect(src).toContain("distinct.size >= 5");
+  it("preserves the session-based distinct-therapist limit inside the atomic authorization", () => {
+    // The limit moved into the locked transaction; no racy application read.
+    expect(src).not.toContain('.eq("session_id", sessionId)');
+    expect(src).not.toContain("distinct.size >= 5");
+    expect(challengeIssuanceMigration).toContain("session_therapists >= 5");
+    expect(challengeIssuanceMigration).toContain("a.session_hash = _session_hash");
   });
 
   it("propagates unexpected database errors", () => {
