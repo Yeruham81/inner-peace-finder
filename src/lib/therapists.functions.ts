@@ -5,15 +5,8 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
 import { SemanticEngine } from "./semantic-engine";
-import {
-  buildClarificationPrompt,
-  needsClarification,
-  type ClarificationPrompt,
-} from "./search-clarification";
-import {
-  parseStoredProfile,
-  type SemanticProfileEntry,
-} from "./therapist-semantic-profile";
+import { buildClarificationPrompt, needsClarification, type ClarificationPrompt } from "./search-clarification";
+import { parseStoredProfile, type SemanticProfileEntry } from "./therapist-semantic-profile";
 import { applyEligibility } from "./search-eligibility";
 import {
   fetchPublicTherapistBySlug,
@@ -82,10 +75,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       if (cls.matches.length > 0) {
         const slugs = cls.matches.map((m) => m.slug);
         slugs.forEach((s) => matchedSlugs.add(s));
-        const { data: pRows } = await sb
-          .from("problems")
-          .select("id, slug")
-          .in("slug", slugs);
+        const { data: pRows } = await sb.from("problems").select("id, slug").in("slug", slugs);
         pRows?.forEach((r) => matchedProblemIds.add(String((r as { id: string | number }).id)));
       }
     }
@@ -161,24 +151,20 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // `semantic_profile` overlaps with any matched slug. Falls back to
     // "keep all" when we have no slugs to match against (e.g. no query and
     // no problem filter — the "browse all" case).
-    const eligibleTherapists = matchedSlugs.size === 0
-      ? therapists
-      : therapists.filter((t) => {
-          const profile = parseStoredProfile(
-            (t as unknown as { semantic_profile?: unknown }).semantic_profile,
-          );
-          if (profile.length === 0) return false;
-          return profile.some((e) => matchedSlugs.has(e.slug));
-        });
+    const eligibleTherapists =
+      matchedSlugs.size === 0
+        ? therapists
+        : therapists.filter((t) => {
+            const profile = parseStoredProfile((t as unknown as { semantic_profile?: unknown }).semantic_profile);
+            if (profile.length === 0) return false;
+            return profile.some((e) => matchedSlugs.has(e.slug));
+          });
     if (eligibleTherapists.length === 0) return [] as ScoredTherapist[];
     const ids = eligibleTherapists.map((t) => t.id);
 
     // 4) Load relations for scoring + display
     const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
-      sb
-        .from("therapist_problems")
-        .select("therapist_id, problem_id")
-        .in("therapist_id", ids),
+      sb.from("therapist_problems").select("therapist_id, problem_id").in("therapist_id", ids),
       sb.from("therapist_populations").select("therapist_id, population_groups(slug, name)").in("therapist_id", ids),
       sb.from("therapist_languages").select("therapist_id, languages(code, name)").in("therapist_id", ids),
     ]);
@@ -186,9 +172,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // Resolve problem details separately — the FK types between
     // therapist_problems.problem_id and problems.id do not embed cleanly.
     type ProblemJoin = { slug: string; parent_id: string | null } | null;
-    const problemIdsInJoin = Array.from(
-      new Set((tpRows ?? []).map((r) => String(r.problem_id))),
-    );
+    const problemIdsInJoin = Array.from(new Set((tpRows ?? []).map((r) => String(r.problem_id))));
     const problemLookup = new Map<string, { slug: string; parent_id: string | null }>();
     if (problemIdsInJoin.length > 0) {
       const { data: pRows } = await sb
@@ -288,6 +272,7 @@ export const listProblems = createServerFn({ method: "GET" }).handler(async () =
   const { data, error } = await sb
     .from("problems")
     .select("id, slug, description, parent_id, name:name_he")
+    .eq("is_active", true)
     .order("name_he");
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -301,17 +286,21 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
   .handler(async ({ data }) => {
     const sb = await publicClient();
-    const { data: problem } = await sb
+    const { data: problem, error: problemError } = await sb
       .from("problems")
       .select("id, slug, description, parent_id, name:name_he")
       .eq("slug", data.slug)
+      .eq("is_active", true)
       .maybeSingle();
+    if (problemError) throw new Error(problemError.message);
     if (!problem) return null;
-    const { data: children } = await sb
+    const { data: children, error: childrenError } = await sb
       .from("problems")
       .select("id, slug, description, name:name_he")
       .eq("parent_id", (problem as { id: string | number }).id as unknown as number)
+      .eq("is_active", true)
       .order("name_he");
+    if (childrenError) throw new Error(childrenError.message);
     return { ...problem, children: children ?? [] };
   });
 
@@ -381,15 +370,13 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
         // Best-effort cache write; never block search on a cache miss.
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          await supabaseAdmin
-            .from("query_classifications")
-            .insert({
-              normalized_query: normalized,
-              // ClassificationResult is JSON-serializable; cast through unknown
-              // to satisfy the generated `Json` column type.
-              result: classification as unknown as never,
-              source: classification.source ?? "mock",
-            });
+          await supabaseAdmin.from("query_classifications").insert({
+            normalized_query: normalized,
+            // ClassificationResult is JSON-serializable; cast through unknown
+            // to satisfy the generated `Json` column type.
+            result: classification as unknown as never,
+            source: classification.source ?? "mock",
+          });
         } catch {
           // ignore — cache is an optimization, not a requirement
         }
@@ -456,9 +443,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
           // No stored profile → derive from full_description ONLY. Empty
           // full_description means "no extractable data available"; do NOT
           // fall back to any other field.
-          const derived = r.full_description
-            ? await SemanticEngine.extractProfile(r.full_description, sb)
-            : [];
+          const derived = r.full_description ? await SemanticEngine.extractProfile(r.full_description, sb) : [];
           profileByT.set(r.id, derived);
         }),
       );
@@ -470,9 +455,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
         // matched_problem_slugs so pre-existing seed data still ranks.
         const profile = profileByT.get(t.id) ?? [];
         const effective: SemanticProfileEntry[] =
-          profile.length > 0
-            ? profile
-            : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
+          profile.length > 0 ? profile : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
         const sim = SemanticEngine.scoreProfiles(classification.matches, effective);
         return { t, sim };
       });
@@ -538,9 +521,11 @@ async function logSemanticSearch(row: {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Table was added in this phase; types regenerate after migration.
-    await (supabaseAdmin as unknown as {
-      from: (t: string) => { insert: (r: unknown) => Promise<unknown> };
-    })
+    await (
+      supabaseAdmin as unknown as {
+        from: (t: string) => { insert: (r: unknown) => Promise<unknown> };
+      }
+    )
       .from("semantic_search_logs")
       .insert(row);
   } catch {
