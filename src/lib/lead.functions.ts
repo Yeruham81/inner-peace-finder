@@ -65,22 +65,9 @@ export const createLead = createServerFn({ method: "POST" })
       };
     }
 
-    // 2.5) Session velocity limit (preserved): max 5 distinct therapists / 15 min.
-    const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-    const { data: recent, error: rlErr } = await supabaseAdmin
-      .from("lead_events")
-      .select("therapist_id")
-      .eq("session_id", sessionId)
-      .gte("created_at", windowStart);
-    if (rlErr) throw new Error(rlErr.message);
-    const distinct = new Set((recent ?? []).map((r: { therapist_id: string }) => r.therapist_id));
-    if (!distinct.has(data.therapistId) && distinct.size >= 5) {
-      return {
-        ok: false as const,
-        reason: "rate_limit_exceeded" as const,
-        message: "נשלחו מספר פניות בזמן קצר. ניתן לנסות שוב מאוחר יותר.",
-      };
-    }
+    // The session velocity limit (max 5 distinct therapists / 15 min) is now
+    // enforced inside `authorize_lead_submission` above, in the same locked
+    // transaction as the IP limits — a separate read here could be raced.
 
     // 2) Eligibility gate — before billing, lead insertion, contact resolution
     //    or dispatch. Missing and ineligible therapists get the same generic
