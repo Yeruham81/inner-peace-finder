@@ -664,10 +664,6 @@ export function TherapistProfileView({
           </div>
         </aside>
       </div>
-
-      <footer className="box-border min-w-0 max-w-full rounded-2xl border border-border bg-muted/40 px-4 py-3 text-center text-xs leading-5 text-muted-foreground sm:text-sm">
-        כל התוכן המופיע בעמוד זה הוא באחריות המטפל/ת בלבד.
-      </footer>
     </article>
   );
 }
