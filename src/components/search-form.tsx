@@ -3,6 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { CANONICAL_LANGUAGES } from "@/lib/language-options";
 import { REGION_DEFINITIONS, REGION_SLUGS } from "@/lib/locality-options";
 import { resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
+import { buildPopulationOptions } from "@/lib/population-options";
 
 type FilterKey =
   | "regions"
@@ -44,17 +45,6 @@ const fallbackLanguageOptions: FilterOption[] = CANONICAL_LANGUAGES.map(({ code,
   value: code,
   label: name,
 }));
-
-const fallbackPopulationOptions: FilterOption[] = [
-  { value: "babies-toddlers", label: "תינוקות ופעוטות" },
-  { value: "children", label: "ילדים" },
-  { value: "adolescents", label: "בני נוער" },
-  { value: "young-adults", label: "צעירים" },
-  { value: "adults", label: "מבוגרים" },
-  { value: "older-adults", label: "הגיל השלישי" },
-  { value: "couples", label: "זוגות" },
-  { value: "parents-families", label: "הורים ומשפחות" },
-];
 
 const serviceTypeOptions: FilterOption[] = [
   { value: "clinic", label: "פגישה בקליניקה" },
@@ -219,13 +209,7 @@ export function SearchForm({
     [languages],
   );
 
-  const populationOptions = useMemo<FilterOption[]>(
-    () =>
-      populations.length
-        ? populations.map(({ slug, name }) => ({ value: slug, label: name }))
-        : fallbackPopulationOptions,
-    [populations],
-  );
+  const populationOptions = useMemo<FilterOption[]>(() => buildPopulationOptions(populations), [populations]);
 
   const filters = useMemo<FilterDefinition[]>(
     () => [
@@ -445,11 +429,12 @@ export function SearchForm({
     freeIntro?: boolean;
   }) {
     const contract = resolveSearchContract(input);
+    const keepCanonicalProblem = contract.q === appliedContract.q;
     navigate({
       to: "/search",
       search: {
         q: contract.q || undefined,
-        problem: preserveSearch?.problem || undefined,
+        problem: keepCanonicalProblem ? preserveSearch?.problem || undefined : undefined,
         city: contract.city || undefined,
         population: contract.population || undefined,
         language: contract.language || undefined,
