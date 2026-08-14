@@ -29,6 +29,12 @@ const challengeMigration =
     .filter((f) => f.endsWith(".sql"))
     .map((f) => readFileSync(join(MIGRATIONS, f), "utf8"))
     .find((sql) => sql.includes("CREATE TABLE public.lead_challenges")) ?? "";
+/** Migration that made issuance + velocity limits atomic. */
+const challengeIssuanceMigration =
+  readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => readFileSync(join(MIGRATIONS, f), "utf8"))
+    .find((sql) => sql.includes("CREATE OR REPLACE FUNCTION public.issue_lead_challenge")) ?? "";
 
 describe("challenge generation (server-only)", () => {
   it("produces a solvable arithmetic prompt", () => {
