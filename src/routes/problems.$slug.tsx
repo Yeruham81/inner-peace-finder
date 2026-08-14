@@ -3,6 +3,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getProblemBySlug } from "@/lib/therapists.functions";
 import { searchProblemResults } from "@/lib/query-interpreter.functions";
 import { TherapistCard } from "@/components/therapist-card";
+import { PublicRouteError } from "@/components/public-route-error";
 
 function problemQuery(slug: string) {
   return queryOptions({
@@ -37,11 +38,14 @@ export const Route = createFileRoute("/problems/$slug")({
     };
   },
   component: ProblemPage,
-  errorComponent: ({ error }) => (
-    <div className="mx-auto max-w-2xl p-6 text-center">
-      <h1 className="text-xl font-semibold">שגיאה</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-    </div>
+  errorComponent: ({ error, reset }) => (
+    <PublicRouteError
+      error={error}
+      reset={reset}
+      boundary="problem_route"
+      title="לא הצלחנו לטעון את תחום הטיפול"
+      message="אירעה שגיאה זמנית בטעינת התחום והמטפלים המתאימים. נסו שוב בעוד רגע או חזרו לדף הבית."
+    />
   ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-2xl p-10 text-center">

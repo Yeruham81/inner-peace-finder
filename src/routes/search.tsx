@@ -10,6 +10,7 @@ import { legacyRowToCard, type SearchResultCard } from "@/lib/search-result-card
 import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
+import { PublicRouteError } from "@/components/public-route-error";
 import { track } from "@/lib/analytics";
 import { buildSearchReturn } from "@/lib/search-return";
 
@@ -142,11 +143,14 @@ export const Route = createFileRoute("/search")({
     ],
   }),
   component: SearchPage,
-  errorComponent: ({ error }) => (
-    <div className="mx-auto max-w-2xl p-6 text-center">
-      <h1 className="text-xl font-semibold">החיפוש נכשל</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-    </div>
+  errorComponent: ({ error, reset }) => (
+    <PublicRouteError
+      error={error}
+      reset={reset}
+      boundary="search_route"
+      title="לא הצלחנו להשלים את החיפוש"
+      message="אירעה שגיאה זמנית בטעינת תוצאות החיפוש. נסו שוב בעוד רגע או חזרו לדף הבית."
+    />
   ),
   notFoundComponent: () => <div className="p-6">לא נמצא</div>,
 });

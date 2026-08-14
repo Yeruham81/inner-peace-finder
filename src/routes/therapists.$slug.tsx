@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
+import { PublicRouteError } from "@/components/public-route-error";
 import { resultsReturnLinkOptions } from "@/lib/search-return";
 
 function therapistQuery(slug: string) {
@@ -44,11 +45,14 @@ export const Route = createFileRoute("/therapists/$slug")({
     return { meta };
   },
   component: TherapistPage,
-  errorComponent: ({ error }) => (
-    <div className="mx-auto max-w-2xl p-6 text-center">
-      <h1 className="text-xl font-semibold">שגיאה</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-    </div>
+  errorComponent: ({ error, reset }) => (
+    <PublicRouteError
+      error={error}
+      reset={reset}
+      boundary="therapist_profile_route"
+      title="לא הצלחנו לטעון את הפרופיל"
+      message="אירעה שגיאה זמנית בטעינת פרופיל המטפל. נסו שוב בעוד רגע או חזרו לדף הבית."
+    />
   ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-2xl p-10 text-center">
