@@ -5,12 +5,18 @@ import {
   applySemanticGate,
   rankCandidates,
   computeQualityScore,
+  computeSemanticScoreWithProfile,
 } from "./unified-search";
 import type { CandidateForRanking, SoftPreferences } from "./query-interpreter.types";
 
 const emptySoft: SoftPreferences = {
-  professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-  languageCodes: [], cities: [], deliveryModes: [], genders: [],
+  professionSlugs: [],
+  modalitySlugs: [],
+  populationSlugs: [],
+  languageCodes: [],
+  cities: [],
+  deliveryModes: [],
+  genders: [],
 };
 
 const base: CandidateForRanking = {
@@ -34,8 +40,11 @@ describe("computePreferenceScore", () => {
   it("gives at most one point per category (0..7 model)", () => {
     const soft: SoftPreferences = {
       ...emptySoft,
-      professionSlugs: ["psychologist"], modalitySlugs: ["cbt"],
-      cities: ["תל אביב"], deliveryModes: ["online"], genders: ["female"],
+      professionSlugs: ["psychologist"],
+      modalitySlugs: ["cbt"],
+      cities: ["תל אביב"],
+      deliveryModes: ["online"],
+      genders: ["female"],
     };
     expect(computePreferenceScore(base, soft)).toBe(5);
   });
@@ -50,6 +59,16 @@ describe("computeSemanticScore", () => {
     ]);
     expect(r.overlapCount).toBe(2);
     expect(r.score).toBeCloseTo(1.4, 5);
+  });
+});
+
+describe("computeSemanticScoreWithProfile", () => {
+  it("matches historical inactive profile slugs to their active canonical domain", () => {
+    const result = computeSemanticScoreWithProfile(
+      [{ slug: "burnout", weight: 0.8 }],
+      [{ slug: "performance_functioning", confidence: 1 }],
+    );
+    expect(result).toEqual({ score: 0.8, overlapCount: 1 });
   });
 });
 
@@ -89,8 +108,18 @@ describe("rankCandidates", () => {
 
 describe("computeQualityScore", () => {
   it("increases monotonically with verified + bio length + experience", () => {
-    const low = computeQualityScore({ yearsExperience: 0, verified: false, hasImage: false, bioLength: 0 });
-    const high = computeQualityScore({ yearsExperience: 20, verified: true, hasImage: true, bioLength: 800 });
+    const low = computeQualityScore({
+      yearsExperience: 0,
+      verified: false,
+      hasImage: false,
+      bioLength: 0,
+    });
+    const high = computeQualityScore({
+      yearsExperience: 20,
+      verified: true,
+      hasImage: true,
+      bioLength: 800,
+    });
     expect(high).toBeGreaterThan(low);
   });
 });
