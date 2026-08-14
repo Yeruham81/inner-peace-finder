@@ -518,143 +518,15 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     // outdated (or silently emptied) semantic_profile.
     const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
 
-    // Load existing profile (if any)
-    const { data: existing } = await supabase
-      .from("therapists")
-      .select("id, slug, visibility, profile_status")
-      .eq("owner_account_id", accountId)
-      .maybeSingle();
-
     const nextStatus: ProfileStatus = data.publish
       ? "published"
       : validateForPublish(data).length === 0
         ? "completed"
         : "draft";
 
-    // Visibility rules (see P3.1 state model):
-    //  - Create: default to 'hidden' (never expose a new row).
-    //  - Draft/complete save on existing row: DO NOT touch visibility.
-    //  - Publish: explicit user action → 'visible'.
-    //  - is_active is a technical filter flag: always true for editable
-    //    rows. Only archival flips it off, and archival is not exposed here.
-    const visibilityForNewRow = "hidden" as const;
-
-    const basePayload = {
-      full_name: data.full_name.trim(),
-      gender: data.gender ?? null,
-      professional_title: data.professional_title?.trim() || null,
-      full_description: data.full_description?.trim() || null,
-      short_intro: data.short_intro?.trim() || null,
-      education_training: data.education_training?.trim() || null,
-      professional_experience: data.professional_experience?.trim() || null,
-      years_experience: data.years_experience ?? null,
-      email: data.email ? data.email.trim() : null,
-      phone: data.phone ? data.phone.trim() : null,
-      image_url: data.image_url ? data.image_url.trim() : null,
-      lgbtq_affirming: data.lgbtq_affirming,
-      offers_free_intro: data.offers_free_intro,
-      free_intro_types: data.offers_free_intro ? data.free_intro_types : [],
-      free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
-      profile_status: nextStatus,
-      is_active: true,
-      semantic_profile: semanticProfile,
-      city: resolvedLocations[0]?.city ?? null,
-      region: resolvedLocations[0]?.region ?? null,
-      ...(data.publish ? { visibility: "visible" as const } : {}),
-    };
-
-    let therapistId: string;
-    if (existing) {
-      const { error } = await supabase
-        .from("therapists")
-        .update(basePayload as never)
-        .eq("id", existing.id);
-      if (error) throw new Error(error.message);
-      therapistId = existing.id;
-    } else {
-      const slug = slugify(data.full_name);
-      const { data: inserted, error } = await supabase
-        .from("therapists")
-        .insert({
-          ...basePayload,
-          visibility: data.publish ? "visible" : visibilityForNewRow,
-          slug,
-          owner_account_id: accountId,
-          profile_claimed: true,
-          country: "Israel",
-        } as never)
-        .select("id")
-        .single();
-      if (error) throw new Error(error.message);
-      therapistId = inserted.id;
-      // Mark account as claimed on first profile creation.
-      await supabase
-        .from("therapist_accounts")
-        .update({ account_status: "claimed", onboarding_completed: true })
-        .eq("id", accountId);
-    }
-
-    // Sync m2m relationships (naive replace strategy — small sets).
-    async function replaceLinks(
-      table: "therapist_professions" | "therapist_modalities" | "therapist_languages" | "therapist_populations",
-      column: "profession_id" | "modality_id" | "language_id" | "population_id",
-      ids: string[],
-    ) {
-      await supabase.from(table).delete().eq("therapist_id", therapistId);
-      if (ids.length === 0) return;
-      const rows = ids.map((id) => ({ therapist_id: therapistId, [column]: id }));
-      const { error } = await supabase.from(table).insert(rows as never);
-      if (error) throw new Error(`${table}: ${error.message}`);
-    }
-    await replaceLinks("therapist_professions", "profession_id", data.profession_ids);
-    await replaceLinks("therapist_modalities", "modality_id", data.modality_ids);
-    await replaceLinks("therapist_languages", "language_id", data.language_ids);
-    await replaceLinks("therapist_populations", "population_id", data.population_ids);
-    await supabase.from("therapist_therapy_formats").delete().eq("therapist_id", therapistId);
-    if (data.therapy_format_ids.length > 0) {
-      const { error } = await supabase.from("therapist_therapy_formats").insert(
-        data.therapy_format_ids.map((therapy_format_id) => ({
-          therapist_id: therapistId,
-          therapy_format_id,
-        })),
-      );
-      if (error) throw new Error(`therapist_therapy_formats: ${error.message}`);
-    }
-
-    await supabase.from("therapist_professional_memberships").delete().eq("therapist_id", therapistId);
-    if (data.professional_memberships.length > 0) {
-      const { error } = await supabase.from("therapist_professional_memberships").insert(
-        data.professional_memberships.map((item, sort_order) => ({
-          ...item,
-          therapist_id: therapistId,
-          sort_order,
-        })),
-      );
-      if (error) throw new Error(`therapist_professional_memberships: ${error.message}`);
-    }
-    await supabase.from("therapist_service_arrangements").delete().eq("therapist_id", therapistId);
-    if (data.service_arrangements.length > 0) {
-      const { error } = await supabase.from("therapist_service_arrangements").insert(
-        data.service_arrangements.map((item, sort_order) => ({
-          ...item,
-          therapist_id: therapistId,
-          sort_order,
-        })),
-      );
-      if (error) throw new Error(`therapist_service_arrangements: ${error.message}`);
-    }
-
-    // Sync the location types managed by this editor. Preserve any future or
-    // externally-managed location types rather than deleting them blindly.
-    const { error: locationDeleteError } = await supabase
-      .from("therapist_locations")
-      .delete()
-      .eq("therapist_id", therapistId)
-      .in("location_type", ["clinic", "online", "home_visit"]);
-    if (locationDeleteError) throw new Error(`therapist_locations: ${locationDeleteError.message}`);
-
-    const locRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
-      therapist_id: therapistId,
+    // Location rows managed by this editor. Any other location type is left
+    // untouched by the database operation below.
+    const locationRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
       location_type: "clinic",
       city: location.city,
       region: location.region,
@@ -662,53 +534,79 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       accessibility_status: data.locations[index]?.accessibility_status ?? "unknown",
       accessibility_features: data.locations[index]?.accessibility_features ?? [],
       accessibility_note: data.locations[index]?.accessibility_note ?? null,
-      country: "Israel",
       is_primary: index === 0,
-      is_active: true,
     }));
 
     if (data.online_available) {
-      locRows.push({
-        therapist_id: therapistId,
+      locationRows.push({
         location_type: "online",
-        country: "Israel",
         is_primary: resolvedLocations.length === 0,
-        is_active: true,
       });
     }
 
     if (data.home_visit_available) {
       if (data.home_visit_regions.length > 0) {
         for (const region of data.home_visit_regions) {
-          locRows.push({
-            therapist_id: therapistId,
-            location_type: "home_visit",
-            region,
-            country: "Israel",
-            is_primary: false,
-            is_active: true,
-          });
+          locationRows.push({ location_type: "home_visit", region, is_primary: false });
         }
       } else {
         // Preserve the checkbox state in drafts. Publishing requires at least
         // one service region, so a region-less home_visit row is never a
         // complete public configuration.
-        locRows.push({
-          therapist_id: therapistId,
-          location_type: "home_visit",
-          region: null,
-          country: "Israel",
-          is_primary: false,
-          is_active: true,
-        });
+        locationRows.push({ location_type: "home_visit", is_primary: false });
       }
     }
-    if (locRows.length > 0) {
-      const { error } = await supabase.from("therapist_locations").insert(locRows as never);
-      if (error) throw new Error(`therapist_locations: ${error.message}`);
-    }
 
-    return { therapist_id: therapistId, profile_status: nextStatus };
+    // Visibility / status / verification columns are decided here and applied by
+    // the database operation; the browser cannot write them at all. A single
+    // transactional call replaces the previous multi-statement sequence, so a
+    // failure anywhere leaves the previously saved profile fully intact.
+    const payload = {
+      profile: {
+        slug: slugify(data.full_name),
+        full_name: data.full_name.trim(),
+        gender: data.gender ?? null,
+        professional_title: data.professional_title?.trim() || null,
+        full_description: data.full_description?.trim() || null,
+        short_intro: data.short_intro?.trim() || null,
+        education_training: data.education_training?.trim() || null,
+        professional_experience: data.professional_experience?.trim() || null,
+        years_experience: data.years_experience ?? null,
+        email: data.email ? data.email.trim() : null,
+        phone: data.phone ? data.phone.trim() : null,
+        image_url: data.image_url ? data.image_url.trim() : null,
+        lgbtq_affirming: data.lgbtq_affirming,
+        offers_free_intro: data.offers_free_intro,
+        free_intro_types: data.offers_free_intro ? data.free_intro_types : [],
+        free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
+        city: resolvedLocations[0]?.city ?? null,
+        region: resolvedLocations[0]?.region ?? null,
+        profile_status: nextStatus,
+        publish: data.publish,
+      },
+      semantic_profile: semanticProfile,
+      profession_ids: data.profession_ids,
+      modality_ids: data.modality_ids,
+      language_ids: data.language_ids,
+      population_ids: data.population_ids,
+      therapy_format_ids: data.therapy_format_ids,
+      professional_memberships: data.professional_memberships,
+      service_arrangements: data.service_arrangements,
+      locations: locationRows,
+    };
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error } = await supabaseAdmin.rpc("save_therapist_profile", {
+      // Ownership is resolved inside the transaction from the verified auth
+      // user id — never from anything the browser supplied.
+      _actor: userId,
+      _payload: payload as never,
+    });
+    if (error) throw new Error(error.message);
+    const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
+    if (!result.therapist_id) throw new Error("שמירת הפרופיל נכשלה. נסו שוב.");
+
+    return { therapist_id: result.therapist_id, profile_status: result.profile_status ?? nextStatus };
   });
 
 const ProfileVisibilitySchema = z.object({ visible: z.boolean() });
@@ -726,9 +624,9 @@ export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input))
   .handler(async ({ context }) => {
-    const accountId = await resolveAccount(context.supabase, context.userId);
+    await resolveAccount(context.supabase, context.userId);
     const { permanentlyDeleteOwnedProfile } = await import("./profile-management.server");
-    return permanentlyDeleteOwnedProfile(accountId);
+    return permanentlyDeleteOwnedProfile(context.userId);
   });
 
 const CredentialSubmissionSchema = z.object({
@@ -755,10 +653,11 @@ export const submitMyCredential = createServerFn({ method: "POST" })
     if (profileError) throw new Error(profileError.message);
     if (!profile) throw new Error("יש לבצע שמירת פרופיל לפני הגשת מסמך הסמכה.");
 
-    // The document must live in the authenticated user's own private folder.
-    if (!isOwnedCredentialDocumentPath(data.document_url, context.userId)) {
-      throw new Error("נתיב המסמך אינו תקין.");
-    }
+    // The document must live in the authenticated user's own private folder AND
+    // the stored object itself must exist and really be a PDF/JPG/PNG under
+    // 10MB — a client-declared MIME type is never trusted.
+    const { verifyStoredCredentialObject } = await import("./credential-object-verification.server");
+    await verifyStoredCredentialObject(data.document_url, context.userId);
 
     // Verification columns are server-owned; the client never supplies them.
     const payload = {
