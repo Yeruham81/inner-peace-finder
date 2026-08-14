@@ -159,9 +159,14 @@ describe("therapist relation tables — server/client boundary", () => {
     // (therapist_credentials is the one exception: verification columns are
     // written through the admin client after ownership + document checks.)
     expect(src).toContain('.rpc("save_therapist_profile"');
+    // (therapist_accounts: only the self-row creation insert, whose status
+    // columns a database trigger forces back to the platform defaults.)
     const editorWrites =
-      src.match(/\.from\("(therapists|therapist_(?!credentials)[a-z_]*)"\)\s*\n?\s*\.(insert|update|delete)\(/g) ?? [];
+      src.match(
+        /\.from\("(therapists|therapist_(?!credentials|accounts)[a-z_]*)"\)\s*\n?\s*\.(insert|update|delete)\(/g,
+      ) ?? [];
     expect(editorWrites).toEqual([]);
+    expect(src).not.toMatch(/\.from\("therapist_accounts"\)\s*\n?\s*\.(update|delete)\(/);
 
     // Relation tables are still read (owner-scoped SELECT) when loading the editor.
     for (const t of RELATION_TABLES) expect(src.includes(t), t).toBe(true);
