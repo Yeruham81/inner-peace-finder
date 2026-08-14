@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
-import { searchReturnLinkOptions } from "@/lib/search-return";
+import { resultsReturnLinkOptions } from "@/lib/search-return";
 
 function therapistQuery(slug: string) {
   return queryOptions({
@@ -16,7 +16,7 @@ function therapistQuery(slug: string) {
 export const Route = createFileRoute("/therapists/$slug")({
   validateSearch: zodValidator(
     z.object({
-      /** Internal search-results URL to return to after a successful lead. */
+      /** Allowlisted internal results URL to return to after a successful lead. */
       ret: fallback(z.string(), "").default(""),
     }),
   ),
@@ -63,20 +63,24 @@ export const Route = createFileRoute("/therapists/$slug")({
 function TherapistPage() {
   const { slug } = Route.useParams();
   const { ret } = Route.useSearch();
-  const backToResults = searchReturnLinkOptions(ret);
+  const backToResults = resultsReturnLinkOptions(ret);
   const { data: t } = useSuspenseQuery(therapistQuery(slug));
   if (!t) return null;
+
+  const backLinkClass = "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
 
   return (
     <div className="min-h-screen overflow-x-clip bg-brand-soft/30">
       <div className="mx-auto w-full min-w-0 max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
-        <Link
-          to={backToResults.to}
-          search={backToResults.search}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          ← חזרה לחיפוש
-        </Link>
+        {backToResults.to === "/problems/$slug" ? (
+          <Link to="/problems/$slug" params={backToResults.params} className={backLinkClass}>
+            ← חזרה לחיפוש
+          </Link>
+        ) : (
+          <Link to="/search" search={backToResults.search} className={backLinkClass}>
+            ← חזרה לחיפוש
+          </Link>
+        )}
 
         <div className="mt-4 min-w-0 max-w-full">
           <TherapistProfileView therapist={t} />
