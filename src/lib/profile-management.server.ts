@@ -2,6 +2,21 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 type ProfileStorageBucket = "therapist-credentials" | "therapist-images";
 
+async function withRetry<T>(label: string, work: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await work();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
+  throw new Error(
+    `${label}: ${lastError instanceof Error ? lastError.message : "שגיאה לא ידועה"}`,
+  );
+}
+
 async function removeStorageFolder(bucket: ProfileStorageBucket, folder: string) {
   const listed = await supabaseAdmin.storage.from(bucket).list(folder, { limit: 1000 });
   if (listed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listed.error.message}`);
@@ -29,33 +44,48 @@ export async function setOwnedProfileVisibility(accountId: string, visible: bool
   return { visibility };
 }
 
-export async function permanentlyDeleteOwnedProfile(accountId: string) {
-  const { data: account, error: accountError } = await supabaseAdmin
-    .from("therapist_accounts")
-    .select("auth_user_id")
-    .eq("id", accountId)
-    .maybeSingle();
-  if (accountError) throw new Error(accountError.message);
-  if (!account) throw new Error("לא נמצא חשבון מטפל למחיקה.");
+/**
+ * Permanent deletion is orchestrated in retryable, idempotent stages so a
+ * failure never leaves the profile publicly visible:
+ *
+ *  1. `begin_therapist_profile_deletion` — one transaction that hides the
+ *     profile from the public immediately (visibility hidden, is_active false).
+ *  2. Storage cleanup, retried on transient failures.
+ *  3. `finalize_therapist_profile_deletion` — one transaction that removes the
+ *     profile row (cascading its relations) and resets the account.
+ *
+ * Re-running the whole flow after any failure is safe: every stage tolerates
+ * already-applied state.
+ */
+export async function permanentlyDeleteOwnedProfile(authUserId: string) {
+  const begun = await withRetry("לא ניתן להתחיל מחיקת פרופיל", async () => {
+    const { data, error } = await supabaseAdmin.rpc("begin_therapist_profile_deletion", {
+      _actor: authUserId,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? {}) as { therapist_id?: string | null; auth_user_id?: string | null; found?: boolean };
+  });
 
-  const { data: profile, error } = await supabaseAdmin
-    .from("therapists")
-    .select("id")
-    .eq("owner_account_id", accountId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!profile) throw new Error("לא נמצא פרופיל למחיקה.");
-  const hidden = await supabaseAdmin.from("therapists").update({ visibility: "hidden" }).eq("id", profile.id);
-  if (hidden.error) throw new Error(hidden.error.message);
+  const therapistId = begun.therapist_id ?? null;
+  const storageOwner = begun.auth_user_id ?? authUserId;
 
-  await removeStorageFolder("therapist-credentials", account.auth_user_id);
-  await removeStorageFolder("therapist-images", profile.id);
+  // The profile is already invisible to the public at this point, so storage
+  // cleanup failures are retried rather than rolled back.
+  await withRetry("לא ניתן למחוק מסמכי הסמכה", () =>
+    removeStorageFolder("therapist-credentials", storageOwner),
+  );
+  if (therapistId) {
+    await withRetry("לא ניתן למחוק תמונות פרופיל", () =>
+      removeStorageFolder("therapist-images", therapistId),
+    );
+  }
 
-  const deleted = await supabaseAdmin.from("therapists").delete().eq("id", profile.id);
-  if (deleted.error) throw new Error(deleted.error.message);
-  await supabaseAdmin
-    .from("therapist_accounts")
-    .update({ account_status: "active", onboarding_completed: false })
-    .eq("id", accountId);
+  await withRetry("לא ניתן להשלים מחיקת פרופיל", async () => {
+    const { error } = await supabaseAdmin.rpc("finalize_therapist_profile_deletion", {
+      _actor: authUserId,
+    });
+    if (error) throw new Error(error.message);
+  });
+
   return { deleted: true as const };
 }
