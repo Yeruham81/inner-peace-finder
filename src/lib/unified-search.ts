@@ -10,12 +10,9 @@
  *   D. yearsExperience    (desc)
  */
 
-import type {
-  CandidateForRanking,
-  SemanticSignal,
-  SoftPreferences,
-} from "./query-interpreter.types";
+import type { CandidateForRanking, SemanticSignal, SoftPreferences } from "./query-interpreter.types";
 import type { SemanticProfileEntry } from "./therapist-semantic-profile";
+import { resolveDeprecatedSlug } from "./semantic-ontology";
 
 /**
  * Approved 0–7 preference model: each of the seven soft-preference
@@ -25,10 +22,7 @@ import type { SemanticProfileEntry } from "./therapist-semantic-profile";
  */
 export const MAX_PREFERENCE_SCORE = 7;
 
-export function computePreferenceScore(
-  candidate: CandidateForRanking,
-  soft: SoftPreferences,
-): number {
+export function computePreferenceScore(candidate: CandidateForRanking, soft: SoftPreferences): number {
   return (
     (soft.professionSlugs.some((s) => candidate.professionSlugs.includes(s)) ? 1 : 0) +
     (soft.modalitySlugs.some((s) => candidate.modalitySlugs.includes(s)) ? 1 : 0) +
@@ -75,11 +69,15 @@ export function computeSemanticScoreWithProfile(
   if (signals.length === 0 || profile.length === 0) {
     return { score: 0, overlapCount: 0 };
   }
-  const byslug = new Map(profile.map((e) => [e.slug, e.weight]));
+  const byslug = new Map<string, number>();
+  for (const entry of profile) {
+    const slug = resolveDeprecatedSlug(entry.slug);
+    byslug.set(slug, Math.max(byslug.get(slug) ?? 0, entry.weight));
+  }
   let score = 0;
   let overlap = 0;
   for (const sig of signals) {
-    const w = byslug.get(sig.slug);
+    const w = byslug.get(resolveDeprecatedSlug(sig.slug));
     if (w !== undefined) {
       score += sig.confidence * w;
       overlap += 1;
@@ -90,10 +88,7 @@ export function computeSemanticScoreWithProfile(
 
 export type RankedCandidate = CandidateForRanking & { preferenceScore: number };
 
-export function rankCandidates(
-  candidates: CandidateForRanking[],
-  soft: SoftPreferences,
-): RankedCandidate[] {
+export function rankCandidates(candidates: CandidateForRanking[], soft: SoftPreferences): RankedCandidate[] {
   const scored: RankedCandidate[] = candidates.map((c) => ({
     ...c,
     preferenceScore: computePreferenceScore(c, soft),
@@ -109,10 +104,7 @@ export function rankCandidates(
   return scored;
 }
 
-export function applySemanticGate<T extends { semanticOverlap: number }>(
-  candidates: T[],
-  hasSignals: boolean,
-): T[] {
+export function applySemanticGate<T extends { semanticOverlap: number }>(candidates: T[], hasSignals: boolean): T[] {
   if (!hasSignals) return candidates;
   return candidates.filter((c) => c.semanticOverlap > 0);
 }
