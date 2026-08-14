@@ -39,7 +39,6 @@ export async function fetchPublicTherapistBySlug(
     locations,
     memberships,
     arrangements,
-    verifiedCredentials,
     semanticSource,
     problemCatalog,
   ] = await Promise.all([
@@ -73,12 +72,6 @@ export async function fetchPublicTherapistBySlug(
       .select("organization_name, note")
       .eq("therapist_id", t.id)
       .order("sort_order"),
-    sb
-      .from("therapist_credentials")
-      .select("id")
-      .eq("therapist_id", t.id)
-      .eq("verification_status", "verified")
-      .limit(1),
     // Read the raw semantic profile only inside the trusted server function.
     // The explicit public projection below returns mapped problem fields only.
     sb.from("therapists").select("semantic_profile").eq("id", t.id).maybeSingle(),
@@ -132,9 +125,9 @@ export async function fetchPublicTherapistBySlug(
     years_experience: t.years_experience ?? 0,
     city: t.city ?? null,
     image_url: t.image_url ?? null,
-    // Preserve the existing profile-level verification flag while also
-    // granting the public badge when at least one credential was verified.
-    verified: !!t.verified || (verifiedCredentials?.data?.length ?? 0) > 0,
+    // Database triggers keep this projection synchronized with manual
+    // verification and verified credentials for every public surface.
+    verified: !!t.verified,
     lgbtq_affirming: !!t.lgbtq_affirming,
     offers_free_intro: !!t.offers_free_intro,
     free_intro_types: t.free_intro_types ?? [],
