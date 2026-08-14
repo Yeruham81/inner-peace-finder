@@ -12,6 +12,7 @@
  */
 
 import { normalizeForInterpretation } from "./query-normalization";
+import { canonicalPopulationName, canonicalPopulationSlug } from "./population-options";
 import type {
   Catalog,
   CityEntry,
@@ -42,8 +43,8 @@ export type TherapistNameRow = { id: string; full_name: string };
 export const CITY_ALIASES: Record<string, string[]> = {
   "תל אביב": ['ת"א', "תא", "תל-אביב", "tel aviv", "telaviv"],
   "תל אביב-יפו": ["תל אביב יפו", "יפו"],
-  "ירושלים": ["jerusalem"],
-  "חיפה": ["haifa"],
+  ירושלים: ["jerusalem"],
+  חיפה: ["haifa"],
   "באר שבע": ['ב"ש', "beersheba", "beer sheva"],
   "פתח תקווה": ['פ"ת', "פתח תקוה"],
   "ראשון לציון": ['ראשל"צ'],
@@ -57,22 +58,22 @@ export const CITY_ALIASES: Record<string, string[]> = {
  * canonical `name_he`; slugs are accepted as a secondary key.
  */
 export const FEMININE_PROFESSION_FORMS: Record<string, string[]> = {
-  "מטפל": ["מטפלת"],
-  "פסיכולוג": ["פסיכולוגית"],
+  מטפל: ["מטפלת"],
+  פסיכולוג: ["פסיכולוגית"],
   "פסיכולוג קליני": ["פסיכולוגית קלינית"],
   "פסיכולוג חינוכי": ["פסיכולוגית חינוכית"],
   "פסיכולוג התפתחותי": ["פסיכולוגית התפתחותית"],
   "פסיכולוג שיקומי": ["פסיכולוגית שיקומית"],
-  "פסיכיאטר": ["פסיכיאטרית"],
-  "פסיכותרפיסט": ["פסיכותרפיסטית"],
+  פסיכיאטר: ["פסיכיאטרית"],
+  פסיכותרפיסט: ["פסיכותרפיסטית"],
   "עובד סוציאלי": ["עובדת סוציאלית"],
-  "יועץ": ["יועצת"],
+  יועץ: ["יועצת"],
   "יועץ חינוכי": ["יועצת חינוכית"],
-  "מאמן": ["מאמנת"],
+  מאמן: ["מאמנת"],
   "מטפל באמנות": ["מטפלת באמנות"],
   "מטפל זוגי": ["מטפלת זוגית"],
   "מטפל משפחתי": ["מטפלת משפחתית"],
-  "דיאטן": ["דיאטנית"],
+  דיאטן: ["דיאטנית"],
 };
 
 const FEMININE_BY_SLUG: Record<string, string[]> = {
@@ -139,11 +140,16 @@ export function buildSearchCatalog(input: {
     return { id: m.id, slug: m.slug, name_he: m.name_he, nameVariants: Array.from(variants) };
   });
 
-  const populations: PopulationEntry[] = input.populations.map((p) => ({
-    slug: p.slug,
-    name_he: p.name,
-    aliases: [p.name, p.slug],
-  }));
+  const populationMap = new Map<string, PopulationEntry>();
+  for (const population of input.populations) {
+    const slug = canonicalPopulationSlug(population.slug);
+    const name = canonicalPopulationName(population.slug, population.name);
+    const current = populationMap.get(slug);
+    const aliases = new Set(current?.aliases ?? []);
+    for (const alias of [name, population.name, slug, population.slug]) aliases.add(alias);
+    populationMap.set(slug, { slug, name_he: name, aliases: [...aliases] });
+  }
+  const populations = [...populationMap.values()];
 
   const languages: LanguageEntry[] = input.languages.map((l) => ({
     code: l.code,
