@@ -98,3 +98,25 @@ export function isOwnedCredentialDocumentPath(path: string, authUserId: string):
   if (path.slice(authUserId.length + 1).includes("/")) return false;
   return OWNED_PATH_PATTERN.test(path.toLowerCase());
 }
+
+export type CredentialFileType = "pdf" | "jpg" | "png";
+
+/**
+ * Content sniffing by magic bytes. The declared extension / MIME type is
+ * attacker-controlled, so the stored bytes decide what the file actually is.
+ */
+export function detectCredentialFileType(bytes: Uint8Array): CredentialFileType | null {
+  const starts = (signature: number[]) =>
+    bytes.length >= signature.length && signature.every((byte, index) => bytes[index] === byte);
+  if (starts([0x25, 0x50, 0x44, 0x46])) return "pdf"; // %PDF
+  if (starts([0xff, 0xd8, 0xff])) return "jpg";
+  if (starts([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "png";
+  return null;
+}
+
+/** The sniffed content type must match the extension the path advertises. */
+export function credentialPathMatchesType(path: string, type: CredentialFileType): boolean {
+  const extension = path.toLowerCase().split(".").pop() ?? "";
+  if (type === "jpg") return extension === "jpg" || extension === "jpeg";
+  return extension === type;
+}
