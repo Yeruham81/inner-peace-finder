@@ -429,7 +429,7 @@ function validateForPublish(input: SaveInput): string[] {
   if (!input.full_description || input.full_description.trim().length < DESCRIPTION_MIN) {
     missing.push("תיאור מקצועי");
   }
-  if (!input.language_ids || input.language_ids.length === 0) missing.push("שפות טיפול");
+  if (!input.language_ids || input.language_ids.length === 0) missing.push("שפות");
   if (!input.population_ids || input.population_ids.length === 0) missing.push("אוכלוסיות טיפול");
   if (!input.email) missing.push("כתובת אימייל");
   if (!input.phone) missing.push("מספר טלפון");
@@ -772,7 +772,8 @@ export const submitMyCredential = createServerFn({ method: "POST" })
       if (ownedError) throw new Error(ownedError.message);
       if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
       if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
-      if (owned.verification_status === "expired") throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
+      if (owned.verification_status === "expired")
+        throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
       const { error } = await supabaseAdmin
         .from("therapist_credentials")
         .update(payload)
