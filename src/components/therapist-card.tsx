@@ -239,7 +239,7 @@ export function TherapistCard({
                 <path d="M8 21h8M12 17v4" />
               </svg>
             </MetaIcon>
-            <span>ניתן לקיים טיפול אונליין</span>
+            <span>טיפול אונליין</span>
           </li>
         )}
       </ul>
