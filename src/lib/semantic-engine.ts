@@ -238,7 +238,12 @@ export function parseProfile(raw: unknown): SemanticProfileEntry[] {
 /* Shared vocabulary fetch + scoring pipeline                         */
 /* ------------------------------------------------------------------ */
 
-type VocabProblem = { id: string | number; slug: string; name: string | null };
+type VocabProblem = {
+  id: string | number;
+  slug: string;
+  name: string | null;
+  is_active?: boolean | null;
+};
 type VocabAlias = { problem_id: string | number; alias: string };
 type VocabIntent = { problem_slug: string | null; intent_text: string };
 type Vocab = {
@@ -251,7 +256,7 @@ type Vocab = {
 
 async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
   const [problemsRes, aliasesRes, intentsRes] = await Promise.all([
-    sb.from("problems").select("id, slug, name:name_he"),
+    sb.from("problems").select("id, slug, name:name_he, is_active"),
     sb.from("problem_aliases").select("problem_id, alias"),
     sb.from("problem_intents").select("problem_slug, intent_text"),
   ]);
@@ -263,7 +268,11 @@ async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
     const err = (res as any).error;
     if (err) throw err;
   }
-  const problems = (problemsRes.data ?? []) as VocabProblem[];
+  // Classifier and profile extraction must share the same active canonical
+  // vocabulary. Historical inactive children can remain in the database for
+  // old URLs/data, but they must never become new query/profile signals.
+  // `undefined` is accepted only for older in-memory fixtures.
+  const problems = ((problemsRes.data ?? []) as VocabProblem[]).filter((problem) => problem.is_active !== false);
   const aliases = (aliasesRes.data ?? []) as VocabAlias[];
   const intents = (intentsRes.data ?? []) as unknown as VocabIntent[];
   const slugById = new Map<string, string>();
@@ -778,9 +787,21 @@ async function classify(input: string, sb: SupabaseClient<Database>): Promise<Se
   const evidence = collectEvidenceForClassify(q, vocab);
   if (evidence.size === 0) return [];
 
+  // If one or more catalog phrases explain the entire normalized query,
+  // partial-overlap candidates add noise rather than recall. Keep every
+  // whole-query owner (so explicit compound mappings can still return more
+  // than one domain), and drop candidates supported only by fragments.
+  const wholeQueryIds = new Set<string>();
+  for (const [id, list] of evidence) {
+    if (list.some((entry) => entry.full && normalizeText(entry.phrase) === q)) {
+      wholeQueryIds.add(id);
+    }
+  }
+
   const queryTokens = Math.max(1, countTokens(q));
   const scored: { slug: string; raw: number; confidence: number }[] = [];
   for (const [id, list] of evidence) {
+    if (wholeQueryIds.size > 0 && !wholeQueryIds.has(id)) continue;
     const slug = vocab.slugById.get(id);
     if (!slug) continue;
     // Phase 17C.4B: umbrella / trait domains normally stay profile-only.
