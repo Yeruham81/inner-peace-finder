@@ -6,7 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
 import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-feedback";
 import { computeSemanticProfile } from "./profile-semantic-sync";
-import { isOwnedCredentialDocumentPath, type CredentialStatus } from "./credential-workflow";
+import type { CredentialStatus } from "./credential-workflow";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 import {
   PRODUCT_REGIONS,
