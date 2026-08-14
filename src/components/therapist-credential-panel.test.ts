@@ -92,7 +92,9 @@ describe("credential submission security", () => {
     expect(isOwnedCredentialDocumentPath(`${UID}/sub/a.pdf`, UID)).toBe(false);
     expect(isOwnedCredentialDocumentPath(`${UID}/evil.exe`, UID)).toBe(false);
     expect(isOwnedCredentialDocumentPath("", UID)).toBe(false);
-    expect(serverSource).toContain("isOwnedCredentialDocumentPath(data.document_url, context.userId)");
+    // Path ownership plus stored-object verification (existence, size, magic
+    // bytes) both run server-side before any credential row is written.
+    expect(serverSource).toContain("verifyStoredCredentialObject(data.document_url, context.userId)");
   });
 });
 
