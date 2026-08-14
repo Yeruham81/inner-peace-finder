@@ -78,6 +78,24 @@ export async function fetchPublicTherapistBySlug(
     sb.from("problems").select("id, slug, name:name_he, parent_id").eq("is_active", true),
   ]);
 
+  // Never turn a failed public relation read into an empty section. `data ??
+  // []` is valid only after Supabase confirmed that the query itself
+  // succeeded; otherwise the route must reach its error boundary.
+  for (const [relation, result] of [
+    ["therapist_populations", pops],
+    ["therapist_languages", langs],
+    ["therapist_professions", professions],
+    ["therapist_modalities", modalities],
+    ["therapist_therapy_formats", formats],
+    ["therapist_locations", locations],
+    ["therapist_professional_memberships", memberships],
+    ["therapist_service_arrangements", arrangements],
+    ["therapists.semantic_profile", semanticSource],
+    ["problems", problemCatalog],
+  ] as const) {
+    if (result.error) throw new Error(`${relation}: ${result.error.message}`);
+  }
+
   type MappedProfession = { slug: string; name: string; is_primary: boolean; sort_order: number };
   const mappedProfessions = ((professions?.data ?? []) as any[])
     .map((row): MappedProfession | null =>
