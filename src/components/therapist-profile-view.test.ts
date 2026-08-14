@@ -131,8 +131,9 @@ describe("free introductory session details", () => {
 
     const html = renderToStaticMarkup(createElement(TherapistProfileView, { therapist, interactive: false }));
 
-    expect(html).toContain("היכרות ללא תשלום · 20 דקות");
-    expect(html).toContain("אפשרויות: טלפון · וידאו · פגישה בקליניקה");
+    expect(html).not.toContain("מאפייני הטיפול");
+    expect(html).toContain("פגישת או שיחת היכרות ללא תשלום · 20 דקות");
+    expect(html).toContain("טלפון · וידאו · פגישה בקליניקה");
   });
 });
 
@@ -170,7 +171,7 @@ describe("mobile profile width guards", () => {
   it("constrains every padded profile section instead of relying on its content width", () => {
     const sectionOpenings = profileSource.match(/<section className="[^"]+"/g) ?? [];
 
-    expect(sectionOpenings).toHaveLength(5);
+    expect(sectionOpenings).toHaveLength(4);
     for (const section of sectionOpenings) {
       expect(section).toContain('className="box-border min-w-0 max-w-full overflow-hidden');
     }
