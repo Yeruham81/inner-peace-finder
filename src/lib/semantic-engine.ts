@@ -106,6 +106,16 @@ const CONFIDENCE_MIN = 0.35;
 const CONFIDENCE_MAX = 0.95;
 
 /**
+ * Classification must not treat one shared word from a multi-token phrase
+ * as a usable semantic signal. A two-token alias with only one overlapping
+ * token has quality 0.25 (`(1 / 2)²`) and is therefore rejected. This keeps
+ * generic words such as "קשיי" from making "קשיי שינה" match unrelated
+ * aliases such as "קשיי זהות" or "קשיים בזוגיות", while preserving exact
+ * phrases and stronger partial matches (two of three meaningful tokens).
+ */
+const CLASSIFY_MIN_PARTIAL_MULTI_TOKEN_QUALITY = 0.4;
+
+/**
  * Deterministic child → parent map used by parent-suppression. A child that
  * outranks its parent in the candidate list suppresses the parent unless
  * the parent's score is high enough to indicate independent evidence.
@@ -353,7 +363,11 @@ function scoreEvidenceQuality(
 ): { quality: number; full: boolean; tokens: number; proximate: boolean } {
   const nPhrase = lightNormalizeHebrew(phrase);
   const pTokens = tokenizeHebrew(phrase);
-  const tokenCount = pTokens.length || countTokens(phrase);
+  // The inflection normalizer can collapse a meaningful Hebrew noun into a
+  // stopword (for example "זהות" -> "זה"). Keep the original surface-word
+  // count as the denominator so the surviving generic word ("קשיי") cannot
+  // be mistaken for full coverage of the multi-word phrase "קשיי זהות".
+  const tokenCount = Math.max(pTokens.length, countTokens(phrase));
   if (nPhrase && nPhrase.length >= 2 && nQuery.includes(nPhrase)) {
     return { quality: 1, full: true, tokens: tokenCount, proximate: true };
   }
@@ -408,7 +422,7 @@ function scoreEvidenceQuality(
       }
     }
   }
-  const ratio = overlap / pTokens.length;
+  const ratio = overlap / tokenCount;
   // Never fully drop — instead weight by ratio² so partial matches count
   // only proportionally. This keeps recall (evidence isn't lost) while
   // sharply penalizing single-token filler overlaps.
@@ -513,6 +527,9 @@ function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evi
   };
   const push = (rawId: string | number, ev: Evidence) => {
     if (ev.quality < 0.05) return;
+    if (!ev.full && ev.tokens >= 2 && ev.quality < CLASSIFY_MIN_PARTIAL_MULTI_TOKEN_QUALITY) {
+      return;
+    }
     const key = resolveId(rawId);
     const arr = byId.get(key) ?? [];
     arr.push(ev);
@@ -766,10 +783,15 @@ async function classify(input: string, sb: SupabaseClient<Database>): Promise<Se
   for (const [id, list] of evidence) {
     const slug = vocab.slugById.get(id);
     if (!slug) continue;
-    // Phase 17C.4B: umbrella / trait domains are excluded from classify
-    // output. They remain available for extractProfile() (therapist
-    // tagging) — see semantic-ontology.PROFILE_ONLY_SLUGS.
-    if (PROFILE_ONLY_SLUGS.has(slug)) continue;
+    // Phase 17C.4B: umbrella / trait domains normally stay profile-only.
+    // A verbatim problem name or alias is different: the user explicitly
+    // named the canonical concept (for example "שחיקה בעבודה"), so dropping
+    // it would turn a precise request into an unrelated fuzzy match or an
+    // unrecognized query. Weak/partial evidence remains excluded.
+    const hasExactCanonicalEvidence = list.some(
+      (entry) => entry.full && (entry.kind === "name" || entry.kind === "alias"),
+    );
+    if (PROFILE_ONLY_SLUGS.has(slug) && !hasExactCanonicalEvidence) continue;
     const raw = aggregateScore(list);
     // Coverage: fraction of query tokens spanned by this slug's evidences
     // (approximate — sum of matched-phrase tokens, capped at queryTokens).
