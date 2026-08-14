@@ -156,9 +156,12 @@ describe("therapist relation tables — server/client boundary", () => {
     // Profile + relation writes happen exclusively inside one transactional
     // database operation; application code performs no insert/update/delete on
     // therapist tables at all.
+    // (therapist_credentials is the one exception: verification columns are
+    // written through the admin client after ownership + document checks.)
     expect(src).toContain('.rpc("save_therapist_profile"');
-    expect(src).not.toMatch(/\.from\("therapist[a-z_]*"\)\s*\n?\s*\.(insert|update|delete)\(/);
-    expect(src).not.toMatch(/\.(insert|update|delete)\(\s*\{[\s\S]{0,200}therapist_id/);
+    const editorWrites =
+      src.match(/\.from\("(therapists|therapist_(?!credentials)[a-z_]*)"\)\s*\n?\s*\.(insert|update|delete)\(/g) ?? [];
+    expect(editorWrites).toEqual([]);
 
     // Relation tables are still read (owner-scoped SELECT) when loading the editor.
     for (const t of RELATION_TABLES) expect(src.includes(t), t).toBe(true);
