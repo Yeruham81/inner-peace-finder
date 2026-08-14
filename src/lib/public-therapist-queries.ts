@@ -1,8 +1,3 @@
-
-/
-public-therapist-queries.ts
-
-
 /**
  * Public therapist reads, expressed as plain functions over a Supabase-like
  * client so they can be exercised in tests without a database.
