@@ -2,10 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/integrations/supabase/types";
 import { SemanticEngine, normalizeText, tokenize, matchesText } from "../src/lib/semantic-engine";
 
-const sb = createClient<Database>(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_PUBLISHABLE_KEY!,
-);-
+const sb = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
 
 const inputs = [
   "אני מטפל בדיכאון ובדכאונות ממושכים.",
@@ -21,7 +18,7 @@ async function main() {
   ]);
   const problems = pRes.data!;
   const aliases = aRes.data!;
-  const slugById = new Map(problems.map(p => [String(p.id), p.slug]));
+  const slugById = new Map(problems.map((p) => [String(p.id), p.slug]));
 
   for (const text of inputs) {
     console.log("\n=========================");
@@ -30,12 +27,12 @@ async function main() {
     console.log("toks :", tokenize(text));
 
     // Find any alias/name that matches
-    const nameHits = problems.filter(p => p.name && matchesText(p.name, text));
-    const aliasHits = aliases.filter(a => a.alias && matchesText(a.alias, text));
+    const nameHits = problems.filter((p) => p.name && matchesText(p.name, text));
+    const aliasHits = aliases.filter((a) => a.alias && matchesText(a.alias, text));
     console.log(`name hits (${nameHits.length}):`);
-    nameHits.forEach(p => console.log(`  - slug=${p.slug} name="${p.name}"`));
+    nameHits.forEach((p) => console.log(`  - slug=${p.slug} name="${p.name}"`));
     console.log(`alias hits (${aliasHits.length}):`);
-    aliasHits.slice(0,20).forEach(a => {
+    aliasHits.slice(0, 20).forEach((a) => {
       const slug = slugById.get(String(a.problem_id));
       console.log(`  - slug=${slug} alias="${a.alias}"`);
     });
@@ -44,4 +41,7 @@ async function main() {
     console.log("→ semantic_profile:", profile);
   }
 }
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
