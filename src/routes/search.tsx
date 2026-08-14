@@ -21,9 +21,9 @@ import { buildSearchReturn } from "@/lib/search-return";
  * there is no silent fallback from unified to legacy.
  *
  * Development: `?flow=legacy|unified` is honored for side-by-side
- * comparison. When the parameter is missing or invalid, DEV defaults to
- * "legacy" (the pre-Q1 baseline) so the parameter is the ONLY way to
- * opt into unified locally.
+ * comparison. Missing or invalid values default to "unified" so Preview
+ * exercises the same search pipeline as production. Legacy remains
+ * reachable only through an explicit `?flow=legacy` diagnostic URL.
  */
 export const FLOW_VALUES = ["legacy", "unified"] as const;
 export type FlowValue = (typeof FLOW_VALUES)[number];
@@ -44,12 +44,12 @@ const searchSchema = z.object({
   verified: fallback(z.string(), "").default(""),
   lgbtqAffirming: fallback(z.string(), "").default(""),
   freeIntro: fallback(z.string(), "").default(""),
-  flow: fallback(z.string(), "legacy").default("legacy"),
+  flow: fallback(z.string(), "unified").default("unified"),
 });
 
 export function resolveFlow(raw: string, opts: { isDev: boolean }): FlowValue {
   if (!opts.isDev) return "unified";
-  return (FLOW_VALUES as readonly string[]).includes(raw) ? (raw as FlowValue) : "legacy";
+  return raw === "legacy" ? "legacy" : "unified";
 }
 
 function resolveFlowFromEnv(raw: string): FlowValue {
