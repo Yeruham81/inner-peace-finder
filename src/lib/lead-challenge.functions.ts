@@ -21,31 +21,30 @@ export const issueLeadChallenge = createServerFn({ method: "POST" }).handler(asy
 
   const { ipHash } = deriveRequestIdentity(getRequest()?.headers);
 
-  // Housekeeping: use the service-role-only database function so the
-  // retention rule remains centralized in the database migration.
-  const { error: purgeErr } = await supabaseAdmin.rpc("purge_expired_lead_challenges");
-  if (purgeErr) throw new Error(purgeErr.message);
+  const { prompt, expected } = generateChallenge();
 
-  // Issuance limit per IP hash.
-  const windowStart = new Date(Date.now() - CHALLENGE_ISSUE_WINDOW_MS).toISOString();
-  const { count, error: countErr } = await supabaseAdmin
-    .from("lead_challenges")
-    .select("id", { count: "exact", head: true })
-    .eq("ip_hash", ipHash)
-    .gte("created_at", windowStart);
-  if (countErr) throw new Error(countErr.message);
-  if ((count ?? 0) >= CHALLENGE_ISSUE_LIMIT) {
+  // Retention purge, per-IP issuance counting and the insert all happen inside
+  // one transactional, advisory-locked database operation, so parallel requests
+  // from the same IP hash cannot race past the issuance limit.
+  const { data: rows, error } = await supabaseAdmin.rpc("issue_lead_challenge", {
+    _ip_hash: ipHash,
+    _prompt: prompt,
+    _expected: expected,
+    _ttl_seconds: Math.round(CHALLENGE_TTL_MS / 1000),
+    _issue_limit: CHALLENGE_ISSUE_LIMIT,
+    _window_seconds: Math.round(CHALLENGE_ISSUE_WINDOW_MS / 1000),
+  });
+  if (error) throw new Error(error.message);
+
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  if (!row?.allowed || !row.challenge_id || !row.expires_at) {
     return { ok: false, reason: "rate_limit_exceeded" };
   }
 
-  const { prompt, expected } = generateChallenge();
-  const expiresAt = new Date(Date.now() + CHALLENGE_TTL_MS).toISOString();
-  const { data, error } = await supabaseAdmin
-    .from("lead_challenges")
-    .insert({ prompt, expected_answer: expected, ip_hash: ipHash, expires_at: expiresAt })
-    .select("id, prompt, expires_at")
-    .single();
-  if (error) throw new Error(error.message);
-
-  return { ok: true, challengeId: data.id, prompt: data.prompt, expiresAt: data.expires_at };
+  return {
+    ok: true,
+    challengeId: row.challenge_id,
+    prompt: row.prompt ?? prompt,
+    expiresAt: row.expires_at,
+  };
 });
