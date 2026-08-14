@@ -13,6 +13,7 @@ import { Route as TherapyInformationRouteImport } from './routes/therapy-informa
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ProfilePreviewDemoRouteImport } from './routes/profile-preview-demo'
 import { Route as ForTherapistsRouteImport } from './routes/for-therapists'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -41,6 +42,11 @@ const SearchRoute = SearchRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilePreviewDemoRoute = ProfilePreviewDemoRouteImport.update({
+  id: '/profile-preview-demo',
+  path: '/profile-preview-demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForTherapistsRoute = ForTherapistsRouteImport.update({
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
+  '/profile-preview-demo': typeof ProfilePreviewDemoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
+  '/profile-preview-demo': typeof ProfilePreviewDemoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
+  '/profile-preview-demo': typeof ProfilePreviewDemoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/for-therapists'
+    | '/profile-preview-demo'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/for-therapists'
+    | '/profile-preview-demo'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/for-therapists'
+    | '/profile-preview-demo'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ForTherapistsRoute: typeof ForTherapistsRoute
+  ProfilePreviewDemoRoute: typeof ProfilePreviewDemoRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -219,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile-preview-demo': {
+      id: '/profile-preview-demo'
+      path: '/profile-preview-demo'
+      fullPath: '/profile-preview-demo'
+      preLoaderRoute: typeof ProfilePreviewDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/for-therapists': {
@@ -307,6 +327,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ForTherapistsRoute: ForTherapistsRoute,
+  ProfilePreviewDemoRoute: ProfilePreviewDemoRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
