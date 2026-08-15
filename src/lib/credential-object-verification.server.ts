@@ -63,13 +63,14 @@ export async function verifyStoredCredentialObject(
   // The stored MIME metadata must be one of the accepted types AND agree with
   // the sniffed content. Metadata alone is never trusted: the bytes decide.
   const storedMime = (blob.type ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
-  if (storedMime) {
-    if (!(CREDENTIAL_ACCEPTED_MIME_TYPES as readonly string[]).includes(storedMime)) {
-      throw new Error("ניתן להעלות PDF, JPG או PNG בלבד.");
-    }
-    if (!MIME_BY_TYPE[type].includes(storedMime)) {
-      throw new Error("סוג המסמך אינו תואם את הקובץ שהועלה.");
-    }
+  if (!storedMime) {
+    throw new Error("סוג המסמך חסר. יש להעלות את המסמך מחדש.");
+  }
+  if (!(CREDENTIAL_ACCEPTED_MIME_TYPES as readonly string[]).includes(storedMime)) {
+    throw new Error("ניתן להעלות PDF, JPG או PNG בלבד.");
+  }
+  if (!MIME_BY_TYPE[type].includes(storedMime)) {
+    throw new Error("סוג המסמך אינו תואם את הקובץ שהועלה.");
   }
 
   return { path, size: bytes.byteLength, type };
