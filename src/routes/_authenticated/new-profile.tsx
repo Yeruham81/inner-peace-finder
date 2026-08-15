@@ -455,6 +455,31 @@ function EditorPage() {
     onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
 
+  if (!initialized && (profile.isError || options.isError)) {
+    return (
+      <div className="min-h-screen bg-brand-soft/50">
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <div className="rounded-2xl border border-destructive/30 bg-surface-elevated p-6 shadow-sm">
+            <h1 className="text-xl font-semibold text-foreground">לא הצלחנו לטעון את עורך הפרופיל</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              אירעה שגיאה בטעינת פרטי הפרופיל או אפשרויות העריכה. ניתן לנסות שוב.
+            </p>
+            <Button
+              type="button"
+              className="mt-5"
+              disabled={profile.isFetching || options.isFetching}
+              onClick={() => {
+                void Promise.all([profile.refetch(), options.refetch()]);
+              }}
+            >
+              {profile.isFetching || options.isFetching ? "מנסה שוב…" : "ניסיון חוזר"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (profile.isLoading || options.isLoading || !initialized) {
     return (
       <div className="min-h-screen bg-brand-soft/50">
