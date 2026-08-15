@@ -59,13 +59,20 @@ describe("canonical eligibility predicate", () => {
     expect(THERAPIST_ELIGIBILITY.isActive).toBe(true);
   });
 
-  it("contact paths reuse the centralized predicate instead of re-declaring it", () => {
-    for (const f of ["lib/therapists.functions.ts", "lib/lead.functions.ts"]) {
-      const src = read(f);
-      expect(src.includes('from "./search-eligibility"')).toBe(true);
-      expect(src.includes("applyEligibility(")).toBe(true);
-      expect(src.includes('"visible", "published"')).toBe(false);
-    }
+  it("the CTA path reuses the centralized predicate instead of re-declaring it", () => {
+    const src = read("lib/therapists.functions.ts");
+    expect(src.includes('from "./search-eligibility"')).toBe(true);
+    expect(src.includes("applyEligibility(")).toBe(true);
+    expect(src.includes('"visible", "published"')).toBe(false);
+  });
+
+  it("the lead path delegates eligibility to the atomic database transaction", () => {
+    const src = read("lib/lead.functions.ts");
+    // No application-side eligibility read: the RPC re-checks it in the same
+    // transaction that consumes the challenge and creates the CTA + lead.
+    expect(src.includes("applyEligibility(")).toBe(false);
+    expect(src.includes('"visible", "published"')).toBe(false);
+    expect(src.includes('.rpc("submit_lead"')).toBe(true);
   });
 });
 
@@ -101,17 +108,17 @@ describe("recordCtaClick", () => {
 describe("createLead", () => {
   const src = read("lib/lead.functions.ts");
 
-  it("gates on eligibility before billing, insertion, contact resolution and dispatch", () => {
-    const gate = src.indexOf("applyEligibility");
-    expect(gate).toBeGreaterThan(-1);
-    expect(gate).toBeLessThan(src.indexOf('rpc("record_cta_click"'));
-    expect(gate).toBeLessThan(src.indexOf('.from("lead_events")\n      .insert('));
-    expect(gate).toBeLessThan(src.indexOf("dispatchLead("));
+  it("creates nothing before the transactional RPC has accepted the submission", () => {
+    const rpc = src.indexOf('.rpc("submit_lead"');
+    expect(rpc).toBeGreaterThan(-1);
+    expect(src.indexOf('rpc("record_cta_click"')).toBe(-1);
+    expect(src.indexOf('.from("lead_events")\n      .insert(')).toBe(-1);
+    expect(rpc).toBeLessThan(src.indexOf("dispatchLead("));
   });
 
   it("returns the generic Hebrew response for missing or ineligible therapists", () => {
-    const guard = src.slice(src.indexOf("if (!therapist)"), src.indexOf('rpc("record_cta_click"'));
-    expect(guard.includes('reason: "therapist_unavailable"')).toBe(true);
+    const guard = src.slice(src.indexOf('if (reason === "rate_limit_exceeded")'), src.indexOf("dispatchLead("));
+    expect(guard.includes('reason: "therapist_unavailable" as const')).toBe(true);
     expect(guard.includes("לא ניתן לשלוח פנייה לפרופיל זה כרגע.")).toBe(true);
   });
 
@@ -147,16 +154,18 @@ describe("record_cta_click database function", () => {
   });
 
   it("revokes execution from anon and authenticated and grants it to service_role only", () => {
-    expect(/REVOKE EXECUTE ON FUNCTION public\.record_cta_click[^;]*FROM anon;/.test(file)).toBe(true);
-    expect(/REVOKE EXECUTE ON FUNCTION public\.record_cta_click[^;]*FROM authenticated;/.test(file)).toBe(true);
+    expect(/REVOKE ALL ON FUNCTION public\.record_cta_click[^;]*FROM PUBLIC;/.test(file)).toBe(true);
+    expect(/REVOKE ALL ON FUNCTION public\.record_cta_click[^;]*FROM anon, authenticated;/.test(file)).toBe(true);
     expect(/GRANT EXECUTE ON FUNCTION public\.record_cta_click[^;]*TO service_role;/.test(file)).toBe(true);
     expect(/GRANT EXECUTE[^;]*record_cta_click[^;]*TO anon/.test(file)).toBe(false);
   });
 
   it("preserves SECURITY DEFINER, fixed search_path, signature and idempotency", () => {
     expect(file.includes("SECURITY DEFINER")).toBe(true);
-    expect(file.includes("SET search_path = public")).toBe(true);
+    // Effective state: no privileged function relies on a mutable search path.
+    expect(file.includes("SET search_path = ''")).toBe(true);
+    expect(file.includes("SET search_path = 'public'")).toBe(false);
     expect(file.includes("ON CONFLICT (session_id, therapist_id, cta_id) DO NOTHING")).toBe(true);
-    expect(file.includes("RETURNS TABLE (billable boolean, already_exists boolean, click_id uuid)")).toBe(true);
+    expect(file.includes("RETURNS TABLE(billable boolean, already_exists boolean, click_id uuid)")).toBe(true);
   });
 });
