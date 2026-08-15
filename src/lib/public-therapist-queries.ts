@@ -140,7 +140,7 @@ export async function fetchPublicTherapistBySlug(
     full_description: t.full_description ?? null,
     education_training: t.education_training ?? null,
     professional_experience: t.professional_experience ?? null,
-    years_experience: t.years_experience ?? 0,
+    years_experience: t.years_experience ?? null,
     city: t.city ?? null,
     image_url: t.image_url ?? null,
     // Database triggers keep this projection synchronized with manual

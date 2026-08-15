@@ -134,16 +134,18 @@ export const createLead = createServerFn({ method: "POST" })
         provider_message_id: result.providerMessageId ?? null,
       })
       .eq("id", leadId);
-    // The lead is already recorded; a failed status write must not be silent.
+    // The lead is already recorded. If the post-commit status sync fails, keep
+    // the database row at its existing `pending` status, log the server-side
+    // failure, and still report success to the user. Do not claim delivery
+    // succeeded when that status could not be persisted.
     if (statusErr) {
       console.error("[lead] delivery status update failed", { leadId, code: statusErr.code });
-      throw new Error("lead_status_update_failed");
     }
 
     return {
       ok: true as const,
       leadId,
       billable,
-      deliveryStatus: result.status,
+      deliveryStatus: statusErr ? ("pending" as const) : result.status,
     };
   });
