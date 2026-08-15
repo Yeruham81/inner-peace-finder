@@ -241,6 +241,14 @@ describe("public eligibility — shared predicate", () => {
     expect(await listEligibleTherapistSlugs(db(rows))).toEqual(["eligible-one"]);
   });
 
+  it("listFilterOptions propagates catalog-query failures instead of returning empty filters", async () => {
+    for (const table of ["population_groups", "languages", "professions", "treatment_modalities", "therapy_formats"]) {
+      await expect(
+        listEligibleFilterOptions(db([therapistRow({})], {}, { [table]: new Error("boom") })),
+      ).rejects.toThrow(`${table}: boom`);
+    }
+  });
+
   it("listFilterOptions derives cities from every active clinic of eligible profiles", async () => {
     const rows = [
       therapistRow({ city: "עיר ישנה שלא נמצאת במיקומים" }),
