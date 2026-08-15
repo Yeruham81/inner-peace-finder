@@ -153,6 +153,12 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
   });
 
+  it("preserves a missing years_experience value as null instead of coercing it to zero", async () => {
+    const res = await fetchPublicTherapistBySlug(db([therapistRow({ years_experience: null })]), "eligible-one");
+
+    expect(res?.years_experience).toBeNull();
+  });
+
   it("uses only the canonical semantic profile for public treatment domains", async () => {
     const client = db([therapistRow({ semantic_profile: [] })], {
       therapist_problems: [
