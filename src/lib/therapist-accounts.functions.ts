@@ -41,11 +41,12 @@ export const ensureTherapistAccount = createServerFn({ method: "POST" })
     }
 
     // Optional owned therapist profile (via nullable owner_account_id FK)
-    const { data: owned } = await supabase
+    const { data: owned, error: ownedErr } = await supabase
       .from("therapists")
       .select("id")
       .eq("owner_account_id", account.id)
       .maybeSingle();
+    if (ownedErr) throw new Error(ownedErr.message);
 
     return { ...(account as TherapistAccount), owned_therapist_id: owned?.id ?? null };
   });
@@ -54,16 +55,20 @@ export const getMyTherapistAccount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TherapistAccount | null> => {
     const { supabase, userId } = context;
-    const { data: account } = await supabase
+    const { data: account, error: accountErr } = await supabase
       .from("therapist_accounts")
       .select("*")
       .eq("auth_user_id", userId)
       .maybeSingle();
+    if (accountErr) throw new Error(accountErr.message);
     if (!account) return null;
-    const { data: owned } = await supabase
+
+    const { data: owned, error: ownedErr } = await supabase
       .from("therapists")
       .select("id")
       .eq("owner_account_id", account.id)
       .maybeSingle();
+    if (ownedErr) throw new Error(ownedErr.message);
+
     return { ...(account as TherapistAccount), owned_therapist_id: owned?.id ?? null };
   });
