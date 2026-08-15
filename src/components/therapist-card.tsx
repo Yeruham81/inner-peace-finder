@@ -175,9 +175,9 @@ export function TherapistCard({
               {t.professional_title}
             </p>
           )}
-          {t.years_experience > 0 && (
+          {(t.years_experience ?? 0) > 0 && (
             <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              <span className="ltr-num">{t.years_experience}</span> {experienceSuffix(t.years_experience)}
+              <span className="ltr-num">{t.years_experience ?? 0}</span> {experienceSuffix(t.years_experience ?? 0)}
             </p>
           )}
           {t.language_names.length > 0 && (

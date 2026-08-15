@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { applyEligibility } from "./search-eligibility";
 
 const LeadSchema = z.object({
   therapistId: z.string().uuid(),
@@ -24,26 +23,38 @@ export const createLead = createServerFn({ method: "POST" })
     const req = getRequest();
     const headers = req?.headers;
 
-    // 1) All rate-limiting identifiers are derived server-side; nothing about
-    //    the IP, the session or the expected answer comes from client input.
+    // 1) All rate-limiting identifiers are derived server-side by the single
+    //    HMAC helper; nothing about the IP, the session or the expected answer
+    //    comes from client input.
     const { deriveRequestIdentity } = await import("./lead-challenge.server");
     const { ipHash, sessionId, sessionHash, userAgent } = deriveRequestIdentity(headers);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 2) Atomic server-side challenge consumption + IP rate limiting. This must
-    //    run before any billing, lead insertion, contact resolution or dispatch.
-    const { data: authRows, error: authErr } = await supabaseAdmin.rpc("authorize_lead_submission", {
+    // 2) ONE transactional database operation performs: rate-limit locking and
+    //    accounting, single-use challenge consumption, eligibility re-check,
+    //    billable CTA creation and lead creation. Any failure rolls all of it
+    //    back — no consumed challenge, no CTA without its lead.
+    const { data: rows, error: rpcErr } = await supabaseAdmin.rpc("submit_lead", {
       _challenge_id: data.challengeId,
       _answer: data.challengeAnswer,
       _ip_hash: ipHash,
       _session_hash: sessionHash,
+      _session_id: sessionId,
       _therapist_id: data.therapistId,
+      _cta_id: data.ctaId,
+      _source_problem_id: data.sourceProblemId ?? (null as unknown as string),
+      _population_id: data.populationId ?? (null as unknown as string),
+      _visitor_name: data.visitorName,
+      _visitor_phone: data.visitorPhone,
+      _message: data.message,
+      _user_agent: userAgent ?? (null as unknown as string),
     });
-    if (authErr) throw new Error(authErr.message);
-    const authRow = Array.isArray(authRows) ? authRows[0] : authRows;
-    if (!authRow?.allowed) {
-      const reason = authRow?.reason;
+    if (rpcErr) throw new Error(rpcErr.message);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+
+    if (!row?.allowed) {
+      const reason = row?.reason;
       if (reason === "rate_limit_exceeded") {
         return {
           ok: false as const,
@@ -58,6 +69,13 @@ export const createLead = createServerFn({ method: "POST" })
           message: "תוקף האימות פג. הוצג תרגיל חדש.",
         };
       }
+      if (reason === "therapist_unavailable") {
+        return {
+          ok: false as const,
+          reason: "therapist_unavailable" as const,
+          message: "לא ניתן לשלוח פנייה לפרופיל זה כרגע.",
+        };
+      }
       return {
         ok: false as const,
         reason: "challenge_failed" as const,
@@ -65,84 +83,32 @@ export const createLead = createServerFn({ method: "POST" })
       };
     }
 
-    // The session velocity limit (max 5 distinct therapists / 15 min) is now
-    // enforced inside `authorize_lead_submission` above, in the same locked
-    // transaction as the IP limits — a separate read here could be raced.
+    // The transaction has committed: the lead exists and stays recorded even if
+    // external delivery fails.
+    const leadId = row.lead_id as string;
+    const billable = !!row.billable;
+    const channel = (row.delivery_channel ?? "whatsapp") as "whatsapp" | "sms" | "email";
+    const destination = row.destination ?? "";
 
-    // 2) Eligibility gate — before billing, lead insertion, contact resolution
-    //    or dispatch. Missing and ineligible therapists get the same generic
-    //    response so profile state is never revealed.
-    const { data: therapist, error: tErr } = await applyEligibility(
-      supabaseAdmin
-        .from("therapists")
-        .select("id, full_name, phone, preferred_contact_channel, contact_destination")
-        .eq("id", data.therapistId),
-    ).maybeSingle();
-    if (tErr) throw new Error(tErr.message);
-    if (!therapist) {
-      return {
-        ok: false as const,
-        reason: "therapist_unavailable" as const,
-        message: "לא ניתן לשלוח פנייה לפרופיל זה כרגע.",
-      };
-    }
-
-    // 3) Bill via atomic RPC (only once per session+therapist+cta)
-    const { data: rpcRows, error: rpcErr } = await supabaseAdmin.rpc("record_cta_click", {
-      _therapist_id: data.therapistId,
-      _session_id: sessionId,
-      _cta_id: data.ctaId,
-      _source_problem_id: data.sourceProblemId ?? undefined,
-      _ip_hash: ipHash ?? undefined,
-      _user_agent: userAgent ?? undefined,
-    });
-    if (rpcErr) throw new Error(rpcErr.message);
-    const ctaRow = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
-    const ctaEventId = (ctaRow?.click_id as string | undefined) ?? null;
-    const billable = !!ctaRow?.billable;
-
-    // 4) Resolve channel + destination
-    const channel = (therapist.preferred_contact_channel ?? "whatsapp") as "whatsapp" | "sms" | "email";
-    const destination = therapist.contact_destination ?? therapist.phone ?? "";
-
-    // 5) Insert lead row
-    const { data: leadRow, error: insErr } = await supabaseAdmin
-      .from("lead_events")
-      .insert({
-        cta_event_id: ctaEventId,
-        session_id: sessionId,
-        therapist_id: data.therapistId,
-        problem_id: data.sourceProblemId ?? null,
-        population_id: data.populationId ?? null,
-        visitor_name: data.visitorName,
-        visitor_phone: data.visitorPhone,
-        message: data.message,
-        challenge_presented: null,
-        challenge_passed: true,
-        delivery_channel: channel,
-        delivery_status: "pending",
-      })
-      .select("id")
-      .single();
-    if (insErr) throw new Error(insErr.message);
-
-    // 6) Dispatch (best-effort; do not throw to user on provider error)
+    // 3) Dispatch (post-commit; provider errors never lose the stored lead)
     let problemName: string | null = null;
     let populationName: string | null = null;
-    if (data.sourceProblemId) {
-      const { data: p } = await supabaseAdmin
+    if (data.sourceProblemId && /^\d+$/.test(data.sourceProblemId)) {
+      const { data: p, error: pErr } = await supabaseAdmin
         .from("problems")
         .select("name:name_he")
         .eq("id", data.sourceProblemId as unknown as number)
         .maybeSingle();
+      if (pErr) throw new Error(pErr.message);
       problemName = p?.name ?? null;
     }
     if (data.populationId) {
-      const { data: pop } = await supabaseAdmin
+      const { data: pop, error: popErr } = await supabaseAdmin
         .from("population_groups")
         .select("name")
         .eq("id", data.populationId)
         .maybeSingle();
+      if (popErr) throw new Error(popErr.message);
       populationName = pop?.name ?? null;
     }
 
@@ -157,21 +123,26 @@ export const createLead = createServerFn({ method: "POST" })
         problemName,
         populationName,
         message: data.message,
-        therapistName: therapist.full_name,
+        therapistName: row.therapist_name ?? "",
       });
     }
 
-    await supabaseAdmin
+    const { error: statusErr } = await supabaseAdmin
       .from("lead_events")
       .update({
         delivery_status: result.status,
         provider_message_id: result.providerMessageId ?? null,
       })
-      .eq("id", leadRow.id);
+      .eq("id", leadId);
+    // The lead is already recorded; a failed status write must not be silent.
+    if (statusErr) {
+      console.error("[lead] delivery status update failed", { leadId, code: statusErr.code });
+      throw new Error("lead_status_update_failed");
+    }
 
     return {
       ok: true as const,
-      leadId: leadRow.id as string,
+      leadId,
       billable,
       deliveryStatus: result.status,
     };

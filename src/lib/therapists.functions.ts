@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { createHash, randomUUID } from "crypto";
+
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
@@ -27,7 +27,7 @@ export type ScoredTherapist = {
   full_name: string;
   professional_title: string | null;
   short_intro: string | null;
-  years_experience: number;
+  years_experience: number | null;
   city: string | null;
   image_url: string | null;
   verified: boolean;
@@ -237,7 +237,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
 
       if (data.city && t.city === data.city) score += 10;
 
-      score += Math.min(20, Math.floor(t.years_experience / 2));
+      score += Math.min(20, Math.floor((t.years_experience ?? 0) / 2));
       if (t.verified) score += 5;
 
       // Phase 3 — additive profile-quality signals (no override of eligibility)
@@ -263,7 +263,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       };
     });
 
-    results.sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
+    results.sort((a, b) => b.score - a.score || (b.years_experience ?? 0) - (a.years_experience ?? 0));
     return results;
   });
 
@@ -467,7 +467,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
 
       therapists = kept
         .map(({ t, sim }) => ({ ...t, score: t.score + Math.round(60 * sim) }))
-        .sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
+        .sort((a, b) => b.score - a.score || (b.years_experience ?? 0) - (a.years_experience ?? 0));
 
       avgSim = sims.length ? Number((sims.reduce((a, b) => a + b, 0) / sims.length).toFixed(4)) : 0;
     }
@@ -568,15 +568,10 @@ export const recordCtaClick = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<RecordCtaClickResult> => {
     const req = getRequest();
     const headers = req?.headers;
-    const userAgent = headers?.get("user-agent") ?? null;
-    const ip = headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || headers?.get("x-real-ip") || "0.0.0.0";
-    const salt = process.env.SUPABASE_PROJECT_ID ?? "salt";
-    const ipHash = createHash("sha256").update(`${ip}:${salt}`).digest("hex");
-
-    // Session id from cookie, or generate one
-    const cookieHeader = headers?.get("cookie") ?? "";
-    const match = cookieHeader.match(/(?:^|;\s*)mt_sid=([^;]+)/);
-    const sessionId = match?.[1] ?? randomUUID();
+    // Identity hashes come from the single server-only HMAC helper shared by
+    // the challenge and lead-submission paths. No static/public salt exists.
+    const { deriveRequestIdentity } = await import("./lead-challenge.server");
+    const { ipHash, sessionId, userAgent } = deriveRequestIdentity(headers);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

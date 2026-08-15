@@ -36,7 +36,7 @@ export type SearchResultCard = {
   professional_title: string | null;
   image_url: string | null;
   verified: boolean;
-  years_experience: number;
+  years_experience: number | null;
   short_intro: string | null;
   /** Primary active clinic, when the therapist has one. */
   primary_clinic: CardClinicLocation | null;
@@ -165,7 +165,7 @@ export function legacyRowToCard(row: {
   full_name: string;
   professional_title: string | null;
   short_intro: string | null;
-  years_experience: number;
+  years_experience: number | null;
   city: string | null;
   image_url: string | null;
   verified: boolean;

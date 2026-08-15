@@ -65,7 +65,7 @@ export type PublicTherapistProfile = {
   full_description: string | null;
   education_training: string | null;
   professional_experience: string | null;
-  years_experience: number;
+  years_experience: number | null;
   city: string | null;
   image_url: string | null;
   verified: boolean;

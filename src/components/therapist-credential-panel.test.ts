@@ -178,3 +178,30 @@ describe("multiple-credential interface", () => {
     expect(panelIndex).toBeGreaterThan(educationIndex);
   });
 });
+
+describe("stored credential object verification", () => {
+  const src = readFileSync(
+    join(import.meta.dir, "..", "lib", "credential-object-verification.server.ts"),
+    "utf8",
+  );
+
+  it("verifies ownership, real bytes, emptiness, size, extension and magic bytes", () => {
+    expect(src).toContain("isOwnedCredentialDocumentPath(path, authUserId)");
+    expect(src).toContain(".download(path)");
+    expect(src).toContain("bytes.byteLength === 0");
+    expect(src).toContain("bytes.byteLength > CREDENTIAL_MAX_BYTES");
+    expect(src).toContain("detectCredentialFileType(bytes)");
+    expect(src).toContain("credentialPathMatchesType(path, type)");
+  });
+
+  it("rejects stored MIME metadata that is disallowed or disagrees with the bytes", () => {
+    expect(src).toContain("CREDENTIAL_ACCEPTED_MIME_TYPES");
+    expect(src).toContain("MIME_BY_TYPE[type].includes(storedMime)");
+    // metadata is a second gate, never the only one
+    expect(src.indexOf("detectCredentialFileType(bytes)")).toBeLessThan(src.indexOf("storedMime"));
+  });
+
+  it("avoids unbounded downloads by checking the reported size first", () => {
+    expect(src).toContain("blob.size > CREDENTIAL_MAX_BYTES");
+  });
+});
