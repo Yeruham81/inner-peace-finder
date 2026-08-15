@@ -154,6 +154,7 @@ const emptyForm: FormState = {
 type ProfessionOption = {
   id: string;
   name_he: string;
+  slug: string;
 };
 
 type ModalityOption = {
@@ -165,114 +166,131 @@ type ModalityOption = {
 type ProfessionCategoryDefinition = {
   id: string;
   title: string;
-  professionNames: readonly string[];
+  professionSlugs: readonly string[];
 };
 
 const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
   {
     id: "emotional-therapy",
-    title: "פסיכותרפיה וטיפול רגשי",
-    professionNames: [
-      "מטפל",
-      "מטפל רגשי",
-      "פסיכותרפיסט",
-      "פסיכותרפיסט קוגניטיבי-התנהגותי",
-      "פסיכותרפיסט גופני",
-      "פסיכואנליטיקאי",
-      "יועץ טיפולי",
-      "מקצוע טיפולי אחר",
-      "תחום טיפולי אחר",
+    title: "טיפול רגשי ופסיכותרפיה",
+    professionSlugs: [
+      "emotional-therapist",
+      "psychotherapist",
+      "cbt-psychotherapist",
+      "body-psychotherapist",
+      "psychoanalyst",
+      "other-therapeutic-profession",
     ],
   },
   {
     id: "psychology-psychiatry",
     title: "פסיכולוגיה ופסיכיאטריה",
-    professionNames: [
-      "פסיכולוג",
-      "פסיכולוג קליני",
-      "פסיכולוג חינוכי",
-      "פסיכולוג רפואי",
-      "פסיכולוג שיקומי",
-      "פסיכולוג התפתחותי",
-      "פסיכולוג ארגוני",
-      "פסיכולוג תעסוקתי",
-      "פסיכולוג תעסוקתי-ארגוני",
-      "פסיכולוג חברתי-תעסוקתי-ארגוני",
-      "פסיכיאטר",
-      "פסיכיאטר ילדים ונוער",
+    professionSlugs: [
+      "psychologist",
+      "clinical-psychologist",
+      "educational-psychologist",
+      "medical-psychologist",
+      "rehabilitation-psychologist",
+      "developmental-psychologist",
+      "occupational-organizational-psychologist",
+      "psychiatrist",
+      "child-adolescent-psychiatrist",
     ],
   },
   {
-    id: "social-family",
-    title: "זוגיות משפחה ורווחה",
-    professionNames: [
-      "עובד סוציאלי",
-      "עובד סוציאלי קליני",
-      "עובד סוציאלי משפחתי",
-      "מטפל זוגי",
-      "מטפל משפחתי",
-      "מטפל מיני",
-      "מדריך הורים",
-      "מגשר",
+    id: "social-family-sexuality",
+    title: "עבודה סוציאלית, זוגיות, משפחה ומיניות",
+    professionSlugs: [
+      "social-worker",
+      "clinical-social-worker",
+      "couples-therapist",
+      "family-therapist",
+      "sex-therapist",
+      "parent-counselor",
+      "mediator",
     ],
   },
   {
-    id: "arts-experiential",
-    title: "טיפול באמצעות אומנויות",
-    professionNames: [
-      "מטפל באומנויות",
-      "מטפל באמצעות אומנויות",
-      "מטפל באמנות חזותית",
-      "מטפל במוזיקה",
-      "מטפל בתנועה ובמחול",
-      "מטפל בדרמה",
-      "מטפל בפסיכודרמה",
-      "פסיכודרמטיסט",
-      "ביבליותרפיסט",
-      "מטפל בעזרת בעלי חיים",
+    id: "arts-animals-nature",
+    title: "טיפול באמצעות אמנויות, בעלי חיים וטבע",
+    professionSlugs: [
+      "arts-therapist",
+      "visual-art-therapist",
+      "music-therapist",
+      "dance-movement-therapist",
+      "drama-therapist",
+      "psychodrama-therapist",
+      "bibliotherapist",
+      "animal-assisted-therapist",
+      "horticultural-therapist",
     ],
   },
   {
-    id: "health-rehabilitation",
-    title: "שיקום בריאות והתפתחות",
-    professionNames: [
-      "מרפא בעיסוק",
-      "קלינאי תקשורת",
-      "פיזיותרפיסט",
-      "דיאטן קליני",
-      "תזונאי קליני",
-      "קרימינולוג קליני",
-      "קרימינולוג חברתי-שיקומי",
-      "מנתח התנהגות",
-      "אח מומחה בפסיכיאטריה",
-      "אחות מומחית בפסיכיאטריה",
-      "רופא",
-      "משקם",
+    id: "health-development-rehabilitation",
+    title: "בריאות, התפתחות ושיקום",
+    professionSlugs: [
+      "occupational-therapist",
+      "speech-language-pathologist",
+      "physiotherapist",
+      "clinical-dietitian",
+      "clinical-criminologist",
+      "social-rehabilitation-criminologist",
+      "behavior-analyst",
+      "hydrotherapist",
     ],
   },
   {
     id: "guidance-diagnosis-coaching",
-    title: "ייעוץ אבחון ואימון",
-    professionNames: [
-      "יועץ חינוכי",
-      "מאבחן דידקטי",
-      "מנחה קבוצות",
-      "מאמן אישי",
-      "מאבחן",
-      "מדריך",
-      "מנחה",
-      "מעריך",
-      "יועץ",
+    title: "ייעוץ, אבחון, הדרכה, ליווי ואימון",
+    professionSlugs: [
+      "educational-counselor",
+      "didactic-diagnostician",
+      "group-facilitator",
+      "life-coach",
+      "sleep-consultant",
+      "lactation-consultant",
+      "career-counselor",
+      "nutrition-consultant",
+      "doula",
+      "adaptive-teaching-specialist",
+      "spiritual-care-provider",
+    ],
+  },
+  {
+    id: "complementary-traditional-medicine",
+    title: "רפואה משלימה ושיטות טיפול מסורתיות",
+    professionSlugs: [
+      "chinese-medicine-practitioner",
+      "acupuncturist",
+      "naturopath",
+      "homeopath",
+      "bach-flower-practitioner",
+      "aromatherapist",
+      "herbal-medicine-practitioner",
+      "ayurveda-practitioner",
+    ],
+  },
+  {
+    id: "body-touch-movement-regulation",
+    title: "טיפולי גוף, מגע, תנועה וויסות",
+    professionSlugs: [
+      "reflexologist",
+      "shiatsu-practitioner",
+      "tuina-practitioner",
+      "osteopath",
+      "chiropractor",
+      "massage-therapist",
+      "feldenkrais-practitioner",
+      "alexander-technique-teacher",
+      "paula-method-practitioner",
+      "yoga-therapist",
+      "reiki-practitioner",
+      "craniosacral-therapist",
+      "biofeedback-therapist",
+      "neurofeedback-therapist",
     ],
   },
 ] as const;
-
-function normalizeProfessionName(value: string): string {
-  return value
-    .replace(/[‐‑‒–—―]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function chunkItems<T>(items: readonly T[], size: number): T[][] {
   const rows: T[][] = [];
@@ -454,31 +472,6 @@ function EditorPage() {
     },
     onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
-
-  if (!initialized && (profile.isError || options.isError)) {
-    return (
-      <div className="min-h-screen bg-brand-soft/50">
-        <div className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-2xl border border-destructive/30 bg-surface-elevated p-6 shadow-sm">
-            <h1 className="text-xl font-semibold text-foreground">לא הצלחנו לטעון את עורך הפרופיל</h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              אירעה שגיאה בטעינת פרטי הפרופיל או אפשרויות העריכה. ניתן לנסות שוב.
-            </p>
-            <Button
-              type="button"
-              className="mt-5"
-              disabled={profile.isFetching || options.isFetching}
-              onClick={() => {
-                void Promise.all([profile.refetch(), options.refetch()]);
-              }}
-            >
-              {profile.isFetching || options.isFetching ? "מנסה שוב…" : "ניסיון חוזר"}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (profile.isLoading || options.isLoading || !initialized) {
     return (
@@ -1567,8 +1560,8 @@ function ProfessionSelector({
     const matchedProfessionIds = new Set<string>();
 
     const grouped = PROFESSION_CATEGORIES.map((category) => {
-      const categoryNames = new Set(category.professionNames.map(normalizeProfessionName));
-      const items = professions.filter((profession) => categoryNames.has(normalizeProfessionName(profession.name_he)));
+      const categorySlugs = new Set(category.professionSlugs);
+      const items = professions.filter((profession) => categorySlugs.has(profession.slug));
       items.forEach((profession) => matchedProfessionIds.add(profession.id));
       return { ...category, items };
     });
@@ -1581,7 +1574,7 @@ function ProfessionSelector({
       {
         id: "additional-professions",
         title: "מקצועות נוספים",
-        professionNames: [] as readonly string[],
+        professionSlugs: [] as readonly string[],
         items: unmatched,
       },
     ];
@@ -1605,13 +1598,9 @@ function ProfessionSelector({
     );
   };
 
-  const selectedOtherProfession = professions.some((profession) => {
-    const normalizedName = normalizeProfessionName(profession.name_he);
-    return (
-      selected.includes(profession.id) &&
-      (normalizedName === "מקצוע טיפולי אחר" || normalizedName === "תחום טיפולי אחר")
-    );
-  });
+  const selectedOtherProfession = professions.some(
+    (profession) => selected.includes(profession.id) && profession.slug === "other-therapeutic-profession",
+  );
 
   if (professions.length === 0) {
     return <p className="text-xs text-muted-foreground">אין מקצועות זמינים לבחירה.</p>;
@@ -1720,10 +1709,10 @@ function ProfessionSelector({
     );
   };
 
-  const renderCategoryRows = (columns: 2 | 3, layoutId: string) =>
+  const renderCategoryRows = (columns: 2 | 4, layoutId: string) =>
     chunkItems(categories, columns).map((row, rowIndex) => {
       const openCategory = row.find((category) => category.id === activeCategoryId) ?? null;
-      const gridColumnsClass = columns === 2 ? "grid-cols-2" : "grid-cols-3";
+      const gridColumnsClass = columns === 2 ? "grid-cols-2" : "grid-cols-4";
 
       return (
         <div key={`${layoutId}-${rowIndex}`}>
@@ -1822,8 +1811,8 @@ function ProfessionSelector({
           </div>
         </>
       )}
-      <div className="mt-4 space-y-3 md:hidden">{renderCategoryRows(2, "mobile")}</div>
-      <div className="mt-4 hidden space-y-3 md:block">{renderCategoryRows(3, "desktop")}</div>
+      <div className="mt-4 space-y-3 lg:hidden">{renderCategoryRows(2, "mobile-tablet")}</div>
+      <div className="mt-4 hidden space-y-3 lg:block">{renderCategoryRows(4, "desktop")}</div>
     </div>
   );
 }
