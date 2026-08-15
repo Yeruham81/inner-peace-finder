@@ -45,7 +45,7 @@ VALUES
   ('parent-counselor', 'מדריך הורים', 'Parent counselor', 210, true),
   ('mediator', 'מגשר', 'Mediator', 220, true),
 
-  -- 4. טיפול באמצעות אמנויות, בעלי חיים וטבע
+  -- 4. טיפול באומנויות, בעלי חיים וטבע
   ('arts-therapist', 'מטפל באמצעות אומנויות', 'Arts therapist', 230, true),
   ('visual-art-therapist', 'מטפל באמנות חזותית', 'Visual art therapist', 240, true),
   ('music-therapist', 'מטפל במוזיקה', 'Music therapist', 250, true),

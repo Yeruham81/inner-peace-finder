@@ -212,7 +212,7 @@ const PROFESSION_CATEGORIES: readonly ProfessionCategoryDefinition[] = [
   },
   {
     id: "arts-animals-nature",
-    title: "טיפול באמצעות אמנויות, בעלי חיים וטבע",
+    title: "טיפול באומנויות, בעלי חיים וטבע",
     professionSlugs: [
       "arts-therapist",
       "visual-art-therapist",
