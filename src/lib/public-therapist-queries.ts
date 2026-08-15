@@ -220,6 +220,20 @@ export async function listEligibleFilterOptions(sb: PublicReadClient) {
     sb.from("treatment_modalities").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
     sb.from("therapy_formats").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
   ]);
+
+  // A failed catalog read is not an empty catalog. Propagate the failure so
+  // the route/query error boundary can show an explicit load error instead of
+  // silently hiding filter options from the user.
+  for (const [catalog, result] of [
+    ["population_groups", populations],
+    ["languages", languages],
+    ["professions", professions],
+    ["treatment_modalities", modalities],
+    ["therapy_formats", therapyFormats],
+  ] as const) {
+    if (result.error) throw new Error(`${catalog}: ${result.error.message}`);
+  }
+
   return {
     cities: clinicCities.cities,
     cityRegions: clinicCities.cityRegions,
