@@ -1,11 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
-
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ensureTherapistAccount, getMyTherapistAccount } from "@/lib/therapist-accounts.functions";
+import { ensureTherapistAccount } from "@/lib/therapist-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/account")({
   head: () => ({
@@ -19,19 +17,14 @@ function AccountPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const ensureFn = useServerFn(ensureTherapistAccount);
-  const getFn = useServerFn(getMyTherapistAccount);
 
-  // Ensure a therapist_accounts row exists on first visit.
-  useEffect(() => {
-    ensureFn().catch(() => {
-      /* non-fatal */
-    });
-  }, [ensureFn]);
-
-  const { data: account, isLoading } = useQuery({
+  // Use the idempotent ensure call as the account query itself. This avoids a
+  // first-visit race where a separate read can finish before account creation.
+  const accountQuery = useQuery({
     queryKey: ["therapist-account", user.id],
-    queryFn: () => getFn(),
+    queryFn: () => ensureFn(),
   });
+  const { data: account, isLoading, isError, isFetching } = accountQuery;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -57,6 +50,22 @@ function AccountPage() {
 
           <div className="mt-6 grid gap-3 text-sm">
             {isLoading && <p className="text-muted-foreground">טוען…</p>}
+            {isError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                <p className="font-medium text-destructive">לא הצלחנו לטעון את פרטי החשבון.</p>
+                <p className="mt-1 text-xs text-muted-foreground">ניתן לנסות שוב.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  disabled={isFetching}
+                  onClick={() => void accountQuery.refetch()}
+                >
+                  {isFetching ? "מנסה שוב…" : "ניסיון חוזר"}
+                </Button>
+              </div>
+            )}
             {account && (
               <>
                 <Row label="סטטוס חשבון" value={statusLabel(account.account_status)} />
@@ -66,44 +75,47 @@ function AccountPage() {
             )}
           </div>
 
-          {account?.owned_therapist_id ? (
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold text-foreground">הפרופיל שלי</h2>
-              <Link
-                to="/new-profile"
-                className="mt-3 block rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
-              >
-                <div className="text-base font-semibold text-foreground">עריכת פרופיל</div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  עדכנו את פרטי הפרופיל, שמרו טיוטה או פרסמו את הפרופיל.
-                </p>
-              </Link>
-            </div>
-          ) : (
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold text-foreground">כיצד תרצו להתחיל?</h2>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <Link
-                  to="/claim"
-                  className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
-                >
-                  <div className="text-base font-semibold text-foreground">שיוך פרופיל מטפל קיים</div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    כבר מופיעים באתר? מצאו את הפרופיל שלכם ובצעו אימות בעלות.
-                  </p>
-                </Link>
+          {!isLoading &&
+            !isError &&
+            account &&
+            (account.owned_therapist_id ? (
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold text-foreground">הפרופיל שלי</h2>
                 <Link
                   to="/new-profile"
-                  className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
+                  className="mt-3 block rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
                 >
-                  <div className="text-base font-semibold text-foreground">יצירת פרופיל מטפל חדש</div>
+                  <div className="text-base font-semibold text-foreground">עריכת פרופיל</div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    אין לכם עדיין פרופיל? צרו פרופיל מקצועי חדש והתחילו להופיע באתר.
+                    עדכנו את פרטי הפרופיל, שמרו טיוטה או פרסמו את הפרופיל.
                   </p>
                 </Link>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold text-foreground">כיצד תרצו להתחיל?</h2>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <Link
+                    to="/claim"
+                    className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
+                  >
+                    <div className="text-base font-semibold text-foreground">שיוך פרופיל מטפל קיים</div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      כבר מופיעים באתר? מצאו את הפרופיל שלכם ובצעו אימות בעלות.
+                    </p>
+                  </Link>
+                  <Link
+                    to="/new-profile"
+                    className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
+                  >
+                    <div className="text-base font-semibold text-foreground">יצירת פרופיל מטפל חדש</div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      אין לכם עדיין פרופיל? צרו פרופיל מקצועי חדש והתחילו להופיע באתר.
+                    </p>
+                  </Link>
+                </div>
+              </div>
+            ))}
 
           <p className="mt-6 text-xs text-muted-foreground">
             <Link to="/" className="underline">
