@@ -147,12 +147,7 @@ describe("createLead client contract", () => {
 
   it("returns early on every rejection reason, before any dispatch", () => {
     const head = src.slice(0, src.indexOf("dispatchLead"));
-    for (const reason of [
-      "rate_limit_exceeded",
-      "challenge_expired",
-      "challenge_failed",
-      "therapist_unavailable",
-    ]) {
+    for (const reason of ["rate_limit_exceeded", "challenge_expired", "challenge_failed", "therapist_unavailable"]) {
       expect(head).toContain(`reason: "${reason}" as const`);
     }
   });
@@ -164,15 +159,19 @@ describe("createLead client contract", () => {
     expect(submitLeadMigration).toContain("a.session_hash = _session_hash");
   });
 
-  it("propagates unexpected database errors instead of swallowing them", () => {
+  it("propagates pre-commit database errors but keeps post-commit enrichment best-effort", () => {
     expect(src).toContain("if (rpcErr) throw new Error(rpcErr.message)");
-    expect(src).toContain("if (pErr) throw new Error(pErr.message)");
-    expect(src).toContain("if (popErr) throw new Error(popErr.message)");
+    expect(src).toContain('console.error("[lead] problem enrichment failed"');
+    expect(src).toContain('console.error("[lead] population enrichment failed"');
+    expect(src).not.toContain("if (pErr) throw new Error(pErr.message)");
+    expect(src).not.toContain("if (popErr) throw new Error(popErr.message)");
   });
 
-  it("never ignores a failed delivery-status update", () => {
+  it("keeps a committed lead successful when delivery-status persistence fails", () => {
     expect(src).toContain("if (statusErr)");
-    expect(src).toContain('throw new Error("lead_status_update_failed")');
+    expect(src).toContain('console.error("[lead] delivery status update failed"');
+    expect(src).toContain('deliveryStatus: statusErr ? ("pending" as const) : result.status');
+    expect(src).not.toContain('throw new Error("lead_status_update_failed")');
   });
 
   it("derives identity only through the shared server-only HMAC helper", () => {
@@ -322,9 +321,7 @@ describe("migration: atomic submit_lead transaction", () => {
   it("locks both the IP and the session identity and the challenge row", () => {
     expect(submitLeadMigration).toContain("'lead_submit_ip:' || _ip_hash");
     expect(submitLeadMigration).toContain("'lead_submit_session:' || _session_hash");
-    expect(submitLeadMigration).toMatch(
-      /SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/,
-    );
+    expect(submitLeadMigration).toMatch(/SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/);
   });
 
   it("re-checks canonical public eligibility before creating any CTA or lead", () => {
