@@ -35,6 +35,14 @@ const challengeIssuanceMigration =
     .filter((f) => f.endsWith(".sql"))
     .map((f) => readFileSync(join(MIGRATIONS, f), "utf8"))
     .find((sql) => sql.includes("CREATE OR REPLACE FUNCTION public.issue_lead_challenge")) ?? "";
+/** Latest effective migration: one atomic accepted-submission transaction. */
+const submitLeadMigration =
+  readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => readFileSync(join(MIGRATIONS, f), "utf8"))
+    .filter((sql) => sql.includes("CREATE OR REPLACE FUNCTION public.submit_lead("))
+    .pop() ?? "";
 
 describe("challenge generation (server-only)", () => {
   it("produces a solvable arithmetic prompt", () => {
@@ -126,39 +134,92 @@ describe("createLead client contract", () => {
     expect(modal).not.toContain("makeChallenge");
   });
 
-  it("authorizes before billing, insertion and dispatch", () => {
-    const auth = src.indexOf("authorize_lead_submission");
-    const eligibility = src.indexOf("applyEligibility(");
-    const cta = src.indexOf("record_cta_click");
-    const insert = src.indexOf('.from("lead_events")\n      .insert');
-    const dispatch = src.indexOf("dispatchLead");
-    expect(auth).toBeGreaterThan(-1);
-    expect(auth).toBeLessThan(eligibility);
-    expect(eligibility).toBeLessThan(cta);
-    expect(cta).toBeLessThan(insert);
-    expect(insert).toBeLessThan(dispatch);
+  it("performs the whole accepted submission through one transactional RPC", () => {
+    expect(src).toContain('.rpc("submit_lead"');
+    // No split authorization / billing / insertion any more.
+    expect(src).not.toContain("authorize_lead_submission");
+    expect(src).not.toContain('rpc("record_cta_click"');
+    expect(src).not.toContain('.from("lead_events")\n      .insert');
+    expect(src).not.toContain("applyEligibility(");
+    // Delivery happens only after the transaction has committed.
+    expect(src.indexOf('.rpc("submit_lead"')).toBeLessThan(src.indexOf("dispatchLead"));
   });
 
-  it("returns early on every rejection reason, before any side effect", () => {
-    const head = src.slice(0, src.indexOf("record_cta_click"));
-    for (const reason of ["rate_limit_exceeded", "challenge_expired", "challenge_failed"]) {
+  it("returns early on every rejection reason, before any dispatch", () => {
+    const head = src.slice(0, src.indexOf("dispatchLead"));
+    for (const reason of [
+      "rate_limit_exceeded",
+      "challenge_expired",
+      "challenge_failed",
+      "therapist_unavailable",
+    ]) {
       expect(head).toContain(`reason: "${reason}" as const`);
     }
-    // eligibility enforcement preserved
-    expect(src).toContain('reason: "therapist_unavailable" as const');
-    expect(src).toContain("applyEligibility(");
   });
 
-  it("preserves the session-based distinct-therapist limit inside the atomic authorization", () => {
-    // The limit moved into the locked transaction; no racy application read.
+  it("keeps the session-based distinct-therapist limit inside the atomic transaction", () => {
     expect(src).not.toContain('.eq("session_id", sessionId)');
     expect(src).not.toContain("distinct.size >= 5");
-    expect(challengeIssuanceMigration).toContain("session_therapists >= 5");
-    expect(challengeIssuanceMigration).toContain("a.session_hash = _session_hash");
+    expect(submitLeadMigration).toContain("session_therapists >= 5");
+    expect(submitLeadMigration).toContain("a.session_hash = _session_hash");
   });
 
-  it("propagates unexpected database errors", () => {
-    expect(src).toContain("if (authErr) throw new Error(authErr.message)");
+  it("propagates unexpected database errors instead of swallowing them", () => {
+    expect(src).toContain("if (rpcErr) throw new Error(rpcErr.message)");
+    expect(src).toContain("if (pErr) throw new Error(pErr.message)");
+    expect(src).toContain("if (popErr) throw new Error(popErr.message)");
+  });
+
+  it("never ignores a failed delivery-status update", () => {
+    expect(src).toContain("if (statusErr)");
+    expect(src).toContain('throw new Error("lead_status_update_failed")');
+  });
+
+  it("derives identity only through the shared server-only HMAC helper", () => {
+    expect(src).toContain('await import("./lead-challenge.server")');
+    expect(src).not.toContain("createHash");
+    expect(src).not.toContain("SUPABASE_PROJECT_ID");
+  });
+});
+
+describe("identity hashing has no static or public salt anywhere", () => {
+  const files = readdirSync(join(SRC, "lib"))
+    .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
+    .filter((f) => !f.includes(".test."));
+
+  it("uses no createHash/project-id salt in identity or rate-limit code", () => {
+    for (const f of files) {
+      const sql = readFileSync(join(SRC, "lib", f), "utf8");
+      expect(sql).not.toContain("SUPABASE_PROJECT_ID");
+      if (f !== "lead-challenge.server.ts") expect(sql).not.toContain("createHash(");
+    }
+  });
+
+  it("fails closed when the HMAC secret is missing or too weak", () => {
+    const previous = process.env["LEAD_IDENTITY_HMAC_SECRET"];
+    try {
+      delete process.env["LEAD_IDENTITY_HMAC_SECRET"];
+      expect(() => hashValue("1.2.3.4")).toThrow();
+      process.env["LEAD_IDENTITY_HMAC_SECRET"] = "short";
+      expect(() => hashValue("1.2.3.4")).toThrow();
+    } finally {
+      if (previous === undefined) delete process.env["LEAD_IDENTITY_HMAC_SECRET"];
+      else process.env["LEAD_IDENTITY_HMAC_SECRET"] = previous;
+    }
+  });
+
+  it("derives comparable hashes across the CTA, challenge and lead paths", () => {
+    const cta = read("lib/therapists.functions.ts");
+    const challenge = read("lib/lead-challenge.functions.ts");
+    const lead = read("lib/lead.functions.ts");
+    for (const sql of [cta, challenge, lead]) {
+      expect(sql).toContain("deriveRequestIdentity");
+    }
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.9", cookie: "mt_sid=zzz" });
+    const a = deriveRequestIdentity(headers);
+    const b = deriveRequestIdentity(headers);
+    expect(a.ipHash).toBe(b.ipHash);
+    expect(a.sessionHash).toBe(b.sessionHash);
   });
 });
 
@@ -231,60 +292,100 @@ describe("migration: private tables", () => {
   });
 });
 
-describe("migration: authorize_lead_submission", () => {
-  it("is SECURITY DEFINER with a fixed search_path", () => {
-    expect(challengeMigration).toMatch(
-      /CREATE OR REPLACE FUNCTION public\.authorize_lead_submission[\s\S]*?SECURITY DEFINER[\s\S]*?SET search_path = public/,
+describe("migration: atomic submit_lead transaction", () => {
+  it("is SECURITY DEFINER with an empty search_path", () => {
+    expect(submitLeadMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.submit_lead\([\s\S]*?SECURITY DEFINER[\s\S]*?SET search_path = ''/,
     );
+  });
+
+  it("leaves no privileged function on search_path = 'public'", () => {
+    expect(submitLeadMigration).not.toMatch(/SET search_path = 'public'/);
+    expect(submitLeadMigration).toContain("DROP FUNCTION IF EXISTS public.authorize_lead_submission");
   });
 
   it("is executable only by service_role", () => {
-    expect(challengeMigration).toContain(
-      "REVOKE ALL ON FUNCTION public.authorize_lead_submission(uuid, integer, text, text, uuid) FROM PUBLIC",
-    );
-    expect(challengeMigration).toContain(
-      "REVOKE ALL ON FUNCTION public.authorize_lead_submission(uuid, integer, text, text, uuid) FROM anon, authenticated",
-    );
-    expect(challengeMigration).toContain(
-      "GRANT EXECUTE ON FUNCTION public.authorize_lead_submission(uuid, integer, text, text, uuid) TO service_role",
+    const sig = "public.submit_lead(uuid, integer, text, text, text, uuid, text, uuid, uuid, text, text, text, text)";
+    expect(submitLeadMigration).toContain(`REVOKE ALL ON FUNCTION ${sig} FROM PUBLIC`);
+    expect(submitLeadMigration).toContain(`REVOKE ALL ON FUNCTION ${sig} FROM anon, authenticated`);
+    expect(submitLeadMigration).toContain(`GRANT EXECUTE ON FUNCTION ${sig} TO service_role`);
+    expect(submitLeadMigration).not.toMatch(/GRANT EXECUTE[^;]*submit_lead[^;]*TO anon/);
+  });
+
+  it("validates expiry, consumption, IP binding and the answer", () => {
+    expect(submitLeadMigration).toContain("challenge.consumed_at IS NOT NULL");
+    expect(submitLeadMigration).toContain("challenge.expires_at <= pg_catalog.now()");
+    expect(submitLeadMigration).toContain("challenge.ip_hash IS DISTINCT FROM _ip_hash");
+    expect(submitLeadMigration).toContain("challenge.expected_answer IS DISTINCT FROM _answer");
+  });
+
+  it("locks both the IP and the session identity and the challenge row", () => {
+    expect(submitLeadMigration).toContain("'lead_submit_ip:' || _ip_hash");
+    expect(submitLeadMigration).toContain("'lead_submit_session:' || _session_hash");
+    expect(submitLeadMigration).toMatch(
+      /SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/,
     );
   });
 
-  it("validates existence, expiry, consumption, IP binding and the answer", () => {
-    expect(challengeMigration).toContain("challenge.consumed_at IS NOT NULL");
-    expect(challengeMigration).toContain("challenge.expires_at <= now()");
-    expect(challengeMigration).toContain("challenge.ip_hash IS DISTINCT FROM _ip_hash");
-    expect(challengeMigration).toContain("challenge.expected_answer IS DISTINCT FROM _answer");
+  it("re-checks canonical public eligibility before creating any CTA or lead", () => {
+    const body = submitLeadMigration.slice(
+      submitLeadMigration.indexOf("CREATE OR REPLACE FUNCTION public.submit_lead("),
+    );
+    const eligibility = body.indexOf("t.profile_status = 'published'");
+    const cta = body.indexOf("INSERT INTO public.cta_clicks");
+    const lead = body.indexOf("INSERT INTO public.lead_events");
+    expect(eligibility).toBeGreaterThan(-1);
+    expect(eligibility).toBeLessThan(cta);
+    expect(cta).toBeLessThan(lead);
+    expect(body).toContain("'therapist_unavailable'");
   });
 
-  it("serializes concurrent consumption with a row lock", () => {
-    expect(challengeMigration).toMatch(/SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/);
-    expect(challengeMigration).toContain("SET consumed_at = now()");
+  it("consumes the challenge, bills and creates the lead in one commit", () => {
+    const body = submitLeadMigration.slice(
+      submitLeadMigration.indexOf("-- From here on everything commits or rolls back together."),
+    );
+    expect(body).toContain("SET consumed_at = pg_catalog.now()");
+    expect(body).toContain("INSERT INTO public.cta_clicks");
+    expect(body).toContain("INSERT INTO public.lead_events");
+    expect(body).toContain("'accepted'");
+    // A single plpgsql function body is one transaction: any failure after the
+    // consumption rolls the consumption, the CTA and the attempt row back.
+    expect(body).not.toContain("COMMIT");
+    expect(body).not.toContain("EXCEPTION WHEN");
   });
 
-  it("implements the exact IP limits and records every attempt", () => {
-    expect(challengeMigration).toContain("interval '15 minutes'");
-    expect(challengeMigration).toContain("attempt_count >= 10");
-    expect(challengeMigration).toContain("distinct_therapists >= 5");
-    expect(challengeMigration).toContain("interval '1 hour'");
-    expect(challengeMigration).toContain("accepted_same >= 3");
-    expect(challengeMigration).toContain("INSERT INTO public.lead_submission_attempts");
+  it("keeps the exact rate limits and records every attempt", () => {
+    expect(submitLeadMigration).toContain("make_interval(mins => 15)");
+    expect(submitLeadMigration).toContain("attempt_count >= 10");
+    expect(submitLeadMigration).toContain("distinct_therapists >= 5");
+    expect(submitLeadMigration).toContain("make_interval(hours => 1)");
+    expect(submitLeadMigration).toContain("accepted_same >= 3");
+    expect(submitLeadMigration).toContain("INSERT INTO public.lead_submission_attempts");
   });
 
   it("returns only a generic reason", () => {
-    expect(challengeMigration).toContain("RETURN QUERY SELECT false, 'rate_limit_exceeded'");
-    expect(challengeMigration).toContain("RETURN QUERY SELECT true, 'accepted'");
-    expect(challengeMigration).not.toContain("attempt_count::text");
+    expect(submitLeadMigration).toContain("RETURN QUERY SELECT false, 'rate_limit_exceeded'");
+    expect(submitLeadMigration).toContain("RETURN QUERY SELECT true, 'accepted'");
+    expect(submitLeadMigration).not.toContain("attempt_count::text");
   });
 
-  it("purges old challenge rows and restricts the purge function", () => {
-    expect(challengeMigration).toContain("interval '24 hours'");
-    expect(challengeMigration).toContain(
+  it("keeps issuance atomic and the purge restricted", () => {
+    expect(challengeIssuanceMigration).toContain("pg_advisory_xact_lock");
+    expect(submitLeadMigration).toContain(
       "GRANT EXECUTE ON FUNCTION public.purge_expired_lead_challenges() TO service_role",
     );
   });
 
   it("does not weaken the previously hardened CTA function", () => {
     expect(migrationSql).toContain("GRANT EXECUTE ON FUNCTION public.record_cta_click");
+    expect(submitLeadMigration).toContain("t.visibility IN ('visible', 'published')");
+  });
+
+  it("stores an empty years_experience as NULL", () => {
+    expect(submitLeadMigration).toContain("ALTER COLUMN years_experience DROP NOT NULL");
+    expect(submitLeadMigration).toContain("ALTER COLUMN years_experience DROP DEFAULT");
+    expect(submitLeadMigration).toContain("v_years_raw !~ '^[0-9]{1,3}$'");
+    expect(submitLeadMigration).toContain("years_experience = v_years");
+    expect(submitLeadMigration).not.toMatch(/coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/);
   });
 });
