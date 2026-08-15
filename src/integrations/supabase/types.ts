@@ -1068,7 +1068,7 @@ export type Database = {
           slug: string
           verified: boolean
           visibility: Database["public"]["Enums"]["therapist_visibility"]
-          years_experience: number
+          years_experience: number | null
         }
         Insert: {
           background?: string | null
@@ -1106,7 +1106,7 @@ export type Database = {
           slug: string
           verified?: boolean
           visibility?: Database["public"]["Enums"]["therapist_visibility"]
-          years_experience?: number
+          years_experience?: number | null
         }
         Update: {
           background?: string | null
@@ -1144,7 +1144,7 @@ export type Database = {
           slug?: string
           verified?: boolean
           visibility?: Database["public"]["Enums"]["therapist_visibility"]
-          years_experience?: number
+          years_experience?: number | null
         }
         Relationships: [
           {
@@ -1244,19 +1244,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      authorize_lead_submission: {
-        Args: {
-          _answer: number
-          _challenge_id: string
-          _ip_hash: string
-          _session_hash: string
-          _therapist_id: string
-        }
-        Returns: {
-          allowed: boolean
-          reason: string
-        }[]
-      }
       begin_therapist_profile_deletion: {
         Args: { _actor: string }
         Returns: Json
@@ -1328,6 +1315,33 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_lead: {
+        Args: {
+          _answer: number
+          _challenge_id: string
+          _cta_id: string
+          _ip_hash: string
+          _message: string
+          _population_id: string
+          _session_hash: string
+          _session_id: string
+          _source_problem_id: string
+          _therapist_id: string
+          _user_agent: string
+          _visitor_name: string
+          _visitor_phone: string
+        }
+        Returns: {
+          allowed: boolean
+          billable: boolean
+          cta_event_id: string
+          delivery_channel: string
+          destination: string
+          lead_id: string
+          reason: string
+          therapist_name: string
+        }[]
       }
     }
     Enums: {
