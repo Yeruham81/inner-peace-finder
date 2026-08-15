@@ -263,7 +263,7 @@ export const searchTherapists = createServerFn({ method: "POST" })
       };
     });
 
-    results.sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
+    results.sort((a, b) => b.score - a.score || (b.years_experience ?? 0) - (a.years_experience ?? 0));
     return results;
   });
 
@@ -467,7 +467,7 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
 
       therapists = kept
         .map(({ t, sim }) => ({ ...t, score: t.score + Math.round(60 * sim) }))
-        .sort((a, b) => b.score - a.score || b.years_experience - a.years_experience);
+        .sort((a, b) => b.score - a.score || (b.years_experience ?? 0) - (a.years_experience ?? 0));
 
       avgSim = sims.length ? Number((sims.reduce((a, b) => a + b, 0) / sims.length).toFixed(4)) : 0;
     }
