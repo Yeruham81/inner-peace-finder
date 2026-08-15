@@ -305,6 +305,21 @@ export const getEditorOptions = createServerFn({ method: "GET" }).handler(async 
     sb.from("therapy_formats").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
     localitiesPromise,
   ]);
+
+  // Core editor catalogs must fail closed. Returning [] on a database error
+  // would make existing options appear to have been deleted and could lead to
+  // an invalid or destructive save. Locality loading intentionally keeps its
+  // separate fallback flag because the editor already handles that case.
+  for (const [catalog, result] of [
+    ["professions", profs],
+    ["treatment_modalities", mods],
+    ["languages", langs],
+    ["population_groups", pops],
+    ["therapy_formats", formats],
+  ] as const) {
+    if (result.error) throw new Error(`${catalog}: ${result.error.message}`);
+  }
+
   return {
     professions: profs.data ?? [],
     modalities: mods.data ?? [],
