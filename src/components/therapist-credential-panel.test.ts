@@ -180,10 +180,7 @@ describe("multiple-credential interface", () => {
 });
 
 describe("stored credential object verification", () => {
-  const src = readFileSync(
-    join(import.meta.dir, "..", "lib", "credential-object-verification.server.ts"),
-    "utf8",
-  );
+  const src = readFileSync(join(import.meta.dir, "..", "lib", "credential-object-verification.server.ts"), "utf8");
 
   it("verifies ownership, real bytes, emptiness, size, extension and magic bytes", () => {
     expect(src).toContain("isOwnedCredentialDocumentPath(path, authUserId)");
@@ -194,7 +191,8 @@ describe("stored credential object verification", () => {
     expect(src).toContain("credentialPathMatchesType(path, type)");
   });
 
-  it("rejects stored MIME metadata that is disallowed or disagrees with the bytes", () => {
+  it("requires stored MIME metadata and rejects values that are disallowed or disagree with the bytes", () => {
+    expect(src).toContain("if (!storedMime)");
     expect(src).toContain("CREDENTIAL_ACCEPTED_MIME_TYPES");
     expect(src).toContain("MIME_BY_TYPE[type].includes(storedMime)");
     // metadata is a second gate, never the only one
