@@ -43,12 +43,12 @@ export const createLead = createServerFn({ method: "POST" })
       _session_id: sessionId,
       _therapist_id: data.therapistId,
       _cta_id: data.ctaId,
-      _source_problem_id: data.sourceProblemId ?? undefined,
-      _population_id: data.populationId ?? undefined,
+      _source_problem_id: data.sourceProblemId ?? (null as unknown as string),
+      _population_id: data.populationId ?? (null as unknown as string),
       _visitor_name: data.visitorName,
       _visitor_phone: data.visitorPhone,
       _message: data.message,
-      _user_agent: userAgent ?? undefined,
+      _user_agent: userAgent ?? (null as unknown as string),
     });
     if (rpcErr) throw new Error(rpcErr.message);
     const row = Array.isArray(rows) ? rows[0] : rows;
