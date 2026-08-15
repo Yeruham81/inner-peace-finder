@@ -5,10 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  searchStructuredTherapists,
-  type TherapistStructuredResult,
-} from "@/lib/structured-search.functions";
+import { searchStructuredTherapists, type TherapistStructuredResult } from "@/lib/structured-search.functions";
 import {
   submitClaimRequest,
   cancelClaimRequest,
@@ -22,10 +19,7 @@ import {
 
 export const Route = createFileRoute("/_authenticated/claim")({
   head: () => ({
-    meta: [
-      { title: "שיוך פרופיל מטפל | Tipulinks" },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
+    meta: [{ title: "שיוך פרופיל מטפל | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
   }),
   component: ClaimPage,
 });
@@ -61,13 +55,16 @@ function ClaimPage() {
       <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-foreground">שיוך פרופיל מטפל קיים</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          הזינו את שמכם כדי לאתר את הפרופיל שלכם. שיוך פרופיל אינו מהווה אישור מקצועי —
-          האימות המקצועי נעשה בשלב נפרד.
+          הזינו את שמכם כדי לאתר את הפרופיל שלכם. שיוך פרופיל אינו מהווה אישור מקצועי — האימות המקצועי נעשה בשלב נפרד.
         </p>
 
         <form
           className="mt-6 flex gap-2"
-          onSubmit={(e) => { e.preventDefault(); setSubmittedQ(q.trim()); setSelected(null); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSubmittedQ(q.trim());
+            setSelected(null);
+          }}
         >
           <Input
             placeholder="הקלידו את שמכם המלא"
@@ -76,11 +73,20 @@ function ClaimPage() {
             aria-label="חיפוש מטפל"
             autoComplete="off"
           />
-          <Button type="submit" disabled={q.trim().length < 2}>חיפוש</Button>
+          <Button type="submit" disabled={q.trim().length < 2}>
+            חיפוש
+          </Button>
         </form>
 
         <div className="mt-6">
           {results.isFetching && <p className="text-sm text-muted-foreground">מחפש…</p>}
+          {results.isError && (
+            <InlineQueryError
+              message="לא הצלחנו לבצע את החיפוש."
+              retrying={results.isFetching}
+              onRetry={() => void results.refetch()}
+            />
+          )}
           {results.data && results.data.length === 0 && (
             <p className="text-sm text-muted-foreground">לא נמצאו פרופילים תואמים.</p>
           )}
@@ -93,10 +99,13 @@ function ClaimPage() {
                 <div>
                   <p className="font-medium text-foreground">{r.full_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {r.professional_title}{r.city ? ` · ${r.city}` : ""}
+                    {r.professional_title}
+                    {r.city ? ` · ${r.city}` : ""}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setSelected(r)}>בחירה</Button>
+                <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
+                  בחירה
+                </Button>
               </li>
             ))}
           </ul>
@@ -116,23 +125,30 @@ function ClaimPage() {
         <section className="mt-10">
           <h2 className="text-lg font-semibold text-foreground">הבקשות שלי</h2>
           {claims.isLoading && <p className="mt-2 text-sm text-muted-foreground">טוען…</p>}
+          {claims.isError && (
+            <InlineQueryError
+              message="לא הצלחנו לטעון את הבקשות."
+              retrying={claims.isFetching}
+              onRetry={() => void claims.refetch()}
+            />
+          )}
+          {cancelMut.isError && (
+            <p className="mt-2 text-sm text-destructive">לא הצלחנו לבטל את הבקשה. ניתן לנסות שוב.</p>
+          )}
           {claims.data && claims.data.length === 0 && (
             <p className="mt-2 text-sm text-muted-foreground">עדיין לא שלחת בקשות.</p>
           )}
           <ul className="mt-3 grid gap-2">
             {claims.data?.map((c) => (
-              <ClaimRow
-                key={c.id}
-                claim={c}
-                onCancel={() => cancelMut.mutate(c.id)}
-                cancelling={cancelMut.isPending}
-              />
+              <ClaimRow key={c.id} claim={c} onCancel={() => cancelMut.mutate(c.id)} cancelling={cancelMut.isPending} />
             ))}
           </ul>
         </section>
 
         <p className="mt-8 text-xs text-muted-foreground">
-          <Link to="/account" className="underline">חזרה לחשבון</Link>
+          <Link to="/account" className="underline">
+            חזרה לחשבון
+          </Link>
         </p>
       </div>
     </div>
@@ -163,19 +179,36 @@ function ActionPicker({
           <p className="text-sm text-muted-foreground">פרופיל שנבחר</p>
           <p className="text-lg font-semibold text-foreground">{therapist.full_name}</p>
           <p className="text-xs text-muted-foreground">
-            {therapist.professional_title}{therapist.city ? ` · ${therapist.city}` : ""}
+            {therapist.professional_title}
+            {therapist.city ? ` · ${therapist.city}` : ""}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>סגירה</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          סגירה
+        </Button>
       </div>
 
-      {owned && action !== "remove_profile" && (
+      {detail.isLoading && <p className="mt-3 text-sm text-muted-foreground">בודק את פרטי הפרופיל…</p>}
+      {detail.isError && (
+        <InlineQueryError
+          message="לא הצלחנו לבדוק את מצב הפרופיל."
+          retrying={detail.isFetching}
+          onRetry={() => void detail.refetch()}
+        />
+      )}
+      {detail.isSuccess && !detail.data && (
+        <p className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          הפרופיל שנבחר אינו זמין עוד.
+        </p>
+      )}
+
+      {detail.isSuccess && detail.data && owned && action !== "remove_profile" && (
         <p className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           הפרופיל הזה כבר משויך לחשבון קיים. אם זו טעות, פנו לתמיכה.
         </p>
       )}
 
-      {!action && (
+      {detail.isSuccess && detail.data && !action && (
         <div className="mt-4">
           <p className="text-sm font-medium text-foreground">מה תרצו לעשות?</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -202,7 +235,7 @@ function ActionPicker({
         </div>
       )}
 
-      {action && (
+      {detail.isSuccess && detail.data && action && (
         <VerificationForm
           therapist={therapist}
           requestType={action}
@@ -257,9 +290,7 @@ function VerificationForm({
     onError: (e: Error) => setError(e.message),
   });
 
-  const submitLabel = requestType === "remove_profile"
-    ? "שליחת בקשה להסרת פרופיל"
-    : "שליחת בקשת שיוך";
+  const submitLabel = requestType === "remove_profile" ? "שליחת בקשה להסרת פרופיל" : "שליחת בקשת שיוך";
 
   return (
     <div className="mt-4 grid gap-3">
@@ -292,14 +323,24 @@ function VerificationForm({
           </div>
           <div>
             <label className="text-sm font-medium text-foreground">מקצוע</label>
+            {professions.isError && (
+              <InlineQueryError
+                message="לא הצלחנו לטעון את רשימת המקצועות."
+                retrying={professions.isFetching}
+                onRetry={() => void professions.refetch()}
+              />
+            )}
             <select
               value={professionId}
               onChange={(e) => setProfessionId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              disabled={professions.isLoading || professions.isError}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm disabled:opacity-60"
             >
-              <option value="">בחרו מקצוע…</option>
+              <option value="">{professions.isLoading ? "טוען מקצועות…" : "בחרו מקצוע…"}</option>
               {professions.data?.map((p) => (
-                <option key={p.id} value={p.id}>{p.name_he}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name_he}
+                </option>
               ))}
             </select>
           </div>
@@ -349,7 +390,9 @@ function VerificationForm({
             >
               {submit.isPending ? "שולח…" : submitLabel}
             </Button>
-            <Button variant="outline" onClick={onBack}>חזרה</Button>
+            <Button variant="outline" onClick={onBack}>
+              חזרה
+            </Button>
           </div>
         </>
       )}
@@ -366,9 +409,31 @@ function isFormValid(
   return true;
 }
 
+function InlineQueryError({ message, retrying, onRetry }: { message: string; retrying: boolean; onRetry: () => void }) {
+  return (
+    <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
+      <p className="text-destructive">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={retrying}
+        className="mt-1 text-xs font-medium text-primary underline disabled:opacity-60"
+      >
+        {retrying ? "מנסה שוב…" : "ניסיון חוזר"}
+      </button>
+    </div>
+  );
+}
+
 function MethodChip({
-  active, onClick, children,
-}: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -402,7 +467,8 @@ function ClaimRow({
           {claim.therapist_full_name ? ` — ${claim.therapist_full_name}` : ""}
         </p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {verificationMethodLabel(claim.verification_method)} · {new Date(claim.created_at).toLocaleDateString("he-IL")}
+          {verificationMethodLabel(claim.verification_method)} ·{" "}
+          {new Date(claim.created_at).toLocaleDateString("he-IL")}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -425,30 +491,45 @@ function requestTypeLabel(t: ClaimRequestType): string {
 
 function verificationMethodLabel(m: string | null): string {
   switch (m) {
-    case "license_number": return "אימות באמצעות מספר רישיון מקצועי";
-    case "professional_email": return "אימות באמצעות כתובת מייל מקצועית";
-    case "manual_review": return "בדיקה ידנית של צוות האתר";
-    default: return "שיטת אימות לא צוינה";
+    case "license_number":
+      return "אימות באמצעות מספר רישיון מקצועי";
+    case "professional_email":
+      return "אימות באמצעות כתובת מייל מקצועית";
+    case "manual_review":
+      return "בדיקה ידנית של צוות האתר";
+    default:
+      return "שיטת אימות לא צוינה";
   }
 }
 
 function claimStatusLabel(s: ClaimRequestWithTherapist["status"]): string {
   switch (s) {
-    case "pending": return "ממתין לבדיקה";
-    case "needs_information": return "נדרש מידע נוסף";
-    case "approved": return "אושר";
-    case "rejected": return "נדחה";
-    case "cancelled": return "בוטל";
-    default: return s;
+    case "pending":
+      return "ממתין לבדיקה";
+    case "needs_information":
+      return "נדרש מידע נוסף";
+    case "approved":
+      return "אושר";
+    case "rejected":
+      return "נדחה";
+    case "cancelled":
+      return "בוטל";
+    default:
+      return s;
   }
 }
 
 function statusChipClass(s: string): string {
   switch (s) {
-    case "approved": return "bg-emerald-100 text-emerald-800";
-    case "rejected": return "bg-destructive/10 text-destructive";
-    case "needs_information": return "bg-amber-100 text-amber-800";
-    case "cancelled": return "bg-muted text-muted-foreground";
-    default: return "bg-brand/10 text-primary";
+    case "approved":
+      return "bg-emerald-100 text-emerald-800";
+    case "rejected":
+      return "bg-destructive/10 text-destructive";
+    case "needs_information":
+      return "bg-amber-100 text-amber-800";
+    case "cancelled":
+      return "bg-muted text-muted-foreground";
+    default:
+      return "bg-brand/10 text-primary";
   }
 }
