@@ -99,8 +99,11 @@ export const createLead = createServerFn({ method: "POST" })
         .select("name:name_he")
         .eq("id", data.sourceProblemId as unknown as number)
         .maybeSingle();
-      if (pErr) throw new Error(pErr.message);
-      problemName = p?.name ?? null;
+      if (pErr) {
+        console.error("[lead] problem enrichment failed", { leadId, code: pErr.code });
+      } else {
+        problemName = p?.name ?? null;
+      }
     }
     if (data.populationId) {
       const { data: pop, error: popErr } = await supabaseAdmin
@@ -108,8 +111,11 @@ export const createLead = createServerFn({ method: "POST" })
         .select("name")
         .eq("id", data.populationId)
         .maybeSingle();
-      if (popErr) throw new Error(popErr.message);
-      populationName = pop?.name ?? null;
+      if (popErr) {
+        console.error("[lead] population enrichment failed", { leadId, code: popErr.code });
+      } else {
+        populationName = pop?.name ?? null;
+      }
     }
 
     const { dispatchLead } = await import("@/lib/lead-delivery.server");
