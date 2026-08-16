@@ -1,8 +1,8 @@
 /**
  * Phase Q2.2 — server-side OpenAI provider configuration boundary.
  *
- * NOT used by production Unified Search. Only the disconnected semantic
- * classification server boundary reads this configuration.
+ * Used only by the server-side Unified semantic orchestrator. Browser code
+ * must never import or read this configuration.
  *
  * Server-side configuration names:
  *   - `OPENAI_API_KEY` — OpenAI API credential. Server-side secret only.
