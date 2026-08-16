@@ -163,9 +163,17 @@ export function preparePhrase(phrase: string): PreparedPhrase | null {
 function sameToken(descToken: string, phraseToken: string): boolean {
   if (descToken === phraseToken) return true;
   // Ordinary Hebrew clitic prefixes: "בדיכאון" ↔ "דיכאון", "בטראומה" ↔ "טראומה".
-  const d = stripHebrewPrefix(descToken);
-  const p = stripHebrewPrefix(phraseToken);
-  return d === phraseToken || descToken === p || d === p;
+  // Two clitics may stack in ordinary Hebrew conjunctions
+  // ("ובדימוי גוף" → "דימוי גוף", "ובבחירת קריירה" → "בחירת קריירה"),
+  // so each side is compared after stripping up to two prefixes.
+  const forms = (token: string): string[] => {
+    const one = stripHebrewPrefix(token);
+    const two = stripHebrewPrefix(one);
+    return one === token ? [token] : two === one ? [token, one] : [token, one, two];
+  };
+  const dForms = forms(descToken);
+  const pForms = forms(phraseToken);
+  return dForms.some((d) => pForms.includes(d));
 }
 
 /**

@@ -32,6 +32,10 @@ const vocab = {
   aliases: [
     { problem_id: "1", alias: "משבר זהות" },
     { problem_id: "2", alias: "הצפה רגשית" },
+    // Mirrors the live catalog, where the explicit single-token term
+    // "דיכאון" is a curated alias of the canonical domain
+    // "דיכאון ומצב רוח ירוד".
+    { problem_id: "3", alias: "דיכאון" },
   ],
   intents: [],
 };
