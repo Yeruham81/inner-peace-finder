@@ -5,14 +5,14 @@
  *   - Deterministic interpretation (`query-interpreter`) stays authoritative
  *     for professions, modalities, populations, languages, cities, delivery
  *     modes, gender, therapist names, hard/soft routing and eligibility.
- *   - A future LLM may ONLY classify `semanticRemainder` into canonical
+ *   - The connected server-side LLM may ONLY classify `semanticRemainder` into canonical
  *     problem slugs. It never ranks, never filters, never extracts
  *     therapist profiles, and never controls search.
- *   - Production Unified Search continues to use the deterministic
- *     `SemanticEngine` as its ONLY semantic classifier.
+ *   - Production Unified Search validates LLM output against the same canonical
+ *     catalog and merges it behind deterministic exact evidence.
  *
  * This module contains: the provider-independent result contract, a strict
- * parser/validator for future provider output, canonical-slug validation and
+ * parser/validator for provider output, canonical-slug validation and
  * one conversion into the existing `SemanticSignal` type.
  */
 
@@ -284,10 +284,7 @@ export function validateLlmSemanticResult(
   }
 
   if (data.abstained && validated.length > 0) {
-    throw new LlmSemanticError(
-      "conflicting_abstention",
-      "abstained:true cannot coexist with matches",
-    );
+    throw new LlmSemanticError("conflicting_abstention", "abstained:true cannot coexist with matches");
   }
 
   // Deterministic dedup: highest confidence wins, first occurrence breaks ties.
@@ -299,10 +296,7 @@ export function validateLlmSemanticResult(
   const deduped = sortMatches([...byslug.values()]);
 
   if (deduped.length > LLM_SEMANTIC_MAX_MATCHES) {
-    throw new LlmSemanticError(
-      "too_many_matches",
-      `at most ${LLM_SEMANTIC_MAX_MATCHES} matches are accepted`,
-    );
+    throw new LlmSemanticError("too_many_matches", `at most ${LLM_SEMANTIC_MAX_MATCHES} matches are accepted`);
   }
 
   return {
@@ -315,9 +309,7 @@ export function validateLlmSemanticResult(
 
 /** Deterministic order: confidence desc, then slug asc. */
 function sortMatches(matches: LlmSemanticMatch[]): LlmSemanticMatch[] {
-  return [...matches].sort(
-    (a, b) => b.confidence - a.confidence || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0),
-  );
+  return [...matches].sort((a, b) => b.confidence - a.confidence || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
 }
 
 /* ------------------------------------------------------------------ */
@@ -370,7 +362,8 @@ export type LlmDerivedSemanticSignals = {
  * deterministic (confidence desc, slug asc), slugs are unique and the count
  * is capped at `LLM_SEMANTIC_MAX_MATCHES`. Abstention → empty list.
  *
- * NOT wired to `TherapistSearchPlan` or live Unified Search.
+ * Consumed by the server-only Unified semantic orchestrator; downstream search
+ * still receives the existing `SemanticSignal[]` representation.
  */
 export function toSemanticSignals(result: LlmSemanticResult): LlmDerivedSemanticSignals {
   if (result.abstained && result.matches.length > 0) {
