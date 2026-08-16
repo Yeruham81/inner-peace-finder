@@ -134,7 +134,7 @@ export type ExecutorResultRow = SearchResultCard;
 
 export type ExecutorOutput = {
   results: ExecutorResultRow[];
-  emptyReason: null | "unrecognized_query" | "no_matching_therapists";
+  emptyReason: null | "unrecognized_query" | "urgent_help" | "no_matching_therapists";
   /** How many rendered cards relied on the primary-clinic display fallback. */
   primaryClinicFallbackCount: number;
 };
@@ -160,6 +160,9 @@ export async function executeUnifiedSearch(
   plan: TherapistSearchPlan,
   limit = 20,
 ): Promise<ExecutorOutput> {
+  if (plan.emptyReason === "urgent_help") {
+    return { results: [], emptyReason: "urgent_help", primaryClinicFallbackCount: 0 };
+  }
   if (plan.emptyReason === "unrecognized_query") {
     return { results: [], emptyReason: "unrecognized_query", primaryClinicFallbackCount: 0 };
   }
