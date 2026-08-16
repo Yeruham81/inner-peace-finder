@@ -6,6 +6,8 @@
  * React, TanStack Router or server-only code.
  */
 
+import type { SearchSafetyTriage } from "./search-safety-triage";
+
 export type Profession = {
   id: string;
   slug: string;
@@ -170,7 +172,9 @@ export type TherapistSearchPlan = {
   softPreferences: SoftPreferences;
   therapistNameIds: string[];
   /** Executor should short-circuit with this reason when set. */
-  emptyReason: null | "unrecognized_query";
+  emptyReason: null | "unrecognized_query" | "urgent_help";
+  /** Pre-classification safety result. `urgent` blocks therapist search. */
+  safetyTriage?: SearchSafetyTriage;
   /**
    * True when the request carried NO query text and NO explicit filters at
    * all: `/search` should browse the eligible published list rather than
