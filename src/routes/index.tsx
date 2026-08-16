@@ -3,6 +3,8 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { listFilterOptions } from "@/lib/therapists.functions";
 import { SearchForm } from "@/components/search-form";
+import { homepageProblemSlugs } from "@/lib/homepage-problem-map";
+import { serializeMultiValue } from "@/lib/search-contract";
 
 const filterOptionsQuery = queryOptions({
   queryKey: ["filter-options"],
@@ -877,10 +879,13 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
   const populationSlug = item.populationSlug;
 
   function startSearch(problem: string) {
+    const problemSlugs = homepageProblemSlugs(problem);
+
     navigate({
       to: "/search",
       search: {
         q: problem,
+        problem: serializeMultiValue(problemSlugs),
         population: populationSlug,
       },
     });
