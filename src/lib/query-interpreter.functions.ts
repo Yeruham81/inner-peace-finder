@@ -7,9 +7,10 @@
  *   3. Builds a `SupabaseTherapistRepo`,
  *   4. Delegates to the pure `executeUnifiedSearch` executor.
  *
- * All deterministic search logic lives in `unified-search-executor.ts` and
- * `unified-search.ts`. The future LLM interpreter will replace only the
- * interpretation step and produce the same `TherapistSearchPlan` shape.
+ * All downstream filtering/ranking remains deterministic in
+ * `unified-search-executor.ts` / `unified-search.ts`. Only the unresolved
+ * semantic remainder may cross the server-side LLM boundary, after safety
+ * triage and exact canonical evidence.
  */
 
 import { createServerFn } from "@tanstack/react-start";
@@ -17,6 +18,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { SemanticEngine } from "./semantic-engine";
+import { triageSearchSafety, type SearchSafetyTriage } from "./search-safety-triage";
 import { parseStoredProfile } from "./therapist-semantic-profile";
 import { loadSearchCatalog } from "./query-catalog";
 import { interpretQuery } from "./query-interpreter";
@@ -84,7 +86,7 @@ async function serverClient(): Promise<SupabaseClient<Database>> {
 export type UnifiedSearchResult = {
   plan: TherapistSearchPlan;
   results: SearchResultCard[];
-  emptyReason: null | "unrecognized_query" | "no_matching_therapists";
+  emptyReason: null | "unrecognized_query" | "urgent_help" | "no_matching_therapists";
   /** Diagnostics: cards that needed the primary-clinic display fallback. */
   primaryClinicFallbackCount: number;
 };
@@ -98,12 +100,83 @@ function unwrap<T>(res: { data: T | null; error: unknown }): T {
   return res.data ?? ([] as unknown as T);
 }
 
+function emptyStructuredFilters(): StructuredFilters {
+  return {
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    deliveryModes: [],
+    cityNames: [],
+    therapistGender: null,
+    regionSlugs: [],
+    therapyFormatSlugs: [],
+    accessibleClinic: false,
+    verifiedOnly: false,
+    lgbtqAffirming: false,
+    freeIntroOnly: false,
+  };
+}
+
+function emptySoftPreferences(): SoftPreferences {
+  return {
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    cities: [],
+    deliveryModes: [],
+    genders: [],
+  };
+}
+
+function buildSafetyBlockedPlan(safetyTriage: SearchSafetyTriage): TherapistSearchPlan {
+  const hardFilters = emptyStructuredFilters();
+  const softPreferences = emptySoftPreferences();
+  const interpretation: InterpretationResult = {
+    // Deliberately do not carry emergency wording forward in the returned
+    // search plan. The browser already owns the URL input; the server result
+    // needs only the safety decision.
+    raw: "",
+    normalized: "",
+    intent: "unknown",
+    unresolvedPrimary: false,
+    primaryHead: null,
+    hardFilters,
+    softPreferences,
+    therapistNameIds: [],
+    semanticRemainder: "",
+    genderEvidence: [],
+    unresolvedCodes: [],
+  };
+  return {
+    interpretation,
+    semanticSignals: [],
+    hardFilters,
+    softPreferences,
+    therapistNameIds: [],
+    emptyReason: "urgent_help",
+    safetyTriage,
+    browseAll: false,
+    explicitFilters: null,
+    filterConflicts: [],
+  };
+}
+
 async function buildPlan(
   query: string,
   explicitRaw: RawExplicitFilters,
   sb: SupabaseClient<Database>,
   requestedProblemSlugs: readonly string[] = [],
 ): Promise<{ plan: TherapistSearchPlan; interpretation: InterpretationResult }> {
+  // Safety is the first semantic decision in the request. An urgent result
+  // blocks catalog loading, classification, LLM calls and therapist reads.
+  const safetyTriage = triageSearchSafety(query);
+  if (safetyTriage.status === "urgent") {
+    const plan = buildSafetyBlockedPlan(safetyTriage);
+    return { plan, interpretation: plan.interpretation };
+  }
+
   const catalog = await loadSearchCatalog(sb);
   const interpretation = interpretQuery(query, catalog);
   const hasRequestedProblem = requestedProblemSlugs.some((slug) => slug.trim().length > 0);
@@ -131,8 +204,12 @@ async function buildPlan(
     interpretation.semanticRemainder.length > 0 &&
     !interpretation.unresolvedPrimary
   ) {
-    const classified = await SemanticEngine.classify(interpretation.semanticRemainder, sb);
-    semanticSignals = classified.map((c) => ({ slug: c.slug, confidence: c.confidence }));
+    // Server-only normal semantic route: exact curated aliases/names are
+    // authoritative, the LLM handles free wording/context, and the old
+    // SemanticEngine classifier remains a temporary failure fallback.
+    const { classifyUnifiedSemanticRemainder } = await import("./unified-semantic-classifier.server");
+    const classified = await classifyUnifiedSemanticRemainder(interpretation.semanticRemainder, sb);
+    semanticSignals = classified.signals;
   }
 
   // Explicit UI filters are canonicalized and folded in as HARD filters.
@@ -150,6 +227,7 @@ async function buildPlan(
       semanticSignals.length === 0 && (hasRequestedProblem || interpretation.unresolvedPrimary)
         ? "unrecognized_query"
         : null,
+    safetyTriage,
     browseAll: query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
     explicitFilters: explicit,
     filterConflicts: merged.conflicts,
@@ -167,30 +245,8 @@ async function buildPlan(
  * semantic gating, ranking and display hydration.
  */
 export function buildProblemSearchPlan(problem: { slug: string; name: string }): TherapistSearchPlan {
-  const hardFilters: StructuredFilters = {
-    professionSlugs: [],
-    modalitySlugs: [],
-    populationSlugs: [],
-    languageCodes: [],
-    deliveryModes: [],
-    cityNames: [],
-    therapistGender: null,
-    regionSlugs: [],
-    therapyFormatSlugs: [],
-    accessibleClinic: false,
-    verifiedOnly: false,
-    lgbtqAffirming: false,
-    freeIntroOnly: false,
-  };
-  const softPreferences: SoftPreferences = {
-    professionSlugs: [],
-    modalitySlugs: [],
-    populationSlugs: [],
-    languageCodes: [],
-    cities: [],
-    deliveryModes: [],
-    genders: [],
-  };
+  const hardFilters = emptyStructuredFilters();
+  const softPreferences = emptySoftPreferences();
   const interpretation: InterpretationResult = {
     raw: problem.name,
     normalized: SemanticEngine.normalize(problem.name),
