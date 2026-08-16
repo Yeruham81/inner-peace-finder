@@ -14,12 +14,12 @@
  *   matching internals from `./hebrew-normalizer`. All other modules must
  *   consume the SemanticEngine API exposed here.
  *
- * Authority note (Phase Q2): this deterministic engine is the ONLY semantic
- * classifier used by production Unified Search. A future LLM provider (see
- * `llm-semantic-contract` / `llm-semantic-adapter`) is limited to classifying
- * the unresolved `semanticRemainder` into canonical problem slugs; it does not
- * replace this engine, does not perform therapist-profile extraction, and does
- * not control interpretation, filtering, eligibility or ranking.
+ * Authority note: production Unified Search now combines exact deterministic
+ * canonical evidence with a server-side LLM classifier for unresolved free
+ * wording. This engine remains authoritative for normalization, therapist
+ * profile extraction/scoring and the TEMPORARY deterministic failure fallback.
+ * The LLM never receives therapist records and never controls filtering,
+ * eligibility or ranking.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -270,25 +270,41 @@ export type CanonicalProblemEntry = {
 };
 
 /**
- * Load the canonical problem catalog through the SAME read the classifier
- * uses, so no module ever hand-maintains a parallel slug list.
+ * Load the canonical problem catalog for the LLM allow-list and exact alias
+ * evidence. This read intentionally depends ONLY on active `problems` and
+ * `problem_aliases`: `problem_intents` are a temporary legacy fallback and
+ * must not be part of the new normal LLM route.
  *
  * Database errors propagate (Q1 behavior): a catalog read failure must never
  * degrade into a valid empty catalog.
  */
 async function loadCanonicalProblems(sb: SupabaseClient<Database>): Promise<CanonicalProblemEntry[]> {
-  const vocab = await fetchVocabulary(sb);
+  const [problemsRes, aliasesRes] = await Promise.all([
+    sb.from("problems").select("id, slug, name:name_he, is_active"),
+    sb.from("problem_aliases").select("problem_id, alias"),
+  ]);
+  for (const res of [problemsRes, aliasesRes]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = (res as any).error;
+    if (err) throw err;
+  }
+
+  const problems = ((problemsRes.data ?? []) as VocabProblem[]).filter((problem) => problem.is_active !== false);
+  const aliases = (aliasesRes.data ?? []) as VocabAlias[];
+  const activeIds = new Set(problems.map((problem) => String(problem.id)));
   const aliasesById = new Map<string, string[]>();
-  for (const a of vocab.aliases) {
-    const key = String(a.problem_id);
+  for (const alias of aliases) {
+    const key = String(alias.problem_id);
+    if (!activeIds.has(key)) continue;
     const list = aliasesById.get(key) ?? [];
-    list.push(a.alias);
+    if (!list.includes(alias.alias)) list.push(alias.alias);
     aliasesById.set(key, list);
   }
-  return vocab.problems.map((p) => ({
-    slug: p.slug,
-    name: p.name ?? p.slug,
-    aliases: aliasesById.get(String(p.id)) ?? [],
+
+  return problems.map((problem) => ({
+    slug: problem.slug,
+    name: problem.name ?? problem.slug,
+    aliases: aliasesById.get(String(problem.id)) ?? [],
   }));
 }
 
