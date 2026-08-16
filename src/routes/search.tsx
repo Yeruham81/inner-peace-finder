@@ -92,6 +92,7 @@ export function unifiedResultsQuery(p: UnifiedParams) {
       unifiedSearch({
         data: {
           query: p.q,
+          problems: [...p.problemSlugs],
           city: p.city,
           population: p.population,
           language: p.language,
@@ -160,6 +161,7 @@ type SearchParams = z.infer<typeof searchSchema>;
 export function toUnifiedParams(s: SearchParams): UnifiedParams {
   return resolveSearchContract({
     q: s.q,
+    problem: s.problem,
     city: s.city,
     population: s.population,
     language: s.language,
