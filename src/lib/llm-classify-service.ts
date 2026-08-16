@@ -55,9 +55,7 @@ export function parseClassifyRequest(payload: unknown): ClassifyQueryRequest {
     throw new LlmRequestError("request body must be a JSON object");
   }
   const keys = Object.keys(payload as Record<string, unknown>);
-  const unexpected = keys.filter(
-    (k) => !(CLASSIFY_REQUEST_FIELDS as readonly string[]).includes(k),
-  );
+  const unexpected = keys.filter((k) => !(CLASSIFY_REQUEST_FIELDS as readonly string[]).includes(k));
   if (unexpected.length > 0) {
     throw new LlmRequestError(`unsupported request field(s): ${unexpected.sort().join(", ")}`);
   }
@@ -89,6 +87,9 @@ export type LlmClassifyLog = {
   matchCount?: number;
   abstained?: boolean;
   responseSizeCategory?: "empty" | "small" | "large";
+  promptTokens?: number;
+  cachedTokens?: number;
+  completionTokens?: number;
   errorCategory?: LlmSemanticErrorCode;
 };
 
@@ -153,10 +154,7 @@ function localAbstentionResult(config: LlmProviderConfig): LlmSemanticResult {
  * the isolated transport → strict local parse/validate against the
  * SERVER-OWNED slug set → attach trusted server-owned provenance.
  */
-export async function classifySemanticRemainder(
-  payload: unknown,
-  deps: ClassifyDeps,
-): Promise<LlmSemanticResult> {
+export async function classifySemanticRemainder(payload: unknown, deps: ClassifyDeps): Promise<LlmSemanticResult> {
   const { config, transport } = deps;
   const now = deps.now ?? (() => Date.now());
   const startedAt = now();
@@ -176,9 +174,7 @@ export async function classifySemanticRemainder(
     const request = parseClassifyRequest(payload);
     const remainder = request.semanticRemainder.trim();
     if (remainder.length > LLM_MAX_REMAINDER_LENGTH) {
-      throw new LlmInputTooLargeError(
-        `semanticRemainder exceeds ${LLM_MAX_REMAINDER_LENGTH} characters`,
-      );
+      throw new LlmInputTooLargeError(`semanticRemainder exceeds ${LLM_MAX_REMAINDER_LENGTH} characters`);
     }
 
     // Empty / whitespace-only remainder → local abstention. No catalog read,
@@ -203,9 +199,7 @@ export async function classifySemanticRemainder(
     try {
       catalog = await deps.loadCatalog();
     } catch (err) {
-      throw new LlmCatalogError(
-        `canonical catalog read failed: ${err instanceof Error ? err.name : "unknown source"}`,
-      );
+      throw new LlmCatalogError(`canonical catalog read failed: ${err instanceof Error ? err.name : "unknown source"}`);
     }
     if (!Array.isArray(catalog) || catalog.length === 0) {
       // An empty catalog is NOT a valid state for this application: the
@@ -254,6 +248,15 @@ export async function classifySemanticRemainder(
           matchCount: result.matches.length,
           abstained: result.abstained,
           responseSizeCategory: sizeCategory(lastSize),
+          ...(providerResult.usage?.promptTokens !== undefined
+            ? { promptTokens: providerResult.usage.promptTokens }
+            : {}),
+          ...(providerResult.usage?.cachedTokens !== undefined
+            ? { cachedTokens: providerResult.usage.cachedTokens }
+            : {}),
+          ...(providerResult.usage?.completionTokens !== undefined
+            ? { completionTokens: providerResult.usage.completionTokens }
+            : {}),
         });
         return result;
       } catch (err) {

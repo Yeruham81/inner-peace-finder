@@ -58,6 +58,7 @@ export type LlmTransportResult = {
   /** Safe numeric usage metadata only. */
   usage?: {
     promptTokens?: number;
+    cachedTokens?: number;
     completionTokens?: number;
   };
 };
@@ -114,13 +115,16 @@ function extractUsage(root: JsonRecord): LlmTransportResult["usage"] | undefined
 
   const promptTokens = safeTokenCount(usage.input_tokens);
   const completionTokens = safeTokenCount(usage.output_tokens);
+  const inputTokenDetails = isRecord(usage.input_tokens_details) ? usage.input_tokens_details : undefined;
+  const cachedTokens = safeTokenCount(inputTokenDetails?.cached_tokens);
 
-  if (promptTokens === undefined && completionTokens === undefined) {
+  if (promptTokens === undefined && cachedTokens === undefined && completionTokens === undefined) {
     return undefined;
   }
 
   return {
     ...(promptTokens !== undefined ? { promptTokens } : {}),
+    ...(cachedTokens !== undefined ? { cachedTokens } : {}),
     ...(completionTokens !== undefined ? { completionTokens } : {}),
   };
 }

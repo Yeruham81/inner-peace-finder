@@ -603,6 +603,27 @@ describe("response and log safety", () => {
     expect(h.logs[0]!.status).toBe("success");
   });
 
+  it("logs provider token usage including prompt-cache hits without logging prompt content", async () => {
+    const h = harness([
+      {
+        kind: "raw",
+        content: VALID,
+        usage: { promptTokens: 6240, cachedTokens: 5184, completionTokens: 42 },
+      },
+    ]);
+
+    await classifySemanticRemainder({ semanticRemainder: QUERY }, h.deps);
+
+    expect(h.logs).toHaveLength(1);
+    expect(h.logs[0]).toMatchObject({
+      status: "success",
+      promptTokens: 6240,
+      cachedTokens: 5184,
+      completionTokens: 42,
+    });
+    expect(JSON.stringify(h.logs).includes(QUERY)).toBe(false);
+  });
+
   it("logs a stable error category without query text on failure", async () => {
     const h = harness([{ kind: "raw", content: '{"matches":[' }]);
     await codeOf(classifySemanticRemainder({ semanticRemainder: QUERY }, h.deps));

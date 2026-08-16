@@ -46,6 +46,7 @@ function envelope(
     output: overrides.output ?? [assistantMessage([outputText(semanticContent)])],
     usage: overrides.usage ?? {
       input_tokens: 12,
+      input_tokens_details: { cached_tokens: 8 },
       output_tokens: 4,
       total_tokens: 16,
     },
@@ -209,12 +210,32 @@ describe("OpenAI response extraction", () => {
     expect(result.rawContent).toBe(VALID_SEMANTIC_RESULT);
     expect(result.usage).toEqual({
       promptTokens: 12,
+      cachedTokens: 8,
       completionTokens: 4,
     });
 
     expect(Object.keys(result).sort()).toEqual(["byteLength", "rawContent", "usage"]);
 
     expect(JSON.stringify(result).includes("resp_provider_native_request_id")).toBe(false);
+  });
+
+  it("ignores invalid cached-token metadata without failing classification", async () => {
+    const result = await run(async () =>
+      respond(
+        envelope(VALID_SEMANTIC_RESULT, {
+          usage: {
+            input_tokens: 12,
+            input_tokens_details: { cached_tokens: "8" },
+            output_tokens: 4,
+          },
+        }),
+      ),
+    );
+
+    expect(result.usage).toEqual({
+      promptTokens: 12,
+      completionTokens: 4,
+    });
   });
 
   it("ignores non-message reasoning output items", async () => {
