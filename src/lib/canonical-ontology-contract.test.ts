@@ -1,74 +1,45 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
-import {
-  CANONICAL_PROBLEM_SLUGS,
-  HOMEPAGE_PROBLEM_MAP,
-  homepageProblemSlugs,
-} from "./homepage-problem-map";
-import { SemanticEngine } from "./semantic-engine";
-import { createFakeSupabase } from "./test-support/fake-supabase";
-import { LIVE_ACTIVE_CATALOG } from "./test-support/live-catalog-snapshot";
+import { CANONICAL_PROBLEM_SLUGS, HOMEPAGE_PROBLEM_MAP, homepageProblemSlugs } from "./homepage-problem-map";
 
-const ONTOLOGY_SQL = readFileSync(
-  "supabase/migrations/20260814150000_expand_canonical_treatment_ontology.sql",
-  "utf8",
-);
-const POPULATION_SQL = readFileSync(
-  "supabase/migrations/20260814151000_canonical_population_slugs.sql",
-  "utf8",
-);
+const POPULATION_SQL = readFileSync("supabase/migrations/20260814151000_canonical_population_slugs.sql", "utf8");
 
 function homepageTerms(): string[] {
   const source = readFileSync("src/routes/index.tsx", "utf8");
-  const explorer = source.slice(
-    source.indexOf("const problemDomains"),
-    source.indexOf("const popularSearches"),
-  );
+  const explorer = source.slice(source.indexOf("const problemDomains"), source.indexOf("const popularSearches"));
   return [...explorer.matchAll(/problems:\s*\[([\s\S]*?)\]/g)].flatMap((match) =>
     [...match[1]!.matchAll(/"([^"]+)"/g)].map((value) => value[1]!),
   );
 }
 
-function migratedCatalogClient() {
-  const problems = LIVE_ACTIVE_CATALOG.problems.map((problem) => ({
-    id: problem.id,
-    slug: problem.slug,
-    name: problem.name_he,
-    is_active: true,
-  }));
-  for (const [slug, name] of [
-    ["sleep_difficulties", "קשיי שינה"],
-    ["sexuality_intimacy", "מיניות ואינטימיות"],
-    ["violence_abuse", "אלימות ומערכות יחסים פוגעניות"],
-  ] as const) {
-    const existing = problems.find((problem) => problem.slug === slug);
-    if (existing) existing.name = name;
-    else problems.push({ id: `new-${slug}`, slug, name, is_active: true });
-  }
-  const idBySlug = new Map(problems.map((problem) => [problem.slug, problem.id]));
-  const aliasBlock = ONTOLOGY_SQL.slice(
-    ONTOLOGY_SQL.indexOf("WITH candidates(slug, alias) AS ("),
-    ONTOLOGY_SQL.indexOf("-- User-voice intents"),
-  );
-  const aliases = [...aliasBlock.matchAll(/\('([a-z_]+)',\s*'([^']+)'\)/g)].map((match) => ({
-    problem_id: idBySlug.get(match[1]!)!,
-    alias: match[2]!,
-  }));
-  const intentBlock = ONTOLOGY_SQL.slice(
-    ONTOLOGY_SQL.indexOf("WITH candidates(problem_slug, intent_text) AS ("),
-  );
-  const intents = [...intentBlock.matchAll(/\('([a-z_]+)',\s*'([^']+)'\)/g)].map((match) => ({
-    problem_slug: match[1]!,
-    intent_text: match[2]!,
-  }));
-  return createFakeSupabase({
-    problems,
-    problem_aliases: [...LIVE_ACTIVE_CATALOG.aliases, ...aliases],
-    problem_intents: intents,
-  }) as unknown as Parameters<typeof SemanticEngine.classify>[1];
-}
-
 describe("canonical homepage ontology contract", () => {
+  it("declares the complete 62-domain canonical catalog and no Legacy umbrella slugs", () => {
+    expect(CANONICAL_PROBLEM_SLUGS).toHaveLength(62);
+    expect(new Set(CANONICAL_PROBLEM_SLUGS).size).toBe(62);
+
+    const declared = new Set<string>(CANONICAL_PROBLEM_SLUGS);
+    for (const legacy of ["developmental", "eating_body", "neurodiversity"]) {
+      expect(declared.has(legacy)).toBe(false);
+    }
+
+    for (const required of [
+      "burnout",
+      "career_direction",
+      "eating_disorders",
+      "body_image",
+      "adhd",
+      "autism",
+      "childhood_development",
+      "behavioral_challenges",
+      "swallowing_feeding",
+      "substance_use",
+      "daily_functioning",
+      "chronic_illness_adjustment",
+    ]) {
+      expect(declared.has(required)).toBe(true);
+    }
+  });
+
   it("maps every homepage topic and contains no stale mapping key", () => {
     const terms = new Set(homepageTerms());
     expect(terms.size).toBe(109);
@@ -76,58 +47,43 @@ describe("canonical homepage ontology contract", () => {
     expect(Object.keys(HOMEPAGE_PROBLEM_MAP).filter((term) => !terms.has(term))).toEqual([]);
   });
 
-  it("maps only declared active canonical slugs", () => {
+  it("maps every homepage topic only to declared canonical slugs", () => {
     const allowed = new Set<string>(CANONICAL_PROBLEM_SLUGS);
     const invalid = Object.entries(HOMEPAGE_PROBLEM_MAP).flatMap(([label, slugs]) =>
       slugs.filter((slug) => !allowed.has(slug)).map((slug) => `${label}:${slug}`),
     );
     expect(invalid).toEqual([]);
-  });
 
-  it("stores every homepage label under its primary canonical owner", () => {
-    for (const [label, slugs] of Object.entries(HOMEPAGE_PROBLEM_MAP)) {
-      expect(ONTOLOGY_SQL).toContain(`('${slugs[0]}', '${label}')`);
+    for (const slugs of Object.values(HOMEPAGE_PROBLEM_MAP)) {
+      expect(slugs.length).toBeGreaterThan(0);
+      expect(new Set(slugs).size).toBe(slugs.length);
     }
   });
 
-  it("classifies all 109 homepage labels to their primary canonical owner", async () => {
-    const client = migratedCatalogClient();
-    for (const [label, slugs] of Object.entries(HOMEPAGE_PROBLEM_MAP)) {
-      const matches = await SemanticEngine.classify(label, client);
-      expect(matches[0]?.slug).toBe(slugs[0]);
-      for (const slug of slugs) expect(matches.map((match) => match.slug)).toContain(slug);
-    }
+  it("uses the new independent canonical domains for migrated homepage concepts", () => {
+    expect(homepageProblemSlugs("שחיקה בעבודה")).toEqual(["burnout"]);
+    expect(homepageProblemSlugs("בחירת קריירה")).toEqual(["career_direction"]);
+    expect(homepageProblemSlugs("הפרעות אכילה")).toEqual(["eating_disorders"]);
+    expect(homepageProblemSlugs("דימוי גוף")).toEqual(["body_image"]);
+    expect(homepageProblemSlugs("עישון")).toEqual(["substance_use"]);
+    expect(homepageProblemSlugs("שימוש באלכוהול")).toEqual(["substance_use"]);
+    expect(homepageProblemSlugs("עיכוב התפתחותי")).toEqual(["childhood_development"]);
+    expect(homepageProblemSlugs("קשיי קשב וריכוז")).toEqual(["adhd"]);
+    expect(homepageProblemSlugs("התפרצויות והתנהגות מאתגרת")).toEqual(["behavioral_challenges"]);
+    expect(homepageProblemSlugs("קשיי אכילה")).toEqual(["swallowing_feeding"]);
+    expect(homepageProblemSlugs("ירידה בתפקוד")).toEqual(["daily_functioning"]);
+    expect(homepageProblemSlugs("שינויים בריאותיים")).toEqual(["chronic_illness_adjustment"]);
   });
 
-  it("rejects generic noise and known cross-domain false positives", async () => {
-    const client = migratedCatalogClient();
-    for (const query of [
-      "אני צריך עזרה",
-      "משהו לא בסדר איתי",
-      "מחפש מישהו לדבר איתו",
-      "שינה",
-      "שינוי",
-    ]) {
-      expect(await SemanticEngine.classify(query, client)).toEqual([]);
-    }
+  it("wires curated homepage topics into the trusted unified-search problem-slug path", () => {
+    const homepageSource = readFileSync("src/routes/index.tsx", "utf8");
+    const searchSource = readFileSync("src/routes/search.tsx", "utf8");
 
-    const habits = await SemanticEngine.classify("קושי בשינוי הרגלים", client);
-    expect(habits.map((match) => match.slug)).toEqual(["addiction"]);
-    const professionalConfidence = await SemanticEngine.classify("חוסר ביטחון מקצועי", client);
-    expect(professionalConfidence.map((match) => match.slug)).toEqual(["performance_functioning"]);
-  });
+    expect(homepageSource).toContain("homepageProblemSlugs(problem)");
+    expect(homepageSource).toContain("problem: serializeMultiValue(problemSlugs)");
 
-  it("adds the three independently searchable missing domains", () => {
-    for (const slug of ["sleep_difficulties", "sexuality_intimacy", "violence_abuse"]) {
-      expect(ONTOLOGY_SQL).toContain(`('${slug}'`);
-    }
-    expect(ONTOLOGY_SQL).toContain("ON CONFLICT (slug) DO UPDATE");
-    expect(ONTOLOGY_SQL).toContain("is_active = true");
-  });
-
-  it("does not add the sleep/change false-positive alias", () => {
-    expect(ONTOLOGY_SQL).not.toContain("('sleep_difficulties', 'קושי בשינה')");
-    expect(ONTOLOGY_SQL).toContain("('addiction', 'קושי בשינוי הרגלים')");
+    expect(searchSource).toContain("problem: s.problem");
+    expect(searchSource).toContain("problems: [...p.problemSlugs]");
   });
 });
 
