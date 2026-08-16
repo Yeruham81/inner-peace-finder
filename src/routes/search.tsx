@@ -220,14 +220,23 @@ export function emptyStateMessage(reason: null | "unrecognized_query" | "no_matc
   };
 }
 
-function useSearchAnalytics(args: { search: SearchParams; mode: string; count: number; isClarification: boolean }) {
-  const { search, mode, count, isClarification } = args;
+function useSearchAnalytics(args: {
+  search: SearchParams;
+  mode: string;
+  count: number;
+  isClarification: boolean;
+  isSafetyTriage?: boolean;
+}) {
+  const { search, mode, count, isClarification, isSafetyTriage = false } = args;
   const lastSearchKeyRef = useRef<string | null>(null);
   useEffect(() => {
     const key = JSON.stringify({ ...search, mode, n: count });
     if (lastSearchKeyRef.current === key) return;
     lastSearchKeyRef.current = key;
     track("search_executed", { page_source: "search", origin: "SearchPage" });
+    if (isSafetyTriage) {
+      return;
+    }
     if (isClarification) {
       track("search_clarification_shown", {
         page_source: "search",
@@ -256,6 +265,7 @@ function useSearchAnalytics(args: { search: SearchParams; mode: string; count: n
     search.serviceTypes,
     count,
     mode,
+    isSafetyTriage,
   ]);
 }
 
@@ -318,6 +328,47 @@ function EmptyState({ reason }: { reason: null | "unrecognized_query" | "no_matc
   );
 }
 
+function UrgentHelpState() {
+  return (
+    <section
+      data-testid="search-urgent-help"
+      className="mt-6 rounded-2xl border border-brand/30 bg-brand-soft px-5 py-8 text-right sm:px-8 sm:py-10"
+      aria-labelledby="urgent-help-title"
+    >
+      <h2 id="urgent-help-title" className="text-xl font-bold text-foreground sm:text-2xl">
+        ייתכן שנדרשת עזרה מיידית
+      </h2>
+      <p className="mt-3 max-w-3xl text-sm leading-7 text-foreground/80 sm:text-base">
+        טיפולינקס אינו שירות חירום. אם קיימת סכנה מיידית, מחשבה על פגיעה עצמית או מצב רפואי דחוף, מומלץ לפנות עכשיו
+        לגורם סיוע מתאים ולא להסתמך על חיפוש מטפלים באתר.
+      </p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <a
+          href="tel:1201"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
+        >
+          ער״ן — 1201
+        </a>
+        <a
+          href="tel:101"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground"
+        >
+          מגן דוד אדום — 101
+        </a>
+        <a
+          href="tel:100"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground"
+        >
+          משטרת ישראל — 100
+        </a>
+      </div>
+      <p className="mt-4 text-xs leading-5 text-muted-foreground sm:text-sm">
+        לאחר קבלת הסיוע המיידי, ניתן לחזור לחיפוש מטפל להמשך תמיכה וטיפול.
+      </p>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Unified flow (the ONLY production surface)                          */
 /* ------------------------------------------------------------------ */
@@ -352,21 +403,23 @@ function UnifiedSearchResults({
   useEffect(() => {
     onQuickFiltersChange?.(quickFilterKey ? quickFilterKey.split(",") : []);
   }, [onQuickFiltersChange, quickFilterKey]);
+  const emptyReason = pipeline?.emptyReason ?? null;
+  const isSafetyTriage = emptyReason === "urgent_help";
   useSearchAnalytics({
     search,
-    mode: "unified",
+    mode: isSafetyTriage ? "urgent_help" : "unified",
     count: results.length,
     isClarification: false,
+    isSafetyTriage,
   });
+
+  if (isSafetyTriage) return <UrgentHelpState />;
+  const nonUrgentEmptyReason = emptyReason === "unrecognized_query" ? "unrecognized_query" : "no_matching_therapists";
 
   return (
     <>
       <ResultsHeader q={contract.q} count={results.length} hasFilters={hasAnyExplicitFilter(contract)} />
-      {results.length === 0 ? (
-        <EmptyState reason={pipeline?.emptyReason ?? "no_matching_therapists"} />
-      ) : (
-        <ResultsGrid results={results} />
-      )}
+      {results.length === 0 ? <EmptyState reason={nonUrgentEmptyReason} /> : <ResultsGrid results={results} />}
     </>
   );
 }
