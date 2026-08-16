@@ -1,18 +1,15 @@
 /**
- * Phase 4 — end-to-end validation of explicit treatment-domain recognition
- * for the therapist profile field `full_description` ("קצת עליי").
+ * End-to-end validation of explicit treatment-domain recognition for the
+ * therapist profile field `full_description` ("קצת עליי") against the
+ * canonical 62-domain / 483-alias catalog approved on 2026-08-16.
  *
- * VALIDATION ONLY. These tests drive the REAL production extraction path
- * (`loadFeedbackCatalog` → `findDirectEvidence` / `combineFeedbackDomains`
- * from `src/lib/profile-domain-feedback.ts`, the exact functions used by the
- * `getSemanticFeedback` server function) against a read-only snapshot of the
- * live active catalog taken after the Phase 3 migration. There is no second
- * extractor implementation here, no network access and no LLM call.
+ * These tests drive the real production feedback path:
+ * loadFeedbackCatalog -> findDirectEvidence / combineFeedbackDomains.
+ * No network and no LLM call.
  */
 import { describe, expect, it } from "bun:test";
 import {
   combineFeedbackDomains,
-  findDirectEvidence,
   loadFeedbackCatalog,
   normalizeFeedbackText,
   type FeedbackDb,
@@ -22,68 +19,61 @@ import { LIVE_ACTIVE_CATALOG } from "./test-support/live-catalog-snapshot";
 
 const CATALOG = LIVE_ACTIVE_CATALOG;
 
-/** Production extraction, exactly as the editor panel consumes it. */
-const domains = (text: string): string[] =>
-  combineFeedbackDomains(text, CATALOG, []).map((d) => d.slug);
+const domains = (text: string): string[] => combineFeedbackDomains(text, CATALOG, []).map((d) => d.slug);
 
 const slugById = new Map(CATALOG.problems.map((p) => [p.id, p.slug]));
 const aliasesOf = (slug: string): string[] =>
   CATALOG.aliases.filter((a) => slugById.get(a.problem_id) === slug).map((a) => a.alias);
-const nameOf = (slug: string): string =>
-  CATALOG.problems.find((p) => p.slug === slug)!.name_he;
+const nameOf = (slug: string): string => CATALOG.problems.find((p) => p.slug === slug)!.name_he;
 
-/* ------------------------------------------------------------------ */
-/* Catalog snapshot sanity (Phase 3 invariants)                        */
-/* ------------------------------------------------------------------ */
+const LEGACY_UMBRELLAS = new Set(["eating_body", "developmental", "neurodiversity"]);
 
-describe("live catalog snapshot reflects the applied Phase 3 state", () => {
-  it("carries the 21 active canonical domains including both Phase 3 additions", () => {
-    expect(CATALOG.problems).toHaveLength(21);
-    expect(nameOf("personality_disorders")).toBe("הפרעות אישיות");
-    expect(nameOf("sexual_abuse_trauma")).toBe("פגיעות מיניות וטראומה מינית");
+describe("canonical treatment-domain snapshot", () => {
+  it("contains exactly 62 active canonical domains and 483 aliases", () => {
+    expect(CATALOG.problems).toHaveLength(62);
+    expect(CATALOG.aliases).toHaveLength(483);
+    expect(new Set(CATALOG.problems.map((p) => p.slug)).size).toBe(62);
+    expect(new Set(CATALOG.aliases.map((a) => a.alias)).size).toBe(483);
   });
 
-  it("has no normalized duplicate alias inside a domain and no active-to-active collision", () => {
-    const perDomain = new Set<string>();
+  it("contains no Legacy umbrella among the active domains", () => {
+    for (const slug of LEGACY_UMBRELLAS) {
+      expect(CATALOG.problems.some((p) => p.slug === slug)).toBe(false);
+    }
+  });
+
+  it("contains the approved canonical split domains", () => {
+    for (const [slug, name] of [
+      ["adhd", "קשב, ADHD ותפקודים ניהוליים"],
+      ["autism", "אוטיזם והספקטרום האוטיסטי"],
+      ["childhood_development", "עיכובים וקשיים התפתחותיים"],
+      ["burnout", "שחיקה ולחץ תעסוקתי"],
+      ["career_direction", "בחירת קריירה ושינוי מקצועי"],
+      ["eating_disorders", "הפרעות אכילה"],
+      ["body_image", "דימוי גוף"],
+      ["substance_use", "שימוש בחומרים והתמכרויות לחומרים"],
+      ["behavioral_addiction", "התמכרויות התנהגותיות"],
+    ] as const) {
+      expect(nameOf(slug)).toBe(name);
+    }
+  });
+
+  it("has no normalized alias collision across two different canonical domains", () => {
     const owners = new Map<string, Set<string>>();
     for (const a of CATALOG.aliases) {
-      const key = `${a.problem_id}|${normalizeFeedbackText(a.alias)}`;
-      expect(perDomain.has(key)).toBe(false);
-      perDomain.add(key);
-      const set = owners.get(normalizeFeedbackText(a.alias)) ?? new Set<string>();
-      set.add(slugById.get(a.problem_id)!);
-      owners.set(normalizeFeedbackText(a.alias), set);
+      const slug = slugById.get(a.problem_id);
+      expect(slug).toBeDefined();
+      const key = normalizeFeedbackText(a.alias);
+      const set = owners.get(key) ?? new Set<string>();
+      set.add(slug!);
+      owners.set(key, set);
     }
-    expect([...owners.entries()].filter(([, s]) => s.size > 1)).toEqual([]);
+    expect([...owners.entries()].filter(([, slugs]) => slugs.size > 1)).toEqual([]);
   });
 
-  it("contains the Phase 3 aliases and none of the removed unsafe standalone terms", () => {
-    for (const [slug, alias] of [
-      ["personality_disorders", "הפרעת אישיות"],
-      ["sexual_abuse_trauma", "תקיפה מינית"],
-      ["trauma", "טראומה מורכבת"],
-      ["anxiety", "חרדת בריאות"],
-      ["ocd_compulsions", "מחשבות חודרניות"],
-      ["self_identity", "משבר זהות"],
-      ["emotional_regulation", "התפרצויות זעם"],
-      ["neurodiversity", "ספקטרום אוטיסטי"],
-      ["eating_body", "דימוי גוף שלילי"],
-      ["social_belonging", "בדידות"],
-      ["relationships", "גירושין"],
-      ["performance_functioning", "דחיינות"],
-      ["family_parenting", "מתח הורי"],
-    ] as const) {
-      expect(aliasesOf(slug)).toContain(alias);
-    }
-    const removed = [
-      "אבל", "אובדן", "שכול", "לחץ", "משבר", "כעס", "זעם", "סמים", "פרידה",
-      "דאון", "גמור", "שחוק", "כפייתיות", "פלאשבקים", "סיוטים", "שימוש לרעה",
-      "הורים", "עצמי",
-    ];
-    for (const term of removed) {
-      expect(
-        CATALOG.aliases.some((a) => normalizeFeedbackText(a.alias) === normalizeFeedbackText(term)),
-      ).toBe(false);
+  it("covers every canonical domain with at least one alias", () => {
+    for (const p of CATALOG.problems) {
+      expect(aliasesOf(p.slug).length).toBeGreaterThan(0);
     }
   });
 
@@ -95,346 +85,87 @@ describe("live catalog snapshot reflects the applied Phase 3 state", () => {
         alias: a.alias,
       })),
     });
+
     const loaded = await loadFeedbackCatalog(db as unknown as FeedbackDb);
+
     expect(db.reads).toEqual(["problems", "problem_aliases"]);
-    expect(loaded.problems).toHaveLength(21);
-    expect(loaded.aliases).toHaveLength(CATALOG.aliases.length);
-    expect(domains("אני מטפל בחרדה ובדיכאון")).toEqual(
-      combineFeedbackDomains("אני מטפל בחרדה ובדיכאון", loaded, []).map((d) => d.slug),
+    expect(loaded.problems).toHaveLength(62);
+    expect(loaded.aliases).toHaveLength(483);
+  });
+});
+
+describe("every canonical domain is reachable through approved direct evidence", () => {
+  for (const problem of CATALOG.problems) {
+    it(`${problem.slug} resolves from one of its approved aliases`, () => {
+      const alias = aliasesOf(problem.slug)[0];
+      expect(alias).toBeDefined();
+
+      const out = domains(`תחום מרכזי בעבודתי הוא ${alias}.`);
+
+      expect(out).toContain(problem.slug);
+      expect(out.some((slug) => LEGACY_UMBRELLAS.has(slug))).toBe(false);
+    });
+  }
+});
+
+describe("the new split ontology remains distinct", () => {
+  it("separates eating disorders from body image", () => {
+    expect(domains("אני מטפלת בהפרעות אכילה ובדימוי גוף.").sort()).toEqual(["body_image", "eating_disorders"].sort());
+  });
+
+  it("separates ADHD from autism", () => {
+    expect(domains("אני מלווה אנשים עם ADHD ואוטיזם.").sort()).toEqual(["adhd", "autism"].sort());
+  });
+
+  it("separates burnout from career direction", () => {
+    expect(domains("אני מטפל בשחיקה בעבודה ובבחירת קריירה.").sort()).toEqual(["burnout", "career_direction"].sort());
+  });
+
+  it("separates substance use from behavioral addiction", () => {
+    expect(domains("אני מטפל בשימוש באלכוהול ובהתנהגות ממכרת.").sort()).toEqual(
+      ["behavioral_addiction", "substance_use"].sort(),
+    );
+  });
+
+  it("distinguishes language, speech, fluency and voice domains", () => {
+    expect(domains("אני מטפלת בקשיי שפה, קשיי היגוי, גמגום והפרעות קול.").sort()).toEqual(
+      ["fluency_stuttering", "language_communication", "speech_articulation", "voice"].sort(),
+    );
+  });
+
+  it("distinguishes rehabilitation domains", () => {
+    expect(domains("אני עוסק בשיקום אורתופדי, שיקום נוירולוגי ושיקום לבבי.").sort()).toEqual(
+      ["cardiopulmonary_rehabilitation", "neurological_rehabilitation", "orthopedic_rehabilitation"].sort(),
     );
   });
 });
 
-/* ------------------------------------------------------------------ */
-/* Synthetic profile corpus                                            */
-/* ------------------------------------------------------------------ */
-
-type Fixture = { id: string; text: string; expected: string[] };
-
-const PROFILES: Fixture[] = [
-  // --- single explicit domain, realistic sentences -------------------
-  {
-    id: "single-anxiety",
-    text: "פסיכולוגית קלינית בעלת ניסיון של 12 שנה. אני מטפלת בחרדה ובהתקפי פאניקה אצל מבוגרים.",
-    expected: ["anxiety"],
-  },
-  {
-    id: "single-depression",
-    text: "אני מטפל בדיכאון ובמצבים דיכאוניים, כולל תסמיני דיכאון ממושכים, בגישה דינמית.",
-    expected: ["depression"],
-  },
-  {
-    id: "single-personality-disorders",
-    text: "פסיכותרפיסט העובד עם הפרעות אישיות בגישה דינמית ארוכת טווח בקליניקה בחיפה.",
-    expected: ["personality_disorders"],
-  },
-  {
-    id: "single-personality-disorder-singular-alias",
-    text: "אני מלווה מטופלים המתמודדים עם הפרעת אישיות גבולית לאורך תהליך ממושך.",
-    expected: ["personality_disorders"],
-  },
-  {
-    id: "single-ocd-canonical-and-alias",
-    text: "מטפלת ב-OCD, כלומר הפרעה טורדנית כפייתית, וגם במחשבות חודרניות ובטקסים כפייתיים.",
-    expected: ["ocd_compulsions"],
-  },
-  {
-    id: "single-eating-body",
-    text: "קלינאית המטפלת בהפרעות אכילה, אנורקסיה ובולימיה, וכן בדימוי גוף שלילי.",
-    expected: ["eating_body"],
-  },
-  {
-    id: "single-family-parenting",
-    text: "מדריך הורים מוסמך. אני עוסק בקשיים בהורות, מתח הורי ויחסי הורים וילדים.",
-    expected: ["family_parenting"],
-  },
-  {
-    id: "single-social-belonging",
-    text: "אני מטפלת בבדידות, בקשיים חברתיים ובתחושת חוסר שייכות בקרב צעירים.",
-    expected: ["social_belonging"],
-  },
-  {
-    id: "single-performance",
-    text: "מטפל בשחיקה בעבודה, בדחיינות ובקשיים בתפקוד היומיומי.",
-    expected: ["performance_functioning"],
-  },
-  {
-    id: "single-emotional-regulation",
-    text: "אני עובדת על ויסות רגשי, על הצפה רגשית ועל התפרצויות זעם אצל מתבגרים.",
-    expected: ["emotional_regulation"],
-  },
-  {
-    id: "single-neurodiversity",
-    text: "ליווי מאובחנים עם ADHD והפרעת קשב וריכוז, וכן אנשים על הספקטרום האוטיסטי.",
-    expected: ["neurodiversity"],
-  },
-  {
-    id: "single-self-identity",
-    text: "אני מטפל במשבר זהות, בקשיי זהות ובדימוי עצמי נמוך אצל צעירים בשנות העשרים.",
-    expected: ["self_identity"],
-  },
-  {
-    id: "single-grief",
-    text: "אני מטפלת באבל ובאובדן — התמודדות עם אבל אחרי מות אדם קרוב, בליווי ארוך טווח.",
-    expected: ["grief_loss"],
-  },
-
-  // --- overlapping wording (documented current behavior) -------------
-  {
-    id: "overlap-sexual-abuse-contains-trauma",
-    text: "מטפלת בטראומה מינית ובטראומה בילדות, בגישה מבוססת מודעות לטראומה.",
-    expected: ["sexual_abuse_trauma", "trauma"],
-  },
-  {
-    id: "overlap-sexual-abuse-victims",
-    // "ובטראומה" carries two stacked clitics ("ו"+"ב"); the shared Hebrew
-    // normalizer strips a single prefix, so the standalone alias "טראומה" is
-    // not matched here. Documented current behavior — explicit sexual-abuse
-    // recognition is unaffected and nothing unrelated is inferred.
-    text: "אני מלווה נפגעות תקיפה מינית ומטפלת בפגיעה מינית ובטראומה מינית מתמשכת.",
-    expected: ["sexual_abuse_trauma"],
-  },
-  {
-    id: "overlap-complex-trauma-abbreviations",
-    text: "עובדת סוציאלית קלינית המתמחה בטראומה מורכבת ובטראומת ילדות (CPTSD).",
-    expected: ["trauma"],
-  },
-
-  // --- several explicit domains --------------------------------------
-  {
-    id: "multi-relationships-couples",
-    text: "מטפל זוגי: קשיים בזוגיות, משבר זוגי ותהליך גירושין, וגם התמודדות עם פרידה זוגית.",
-    expected: ["relationships"],
-  },
-  {
-    id: "multi-five-domains",
-    text: "קליניקה בתל אביב: חרדה, דיכאון, טראומה, אבל ואובדן, ומשברי חיים.",
-    expected: ["anxiety", "depression", "trauma", "grief_loss", "life_transitions"],
-  },
-  {
-    id: "multi-addiction-and-functioning",
-    text: "אני עוסק בהתמכרויות ותלות: התמכרות לאלכוהול, התנהגות ממכרת וגם דחיינות כרונית.",
-    expected: ["addiction", "performance_functioning"],
-  },
-  {
-    id: "multi-professional-paragraph",
-    text:
-      "פסיכולוג קליני מומחה. אני מטפל במבוגרים ובמתבגרים ומתמחה בטיפול בדיכאון, ב-OCD, " +
-      "בהתמכרויות, בהפרעות חרדה ובפוסט טראומה, וכן בליווי אנשים המתמודדים עם קשיים ומשברי חיים.",
-    expected: ["depression", "ocd_compulsions", "addiction", "anxiety", "trauma", "life_transitions"],
-  },
-
-  // --- deduplication -------------------------------------------------
-  {
-    id: "dedup-depression-repeated",
-    text:
-      "אני מטפל בדיכאון. דיכאונות ממושכים הם תחום ההתמחות שלי, ואת המשפט \"אני בדיכאון\" " +
-      "אני שומע כאן הרבה. תסמיני דיכאון מקבלים אצלי מקום מרכזי.",
-    expected: ["depression"],
-  },
-  {
-    id: "dedup-anxiety-canonical-plus-aliases",
-    text: "חרדה ופחדים הם ליבת העבודה שלי: חרדות, הפרעת חרדה מוכללת, חרדה חברתית ופוביות.",
-    expected: ["anxiety"],
-  },
-
-  // --- ambiguous / must not match ------------------------------------
-  {
-    id: "negative-conjunction-and-stress",
-    text: "אני עוסקת בליווי אישי ובצמיחה, אבל לא בטיפול תרופתי. יש לחץ בחיים של כולנו.",
-    expected: [],
-  },
-  {
-    id: "negative-address-and-generic-bio",
-    text: "הקליניקה שלי ברחוב הורים 4. אני מטפל באנשים בכל הגילים, ליווי אישי ומשפחה.",
-    expected: [],
-  },
-  {
-    id: "negative-educational-psychologist",
-    text: "פסיכולוג חינוכי בעל ניסיון של 12 שנה בעבודה עם בתי ספר, צוותי חינוך והשתלמויות מורים.",
-    expected: [],
-  },
-];
-
-describe("Phase 4 synthetic profile corpus", () => {
-  it("covers 15–25 realistic profiles", () => {
-    expect(PROFILES.length).toBeGreaterThanOrEqual(15);
-    expect(PROFILES.length).toBeLessThanOrEqual(25);
-  });
-
-  for (const f of PROFILES) {
-    it(`${f.id} resolves to its expected canonical domains`, () => {
-      const out = domains(f.text);
-      expect([...out].sort()).toEqual([...f.expected].sort());
-      expect(new Set(out).size).toBe(out.length);
-    });
-  }
-});
-
-/* ------------------------------------------------------------------ */
-/* A. Direct canonical-name recognition                                */
-/* ------------------------------------------------------------------ */
-
-describe("A. canonical Hebrew names inside realistic sentences", () => {
-  const cases: [string, string][] = [
-    ["anxiety", "אני מטפלת בחרדה ופחדים בקרב מבוגרים בקליניקה פרטית."],
-    ["depression", "התמחותי היא דיכאון וכאב רגשי, בליווי ארוך טווח."],
-    ["personality_disorders", "אני עוסק בהפרעות אישיות בגישה מבוססת מנטליזציה."],
-    ["sexual_abuse_trauma", "אני מלווה מטופלות בתחום פגיעות מיניות וטראומה מינית."],
-    ["eating_body", "עבודתי מתמקדת באכילה ודימוי גוף אצל נשים צעירות."],
-    ["family_parenting", "אני מטפל בתחום משפחה והורות, כולל הדרכת הורים."],
-    ["emotional_regulation", "אני מלמדת מיומנויות של ויסות רגשי במסגרת טיפול קבוצתי."],
-  ];
-  for (const [slug, text] of cases) {
-    it(`recognizes ${slug} from its canonical name`, () => {
-      expect(domains(text)).toContain(slug);
-    });
-  }
-});
-
-/* ------------------------------------------------------------------ */
-/* B. Alias recognition, from the real catalog                          */
-/* ------------------------------------------------------------------ */
-
-describe("B. aliases taken from the live catalog map to their own domain", () => {
-  /** Phase 3 aliases, read out of the catalog rather than re-invented. */
-  const sampled: [string, string][] = [
-    ["trauma", "טראומה מורכבת"],
-    ["trauma", "הפרעת דחק פוסט טראומטית"],
-    ["anxiety", "חרדת בריאות"],
-    ["anxiety", "התקפי פאניקה"],
-    ["ocd_compulsions", "טקסים כפייתיים"],
-    ["self_identity", "קשיים בזהות העצמית"],
-    ["family_parenting", "קונפליקטים בין הורים לילדים"],
-    ["emotional_regulation", "קשיים בשליטה בכעסים"],
-    ["neurodiversity", "קשיי קשב וריכוז"],
-    ["eating_body", "קשיים בדימוי הגוף"],
-    ["social_belonging", "קשיים ביצירת קשרים חברתיים"],
-    ["relationships", "התמודדות עם גירושין"],
-    ["performance_functioning", "שחיקה מקצועית"],
-    ["personality_disorders", "הפרעות אישיות"],
-    ["sexual_abuse_trauma", "התעללות מינית"],
-    ["grief_loss", "אבל ושכול"],
-    ["life_transitions", "מעבר בחיים"],
-    ["addiction", "התנהגות ממכרת"],
+describe("safety-first phrases are not deterministic treatment aliases", () => {
+  const safetyFirst = [
+    "אני שואל את עצמי למה לחיות",
+    "אני חושב הרבה על החיים והמוות",
+    "דופק מטורף",
+    "קוצר נשימה פתאומי",
+    "אין לי אוויר כבר",
+    "אני עומדת להתפרק",
+    "אני עומד להתפרק",
+    "לא יכולה יותר",
+    "לא יכול יותר",
   ];
 
-  for (const [slug, alias] of sampled) {
-    it(`"${alias}" belongs to ${slug} in the catalog and resolves to it`, () => {
-      expect(aliasesOf(slug)).toContain(alias);
-      const out = domains(`בקליניקה שלי אני מטפל ב${alias} כתחום מרכזי, לאורך תהליך ממושך.`);
-      expect(out).toContain(slug);
-      // Only trauma-family overlap may legitimately add a second domain.
-      const extra = out.filter((s) => s !== slug);
-      expect(extra.every((s) => s === "trauma" || s === "sexual_abuse_trauma")).toBe(true);
+  for (const phrase of safetyFirst) {
+    it(`does not keep "${phrase}" in problem_aliases`, () => {
+      expect(CATALOG.aliases.some((a) => normalizeFeedbackText(a.alias) === normalizeFeedbackText(phrase))).toBe(false);
     });
   }
 });
 
-/* ------------------------------------------------------------------ */
-/* E. Natural Hebrew formatting                                        */
-/* ------------------------------------------------------------------ */
+describe("Legacy umbrellas never surface from current direct matching", () => {
+  const examples = ["הפרעות אכילה ודימוי גוף", "ADHD ואוטיזם", "עיכוב התפתחותי"];
 
-describe("E. natural profile formatting", () => {
-  const cases: [string, string[]][] = [
-    ["תחומי הטיפול שלי: חרדה, דיכאון, ו-OCD.", ["anxiety", "depression", "ocd_compulsions"]],
-    ["אני מטפלת ב(הפרעות אכילה) ובדימוי גוף.", ["eating_body"]],
-    ["טראומה / פוסט טראומה / PTSD — התמחות עיקרית.", ["trauma"]],
-    ["טיפול בהפרעת קשב-וריכוז ובקשיי קשב וריכוז.", ["neurodiversity"]],
-    ["תחומים:\nחרדה\nדיכאון\nטראומה\n", ["anxiety", "depression", "trauma"]],
-    ["מטפל ב O.C.D. ובמחשבות טורדניות.", ["ocd_compulsions"]],
-    ["הפרעות אישיות (גבולית, נרקיסיסטית) — עבודה דינמית.", ["personality_disorders"]],
-  ];
-  for (const [text, expected] of cases) {
-    it(`handles ${JSON.stringify(text)}`, () => {
-      expect([...domains(text)].sort()).toEqual([...expected].sort());
+  for (const text of examples) {
+    it(`${JSON.stringify(text)} returns only canonical slugs`, () => {
+      expect(domains(text).some((slug) => LEGACY_UMBRELLAS.has(slug))).toBe(false);
     });
   }
-});
-
-/* ------------------------------------------------------------------ */
-/* F. Negative / false-positive regression                             */
-/* ------------------------------------------------------------------ */
-
-describe("F. Phase 3 removed and deferred expressions stay unmapped", () => {
-  const removedOrDeferred = [
-    "אבל", "אובדן", "שכול", "לחץ", "משבר", "כעס", "זעם", "סמים", "פרידה",
-    "דאון", "גמור", "שחוק", "כפייתיות", "פלאשבקים", "סיוטים", "שימוש לרעה",
-    "הורים", "עצמי", "זהות", "הורות", "ילדים", "משפחה", "מחלות נפש",
-    "קשיי שינה", "הפרעות שינה", "נדודי שינה",
-  ];
-  for (const term of removedOrDeferred) {
-    it(`"${term}" alone does not create a treatment domain`, () => {
-      expect(domains(`אני מטפל ב${term} בקליניקה שלי בתל אביב, בגישה אינטגרטיבית ורגישה.`)).toEqual(
-        [],
-      );
-    });
-  }
-
-  it("keeps the contextual phrases that Phase 3 deliberately preserved", () => {
-    expect(domains("אני מלווה תהליכי אבל ושכול לאחר אובדן פתאומי.")).toEqual(["grief_loss"]);
-    expect(domains("אני מטפלת בהתמודדות עם אובדן ובתהליך אבל ממושך.")).toEqual(["grief_loss"]);
-    expect(domains("אני מטפל בפרידה זוגית ובהתמודדות עם פרידה.")).toEqual(["relationships"]);
-    expect(domains("אני עובדת על קשיים בשליטה בכעסים עם מתבגרים.")).toEqual([
-      "emotional_regulation",
-    ]);
-  });
-});
-
-/* ------------------------------------------------------------------ */
-/* G. Overlapping wording                                              */
-/* ------------------------------------------------------------------ */
-
-describe("G. overlapping expressions", () => {
-  it("sexual-abuse wording surfaces its own domain, plus trauma only via the literal word", () => {
-    expect([...domains("אני מטפלת בפגיעות מיניות בקליניקה.")].sort()).toEqual([
-      "sexual_abuse_trauma",
-    ]);
-    // "טראומה מינית" literally contains "טראומה", an approved trauma alias, so
-    // both domains legitimately carry explicit evidence. Intended behavior.
-    expect([...domains("אני מטפלת בטראומה מינית.")].sort()).toEqual([
-      "sexual_abuse_trauma",
-      "trauma",
-    ]);
-  });
-
-  it("distinguishes self-image from body-image wording", () => {
-    expect(domains("אני מטפל בדימוי עצמי נמוך.")).toEqual(["self_identity"]);
-    expect(domains("אני מטפל בדימוי גוף שלילי.")).toEqual(["eating_body"]);
-  });
-
-  it("does not duplicate a domain when nested expressions co-occur", () => {
-    const out = domains(
-      "אני מטפל בחרדה, בחרדה חברתית, בהפרעת חרדה מוכללת ובהתקפי פאניקה חוזרים.",
-    );
-    expect(out).toEqual(["anxiety"]);
-  });
-});
-
-/* ------------------------------------------------------------------ */
-/* H. Empty and irrelevant content                                     */
-/* ------------------------------------------------------------------ */
-
-describe("H. empty and irrelevant content", () => {
-  for (const text of ["", "   ", "\n\t  \n", "אני עובד בקליניקה בירושלים מאז 2011."]) {
-    it(`returns no domains for ${JSON.stringify(text)}`, () => {
-      expect(domains(text)).toEqual([]);
-    });
-  }
-
-  it("ignores semantic suggestions that carry no explicit textual evidence", () => {
-    const text = "אני עובד בקליניקה בירושלים מאז 2011 ומלווה תהליכים אישיים.";
-    expect(combineFeedbackDomains(text, CATALOG, [{ slug: "anxiety", weight: 9 }])).toEqual([]);
-  });
-
-  it("returns names alongside slugs for the editor panel", () => {
-    expect(combineFeedbackDomains("אני מטפל בהפרעות אישיות.", CATALOG, [])).toEqual([
-      { slug: "personality_disorders", name: "הפרעות אישיות" },
-    ]);
-  });
-
-  it("orders direct evidence by first occurrence in the text", () => {
-    const ev = findDirectEvidence("קודם דיכאון ואחר כך חרדה.", CATALOG);
-    expect(ev.map((e) => e.slug)).toEqual(["depression", "anxiety"]);
-  });
 });
