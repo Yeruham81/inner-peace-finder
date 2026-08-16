@@ -37,7 +37,7 @@ import {
   tokenizeHebrew,
 } from "./hebrew-normalizer";
 import { parseStoredProfile, type SemanticProfileEntry } from "./therapist-semantic-profile";
-import { DEPRECATED_SLUGS, PROFILE_ONLY_SLUGS, buildParentOf, isBlockedForClassify } from "./semantic-ontology";
+import { DEPRECATED_SLUGS } from "./semantic-ontology";
 
 export type { SemanticProfileEntry };
 export {
@@ -77,7 +77,7 @@ const MAX_MATCHES = 3;
 export const SEMANTIC_MAX_MATCHES = MAX_MATCHES;
 
 /* ------------------------------------------------------------------ */
-/* Phase 17C.2 — scoring / confidence / suppression tunables          */
+/* Scoring / confidence tunables                                      */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -116,36 +116,10 @@ const CONFIDENCE_MAX = 0.95;
 const CLASSIFY_MIN_PARTIAL_MULTI_TOKEN_QUALITY = 0.4;
 
 /**
- * Deterministic child → parent map used by parent-suppression. A child that
- * outranks its parent in the candidate list suppresses the parent unless
- * the parent's score is high enough to indicate independent evidence.
- * Kept intentionally small and conservative to avoid recall regressions.
+ * The canonical treatment-domain catalog is intentionally flat.
+ * No child → parent suppression is applied between active domains: if two
+ * independent canonical domains have evidence, both remain eligible.
  */
-const PARENT_OF: Record<string, string> = {
-  panic: "anxiety",
-  social_anxiety: "anxiety",
-  health_anxiety: "anxiety",
-  intrusive_thoughts: "ocd_compulsions",
-  childhood_trauma: "trauma",
-  ptsd: "trauma",
-  body_image: "eating_body",
-  low_mood: "depression",
-};
-
-/**
- * Phase 17C.4B: combined child → parent map. The engine's own PARENT_OF
- * stays intact for readability; ontology-driven additions are merged here
- * via `buildParentOf` so `applyParentSuppression` always sees one table.
- */
-const PARENT_OF_EFFECTIVE = buildParentOf(PARENT_OF);
-
-/**
- * If a child ranks above its parent AND the parent's raw score is below
- * `PARENT_SUPPRESS_RATIO * child.rawScore`, drop the parent. A parent that
- * still scores highly (>= ratio) is treated as independent evidence and
- * kept in the output.
- */
-const PARENT_SUPPRESS_RATIO = 0.5;
 
 /* ------------------------------------------------------------------ */
 /* Extraction precision guards (semantic_profile only)                */
@@ -503,22 +477,12 @@ function collectEvidence(text: string, vocab: Vocab): Map<string, Evidence[]> {
 }
 
 /**
- * Phase 17C.4B — classification-only evidence collection.
+ * Classification evidence collection.
  *
- * Differs from `collectEvidence` on two axes, both driven by the ontology
- * migration layer (never destructive to the DB):
- *
- *   1. Applies `BLOCKED_CLASSIFY_PHRASES` to skip specific aliases /
- *      intents that produce documented false positives at classify time.
- *      The rows remain fully available to `extractProfile()`.
- *
- *   2. Applies `DEPRECATED_SLUGS`: evidence collected against a deprecated
- *      slug is redirected into the canonical replacement slug's bucket
- *      (e.g. `burnout_depression` → `burnout`). The replacement slug's
- *      own evidence is then aggregated normally.
- *
- * Therapist profile extraction continues to use `collectEvidence` via
- * `scoreAgainstVocabularyLegacy` and is intentionally not affected.
+ * The database's active `problems` rows and curated `problem_aliases` rows
+ * are authoritative. The deprecation bridge is kept only for legacy/in-memory
+ * fixtures where an old slug may still be present; production vocabulary
+ * contains active canonical problems only.
  */
 function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const byId = new Map<string, Evidence[]>();
@@ -552,14 +516,11 @@ function collectEvidenceForClassify(text: string, vocab: Vocab): Map<string, Evi
   });
   vocab.aliases.forEach((a) => {
     if (!a.alias || !matchesText(a.alias, text)) return;
-    const srcSlug = vocab.slugById.get(String(a.problem_id));
-    if (srcSlug && isBlockedForClassify(srcSlug, a.alias)) return;
     const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet, qTokensOrdered);
     push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
   });
   vocab.intents.forEach((i) => {
     if (!i.intent_text || !i.problem_slug) return;
-    if (isBlockedForClassify(i.problem_slug, i.intent_text)) return;
     const pid = vocab.idBySlug.get(i.problem_slug);
     if (pid && matchesText(i.intent_text, text)) {
       const q = scoreEvidenceQuality(i.intent_text, nQuery, qTokenSet, qTokensOrdered);
@@ -622,20 +583,16 @@ function scoreAgainstVocabularyLegacy(text: string, vocab: Vocab): Map<string, n
 
 /**
  * Evidence collection for `extractProfile()` — precision-first variant of
- * `collectEvidence`. Mirrors the classify-time protections and adds
- * extraction-specific safeguards documented in the module header:
+ * `collectEvidence`. The active DB catalog and curated aliases are
+ * authoritative, with extraction-specific safeguards:
  *
- *   1. `DEPRECATED_SLUGS` — evidence for a deprecated slug is redirected
- *      into its canonical replacement's bucket, matching classify().
- *   2. `BLOCKED_CLASSIFY_PHRASES` — the same alias/intent phrases that
- *      are documented as false positives at classify time are also
- *      unhelpful when tagging a therapist profile, so they are skipped.
- *   3. Intents (statements of user need) are omitted entirely. A
- *      therapist bio describes coverage; user-intent phrasing on the
- *      therapist side is not evidence of a treatment domain.
- *   4. Single-token evidence whose only token is a generic Hebrew
- *      anchor (`EXTRACTION_GENERIC_ANCHORS`) is dropped. Multi-word
- *      phrases that happen to contain such a token are kept.
+ *   1. `DEPRECATED_SLUGS` remains a compatibility bridge for legacy/in-memory
+ *      fixtures; production vocabulary contains active canonical slugs only.
+ *   2. Intents (statements of user need) are omitted entirely. A therapist
+ *      bio describes coverage; user-intent phrasing is not profile evidence.
+ *   3. Single-token evidence whose only token is a generic Hebrew anchor
+ *      (`EXTRACTION_GENERIC_ANCHORS`) is dropped. Multi-word phrases that
+ *      contain such a token are kept.
  */
 function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evidence[]> {
   const byId = new Map<string, Evidence[]>();
@@ -675,8 +632,6 @@ function collectEvidenceForExtract(text: string, vocab: Vocab): Map<string, Evid
   vocab.aliases.forEach((a) => {
     if (!a.alias) return;
     if (isGenericSingleToken(a.alias)) return;
-    const srcSlug = vocab.slugById.get(String(a.problem_id));
-    if (srcSlug && isBlockedForClassify(srcSlug, a.alias)) return;
     if (!matchesText(a.alias, text)) return;
     const q = scoreEvidenceQuality(a.alias, nQuery, qTokenSet, qTokensOrdered);
     push(a.problem_id, { kind: "alias", base: WEIGHT_ALIAS, phrase: a.alias, ...q });
@@ -740,31 +695,6 @@ export function hasStrongExtractionEvidence(evidences: Evidence[]): boolean {
   return false;
 }
 
-/**
- * Parent suppression: if a child concept outranks its parent, and the
- * parent's raw score is dominated by the child's, drop the parent from
- * the output. Conservative — only suppresses when the parent is clearly
- * weaker than the child that already covers it.
- */
-function applyParentSuppression(
-  ranked: { slug: string; raw: number; confidence: number }[],
-): { slug: string; raw: number; confidence: number }[] {
-  const bySlug = new Map(ranked.map((r) => [r.slug, r]));
-  const drop = new Set<string>();
-  for (let i = 0; i < ranked.length; i++) {
-    const r = ranked[i];
-    const parent = PARENT_OF_EFFECTIVE[r.slug];
-    if (!parent) continue;
-    const p = bySlug.get(parent);
-    if (!p) continue;
-    // Parent must appear later in the list (child ranks above parent).
-    const pIdx = ranked.findIndex((x) => x.slug === parent);
-    if (pIdx <= i) continue;
-    if (p.raw < PARENT_SUPPRESS_RATIO * r.raw) drop.add(parent);
-  }
-  return ranked.filter((r) => !drop.has(r.slug));
-}
-
 /* ------------------------------------------------------------------ */
 /* Public engine API                                                  */
 /* ------------------------------------------------------------------ */
@@ -776,8 +706,10 @@ function applyParentSuppression(
  *   1. Collect evidence (name/alias/intent matches) per problem.
  *   2. Aggregate with specificity weighting + top-N cap.
  *   3. Calibrate confidence from raw score + query-coverage.
- *   4. Apply parent → child suppression conservatively.
- *   5. Return top MAX_MATCHES ordered by confidence.
+ *   4. Return top MAX_MATCHES ordered by confidence.
+ *
+ * The 62 active treatment domains are independent canonical concepts; no
+ * parent/child suppression is applied between them.
  */
 async function classify(input: string, sb: SupabaseClient<Database>): Promise<SemanticResult[]> {
   const q = normalizeText(input);
@@ -804,15 +736,6 @@ async function classify(input: string, sb: SupabaseClient<Database>): Promise<Se
     if (wholeQueryIds.size > 0 && !wholeQueryIds.has(id)) continue;
     const slug = vocab.slugById.get(id);
     if (!slug) continue;
-    // Phase 17C.4B: umbrella / trait domains normally stay profile-only.
-    // A verbatim problem name or alias is different: the user explicitly
-    // named the canonical concept (for example "שחיקה בעבודה"), so dropping
-    // it would turn a precise request into an unrelated fuzzy match or an
-    // unrecognized query. Weak/partial evidence remains excluded.
-    const hasExactCanonicalEvidence = list.some(
-      (entry) => entry.full && (entry.kind === "name" || entry.kind === "alias"),
-    );
-    if (PROFILE_ONLY_SLUGS.has(slug) && !hasExactCanonicalEvidence) continue;
     const raw = aggregateScore(list);
     // Coverage: fraction of query tokens spanned by this slug's evidences
     // (approximate — sum of matched-phrase tokens, capped at queryTokens).
@@ -824,8 +747,7 @@ async function classify(input: string, sb: SupabaseClient<Database>): Promise<Se
   }
 
   scored.sort((a, b) => b.raw - a.raw || b.confidence - a.confidence);
-  const suppressed = applyParentSuppression(scored);
-  return suppressed.slice(0, MAX_MATCHES).map((r) => ({ slug: r.slug, confidence: r.confidence }));
+  return scored.slice(0, MAX_MATCHES).map((r) => ({ slug: r.slug, confidence: r.confidence }));
 }
 
 /**
