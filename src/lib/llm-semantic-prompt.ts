@@ -1,5 +1,5 @@
 /**
- * Phase Q2 — deterministic, versioned prompt builder for FUTURE semantic
+ * Deterministic, versioned prompt builder for server-side semantic
  * classification of `semanticRemainder`. No model is invoked here.
  *
  * Any behavioral change to the prompt REQUIRES bumping
