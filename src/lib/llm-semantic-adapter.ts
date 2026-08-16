@@ -1,9 +1,9 @@
 /**
  * Phase Q2 — provider-independent LLM semantic adapter boundary.
  *
- * ⚠️  NOT IMPORTED BY PRODUCTION CODE and contains NO provider, credentials
- *     or network calls. Production Unified Search uses only the deterministic
- *     `SemanticEngine`.
+ * Contains NO provider, credentials or network calls. The production server
+ * semantic route may use these pure contracts, while provider access remains
+ * isolated behind the server-only orchestrator.
  *
  * Scope of this boundary (hard limits):
  *   - Input is ONLY the unresolved `semanticRemainder` plus the canonical
@@ -40,10 +40,7 @@ export interface LlmSemanticClassifier {
 }
 
 /** A local abstention — produced without invoking any provider. */
-export function localAbstention(
-  modelVersion = "local",
-  promptVersion = "local",
-): LlmSemanticResult {
+export function localAbstention(modelVersion = "local", promptVersion = "local"): LlmSemanticResult {
   return { matches: [], abstained: true, modelVersion, promptVersion };
 }
 
