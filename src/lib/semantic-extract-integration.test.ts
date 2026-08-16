@@ -25,11 +25,14 @@ function makeSb(rows: {
 
 const vocab = {
   problems: [
-    { id: "1", slug: "identity_crisis", name: "משבר זהות" },
-    { id: "2", slug: "emotional_overwhelm", name: "הצפה רגשית" },
-    { id: "3", slug: "depression", name: "דיכאון" },
+    { id: "1", slug: "self_identity", name: "דימוי עצמי, ערך עצמי וזהות" },
+    { id: "2", slug: "emotional_regulation", name: "ויסות רגשי, כעס והצפה" },
+    { id: "3", slug: "depression", name: "דיכאון ומצב רוח ירוד" },
   ],
-  aliases: [],
+  aliases: [
+    { problem_id: "1", alias: "משבר זהות" },
+    { problem_id: "2", alias: "הצפה רגשית" },
+  ],
   intents: [],
 };
 
@@ -39,24 +42,24 @@ async function slugs(text: string): Promise<string[]> {
 }
 
 describe("extractProfile — proximity + anchor-heavy guard", () => {
-  it("rejects משבר זהות when tokens co-occur far apart", async () => {
+  it("rejects משבר זהות when tokens only co-occur far apart", async () => {
     const text = "אני מלווה מטופלים בהתמודדות עם משברים שונים ובעבודה על תחושת זהות עצמית. אני מטפלת מזה שנים רבות.";
-    expect(await slugs(text)).not.toContain("identity_crisis");
+    expect(await slugs(text)).not.toContain("self_identity");
   });
 
   it("rejects הצפה רגשית when tokens are only incidentally near each other", async () => {
     const text = "אני מציעה עזרה במצוקה רגשית עמוקה והצפה של רגשות שקשה להכיל בכוחות עצמך.";
-    expect(await slugs(text)).not.toContain("emotional_overwhelm");
+    expect(await slugs(text)).not.toContain("emotional_regulation");
   });
 
-  it("accepts משבר זהות when the full phrase appears verbatim", async () => {
+  it("accepts self_identity when the approved phrase משבר זהות appears verbatim", async () => {
     const text = "אני מטפל במשבר זהות אצל מבוגרים ובני נוער בשנים האחרונות.";
-    expect(await slugs(text)).toContain("identity_crisis");
+    expect(await slugs(text)).toContain("self_identity");
   });
 
-  it("accepts הצפה רגשית when the full phrase appears verbatim", async () => {
+  it("accepts emotional_regulation when הצפה רגשית appears verbatim", async () => {
     const text = "אני מטפל בהצפה רגשית ובקשיים בוויסות רגשי אצל מבוגרים.";
-    expect(await slugs(text)).toContain("emotional_overwhelm");
+    expect(await slugs(text)).toContain("emotional_regulation");
   });
 
   it("still accepts an explicit single-token treatment domain (דיכאון)", async () => {
