@@ -65,8 +65,8 @@ describe("computeSemanticScore", () => {
 describe("computeSemanticScoreWithProfile", () => {
   it("matches historical inactive profile slugs to their active canonical domain", () => {
     const result = computeSemanticScoreWithProfile(
-      [{ slug: "burnout", weight: 0.8 }],
-      [{ slug: "performance_functioning", confidence: 1 }],
+      [{ slug: "depression", weight: 0.8 }],
+      [{ slug: "low_mood", confidence: 1 }],
     );
     expect(result).toEqual({ score: 0.8, overlapCount: 1 });
   });
