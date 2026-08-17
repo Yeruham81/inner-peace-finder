@@ -5,75 +5,80 @@
  * implementation throws.
  *
  * The real route module is rendered (via the exported `SearchResultsSwitch`
- * used by `SearchPage`); only the server-function modules are doubled.
+ * used by `SearchPage`); only the specific dependencies needed by this test
+ * are spied. No process-wide `mock.module()` overrides are used.
  */
 
-import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, spyOn } from "bun:test";
+
+import * as TherapistsFunctions from "@/lib/therapists.functions";
+import * as StructuredSearchFunctions from "@/lib/structured-search.functions";
+import * as QueryInterpreterFunctions from "@/lib/query-interpreter.functions";
+import * as TherapistCardModule from "@/components/therapist-card";
 
 const calls: string[] = [];
 
-mock.module("@/lib/therapists.functions", () => ({
-  listFilterOptions: () => {
-    calls.push("listFilterOptions");
-    return Promise.resolve({ cities: [], populations: [], languages: [] });
-  },
-  classifyAndSearch: () => {
-    calls.push("classifyAndSearch");
-    throw new Error("legacy classifyAndSearch must not run in production mode");
-  },
-}));
+const listFilterOptionsSpy = spyOn(TherapistsFunctions, "listFilterOptions").mockImplementation((() => {
+  calls.push("listFilterOptions");
+  return Promise.resolve({ cities: [], populations: [], languages: [] });
+}) as typeof TherapistsFunctions.listFilterOptions);
 
-mock.module("@/lib/structured-search.functions", () => ({
-  searchStructuredTherapists: () => {
+const classifyAndSearchSpy = spyOn(TherapistsFunctions, "classifyAndSearch").mockImplementation((() => {
+  calls.push("classifyAndSearch");
+  throw new Error("legacy classifyAndSearch must not run in production mode");
+}) as typeof TherapistsFunctions.classifyAndSearch);
+
+const searchStructuredTherapistsSpy = spyOn(StructuredSearchFunctions, "searchStructuredTherapists").mockImplementation(
+  (() => {
     calls.push("searchStructuredTherapists");
     throw new Error("structured search must not run in production mode");
-  },
-}));
+  }) as typeof StructuredSearchFunctions.searchStructuredTherapists,
+);
 
 // The card renders TanStack <Link>, which needs a RouterProvider. Rendering
-// is not the subject here — query orchestration is — so the card is stubbed
-// to a plain node while every query path stays real.
-mock.module("@/components/therapist-card", () => ({
-  TherapistCard: ({ t }: { t: { full_name: string } }) => <div>{t.full_name}</div>,
-}));
+// the real card is not the subject here, so replace only this export with a
+// restorable spy while keeping the rest of the module real.
+const therapistCardSpy = spyOn(TherapistCardModule, "TherapistCard").mockImplementation((({
+  t,
+}: {
+  t: { full_name: string };
+}) => <div>{t.full_name}</div>) as typeof TherapistCardModule.TherapistCard);
 
-mock.module("@/lib/query-interpreter.functions", () => ({
-  unifiedSearch: () => {
-    calls.push("unifiedSearch");
-    return Promise.resolve({
-      plan: null,
-      results: [
-        {
-          id: "t-haifa",
-          slug: "t-haifa",
-          full_name: "יעל כהן",
-          professional_title: "פסיכולוגית",
-          image_url: null,
-          verified: true,
-          years_experience: 10,
-          short_intro: null,
-          primary_clinic: null,
-          clinic_locations: [],
-          additional_clinic_count: 0,
-          online_available: false,
-          gender: null,
-          accessible_clinic: false,
-          home_visit_regions: [],
-          language_names: [],
-          population_names: [],
-          population_tags: [],
-          modality_names: [],
-          treatment_domains: [],
-          lgbtq_affirming: false,
-          offers_free_intro: false,
-          scores: { semantic: 0, preference: 0, quality: 5 },
-        },
-      ],
-      emptyReason: null,
-      primaryClinicFallbackCount: 0,
-    });
-  },
-}));
+const unifiedSearchSpy = spyOn(QueryInterpreterFunctions, "unifiedSearch").mockImplementation((() => {
+  calls.push("unifiedSearch");
+  return Promise.resolve({
+    plan: null,
+    results: [
+      {
+        id: "t-haifa",
+        slug: "t-haifa",
+        full_name: "יעל כהן",
+        professional_title: "פסיכולוגית",
+        image_url: null,
+        verified: true,
+        years_experience: 10,
+        short_intro: null,
+        primary_clinic: null,
+        clinic_locations: [],
+        additional_clinic_count: 0,
+        online_available: false,
+        gender: null,
+        accessible_clinic: false,
+        home_visit_regions: [],
+        language_names: [],
+        population_names: [],
+        population_tags: [],
+        modality_names: [],
+        treatment_domains: [],
+        lgbtq_affirming: false,
+        offers_free_intro: false,
+        scores: { semantic: 0, preference: 0, quality: 5 },
+      },
+    ],
+    emptyReason: null,
+    primaryClinicFallbackCount: 0,
+  });
+}) as typeof QueryInterpreterFunctions.unifiedSearch);
 
 const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
 const { renderToStaticMarkup } = await import("react-dom/server");
@@ -94,9 +99,11 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  // Bun module mocks are process-wide. Restore them so this isolation suite
-  // cannot replace query-interpreter exports used by later test files.
-  mock.restore();
+  unifiedSearchSpy.mockRestore();
+  therapistCardSpy.mockRestore();
+  searchStructuredTherapistsSpy.mockRestore();
+  classifyAndSearchSpy.mockRestore();
+  listFilterOptionsSpy.mockRestore();
 });
 
 async function renderUnified() {
@@ -139,7 +146,7 @@ describe("search flow isolation", () => {
 
   it("a throwing Legacy implementation cannot affect unified mode", async () => {
     // classifyAndSearch / searchStructuredTherapists throw synchronously
-    // (see the module doubles above); unified rendering still succeeds.
+    // (see the spies above); unified rendering still succeeds.
     const { html } = await renderUnified();
     expect(html).toContain("תוצאות עבור");
   });
