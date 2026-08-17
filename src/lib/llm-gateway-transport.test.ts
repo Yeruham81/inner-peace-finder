@@ -152,7 +152,7 @@ describe("OpenAI request formatting", () => {
     expect(headers.get("Content-Type")).toBe("application/json");
     expect(headers.has("Lovable-API-Key")).toBe(false);
 
-    const body = JSON.parse(String(seenInit?.body)) as Record<string, any>;
+    const body = JSON.parse(String(seenInit?.body)) as Record<string, unknown>;
 
     expect(body.model).toBe("fake-openai-model-v9");
     expect(body.store).toBe(false);
