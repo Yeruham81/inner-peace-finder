@@ -480,6 +480,7 @@ function JoinSection() {
         <div className="mt-8">
           <Link
             to={THERAPIST_SIGNUP_URL}
+            search={{ mode: "signup" as const }}
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-base font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             פתיחת פרופיל מטפל בחינם
