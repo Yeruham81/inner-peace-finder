@@ -486,6 +486,31 @@ function EditorPage() {
     onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
 
+  if (profile.isError || options.isError) {
+    return (
+      <div className="min-h-screen bg-brand-soft/50">
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+            <p className="text-sm font-medium text-destructive">
+              לא הצלחנו לטעון את עורך הפרופיל.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (profile.isError) void profile.refetch();
+                if (options.isError) void options.refetch();
+              }}
+              disabled={profile.isFetching || options.isFetching}
+              className="mt-2 text-sm font-medium text-primary underline disabled:opacity-60"
+            >
+              {profile.isFetching || options.isFetching ? "מנסה שוב…" : "ניסיון חוזר"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (profile.isLoading || options.isLoading || !initialized) {
     return (
       <div className="min-h-screen bg-brand-soft/50">
