@@ -109,6 +109,10 @@ export function unifiedResultsQuery(p: UnifiedParams) {
           limit: 20,
         },
       }),
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
