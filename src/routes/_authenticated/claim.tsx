@@ -153,7 +153,7 @@ function ClaimPage() {
                 key={c.id}
                 claim={c}
                 onCancel={() => cancelMut.mutate(c.id)}
-                cancelling={cancelMut.isPending}
+                cancelling={cancelMut.isPending && cancelMut.variables === c.id}
               />
             ))}
           </ul>
