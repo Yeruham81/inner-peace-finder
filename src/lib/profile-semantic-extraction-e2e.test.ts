@@ -136,7 +136,8 @@ describe("therapist semantic extraction — canonical 62-domain / 483-alias E2E"
     }
 
     expect(failures).toEqual([]);
-  });
+    // 483 aliases x full extraction is CPU-bound and exceeds Bun's 5s default.
+  }, 120_000);
 
   it("retains more than eight independently stated treatment domains", async () => {
     const selectedSlugs = [
