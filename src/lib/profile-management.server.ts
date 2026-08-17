@@ -12,21 +12,23 @@ async function withRetry<T>(label: string, work: () => Promise<T>, attempts = 3)
       if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
     }
   }
-  throw new Error(
-    `${label}: ${lastError instanceof Error ? lastError.message : "שגיאה לא ידועה"}`,
-  );
+  throw new Error(`${label}: ${lastError instanceof Error ? lastError.message : "שגיאה לא ידועה"}`);
 }
 
 async function removeStorageFolder(bucket: ProfileStorageBucket, folder: string) {
   const listed = await supabaseAdmin.storage.from(bucket).list(folder, { limit: 1000 });
-  if (listed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listed.error.message}`);
+  if (listed.error)
+    throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listed.error.message}`);
 
-  const paths = (listed.data ?? []).filter((file) => file.name).map((file) => `${folder}/${file.name}`);
+  const paths = (listed.data ?? [])
+    .filter((file) => file.name)
+    .map((file) => `${folder}/${file.name}`);
 
   if (!paths.length) return;
 
   const removed = await supabaseAdmin.storage.from(bucket).remove(paths);
-  if (removed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removed.error.message}`);
+  if (removed.error)
+    throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removed.error.message}`);
 }
 
 export async function setOwnedProfileVisibility(accountId: string, visible: boolean) {
@@ -37,9 +39,13 @@ export async function setOwnedProfileVisibility(accountId: string, visible: bool
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!profile) throw new Error("לא נמצא פרופיל לניהול.");
-  if (visible && profile.profile_status !== "published") throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
+  if (visible && profile.profile_status !== "published")
+    throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
   const visibility = visible ? ("visible" as const) : ("hidden" as const);
-  const updated = await supabaseAdmin.from("therapists").update({ visibility }).eq("id", profile.id);
+  const updated = await supabaseAdmin
+    .from("therapists")
+    .update({ visibility })
+    .eq("id", profile.id);
   if (updated.error) throw new Error(updated.error.message);
   return { visibility };
 }
@@ -63,7 +69,11 @@ export async function permanentlyDeleteOwnedProfile(authUserId: string) {
       _actor: authUserId,
     });
     if (error) throw new Error(error.message);
-    return (data ?? {}) as { therapist_id?: string | null; auth_user_id?: string | null; found?: boolean };
+    return (data ?? {}) as {
+      therapist_id?: string | null;
+      auth_user_id?: string | null;
+      found?: boolean;
+    };
   });
 
   const therapistId = begun.therapist_id ?? null;

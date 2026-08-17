@@ -97,10 +97,13 @@ export const PROFILE_ONLY_SLUGS: ReadonlySet<string> = new Set();
  * code-side blocklist. Safety/urgent-risk routing is handled before normal
  * semantic classification, not by hiding treatment aliases here.
  */
-export const BLOCKED_CLASSIFY_PHRASES: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({});
+export const BLOCKED_CLASSIFY_PHRASES: Readonly<Record<string, ReadonlySet<string>>> =
+  Object.freeze({});
 
 /** Compatibility helper retained while old callers are migrated. */
-export function buildParentOf(base: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+export function buildParentOf(
+  base: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
   return Object.freeze({ ...base });
 }
 

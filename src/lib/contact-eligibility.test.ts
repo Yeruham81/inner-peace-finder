@@ -88,7 +88,10 @@ describe("recordCtaClick", () => {
   });
 
   it("returns a generic unavailable result without a phone for ineligible or unknown ids", () => {
-    const unavailable = cta.slice(cta.indexOf("if (!therapist)"), cta.indexOf('rpc("record_cta_click"'));
+    const unavailable = cta.slice(
+      cta.indexOf("if (!therapist)"),
+      cta.indexOf('rpc("record_cta_click"'),
+    );
     expect(unavailable.includes('reason: "therapist_unavailable"')).toBe(true);
     expect(unavailable.includes("phone: null")).toBe(true);
     expect(unavailable.includes("billable: false")).toBe(true);
@@ -101,7 +104,9 @@ describe("recordCtaClick", () => {
 
   it("never reaches the billing RPC when the therapist is ineligible", () => {
     // the early return happens before the RPC statement
-    expect(cta.indexOf("return {\n        ok: false")).toBeLessThan(cta.indexOf('rpc("record_cta_click"'));
+    expect(cta.indexOf("return {\n        ok: false")).toBeLessThan(
+      cta.indexOf('rpc("record_cta_click"'),
+    );
   });
 });
 
@@ -117,7 +122,10 @@ describe("createLead", () => {
   });
 
   it("returns the generic Hebrew response for missing or ineligible therapists", () => {
-    const guard = src.slice(src.indexOf('if (reason === "rate_limit_exceeded")'), src.indexOf("dispatchLead("));
+    const guard = src.slice(
+      src.indexOf('if (reason === "rate_limit_exceeded")'),
+      src.indexOf("dispatchLead("),
+    );
     expect(guard.includes('reason: "therapist_unavailable" as const')).toBe(true);
     expect(guard.includes("לא ניתן לשלוח פנייה לפרופיל זה כרגע.")).toBe(true);
   });
@@ -142,7 +150,9 @@ describe("record_cta_click database function", () => {
     .sort()
     .reverse()
     .map((f) => readFileSync(join(dir, f), "utf8"))
-    .find((sql) => sql.includes("FUNCTION public.record_cta_click") && sql.includes("is_active = true"))!;
+    .find(
+      (sql) => sql.includes("FUNCTION public.record_cta_click") && sql.includes("is_active = true"),
+    )!;
 
   it("contains the canonical eligibility guard before inserting a CTA event", () => {
     expect(file).toBeTruthy();
@@ -154,9 +164,15 @@ describe("record_cta_click database function", () => {
   });
 
   it("revokes execution from anon and authenticated and grants it to service_role only", () => {
-    expect(/REVOKE ALL ON FUNCTION public\.record_cta_click[^;]*FROM PUBLIC;/.test(file)).toBe(true);
-    expect(/REVOKE ALL ON FUNCTION public\.record_cta_click[^;]*FROM anon, authenticated;/.test(file)).toBe(true);
-    expect(/GRANT EXECUTE ON FUNCTION public\.record_cta_click[^;]*TO service_role;/.test(file)).toBe(true);
+    expect(/REVOKE ALL ON FUNCTION public\.record_cta_click[^;]*FROM PUBLIC;/.test(file)).toBe(
+      true,
+    );
+    expect(
+      /REVOKE ALL ON FUNCTION public\.record_cta_click[^;]*FROM anon, authenticated;/.test(file),
+    ).toBe(true);
+    expect(
+      /GRANT EXECUTE ON FUNCTION public\.record_cta_click[^;]*TO service_role;/.test(file),
+    ).toBe(true);
     expect(/GRANT EXECUTE[^;]*record_cta_click[^;]*TO anon/.test(file)).toBe(false);
   });
 
@@ -166,6 +182,8 @@ describe("record_cta_click database function", () => {
     expect(file.includes("SET search_path = ''")).toBe(true);
     expect(file.includes("SET search_path = 'public'")).toBe(false);
     expect(file.includes("ON CONFLICT (session_id, therapist_id, cta_id) DO NOTHING")).toBe(true);
-    expect(file.includes("RETURNS TABLE(billable boolean, already_exists boolean, click_id uuid)")).toBe(true);
+    expect(
+      file.includes("RETURNS TABLE(billable boolean, already_exists boolean, click_id uuid)"),
+    ).toBe(true);
   });
 });

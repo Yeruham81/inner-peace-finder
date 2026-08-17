@@ -133,7 +133,11 @@ export async function runLlmSemanticEvaluation(
         expected: [...c.expected],
         slugs,
         confidence: result.matches[0]?.confidence,
-        outcome: result.abstained ? "abstained" : slugs.length === 0 ? "classified_empty" : "classified",
+        outcome: result.abstained
+          ? "abstained"
+          : slugs.length === 0
+            ? "classified_empty"
+            : "classified",
         latencyMs: now() - startedAt,
         modelVersion: result.modelVersion,
         promptVersion: result.promptVersion,

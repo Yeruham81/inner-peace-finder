@@ -24,7 +24,11 @@ import {
   type CanonicalProblemEntry,
 } from "./llm-semantic-contract";
 import { LLM_SEMANTIC_PROMPT_VERSION } from "./llm-semantic-prompt";
-import { createScriptedTransport, fakeProviderConfig, type ScriptedStep } from "./test-support/fake-llm-transport";
+import {
+  createScriptedTransport,
+  fakeProviderConfig,
+  type ScriptedStep,
+} from "./test-support/fake-llm-transport";
 
 const CATALOG: CanonicalProblemEntry[] = [
   { slug: "anxiety", name: "חרדה", aliases: ["פחדים"] },
@@ -59,7 +63,10 @@ function harness(
   const transport = createScriptedTransport(steps);
   const logs: LlmClassifyLog[] = [];
   const state = { catalogReads: 0 };
-  const loader = typeof options.catalog === "function" ? options.catalog : async () => options.catalog ?? CATALOG;
+  const loader =
+    typeof options.catalog === "function"
+      ? options.catalog
+      : async () => options.catalog ?? CATALOG;
   const h: Harness = {
     transport,
     logs,
@@ -110,7 +117,10 @@ describe("public request contract", () => {
 
   it("rejects a malformed JSON body at the HTTP boundary", async () => {
     const h = harness();
-    const res = await handleClassifyRequest({ method: "POST", text: async () => "{not json" }, h.deps);
+    const res = await handleClassifyRequest(
+      { method: "POST", text: async () => "{not json" },
+      h.deps,
+    );
     expect(res).toEqual({ status: 400, body: { error: { code: "invalid_request" } } });
     expect(h.transport.callCount).toBe(0);
   });
@@ -127,7 +137,9 @@ describe("public request contract", () => {
   });
 
   it("rejects a non-string remainder", async () => {
-    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: 5 }, harness().deps))).toBe("invalid_request");
+    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: 5 }, harness().deps))).toBe(
+      "invalid_request",
+    );
   });
 
   it("rejects a non-object body", async () => {
@@ -154,7 +166,12 @@ describe("public request contract", () => {
   it("rejects an oversized remainder before any provider call", async () => {
     const h = harness();
     expect(
-      await codeOf(classifySemanticRemainder({ semanticRemainder: "א".repeat(LLM_MAX_REMAINDER_LENGTH + 1) }, h.deps)),
+      await codeOf(
+        classifySemanticRemainder(
+          { semanticRemainder: "א".repeat(LLM_MAX_REMAINDER_LENGTH + 1) },
+          h.deps,
+        ),
+      ),
     ).toBe("input_too_large");
     expect(h.transport.callCount).toBe(0);
     expect(h.catalogReads).toBe(0);
@@ -174,9 +191,9 @@ describe("public request contract", () => {
   for (const [label, extra] of rejectedFields) {
     it(`rejects caller-supplied ${label}`, async () => {
       const h = harness();
-      expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה", ...extra }, h.deps))).toBe(
-        "invalid_request",
-      );
+      expect(
+        await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה", ...extra }, h.deps)),
+      ).toBe("invalid_request");
       expect(h.transport.callCount).toBe(0);
     });
   }
@@ -196,19 +213,30 @@ describe("server-owned canonical catalog", () => {
 
   it("a caller cannot add a valid slug", async () => {
     const h = harness([
-      { kind: "raw", content: JSON.stringify({ matches: [{ slug: "made_up", confidence: 0.9 }], abstained: false }) },
+      {
+        kind: "raw",
+        content: JSON.stringify({
+          matches: [{ slug: "made_up", confidence: 0.9 }],
+          abstained: false,
+        }),
+      },
     ]);
     // Even the request that tried to supply the slug is rejected outright.
     expect(
       await codeOf(
         classifySemanticRemainder(
-          { semanticRemainder: "חרדה", allowedProblems: [{ slug: "made_up", name: "m", aliases: [] }] },
+          {
+            semanticRemainder: "חרדה",
+            allowedProblems: [{ slug: "made_up", name: "m", aliases: [] }],
+          },
           h.deps,
         ),
       ),
     ).toBe("invalid_request");
     // And the server catalog still rejects the slug on the accepted path.
-    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe("unknown_slug");
+    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(
+      "unknown_slug",
+    );
   });
 
   it("a caller cannot remove a valid slug", async () => {
@@ -225,7 +253,10 @@ describe("server-owned canonical catalog", () => {
           harness([
             {
               kind: "raw",
-              content: JSON.stringify({ matches: [{ slug: "trauma", confidence: 0.5 }], abstained: false }),
+              content: JSON.stringify({
+                matches: [{ slug: "trauma", confidence: 0.5 }],
+                abstained: false,
+              }),
             },
           ]).deps,
         )
@@ -238,7 +269,10 @@ describe("server-owned canonical catalog", () => {
           harness([
             {
               kind: "raw",
-              content: JSON.stringify({ matches: [{ slug: "nope", confidence: 0.5 }], abstained: false }),
+              content: JSON.stringify({
+                matches: [{ slug: "nope", confidence: 0.5 }],
+                abstained: false,
+              }),
             },
           ]).deps,
         ),
@@ -253,7 +287,13 @@ describe("server-owned canonical catalog", () => {
           classifySemanticRemainder(
             { semanticRemainder: "משהו" },
             harness([
-              { kind: "raw", content: JSON.stringify({ matches: [{ slug: bad, confidence: 0.6 }], abstained: false }) },
+              {
+                kind: "raw",
+                content: JSON.stringify({
+                  matches: [{ slug: bad, confidence: 0.6 }],
+                  abstained: false,
+                }),
+              },
             ]).deps,
           ),
         ),
@@ -267,13 +307,17 @@ describe("server-owned canonical catalog", () => {
         throw new Error("PostgrestError: relation problems does not exist");
       },
     });
-    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe("catalog_error");
+    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(
+      "catalog_error",
+    );
     expect(h.transport.callCount).toBe(0);
   });
 
   it("does not treat an empty catalog as valid data", async () => {
     const h = harness([{ kind: "raw", content: VALID }], { catalog: [] });
-    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe("catalog_error");
+    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(
+      "catalog_error",
+    );
   });
 
   it("catalog ordering and duplicate rows do not weaken validation", async () => {
@@ -293,7 +337,10 @@ describe("server-owned canonical catalog", () => {
               [
                 {
                   kind: "raw",
-                  content: JSON.stringify({ matches: [{ slug: "nope", confidence: 0.5 }], abstained: false }),
+                  content: JSON.stringify({
+                    matches: [{ slug: "nope", confidence: 0.5 }],
+                    abstained: false,
+                  }),
                 },
               ],
               { catalog },
@@ -329,7 +376,9 @@ describe("server-owned provenance", () => {
         }),
       },
     ]);
-    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe("invalid_schema");
+    expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(
+      "invalid_schema",
+    );
   });
 
   it("no successful result contains 'unknown' or empty provenance", async () => {
@@ -400,7 +449,9 @@ describe("provider behavior", () => {
   for (const [label, content, expected] of deterministicFailures) {
     it(`rejects ${label} without retrying`, async () => {
       const h = harness([{ kind: "raw", content }]);
-      expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "משהו" }, h.deps))).toBe(expected);
+      expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "משהו" }, h.deps))).toBe(
+        expected,
+      );
       expect(h.transport.callCount).toBe(1);
     });
   }
@@ -452,7 +503,9 @@ describe("provider behavior", () => {
 
     it(`preserves the ${label} category after the retry also fails, with exactly 2 attempts`, async () => {
       const h = harness([{ kind: "throw", error: make() }]);
-      expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(expected);
+      expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(
+        expected,
+      );
       expect(h.transport.callCount).toBe(2);
     });
   }
@@ -464,7 +517,9 @@ describe("provider behavior", () => {
   });
 
   it("does not retry a provider client error", async () => {
-    const h = harness([{ kind: "throw", error: new LlmSemanticError("provider_client_error", "401") }]);
+    const h = harness([
+      { kind: "throw", error: new LlmSemanticError("provider_client_error", "401") },
+    ]);
     expect(await codeOf(classifySemanticRemainder({ semanticRemainder: "חרדה" }, h.deps))).toBe(
       "provider_client_error",
     );
@@ -472,7 +527,12 @@ describe("provider behavior", () => {
   });
 
   it("classifies exactly which categories are retryable", () => {
-    for (const c of ["provider_error", "provider_timeout", "provider_rate_limited", "provider_server_error"] as const) {
+    for (const c of [
+      "provider_error",
+      "provider_timeout",
+      "provider_rate_limited",
+      "provider_server_error",
+    ] as const) {
       expect(isRetryableCode(c)).toBe(true);
     }
     for (const c of [
@@ -542,7 +602,12 @@ describe("HTTP mapping", () => {
       h.deps,
     );
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body).sort()).toEqual(["abstained", "matches", "modelVersion", "promptVersion"]);
+    expect(Object.keys(res.body).sort()).toEqual([
+      "abstained",
+      "matches",
+      "modelVersion",
+      "promptVersion",
+    ]);
   });
 
   it("returns only a stable error category on failure", async () => {
@@ -636,7 +701,14 @@ describe("response and log safety", () => {
     await classifySemanticRemainder({ semanticRemainder: QUERY }, h.deps);
     const sent = JSON.stringify(h.transport.lastRequest);
     expect(sent).toContain("REMAINDER");
-    for (const forbidden of ["therapist_id", "full_name", "userId", "cityNames", "access_token", "email"]) {
+    for (const forbidden of [
+      "therapist_id",
+      "full_name",
+      "userId",
+      "cityNames",
+      "access_token",
+      "email",
+    ]) {
       expect(sent.includes(forbidden)).toBe(false);
     }
   });

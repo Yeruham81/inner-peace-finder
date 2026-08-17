@@ -69,7 +69,11 @@ export const LIVE_ACTIVE_CATALOG: FeedbackCatalog = {
     { id: "57", slug: "substance_use", name_he: "שימוש בחומרים והתמכרויות לחומרים" },
     { id: "58", slug: "behavioral_addiction", name_he: "התמכרויות התנהגותיות" },
     { id: "59", slug: "somatic", name_he: "תסמינים פסיכוסומטיים וקשר גוף־נפש" },
-    { id: "60", slug: "chronic_illness_adjustment", name_he: "התמודדות עם מחלה כרונית או מצב רפואי" },
+    {
+      id: "60",
+      slug: "chronic_illness_adjustment",
+      name_he: "התמודדות עם מחלה כרונית או מצב רפואי",
+    },
     { id: "61", slug: "medical_rehabilitation", name_he: "שיקום לאחר מחלה, אשפוז או ניתוח" },
     { id: "62", slug: "disability_adjustment", name_he: "הסתגלות למוגבלות ולשינוי תפקודי" },
   ],

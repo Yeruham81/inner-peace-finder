@@ -22,7 +22,7 @@ describe("therapist account and claim read failures", () => {
     expect(claimsSource).toContain("error: readErr");
     expect(claimsSource).toContain("if (readErr) throw new Error(readErr.message)");
     expect(claimsSource).toContain("if (accountErr) throw new Error(accountErr.message)");
-    expect(claimsSource).toContain('const { data, error } = await sb');
+    expect(claimsSource).toContain("const { data, error } = await sb");
     expect(claimsSource).toContain("if (error) throw new Error(error.message)");
   });
 

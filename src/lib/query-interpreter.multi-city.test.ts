@@ -31,9 +31,7 @@ function makeCatalog(cities: typeof BASE_CITIES): Catalog {
         feminineVariants: ["פסיכולוגית"],
       },
     ],
-    modalities: [
-      { id: "m1", slug: "cbt", name_he: "CBT", nameVariants: ["cbt", "CBT"] },
-    ],
+    modalities: [{ id: "m1", slug: "cbt", name_he: "CBT", nameVariants: ["cbt", "CBT"] }],
     populations: [],
     languages: [],
     cities,

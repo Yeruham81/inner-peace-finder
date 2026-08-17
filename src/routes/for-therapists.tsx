@@ -137,26 +137,28 @@ function VisionSection() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-            אנשים שחווים מצוקה, קושי רגשי, משבר, בעיה משפחתית או מצב שמפריע לחיי היום־יום פונים לחפש עזרה דווקא כשהם
-            מבולבלים, מוצפים ולא תמיד יודעים להסביר מה עובר עליהם.
+            אנשים שחווים מצוקה, קושי רגשי, משבר, בעיה משפחתית או מצב שמפריע לחיי היום־יום פונים לחפש
+            עזרה דווקא כשהם מבולבלים, מוצפים ולא תמיד יודעים להסביר מה עובר עליהם.
           </p>
 
           <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground">
-            למרות זאת, לא מעט אתרי חיפוש מצפים מהם לדעת מראש איזה איש מקצוע הם צריכים, לזהות בעצמם את הבעיה ולמיין
-            מטפלים לפי מקצועות ושיטות טיפול שהם כלל אינם מכירים.
+            למרות זאת, לא מעט אתרי חיפוש מצפים מהם לדעת מראש איזה איש מקצוע הם צריכים, לזהות בעצמם
+            את הבעיה ולמיין מטפלים לפי מקצועות ושיטות טיפול שהם כלל אינם מכירים.
           </p>
 
           <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground">
-            חלקם מגיעים בעקבות זאת לאנשי מקצוע שאינם מתאימים לצורך שלהם. אחרים מתייאשים באמצע הדרך ואינם פונים לקבלת
-            עזרה כלל.
+            חלקם מגיעים בעקבות זאת לאנשי מקצוע שאינם מתאימים לצורך שלהם. אחרים מתייאשים באמצע הדרך
+            ואינם פונים לקבלת עזרה כלל.
           </p>
 
           <div className="mt-7 rounded-2xl border-r-4 border-primary bg-background p-5 shadow-sm">
-            <p className="text-base font-semibold leading-8 text-foreground">טיפולינקס נכנסת בדיוק בנקודה הזאת.</p>
+            <p className="text-base font-semibold leading-8 text-foreground">
+              טיפולינקס נכנסת בדיוק בנקודה הזאת.
+            </p>
 
             <p className="mt-2 text-base leading-8 text-muted-foreground">
-              היא מסייעת לאנשים למצוא את המטפלים המתאימים להם ביותר, גם בלי לאבחן את עצמם, לבחור מראש מקצוע טיפולי או
-              להתמצא במונחים מקצועיים.
+              היא מסייעת לאנשים למצוא את המטפלים המתאימים להם ביותר, גם בלי לאבחן את עצמם, לבחור
+              מראש מקצוע טיפולי או להתמצא במונחים מקצועיים.
             </p>
           </div>
         </div>
@@ -170,13 +172,18 @@ function VisionSection() {
             <div>
               <p className="text-sm font-medium text-primary">הבעיה בתהליך הקיים</p>
 
-              <h2 className="mt-1 text-xl font-bold text-foreground">מצפים מהאדם לדעת את התשובה מראש</h2>
+              <h2 className="mt-1 text-xl font-bold text-foreground">
+                מצפים מהאדם לדעת את התשובה מראש
+              </h2>
             </div>
           </div>
 
           <div className="mt-6 space-y-3">
             {commonSearchProblems.map((problem) => (
-              <div key={problem} className="flex items-start gap-3 rounded-2xl border border-border bg-muted/40 p-4">
+              <div
+                key={problem}
+                className="flex items-start gap-3 rounded-2xl border border-border bg-muted/40 p-4"
+              >
                 <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                 </div>
@@ -211,8 +218,8 @@ function HowItWorksSection() {
           </h2>
 
           <p className="mt-5 text-base leading-8 text-muted-foreground">
-            טיפולינקס משלבת מנוע חיפוש מתקדם עם בינה מלאכותית, שמסוגל להבין את המשמעות של מה שאנשים כותבים ולא להסתפק
-            בחיפוש מילים או סינון טכני של רשימות.
+            טיפולינקס משלבת מנוע חיפוש מתקדם עם בינה מלאכותית, שמסוגל להבין את המשמעות של מה שאנשים
+            כותבים ולא להסתפק בחיפוש מילים או סינון טכני של רשימות.
           </p>
         </div>
 
@@ -234,8 +241,8 @@ function HowItWorksSection() {
               <h3 className="text-xl font-bold text-foreground">ההתאמה אינה מבוססת על גורם אחד</h3>
 
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                המערכת מזהה את תחומי הטיפול הרלוונטיים מתוך הפרופיל המקצועי ומשלבת אותם עם העדפות וצרכים נוספים שהמשתמש
-                הגדיר.
+                המערכת מזהה את תחומי הטיפול הרלוונטיים מתוך הפרופיל המקצועי ומשלבת אותם עם העדפות
+                וצרכים נוספים שהמשתמש הגדיר.
               </p>
             </div>
 
@@ -250,7 +257,9 @@ function HowItWorksSection() {
                   >
                     <Icon className="h-5 w-5 text-primary" />
 
-                    <span className="mt-3 text-sm font-medium text-foreground">{parameter.label}</span>
+                    <span className="mt-3 text-sm font-medium text-foreground">
+                      {parameter.label}
+                    </span>
                   </div>
                 );
               })}
@@ -259,8 +268,8 @@ function HowItWorksSection() {
         </div>
 
         <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-6 text-muted-foreground">
-          מנוע החיפוש של טיפולינקס לא מאבחן ולא מתיימר להחליף ייעוץ מקצועי. הוא מסייע למקד את החיפוש על בסיס המידע שנמסר
-          והפרטים בפרופילי המטפלים.
+          מנוע החיפוש של טיפולינקס לא מאבחן ולא מתיימר להחליף ייעוץ מקצועי. הוא מסייע למקד את החיפוש
+          על בסיס המידע שנמסר והפרטים בפרופילי המטפלים.
         </p>
       </div>
     </section>
@@ -282,8 +291,8 @@ function SearchUserCard() {
         <MessageCircleMore className="h-5 w-5 text-primary" />
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          "הבן שלי בן 9 התחיל לסרב ללכת לבית הספר, מתלונן על כאבי בטן בכל בוקר ונמנע ממפגשים עם ילדים. אנחנו לא יודעים
-          אם מדובר בחרדה או בקושי חברתי ואיזה איש מקצוע יכול לעזור לו.”
+          "הבן שלי בן 9 התחיל לסרב ללכת לבית הספר, מתלונן על כאבי בטן בכל בוקר ונמנע ממפגשים עם
+          ילדים. אנחנו לא יודעים אם מדובר בחרדה או בקושי חברתי ואיזה איש מקצוע יכול לעזור לו.”
         </p>
       </div>
     </article>
@@ -302,8 +311,8 @@ function TipulinksEngineCard() {
       <h3 className="mt-1 text-xl font-bold text-foreground">מבין את משמעות החיפוש</h3>
 
       <p className="mt-4 text-sm leading-7 text-muted-foreground">
-        הבינה המלאכותית מזהה מתוך התיאור את הצרכים, הקשיים והמאפיינים הרלוונטיים ומתרגמת אותם לחיפוש מקצועי במאגר
-        המטפלים.
+        הבינה המלאכותית מזהה מתוך התיאור את הצרכים, הקשיים והמאפיינים הרלוונטיים ומתרגמת אותם לחיפוש
+        מקצועי במאגר המטפלים.
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">
@@ -332,7 +341,8 @@ function MatchedTherapistCard() {
       <h3 className="mt-1 text-xl font-bold text-foreground">מוצגים לפי רמת ההתאמה</h3>
 
       <p className="mt-4 text-sm leading-7 text-muted-foreground">
-        טיפולינקס בוחנת אילו פרופילים כוללים את תחומי העיסוק, ההכשרה, שיטות הטיפול והמאפיינים המתאימים לחיפוש.
+        טיפולינקס בוחנת אילו פרופילים כוללים את תחומי העיסוק, ההכשרה, שיטות הטיפול והמאפיינים
+        המתאימים לחיפוש.
       </p>
 
       <div className="mt-5 rounded-2xl border border-border bg-background p-4">
@@ -370,8 +380,8 @@ function TherapistBenefitsSection() {
           </h2>
 
           <p className="mt-5 text-base leading-8 text-muted-foreground">
-            המטרה היא לא רק להציג את שמכם ברשימה, אלא להפנות אליכם אנשים שהצרכים שלהם תואמים בסבירות גבוהה את השירותים
-            שאתם מציעים.
+            המטרה היא לא רק להציג את שמכם ברשימה, אלא להפנות אליכם אנשים שהצרכים שלהם תואמים בסבירות
+            גבוהה את השירותים שאתם מציעים.
           </p>
         </div>
 
@@ -380,14 +390,19 @@ function TherapistBenefitsSection() {
             const Icon = advantage.icon;
 
             return (
-              <article key={advantage.title} className="rounded-3xl border border-border bg-background p-6 shadow-sm">
+              <article
+                key={advantage.title}
+                className="rounded-3xl border border-border bg-background p-6 shadow-sm"
+              >
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft/50 text-primary">
                   <Icon className="h-6 w-6" />
                 </div>
 
                 <h3 className="mt-5 text-lg font-bold text-foreground">{advantage.title}</h3>
 
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{advantage.description}</p>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  {advantage.description}
+                </p>
               </article>
             );
           })}
@@ -402,13 +417,13 @@ function TherapistBenefitsSection() {
             </h3>
 
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              ככל שהפרופיל מקצועי, מפורט ומדויק יותר, כך המערכת יכולה להבין טוב יותר למי נכון להציג אותו ולהגדיל את
-              הסיכוי לקבלת פניות רלוונטיות.
+              ככל שהפרופיל מקצועי, מפורט ומדויק יותר, כך המערכת יכולה להבין טוב יותר למי נכון להציג
+              אותו ולהגדיל את הסיכוי לקבלת פניות רלוונטיות.
             </p>
 
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              פנייה ממוקדת אינה מבטיחה התחלת טיפול, אך היא מגיעה לאחר שנבדקה התאמה בין הצורך שתואר לבין המידע המקצועי
-              בפרופיל.
+              פנייה ממוקדת אינה מבטיחה התחלת טיפול, אך היא מגיעה לאחר שנבדקה התאמה בין הצורך שתואר
+              לבין המידע המקצועי בפרופיל.
             </p>
           </div>
 
@@ -426,11 +441,13 @@ function TherapistBenefitsSection() {
         </div>
 
         <div className="mt-8 rounded-2xl border-r-4 border-primary bg-brand-soft/50 p-5">
-          <p className="text-base font-semibold leading-7 text-foreground">אתם לא משלמים עבור עצם ההופעה במאגר.</p>
+          <p className="text-base font-semibold leading-7 text-foreground">
+            אתם לא משלמים עבור עצם ההופעה במאגר.
+          </p>
 
           <p className="mt-1 text-sm leading-7 text-muted-foreground">
-            התשלום קשור לפניות שהתקבלו בפועל דרך הפלטפורמה, במקום לדמי מנוי קבועים שמשולמים גם בחודשים שבהם לא התקבלו
-            פניות.
+            התשלום קשור לפניות שהתקבלו בפועל דרך הפלטפורמה, במקום לדמי מנוי קבועים שמשולמים גם
+            בחודשים שבהם לא התקבלו פניות.
           </p>
         </div>
       </div>
@@ -451,13 +468,13 @@ function JoinSection() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-muted-foreground">
-          טיפולינקס היא פלטפורמה מתקדמת מבוססת בינה מלאכותית, שמקלה על אנשים למצוא את המטפל המתאים ומסייעת למטפלים לקבל
-          פניות חדשות, ממוקדות ורלוונטיות יותר.
+          טיפולינקס היא פלטפורמה מתקדמת מבוססת בינה מלאכותית, שמקלה על אנשים למצוא את המטפל המתאים
+          ומסייעת למטפלים לקבל פניות חדשות, ממוקדות ורלוונטיות יותר.
         </p>
 
         <p className="mx-auto mt-3 max-w-3xl text-base leading-8 text-muted-foreground">
-          פתחו פרופיל מקצועי בחינם, ללא דמי מנוי וללא התחייבות מראש, והחליפו הוצאה חודשית קבועה בתשלום המבוסס על פניות
-          שמתקבלות בפועל.
+          פתחו פרופיל מקצועי בחינם, ללא דמי מנוי וללא התחייבות מראש, והחליפו הוצאה חודשית קבועה
+          בתשלום המבוסס על פניות שמתקבלות בפועל.
         </p>
 
         <div className="mt-8">

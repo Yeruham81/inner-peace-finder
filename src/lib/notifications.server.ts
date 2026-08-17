@@ -148,9 +148,7 @@ function buildTemplate(
   event: EventType,
   ctx: { therapistName: string | null; requestType: string; verificationMethod: string },
 ): { subject: string; html: string } {
-  const rtLabel = ctx.requestType === "remove_profile"
-    ? "בקשה להסרת הפרופיל"
-    : "שיוך פרופיל מטפל";
+  const rtLabel = ctx.requestType === "remove_profile" ? "בקשה להסרת הפרופיל" : "שיוך פרופיל מטפל";
   const vmLabel: Record<string, string> = {
     license_number: "מספר רישיון מקצועי",
     professional_email: "כתובת מייל מקצועית",
@@ -170,22 +168,30 @@ function buildTemplate(
 
   switch (event) {
     case "request_submitted":
-      return wrap(`הבקשה שלכם התקבלה — ${rtLabel}`,
+      return wrap(
+        `הבקשה שלכם התקבלה — ${rtLabel}`,
         `<p>קיבלנו את בקשתכם עבור${who}.</p>
          <p><strong>סוג בקשה:</strong> ${rtLabel}<br/>
             <strong>שיטת אימות:</strong> ${vmLabel[ctx.verificationMethod] ?? ctx.verificationMethod}</p>
-         <p>צוות האתר יבדוק את הפרטים. תהליך האימות עשוי להימשך עד 24 שעות.</p>`);
+         <p>צוות האתר יבדוק את הפרטים. תהליך האימות עשוי להימשך עד 24 שעות.</p>`,
+      );
     case "request_approved":
-      return wrap(`הבקשה אושרה — ${rtLabel}`,
+      return wrap(
+        `הבקשה אושרה — ${rtLabel}`,
         `<p>הבקשה עבור${who} אושרה.</p>
-         <p>ניתן להתחבר לחשבון ולראות את המצב המעודכן.</p>`);
+         <p>ניתן להתחבר לחשבון ולראות את המצב המעודכן.</p>`,
+      );
     case "request_rejected":
-      return wrap(`הבקשה נדחתה — ${rtLabel}`,
+      return wrap(
+        `הבקשה נדחתה — ${rtLabel}`,
         `<p>לצערנו הבקשה עבור${who} נדחתה.</p>
-         <p>לפרטים נוספים ניתן לפנות אלינו בתשובה למייל זה.</p>`);
+         <p>לפרטים נוספים ניתן לפנות אלינו בתשובה למייל זה.</p>`,
+      );
     case "request_needs_information":
-      return wrap(`נדרש מידע נוסף — ${rtLabel}`,
+      return wrap(
+        `נדרש מידע נוסף — ${rtLabel}`,
         `<p>כדי להמשיך בבדיקת הבקשה עבור${who} אנו זקוקים למידע נוסף.</p>
-         <p>אנא היכנסו לחשבון ובדקו את פרטי הבקשה, או השיבו למייל זה.</p>`);
+         <p>אנא היכנסו לחשבון ובדקו את פרטי הבקשה, או השיבו למייל זה.</p>`,
+      );
   }
 }

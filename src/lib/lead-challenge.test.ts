@@ -68,7 +68,9 @@ describe("challenge generation (server-only)", () => {
 
 describe("server-derived identity", () => {
   it("derives the IP hash from proxy headers, never from client input", () => {
-    const id = deriveRequestIdentity(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1", cookie: "mt_sid=abc" }));
+    const id = deriveRequestIdentity(
+      new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1", cookie: "mt_sid=abc" }),
+    );
     expect(id.ip).toBe("203.0.113.7");
     expect(id.ipHash).toBe(hashValue("203.0.113.7"));
     expect(id.sessionHash).toBe(hashValue("abc"));
@@ -147,7 +149,12 @@ describe("createLead client contract", () => {
 
   it("returns early on every rejection reason, before any dispatch", () => {
     const head = src.slice(0, src.indexOf("dispatchLead"));
-    for (const reason of ["rate_limit_exceeded", "challenge_expired", "challenge_failed", "therapist_unavailable"]) {
+    for (const reason of [
+      "rate_limit_exceeded",
+      "challenge_expired",
+      "challenge_failed",
+      "therapist_unavailable",
+    ]) {
       expect(head).toContain(`reason: "${reason}" as const`);
     }
   });
@@ -261,10 +268,18 @@ describe("migration: private tables", () => {
   });
 
   it("enables RLS with no anon/authenticated policies and revokes access", () => {
-    expect(challengeMigration).toContain("ALTER TABLE public.lead_challenges ENABLE ROW LEVEL SECURITY");
-    expect(challengeMigration).toContain("ALTER TABLE public.lead_submission_attempts ENABLE ROW LEVEL SECURITY");
-    expect(challengeMigration).toContain("REVOKE ALL ON public.lead_challenges FROM anon, authenticated");
-    expect(challengeMigration).toContain("REVOKE ALL ON public.lead_submission_attempts FROM anon, authenticated");
+    expect(challengeMigration).toContain(
+      "ALTER TABLE public.lead_challenges ENABLE ROW LEVEL SECURITY",
+    );
+    expect(challengeMigration).toContain(
+      "ALTER TABLE public.lead_submission_attempts ENABLE ROW LEVEL SECURITY",
+    );
+    expect(challengeMigration).toContain(
+      "REVOKE ALL ON public.lead_challenges FROM anon, authenticated",
+    );
+    expect(challengeMigration).toContain(
+      "REVOKE ALL ON public.lead_submission_attempts FROM anon, authenticated",
+    );
     expect(challengeMigration).toContain("GRANT ALL ON public.lead_challenges TO service_role");
     expect(challengeMigration).not.toMatch(/CREATE POLICY[^;]*lead_challenges/);
     expect(challengeMigration).not.toMatch(/CREATE POLICY[^;]*lead_submission_attempts/);
@@ -300,11 +315,14 @@ describe("migration: atomic submit_lead transaction", () => {
 
   it("leaves no privileged function on search_path = 'public'", () => {
     expect(submitLeadMigration).not.toMatch(/SET search_path = 'public'/);
-    expect(submitLeadMigration).toContain("DROP FUNCTION IF EXISTS public.authorize_lead_submission");
+    expect(submitLeadMigration).toContain(
+      "DROP FUNCTION IF EXISTS public.authorize_lead_submission",
+    );
   });
 
   it("is executable only by service_role", () => {
-    const sig = "public.submit_lead(uuid, integer, text, text, text, uuid, text, uuid, uuid, text, text, text, text)";
+    const sig =
+      "public.submit_lead(uuid, integer, text, text, text, uuid, text, uuid, uuid, text, text, text, text)";
     expect(submitLeadMigration).toContain(`REVOKE ALL ON FUNCTION ${sig} FROM PUBLIC`);
     expect(submitLeadMigration).toContain(`REVOKE ALL ON FUNCTION ${sig} FROM anon, authenticated`);
     expect(submitLeadMigration).toContain(`GRANT EXECUTE ON FUNCTION ${sig} TO service_role`);
@@ -321,7 +339,9 @@ describe("migration: atomic submit_lead transaction", () => {
   it("locks both the IP and the session identity and the challenge row", () => {
     expect(submitLeadMigration).toContain("'lead_submit_ip:' || _ip_hash");
     expect(submitLeadMigration).toContain("'lead_submit_session:' || _session_hash");
-    expect(submitLeadMigration).toMatch(/SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/);
+    expect(submitLeadMigration).toMatch(
+      /SELECT \* INTO challenge FROM public\.lead_challenges c[\s\S]*?FOR UPDATE/,
+    );
   });
 
   it("re-checks canonical public eligibility before creating any CTA or lead", () => {
@@ -383,6 +403,8 @@ describe("migration: atomic submit_lead transaction", () => {
     expect(submitLeadMigration).toContain("ALTER COLUMN years_experience DROP DEFAULT");
     expect(submitLeadMigration).toContain("v_years_raw !~ '^[0-9]{1,3}$'");
     expect(submitLeadMigration).toContain("years_experience = v_years");
-    expect(submitLeadMigration).not.toMatch(/coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/);
+    expect(submitLeadMigration).not.toMatch(
+      /coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/,
+    );
   });
 });

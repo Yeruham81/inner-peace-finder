@@ -114,15 +114,18 @@ describe("abstention", () => {
 
 describe("canonical slug validation", () => {
   it("rejects unknown slugs", () => {
-    expect(code(() => parseLlmSemanticResponse(fakeRawResponse("unknown_slug", SLUGS), ALLOWED))).toBe(
-      "unknown_slug",
-    );
+    expect(
+      code(() => parseLlmSemanticResponse(fakeRawResponse("unknown_slug", SLUGS), ALLOWED)),
+    ).toBe("unknown_slug");
   });
 
   it("rejects a display name used as a slug", () => {
     expect(
       code(() =>
-        validateLlmSemanticResult({ matches: [{ slug: "חרדה", confidence: 0.7 }], abstained: false }, ALLOWED),
+        validateLlmSemanticResult(
+          { matches: [{ slug: "חרדה", confidence: 0.7 }], abstained: false },
+          ALLOWED,
+        ),
       ),
     ).toBe("unknown_slug");
   });
@@ -130,7 +133,10 @@ describe("canonical slug validation", () => {
   it("rejects an alias used as a slug", () => {
     expect(
       code(() =>
-        validateLlmSemanticResult({ matches: [{ slug: "פחדים", confidence: 0.7 }], abstained: false }, ALLOWED),
+        validateLlmSemanticResult(
+          { matches: [{ slug: "פחדים", confidence: 0.7 }], abstained: false },
+          ALLOWED,
+        ),
       ),
     ).toBe("unknown_slug");
   });
@@ -138,7 +144,10 @@ describe("canonical slug validation", () => {
   it("rejects a translated / invented label", () => {
     expect(
       code(() =>
-        validateLlmSemanticResult({ matches: [{ slug: "Anxiety Disorder", confidence: 0.7 }], abstained: false }, ALLOWED),
+        validateLlmSemanticResult(
+          { matches: [{ slug: "Anxiety Disorder", confidence: 0.7 }], abstained: false },
+          ALLOWED,
+        ),
       ),
     ).toBe("unknown_slug");
   });
@@ -174,15 +183,18 @@ describe("confidence validation", () => {
   }
 
   it("rejects NaN (unparseable JSON literal) as malformed, never coerced", () => {
-    expect(code(() => parseLlmSemanticResponse(fakeRawResponse("nan_confidence", SLUGS), ALLOWED))).toBe(
-      "malformed_response",
-    );
+    expect(
+      code(() => parseLlmSemanticResponse(fakeRawResponse("nan_confidence", SLUGS), ALLOWED)),
+    ).toBe("malformed_response");
   });
 
   it("rejects NaN passed as a decoded value", () => {
     expect(
       code(() =>
-        validateLlmSemanticResult({ matches: [{ slug: "anxiety", confidence: NaN }], abstained: false }, ALLOWED),
+        validateLlmSemanticResult(
+          { matches: [{ slug: "anxiety", confidence: NaN }], abstained: false },
+          ALLOWED,
+        ),
       ),
     ).toBe("invalid_confidence");
   });
@@ -226,9 +238,7 @@ describe("structural validation", () => {
 
   it("rejects unknown top-level properties", () => {
     expect(
-      code(() =>
-        validateLlmSemanticResult({ matches: [], abstained: true, extra: 1 }, ALLOWED),
-      ),
+      code(() => validateLlmSemanticResult({ matches: [], abstained: true, extra: 1 }, ALLOWED)),
     ).toBe("invalid_schema");
   });
 

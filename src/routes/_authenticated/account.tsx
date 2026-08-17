@@ -69,8 +69,14 @@ function AccountPage() {
             {account && (
               <>
                 <Row label="סטטוס חשבון" value={statusLabel(account.account_status)} />
-                <Row label="השלמת אונבורדינג" value={account.onboarding_completed ? "הושלם" : "בתהליך"} />
-                <Row label="פרופיל מטפל" value={account.owned_therapist_id ? "מקושר" : "עדיין לא שויך פרופיל"} />
+                <Row
+                  label="השלמת אונבורדינג"
+                  value={account.onboarding_completed ? "הושלם" : "בתהליך"}
+                />
+                <Row
+                  label="פרופיל מטפל"
+                  value={account.owned_therapist_id ? "מקושר" : "עדיין לא שויך פרופיל"}
+                />
               </>
             )}
           </div>
@@ -99,7 +105,9 @@ function AccountPage() {
                     to="/claim"
                     className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
                   >
-                    <div className="text-base font-semibold text-foreground">שיוך פרופיל מטפל קיים</div>
+                    <div className="text-base font-semibold text-foreground">
+                      שיוך פרופיל מטפל קיים
+                    </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       כבר מופיעים באתר? מצאו את הפרופיל שלכם ובצעו אימות בעלות.
                     </p>
@@ -108,7 +116,9 @@ function AccountPage() {
                     to="/new-profile"
                     className="rounded-xl border border-border bg-surface p-4 text-right transition hover:border-brand hover:bg-brand/5"
                   >
-                    <div className="text-base font-semibold text-foreground">יצירת פרופיל מטפל חדש</div>
+                    <div className="text-base font-semibold text-foreground">
+                      יצירת פרופיל מטפל חדש
+                    </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       אין לכם עדיין פרופיל? צרו פרופיל מקצועי חדש והתחילו להופיע באתר.
                     </p>

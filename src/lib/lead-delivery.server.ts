@@ -19,12 +19,7 @@ export type LeadPayload = {
 };
 
 function renderTherapistMessage(p: LeadPayload): string {
-  const lines = [
-    "פנייה חדשה מטיפולינקס",
-    "",
-    `שם: ${p.visitorName}`,
-    `טלפון: ${p.visitorPhone}`,
-  ];
+  const lines = ["פנייה חדשה מטיפולינקס", "", `שם: ${p.visitorName}`, `טלפון: ${p.visitorPhone}`];
   if (p.problemName) lines.push(`נושא: ${p.problemName}`);
   if (p.populationName) lines.push(`אוכלוסייה: ${p.populationName}`);
   lines.push("", "הודעה:", p.message);

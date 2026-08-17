@@ -11,7 +11,9 @@ describe("analytics debug endpoint security", () => {
   });
 
   it("does not ship or globally mount the analytics debug panel", () => {
-    expect(existsSync(resolve(projectRoot, "src/components/analytics-debug-panel.tsx"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, "src/components/analytics-debug-panel.tsx"))).toBe(
+      false,
+    );
     expect(rootRoute).not.toContain("AnalyticsDebugPanel");
     expect(rootRoute).not.toContain("analytics-debug-panel");
   });

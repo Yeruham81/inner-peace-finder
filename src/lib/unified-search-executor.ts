@@ -177,9 +177,11 @@ export async function executeUnifiedSearch(
   // Build one id-set per non-empty hard-filter category. Each call runs
   // one DB query using IN(...) for OR-within semantics.
   const setsToIntersect: Set<string>[] = [];
-  if (hf.professionSlugs.length) setsToIntersect.push(await repo.idsByProfessions(hf.professionSlugs));
+  if (hf.professionSlugs.length)
+    setsToIntersect.push(await repo.idsByProfessions(hf.professionSlugs));
   if (hf.modalitySlugs.length) setsToIntersect.push(await repo.idsByModalities(hf.modalitySlugs));
-  if (hf.populationSlugs.length) setsToIntersect.push(await repo.idsByPopulations(hf.populationSlugs));
+  if (hf.populationSlugs.length)
+    setsToIntersect.push(await repo.idsByPopulations(hf.populationSlugs));
   if (hf.languageCodes.length) setsToIntersect.push(await repo.idsByLanguages(hf.languageCodes));
   if (hf.cityNames.length) setsToIntersect.push(await repo.idsByCities(hf.cityNames));
   const regionSlugs = hf.regionSlugs ?? [];
@@ -263,7 +265,9 @@ export async function executeUnifiedSearch(
   }
 
   const display = await repo.fetchDisplay(top.map((r) => r.therapistId));
-  const matchedDomainSlugs = new Set(plan.semanticSignals.map((signal) => resolveDeprecatedSlug(signal.slug)));
+  const matchedDomainSlugs = new Set(
+    plan.semanticSignals.map((signal) => resolveDeprecatedSlug(signal.slug)),
+  );
   const matchedPopulationSlugs = new Set(plan.hardFilters.populationSlugs);
 
   // Preserve the executor's ranked order — the DB does not guarantee row

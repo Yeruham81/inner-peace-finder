@@ -31,7 +31,10 @@ describe("Unified Search safety-first orchestration", () => {
 
   it("does not block ambiguous distress before contextual interpretation", async () => {
     const sb = createFakeSupabase(searchFixture()) as unknown as SupabaseClient<Database>;
-    const out = await runUnifiedSearch({ query: "לא יכולה יותר מהלחץ", explicit: {}, limit: 20 }, sb);
+    const out = await runUnifiedSearch(
+      { query: "לא יכולה יותר מהלחץ", explicit: {}, limit: 20 },
+      sb,
+    );
     expect(out.plan.safetyTriage?.status).toBe("watch");
     expect(out.emptyReason).not.toBe("urgent_help");
     expect((sb as unknown as { reads: string[] }).reads.length).toBeGreaterThan(0);

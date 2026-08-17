@@ -47,7 +47,10 @@ const CreateSchema = z.object({
 });
 const CancelSchema = z.object({ claimId: z.string().uuid() });
 
-async function ensureAccount(supabase: import("@supabase/supabase-js").SupabaseClient, userId: string) {
+async function ensureAccount(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  userId: string,
+) {
   const { data: existing, error: readErr } = await supabase
     .from("therapist_accounts")
     .select("id")
@@ -114,7 +117,8 @@ export const submitClaimRequest = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) {
-      if (error.code === "23505") throw new Error("You already have an open request for this profile");
+      if (error.code === "23505")
+        throw new Error("You already have an open request for this profile");
       throw new Error(error.message);
     }
 
@@ -147,7 +151,8 @@ export const listMyClaimRequests = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r) => {
-      const t = (r as { therapists: { full_name: string | null; slug: string | null } | null }).therapists;
+      const t = (r as { therapists: { full_name: string | null; slug: string | null } | null })
+        .therapists;
       return {
         ...(r as ClaimRequest),
         therapist_full_name: t?.full_name ?? null,
@@ -202,16 +207,18 @@ export const getClaimableTherapist = createServerFn({ method: "POST" })
 // -----------------------------------------------------------------
 export type ProfessionOption = { id: string; name_he: string; slug: string };
 
-export const listProfessions = createServerFn({ method: "GET" }).handler(async (): Promise<ProfessionOption[]> => {
-  const { createClient } = await import("@supabase/supabase-js");
-  const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-  });
-  const { data, error } = await sb
-    .from("professions")
-    .select("id, name_he, slug")
-    .eq("is_active", true)
-    .order("name_he");
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ProfessionOption[];
-});
+export const listProfessions = createServerFn({ method: "GET" }).handler(
+  async (): Promise<ProfessionOption[]> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+    });
+    const { data, error } = await sb
+      .from("professions")
+      .select("id, name_he, slug")
+      .eq("is_active", true)
+      .order("name_he");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as ProfessionOption[];
+  },
+);

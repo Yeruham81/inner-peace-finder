@@ -248,7 +248,11 @@ export function LeadModal({
       aria-labelledby={titleId}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseRequest} aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleCloseRequest}
+        aria-hidden="true"
+      />
       <div
         ref={panelRef}
         aria-busy={submitting}
@@ -283,7 +287,9 @@ export function LeadModal({
               <h2 id={titleId} className="text-lg font-semibold text-foreground">
                 פנייה ל{therapistName}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">מלאו פרטים והפנייה תועבר ישירות למטפל/ת.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                מלאו פרטים והפנייה תועבר ישירות למטפל/ת.
+              </p>
             </div>
 
             <div>
@@ -356,7 +362,11 @@ export function LeadModal({
               />
             </div>
 
-            {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+            {error && (
+              <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"

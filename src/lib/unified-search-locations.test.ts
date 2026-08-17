@@ -39,25 +39,37 @@ describe("correlated region + service-type semantics (pure)", () => {
   ];
 
   it("clinic + north matches when a single row satisfies both", () => {
-    expect(matchesLocationAvailability(rows, { regionSlugs: ["north"], serviceTypes: ["clinic"] })).toBe(true);
+    expect(
+      matchesLocationAvailability(rows, { regionSlugs: ["north"], serviceTypes: ["clinic"] }),
+    ).toBe(true);
   });
 
   it("clinic + south does NOT match a northern clinic plus unrelated online row", () => {
-    expect(matchesLocationAvailability(rows, { regionSlugs: ["south"], serviceTypes: ["clinic"] })).toBe(false);
+    expect(
+      matchesLocationAvailability(rows, { regionSlugs: ["south"], serviceTypes: ["clinic"] }),
+    ).toBe(false);
   });
 
   it("online is location-independent: it matches even with a region selected", () => {
-    expect(matchesLocationAvailability(rows, { regionSlugs: ["south"], serviceTypes: ["online"] })).toBe(true);
+    expect(
+      matchesLocationAvailability(rows, { regionSlugs: ["south"], serviceTypes: ["online"] }),
+    ).toBe(true);
   });
 
   it("a region alone means physical availability in that region", () => {
-    expect(matchesLocationAvailability(rows, { regionSlugs: ["north"], serviceTypes: [] })).toBe(true);
-    expect(matchesLocationAvailability(rows, { regionSlugs: ["south"], serviceTypes: [] })).toBe(false);
+    expect(matchesLocationAvailability(rows, { regionSlugs: ["north"], serviceTypes: [] })).toBe(
+      true,
+    );
+    expect(matchesLocationAvailability(rows, { regionSlugs: ["south"], serviceTypes: [] })).toBe(
+      false,
+    );
   });
 
   it("an online-only therapist is not matched by a region-only filter", () => {
     const onlineOnly = [{ location_type: "online", region_slug: null }];
-    expect(matchesLocationAvailability(onlineOnly, { regionSlugs: ["north"], serviceTypes: [] })).toBe(false);
+    expect(
+      matchesLocationAvailability(onlineOnly, { regionSlugs: ["north"], serviceTypes: [] }),
+    ).toBe(false);
   });
 
   it("service types OR within the category", () => {
@@ -106,7 +118,10 @@ describe("region and service-type filters on the production path", () => {
   it("invalid regions and service types are rejected, not silently ignored", async () => {
     const out = await run("", { regions: ["atlantis"], serviceTypes: ["group"] });
     expect(out.plan.hardFilters.regionSlugs).toEqual([]);
-    expect(out.plan.explicitFilters?.rejected.map((r) => r.category).sort()).toEqual(["region", "serviceType"]);
+    expect(out.plan.explicitFilters?.rejected.map((r) => r.category).sort()).toEqual([
+      "region",
+      "serviceType",
+    ]);
     expect(out.emptyReason).toBe("unrecognized_query");
   });
 

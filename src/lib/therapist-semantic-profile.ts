@@ -29,9 +29,10 @@ function coerceEntry(item: unknown): SemanticProfileEntry | null {
   if (!item || typeof item !== "object") return null;
   const obj = item as { slug?: unknown; weight?: unknown };
   if (typeof obj.slug !== "string" || obj.slug.length === 0) return null;
-  const w = typeof obj.weight === "number" && obj.weight >= 0 && obj.weight <= 1
-    ? obj.weight
-    : DEFAULT_WEIGHT;
+  const w =
+    typeof obj.weight === "number" && obj.weight >= 0 && obj.weight <= 1
+      ? obj.weight
+      : DEFAULT_WEIGHT;
   return { slug: obj.slug, weight: w };
 }
 
@@ -48,7 +49,5 @@ export function parseStoredProfile(raw: unknown): SemanticProfileEntry[] {
 
 /** Serialize back to the canonical JSON contract before writing to the DB. */
 export function serializeProfile(entries: SemanticProfileEntry[]): SemanticProfileEntry[] {
-  return entries
-    .map((e) => coerceEntry(e))
-    .filter((e): e is SemanticProfileEntry => !!e);
+  return entries.map((e) => coerceEntry(e)).filter((e): e is SemanticProfileEntry => !!e);
 }

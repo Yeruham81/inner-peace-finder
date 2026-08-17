@@ -38,7 +38,7 @@ function scripted(script: Record<string, string | Error>): LlmSemanticClassifier
 describe("evaluator abstraction", () => {
   it("conforms to the existing Evaluator interface and runs through the existing runner", async () => {
     const evaluator = createLlmClassificationEvaluator(
-      scripted({ "חרדה": '{"matches":[{"slug":"anxiety","confidence":0.9}],"abstained":false}' }),
+      scripted({ חרדה: '{"matches":[{"slug":"anxiety","confidence":0.9}],"abstained":false}' }),
       CATALOG,
     );
     expect(evaluator.kind).toBe("classify");
@@ -130,8 +130,8 @@ describe("full corpus, offline", () => {
       CLASSIFICATION_CASES,
       // Every case abstains except a scripted few; failures must not abort.
       scripted({
-        "חרדה": '{"matches":[{"slug":"anxiety","confidence":0.9}],"abstained":false}',
-        "דיכאון": new LlmTimeoutError(),
+        חרדה: '{"matches":[{"slug":"anxiety","confidence":0.9}],"abstained":false}',
+        דיכאון: new LlmTimeoutError(),
       }),
       CATALOG,
       { now: () => 0 },

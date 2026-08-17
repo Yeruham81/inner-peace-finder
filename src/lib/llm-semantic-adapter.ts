@@ -40,7 +40,10 @@ export interface LlmSemanticClassifier {
 }
 
 /** A local abstention — produced without invoking any provider. */
-export function localAbstention(modelVersion = "local", promptVersion = "local"): LlmSemanticResult {
+export function localAbstention(
+  modelVersion = "local",
+  promptVersion = "local",
+): LlmSemanticResult {
   return { matches: [], abstained: true, modelVersion, promptVersion };
 }
 

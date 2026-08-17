@@ -22,8 +22,13 @@ const candidate: CandidateForRanking = {
 };
 
 const empty: SoftPreferences = {
-  professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-  languageCodes: [], cities: [], deliveryModes: [], genders: [],
+  professionSlugs: [],
+  modalitySlugs: [],
+  populationSlugs: [],
+  languageCodes: [],
+  cities: [],
+  deliveryModes: [],
+  genders: [],
 };
 
 describe("computePreferenceScore — 0–7 model", () => {

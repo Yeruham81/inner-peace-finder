@@ -19,7 +19,8 @@ import { LIVE_ACTIVE_CATALOG } from "./test-support/live-catalog-snapshot";
 
 const CATALOG = LIVE_ACTIVE_CATALOG;
 
-const domains = (text: string): string[] => combineFeedbackDomains(text, CATALOG, []).map((d) => d.slug);
+const domains = (text: string): string[] =>
+  combineFeedbackDomains(text, CATALOG, []).map((d) => d.slug);
 
 const slugById = new Map(CATALOG.problems.map((p) => [p.id, p.slug]));
 const aliasesOf = (slug: string): string[] =>
@@ -110,7 +111,9 @@ describe("every canonical domain is reachable through approved direct evidence",
 
 describe("the new split ontology remains distinct", () => {
   it("separates eating disorders from body image", () => {
-    expect(domains("אני מטפלת בהפרעות אכילה ובדימוי גוף.").sort()).toEqual(["body_image", "eating_disorders"].sort());
+    expect(domains("אני מטפלת בהפרעות אכילה ובדימוי גוף.").sort()).toEqual(
+      ["body_image", "eating_disorders"].sort(),
+    );
   });
 
   it("separates ADHD from autism", () => {
@@ -118,7 +121,9 @@ describe("the new split ontology remains distinct", () => {
   });
 
   it("separates burnout from career direction", () => {
-    expect(domains("אני מטפל בשחיקה בעבודה ובבחירת קריירה.").sort()).toEqual(["burnout", "career_direction"].sort());
+    expect(domains("אני מטפל בשחיקה בעבודה ובבחירת קריירה.").sort()).toEqual(
+      ["burnout", "career_direction"].sort(),
+    );
   });
 
   it("separates substance use from behavioral addiction", () => {
@@ -135,7 +140,11 @@ describe("the new split ontology remains distinct", () => {
 
   it("distinguishes rehabilitation domains", () => {
     expect(domains("אני עוסק בשיקום אורתופדי, שיקום נוירולוגי ושיקום לבבי.").sort()).toEqual(
-      ["cardiopulmonary_rehabilitation", "neurological_rehabilitation", "orthopedic_rehabilitation"].sort(),
+      [
+        "cardiopulmonary_rehabilitation",
+        "neurological_rehabilitation",
+        "orthopedic_rehabilitation",
+      ].sort(),
     );
   });
 });
@@ -155,7 +164,11 @@ describe("safety-first phrases are not deterministic treatment aliases", () => {
 
   for (const phrase of safetyFirst) {
     it(`does not keep "${phrase}" in problem_aliases`, () => {
-      expect(CATALOG.aliases.some((a) => normalizeFeedbackText(a.alias) === normalizeFeedbackText(phrase))).toBe(false);
+      expect(
+        CATALOG.aliases.some(
+          (a) => normalizeFeedbackText(a.alias) === normalizeFeedbackText(phrase),
+        ),
+      ).toBe(false);
     });
   }
 });

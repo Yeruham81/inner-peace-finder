@@ -5,7 +5,11 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { classifyQuery, type ClassificationResult } from "./semantic-classifier";
 import { SemanticEngine } from "./semantic-engine";
-import { buildClarificationPrompt, needsClarification, type ClarificationPrompt } from "./search-clarification";
+import {
+  buildClarificationPrompt,
+  needsClarification,
+  type ClarificationPrompt,
+} from "./search-clarification";
 import { parseStoredProfile, type SemanticProfileEntry } from "./therapist-semantic-profile";
 import { applyEligibility } from "./search-eligibility";
 import {
@@ -65,8 +69,15 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // reference `problems.id` (bigint) after the semantic-profile migration.
     const matchedSlugs = new Set<string>();
 
-    const { data: anxietyParent } = await sb.from("problems").select("id").eq("slug", "anxiety").maybeSingle();
-    parentAnxietyId = anxietyParent?.id !== undefined && anxietyParent?.id !== null ? String(anxietyParent.id) : null;
+    const { data: anxietyParent } = await sb
+      .from("problems")
+      .select("id")
+      .eq("slug", "anxiety")
+      .maybeSingle();
+    parentAnxietyId =
+      anxietyParent?.id !== undefined && anxietyParent?.id !== null
+        ? String(anxietyParent.id)
+        : null;
 
     if (q.length >= 2) {
       // Phase 5/6: flexible, token-aware matching against the full vocabulary
@@ -84,7 +95,11 @@ export const searchTherapists = createServerFn({ method: "POST" })
     let filterProblemId: string | null = null;
     if (data.problemSlug) {
       matchedSlugs.add(data.problemSlug);
-      const { data: p } = await sb.from("problems").select("id").eq("slug", data.problemSlug).maybeSingle();
+      const { data: p } = await sb
+        .from("problems")
+        .select("id")
+        .eq("slug", data.problemSlug)
+        .maybeSingle();
       filterProblemId = p?.id !== undefined && p?.id !== null ? String(p.id) : null;
       if (filterProblemId) matchedProblemIds.add(filterProblemId);
     }
@@ -101,7 +116,11 @@ export const searchTherapists = createServerFn({ method: "POST" })
     }
     let filterLanguageId: string | null = null;
     if (data.languageCode) {
-      const { data: lang } = await sb.from("languages").select("id").eq("code", data.languageCode).maybeSingle();
+      const { data: lang } = await sb
+        .from("languages")
+        .select("id")
+        .eq("code", data.languageCode)
+        .maybeSingle();
       filterLanguageId = lang?.id ?? null;
     }
 
@@ -119,7 +138,9 @@ export const searchTherapists = createServerFn({ method: "POST" })
         .select("therapist_id")
         .eq("population_id", filterPopulationId);
       const popSet = new Set(tps?.map((r) => r.therapist_id) ?? []);
-      candidateIds = candidateIds ? new Set([...candidateIds].filter((id) => popSet.has(id))) : popSet;
+      candidateIds = candidateIds
+        ? new Set([...candidateIds].filter((id) => popSet.has(id)))
+        : popSet;
     }
     if (filterLanguageId) {
       const { data: tls } = await sb
@@ -127,7 +148,9 @@ export const searchTherapists = createServerFn({ method: "POST" })
         .select("therapist_id")
         .eq("language_id", filterLanguageId);
       const langSet = new Set(tls?.map((r) => r.therapist_id) ?? []);
-      candidateIds = candidateIds ? new Set([...candidateIds].filter((id) => langSet.has(id))) : langSet;
+      candidateIds = candidateIds
+        ? new Set([...candidateIds].filter((id) => langSet.has(id)))
+        : langSet;
     }
 
     // 3) Load therapists (filter by candidate set if any; otherwise everyone)
@@ -155,7 +178,9 @@ export const searchTherapists = createServerFn({ method: "POST" })
       matchedSlugs.size === 0
         ? therapists
         : therapists.filter((t) => {
-            const profile = parseStoredProfile((t as unknown as { semantic_profile?: unknown }).semantic_profile);
+            const profile = parseStoredProfile(
+              (t as unknown as { semantic_profile?: unknown }).semantic_profile,
+            );
             if (profile.length === 0) return false;
             return profile.some((e) => matchedSlugs.has(e.slug));
           });
@@ -165,8 +190,14 @@ export const searchTherapists = createServerFn({ method: "POST" })
     // 4) Load relations for scoring + display
     const [{ data: tpRows }, { data: tpopRows }, { data: tlangRows }] = await Promise.all([
       sb.from("therapist_problems").select("therapist_id, problem_id").in("therapist_id", ids),
-      sb.from("therapist_populations").select("therapist_id, population_groups(slug, name)").in("therapist_id", ids),
-      sb.from("therapist_languages").select("therapist_id, languages(code, name)").in("therapist_id", ids),
+      sb
+        .from("therapist_populations")
+        .select("therapist_id, population_groups(slug, name)")
+        .in("therapist_id", ids),
+      sb
+        .from("therapist_languages")
+        .select("therapist_id, languages(code, name)")
+        .in("therapist_id", ids),
     ]);
 
     // Resolve problem details separately — the FK types between
@@ -183,7 +214,8 @@ export const searchTherapists = createServerFn({ method: "POST" })
         const row = p as { id: string | number; slug: string; parent_id: string | number | null };
         problemLookup.set(String(row.id), {
           slug: row.slug,
-          parent_id: row.parent_id !== null && row.parent_id !== undefined ? String(row.parent_id) : null,
+          parent_id:
+            row.parent_id !== null && row.parent_id !== undefined ? String(row.parent_id) : null,
         });
       });
     }
@@ -263,7 +295,9 @@ export const searchTherapists = createServerFn({ method: "POST" })
       };
     });
 
-    results.sort((a, b) => b.score - a.score || (b.years_experience ?? 0) - (a.years_experience ?? 0));
+    results.sort(
+      (a, b) => b.score - a.score || (b.years_experience ?? 0) - (a.years_experience ?? 0),
+    );
     return results;
   });
 
@@ -283,7 +317,9 @@ export const listFilterOptions = createServerFn({ method: "GET" }).handler(async
 });
 
 export const getProblemBySlug = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ slug: z.string().trim().min(1).max(80) }).parse(input),
+  )
   .handler(async ({ data }) => {
     const sb = await publicClient();
     const { data: problem, error: problemError } = await sb
@@ -305,7 +341,9 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
   });
 
 export const getTherapistBySlug = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ slug: z.string().trim().min(1).max(120) }).parse(input),
+  )
   .handler(async ({ data }) => {
     return fetchPublicTherapistBySlug(await publicClient(), data.slug);
   });
@@ -443,7 +481,9 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
           // No stored profile → derive from full_description ONLY. Empty
           // full_description means "no extractable data available"; do NOT
           // fall back to any other field.
-          const derived = r.full_description ? await SemanticEngine.extractProfile(r.full_description, sb) : [];
+          const derived = r.full_description
+            ? await SemanticEngine.extractProfile(r.full_description, sb)
+            : [];
           profileByT.set(r.id, derived);
         }),
       );
@@ -455,7 +495,9 @@ export const classifyAndSearch = createServerFn({ method: "POST" })
         // matched_problem_slugs so pre-existing seed data still ranks.
         const profile = profileByT.get(t.id) ?? [];
         const effective: SemanticProfileEntry[] =
-          profile.length > 0 ? profile : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
+          profile.length > 0
+            ? profile
+            : t.matched_problem_slugs.map((slug) => ({ slug, weight: 1 }));
         const sim = SemanticEngine.scoreProfiles(classification.matches, effective);
         return { t, sim };
       });

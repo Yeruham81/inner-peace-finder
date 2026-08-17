@@ -32,9 +32,7 @@ export function hashValue(value: string): string {
 /** Extract the caller IP from trusted proxy headers (never from the body). */
 export function extractIp(headers: Headers | undefined | null): string {
   return (
-    headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headers?.get("x-real-ip") ||
-    "0.0.0.0"
+    headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || headers?.get("x-real-ip") || "0.0.0.0"
   );
 }
 

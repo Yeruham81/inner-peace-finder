@@ -15,7 +15,8 @@ const unifiedSearchFunctions = readFileSync("src/lib/query-interpreter.functions
 
 describe("back-to-search button", () => {
   it("restores the exact filtered results state, including sort and page", () => {
-    const ret = "/search?q=%D7%96%D7%95%D7%92&problem=couples_conflict&sort=rank&page=3&online=true";
+    const ret =
+      "/search?q=%D7%96%D7%95%D7%92&problem=couples_conflict&sort=rank&page=3&online=true";
     const opts = resultsReturnLinkOptions(ret);
     expect(opts.to).toBe("/search");
     if (opts.to !== "/search") throw new Error("expected search return options");
@@ -145,7 +146,9 @@ describe("canonical problem-page search", () => {
     expect(problemSearch).toContain("buildProblemSearchPlan");
     expect(problemSearch).toContain("executeUnifiedPlan");
     expect(problemSearch).not.toContain("SemanticEngine.classify");
-    expect(unifiedSearchFunctions).toContain("semanticSignals: [{ slug: problem.slug, confidence: 1 }]");
+    expect(unifiedSearchFunctions).toContain(
+      "semanticSignals: [{ slug: problem.slug, confidence: 1 }]",
+    );
   });
 });
 
@@ -156,12 +159,18 @@ describe("contact-flow wiring", () => {
     expect(modal).toContain("navigate({ href: returnTo, replace: true })");
     // done is only set after the server confirms ok
     expect(modal).toContain("setDone(true);");
-    const failurePaths = modal.slice(modal.indexOf("if (!res.ok)"), modal.indexOf("setDone(true);"));
+    const failurePaths = modal.slice(
+      modal.indexOf("if (!res.ok)"),
+      modal.indexOf("setDone(true);"),
+    );
     expect(failurePaths).not.toContain("navigate(");
   });
 
   it("resets the form state as part of the redirect", () => {
-    const redirect = modal.slice(modal.indexOf("const returnToResults"), modal.indexOf("const handleCloseRequest"));
+    const redirect = modal.slice(
+      modal.indexOf("const returnToResults"),
+      modal.indexOf("const handleCloseRequest"),
+    );
     expect(redirect).toContain("setDone(false);");
     expect(redirect).toContain('setName("");');
     expect(redirect).toContain("setMessage(defaultMessage(problemName, populationName));");
@@ -169,7 +178,9 @@ describe("contact-flow wiring", () => {
   });
 
   it("shows the final success confirmation copy for 1.5 seconds before redirecting", () => {
-    expect(modal).toContain("הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.");
+    expect(modal).toContain(
+      "הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.",
+    );
     expect(modal).toContain("LEAD_SUCCESS_REDIRECT_MS = 1500");
     expect(modal).toContain("setTimeout(returnToResults, LEAD_SUCCESS_REDIRECT_MS)");
   });
@@ -192,7 +203,10 @@ describe("contact-flow wiring", () => {
     );
     expect(closeHandler).toContain("if (done) {");
     expect(closeHandler).toContain("returnToResults();");
-    const successUi = modal.slice(modal.indexOf("{done ? ("), modal.indexOf(") : (", modal.indexOf("{done ? (")));
+    const successUi = modal.slice(
+      modal.indexOf("{done ? ("),
+      modal.indexOf(") : (", modal.indexOf("{done ? (")),
+    );
     expect(successUi).not.toContain("סגירה");
   });
 

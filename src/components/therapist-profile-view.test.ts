@@ -10,7 +10,10 @@ import {
   visibleTagCountForRows,
 } from "./therapist-profile-view";
 
-const profileSource = readFileSync(new URL("./therapist-profile-view.tsx", import.meta.url), "utf8");
+const profileSource = readFileSync(
+  new URL("./therapist-profile-view.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("visibleTagCountForRows", () => {
   it("shows every tag when they fit within two rows", () => {
@@ -129,7 +132,9 @@ describe("free introductory session details", () => {
       languages: [],
     };
 
-    const html = renderToStaticMarkup(createElement(TherapistProfileView, { therapist, interactive: false }));
+    const html = renderToStaticMarkup(
+      createElement(TherapistProfileView, { therapist, interactive: false }),
+    );
 
     expect(html).not.toContain("מאפייני הטיפול");
     expect(html).toContain("פגישת או שיחת היכרות ללא תשלום · 20 דקות");
@@ -152,7 +157,9 @@ describe("mobile profile width guards", () => {
     expect(profileSource).toContain(
       "box-border block w-full min-w-0 max-w-full lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-6",
     );
-    expect(profileSource).not.toContain('className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]"');
+    expect(profileSource).not.toContain(
+      'className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]"',
+    );
   });
 
   it("constrains the main content and contact card to the available mobile width", () => {
@@ -178,7 +185,9 @@ describe("mobile profile width guards", () => {
   });
 
   it("constrains tags, location grids and long dynamic text", () => {
-    expect(profileSource).toContain("inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap");
+    expect(profileSource).toContain(
+      "inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap",
+    );
     expect(profileSource).toContain('className="relative min-w-0 max-w-full overflow-hidden"');
     expect(profileSource).toContain("grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)]");
     expect(profileSource).toContain("mt-3 break-words whitespace-pre-line text-base");

@@ -9,7 +9,11 @@
 
 import type { LlmSemanticError } from "../llm-semantic-contract";
 import { createProviderConfig, type LlmProviderConfig } from "../llm-provider-config";
-import type { LlmTransport, LlmTransportRequest, LlmTransportResult } from "../llm-gateway-transport";
+import type {
+  LlmTransport,
+  LlmTransportRequest,
+  LlmTransportResult,
+} from "../llm-gateway-transport";
 
 export type ScriptedStep =
   | { kind: "raw"; content: string; byteLength?: number; usage?: LlmTransportResult["usage"] }

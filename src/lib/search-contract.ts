@@ -81,7 +81,9 @@ export function normalizeServiceTypesParam(raw: MultiValueInput): NormalizedMult
   return normalizeAgainst(raw, SERVICE_TYPES, isServiceType);
 }
 
-export function normalizeTherapyFormatsParam(raw: MultiValueInput): NormalizedMulti<TherapyFormatSlug> {
+export function normalizeTherapyFormatsParam(
+  raw: MultiValueInput,
+): NormalizedMulti<TherapyFormatSlug> {
   return normalizeAgainst(raw, THERAPY_FORMAT_SLUGS, (value): value is TherapyFormatSlug =>
     (THERAPY_FORMAT_SLUGS as readonly string[]).includes(value),
   );

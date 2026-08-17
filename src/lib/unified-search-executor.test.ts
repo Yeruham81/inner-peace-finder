@@ -82,31 +82,41 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
     async idsByProfessions(slugs) {
       guard("idsByProfessions");
       return new Set(
-        therapists.filter((t) => isEligible(t) && t.professionSlugs.some((s) => slugs.includes(s))).map((t) => t.id),
+        therapists
+          .filter((t) => isEligible(t) && t.professionSlugs.some((s) => slugs.includes(s)))
+          .map((t) => t.id),
       );
     },
     async idsByModalities(slugs) {
       guard("idsByModalities");
       return new Set(
-        therapists.filter((t) => isEligible(t) && t.modalitySlugs.some((s) => slugs.includes(s))).map((t) => t.id),
+        therapists
+          .filter((t) => isEligible(t) && t.modalitySlugs.some((s) => slugs.includes(s)))
+          .map((t) => t.id),
       );
     },
     async idsByPopulations(slugs) {
       guard("idsByPopulations");
       return new Set(
-        therapists.filter((t) => isEligible(t) && t.populationSlugs.some((s) => slugs.includes(s))).map((t) => t.id),
+        therapists
+          .filter((t) => isEligible(t) && t.populationSlugs.some((s) => slugs.includes(s)))
+          .map((t) => t.id),
       );
     },
     async idsByLanguages(codes) {
       guard("idsByLanguages");
       return new Set(
-        therapists.filter((t) => isEligible(t) && t.languageCodes.some((c) => codes.includes(c))).map((t) => t.id),
+        therapists
+          .filter((t) => isEligible(t) && t.languageCodes.some((c) => codes.includes(c)))
+          .map((t) => t.id),
       );
     },
     async idsByCities(cities) {
       guard("idsByCities");
       return new Set(
-        therapists.filter((t) => isEligible(t) && t.locations.some((l) => cities.includes(l.city))).map((t) => t.id),
+        therapists
+          .filter((t) => isEligible(t) && t.locations.some((l) => cities.includes(l.city)))
+          .map((t) => t.id),
       );
     },
     async idsByLocationAvailability(filter) {
@@ -129,7 +139,9 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
     },
     async idsByGender(gender) {
       guard("idsByGender");
-      return new Set(therapists.filter((t) => isEligible(t) && t.gender === gender).map((t) => t.id));
+      return new Set(
+        therapists.filter((t) => isEligible(t) && t.gender === gender).map((t) => t.id),
+      );
     },
     async hydrate(ids): Promise<HydratedCandidate[]> {
       guard("hydrate");
@@ -170,8 +182,12 @@ function makeRepo(therapists: FakeTherapist[], opts: { failOn?: keyof TherapistR
           image_url: t.image_url,
           verified: t.verified,
           short_intro: null,
-          primary_clinic: t.displayCity ? { city: t.displayCity, region_slug: null, region_label: null } : null,
-          clinic_locations: t.displayCity ? [{ city: t.displayCity, region_slug: null, region_label: null }] : [],
+          primary_clinic: t.displayCity
+            ? { city: t.displayCity, region_slug: null, region_label: null }
+            : null,
+          clinic_locations: t.displayCity
+            ? [{ city: t.displayCity, region_slug: null, region_label: null }]
+            : [],
           additional_clinic_count: 0,
           online_available: t.locations.some((l) => l.deliveryMode === "online"),
           gender: t.gender,
@@ -692,7 +708,9 @@ describe("executor: safety", () => {
   });
 
   it("unsupported primary + city → zero therapists (unrecognized_query via plan)", async () => {
-    const { repo } = makeRepo([makeTherapist({ id: "a", locations: [{ city: "חיפה", deliveryMode: "clinic" }] })]);
+    const { repo } = makeRepo([
+      makeTherapist({ id: "a", locations: [{ city: "חיפה", deliveryMode: "clinic" }] }),
+    ]);
     const out = await executeUnifiedSearch(repo, plan({ emptyReason: "unrecognized_query" }));
     expect(out.results).toEqual([]);
     expect(out.emptyReason).toBe("unrecognized_query");
@@ -732,7 +750,11 @@ describe("executor: safety", () => {
       );
     }
     const { repo } = makeRepo(many);
-    const out = await executeUnifiedSearch(repo, plan({ semanticSignals: [{ slug: "anxiety", confidence: 1 }] }), 50);
+    const out = await executeUnifiedSearch(
+      repo,
+      plan({ semanticSignals: [{ slug: "anxiety", confidence: 1 }] }),
+      50,
+    );
     // Executor caps at `limit` (50) but must have RANKED over the full 600
     // seed. Deterministic tiebreak by therapistId ascending → t000..t049.
     expect(out.results.length).toBe(50);

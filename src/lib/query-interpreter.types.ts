@@ -62,7 +62,13 @@ export type Catalog = {
   firstNameCount: Map<string, number>;
 };
 
-export type Intent = "structured" | "semantic" | "hybrid" | "named" | "unresolved_service" | "unknown";
+export type Intent =
+  | "structured"
+  | "semantic"
+  | "hybrid"
+  | "named"
+  | "unresolved_service"
+  | "unknown";
 
 export type UnresolvedCode = "unrecognized_service" | "gender_conflict" | "empty_query";
 

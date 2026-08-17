@@ -42,7 +42,10 @@ export async function fetchPublicTherapistBySlug(
     semanticSource,
     problemCatalog,
   ] = await Promise.all([
-    sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
+    sb
+      .from("therapist_populations")
+      .select("population_groups(slug, name)")
+      .eq("therapist_id", t.id),
     sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
     sb
       .from("therapist_professions")
@@ -54,7 +57,10 @@ export async function fetchPublicTherapistBySlug(
       .select("treatment_modalities!inner(slug, name:name_he, sort_order, is_active)")
       .eq("therapist_id", t.id)
       .eq("treatment_modalities.is_active", true),
-    sb.from("therapist_therapy_formats").select("therapy_formats(slug, name:name_he)").eq("therapist_id", t.id),
+    sb
+      .from("therapist_therapy_formats")
+      .select("therapy_formats(slug, name:name_he)")
+      .eq("therapist_id", t.id),
     sb
       .from("therapist_locations")
       .select(
@@ -176,7 +182,9 @@ export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<
 async function listEligibleClinicCities(
   sb: PublicReadClient,
 ): Promise<{ cities: string[]; cityRegions: Record<string, string[]> }> {
-  const eligibleTherapists = unwrap(await applyEligibility(sb.from("therapists").select("id"))) as Array<{
+  const eligibleTherapists = unwrap(
+    await applyEligibility(sb.from("therapists").select("id")),
+  ) as Array<{
     id: string;
   }> | null;
   const eligibleIds = (eligibleTherapists ?? []).map((row) => row.id);
@@ -212,14 +220,23 @@ async function listEligibleClinicCities(
 
 /** Filter options. Cities come from every active clinic of eligible profiles. */
 export async function listEligibleFilterOptions(sb: PublicReadClient) {
-  const [clinicCities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
-    listEligibleClinicCities(sb),
-    sb.from("population_groups").select("slug, name").order("sort_order"),
-    sb.from("languages").select("code, name").order("name"),
-    sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
-    sb.from("treatment_modalities").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
-    sb.from("therapy_formats").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
-  ]);
+  const [clinicCities, populations, languages, professions, modalities, therapyFormats] =
+    await Promise.all([
+      listEligibleClinicCities(sb),
+      sb.from("population_groups").select("slug, name").order("sort_order"),
+      sb.from("languages").select("code, name").order("name"),
+      sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
+      sb
+        .from("treatment_modalities")
+        .select("slug, name:name_he")
+        .eq("is_active", true)
+        .order("sort_order"),
+      sb
+        .from("therapy_formats")
+        .select("slug, name:name_he")
+        .eq("is_active", true)
+        .order("sort_order"),
+    ]);
 
   // A failed catalog read is not an empty catalog. Propagate the failure so
   // the route/query error boundary can show an explicit load error instead of

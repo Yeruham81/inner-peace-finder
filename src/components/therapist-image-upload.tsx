@@ -50,7 +50,8 @@ export function TherapistImageUpload({
       });
       if (up.error) throw up.error;
       const signed = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_TTL_SECONDS);
-      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("signed url failed");
+      if (signed.error || !signed.data?.signedUrl)
+        throw signed.error ?? new Error("signed url failed");
       onChange(signed.data.signedUrl);
       toast.success("התמונה הועלתה — לחצו על שמירה כדי לעדכן את הפרופיל");
     } catch (e) {
@@ -96,7 +97,13 @@ export function TherapistImageUpload({
             {uploading ? "מעלה…" : value ? "החלפת תמונה" : "העלאת תמונה"}
           </Button>
           {value && (
-            <Button type="button" variant="ghost" size="sm" disabled={uploading} onClick={() => onChange(null)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={uploading}
+              onClick={() => onChange(null)}
+            >
               הסרה
             </Button>
           )}
@@ -107,7 +114,9 @@ export function TherapistImageUpload({
         {!therapistId && " · יש לשמור טיוטה תחילה כדי להעלות תמונה"}
       </p>
       {showFallbackHint && (
-        <p className="text-xs text-muted-foreground">אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.</p>
+        <p className="text-xs text-muted-foreground">
+          אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.
+        </p>
       )}
     </div>
   );

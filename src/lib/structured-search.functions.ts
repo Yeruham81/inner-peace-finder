@@ -125,10 +125,18 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
   const ql = q.toLowerCase();
   const like = `%${escapeIlike(q)}%`;
   const limit = data.limit ?? 10;
-  const types = new Set<StructuredEntityType>(data.types ?? ["therapist", "profession", "modality", "location"]);
+  const types = new Set<StructuredEntityType>(
+    data.types ?? ["therapist", "profession", "modality", "location"],
+  );
 
   // --- profession lookups (authoritative: professions + therapist_professions) ---
-  let professionMatches: { id: string; slug: string; name_he: string; name_en: string | null; score: number }[] = [];
+  let professionMatches: {
+    id: string;
+    slug: string;
+    name_he: string;
+    name_en: string | null;
+    score: number;
+  }[] = [];
   const therapistIdsByProfession = new Set<string>();
   if (types.has("profession") || types.has("therapist")) {
     const profs = unwrap(
@@ -141,7 +149,11 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     );
     professionMatches = (profs ?? []).map((p) => ({
       ...p,
-      score: Math.max(scoreText(p.name_he, ql), scoreText(p.name_en ?? "", ql), scoreText(p.slug, ql)),
+      score: Math.max(
+        scoreText(p.name_he, ql),
+        scoreText(p.name_en ?? "", ql),
+        scoreText(p.slug, ql),
+      ),
     }));
 
     if (professionMatches.length > 0) {
@@ -150,7 +162,9 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
         await applyEligibility(
           sb
             .from("therapist_professions")
-            .select("therapist_id, profession_id, therapists!inner(id, is_active, profile_status, visibility)")
+            .select(
+              "therapist_id, profession_id, therapists!inner(id, is_active, profile_status, visibility)",
+            )
             .in("profession_id", ids),
           "therapists!inner",
         ),
@@ -160,7 +174,13 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
   }
 
   // --- modality lookups (authoritative: treatment_modalities + therapist_modalities) ---
-  let modalityMatches: { id: string; slug: string; name_he: string; name_en: string | null; score: number }[] = [];
+  let modalityMatches: {
+    id: string;
+    slug: string;
+    name_he: string;
+    name_en: string | null;
+    score: number;
+  }[] = [];
   const therapistIdsByModality = new Set<string>();
   if (types.has("modality") || types.has("therapist")) {
     const mods = unwrap(
@@ -173,7 +193,11 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     );
     modalityMatches = (mods ?? []).map((m) => ({
       ...m,
-      score: Math.max(scoreText(m.name_he, ql), scoreText(m.name_en ?? "", ql), scoreText(m.slug, ql)),
+      score: Math.max(
+        scoreText(m.name_he, ql),
+        scoreText(m.name_en ?? "", ql),
+        scoreText(m.slug, ql),
+      ),
     }));
 
     if (modalityMatches.length > 0) {
@@ -182,7 +206,9 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
         await applyEligibility(
           sb
             .from("therapist_modalities")
-            .select("therapist_id, modality_id, therapists!inner(id, is_active, profile_status, visibility)")
+            .select(
+              "therapist_id, modality_id, therapists!inner(id, is_active, profile_status, visibility)",
+            )
             .in("modality_id", ids),
           "therapists!inner",
         ),
@@ -192,14 +218,21 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
   }
 
   // --- location lookups (authoritative: therapist_locations) ---
-  let locationMatches: { city: string; region: string | null; therapist_count: number; score: number }[] = [];
+  let locationMatches: {
+    city: string;
+    region: string | null;
+    therapist_count: number;
+    score: number;
+  }[] = [];
   const therapistIdsByLocation = new Set<string>();
   if (types.has("location") || types.has("therapist")) {
     const locs = unwrap(
       await applyEligibility(
         sb
           .from("therapist_locations")
-          .select("therapist_id, city, region, therapists!inner(id, is_active, profile_status, visibility)")
+          .select(
+            "therapist_id, city, region, therapists!inner(id, is_active, profile_status, visibility)",
+          )
           .eq("is_active", true),
         "therapists!inner",
       )
@@ -229,7 +262,9 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     const nameLike = `%${escapeIlike(q)}%`;
     const byName = unwrap(
       await applyEligibility(
-        sb.from("therapists").select("id, slug, full_name, professional_title, city, image_url, verified"),
+        sb
+          .from("therapists")
+          .select("id, slug, full_name, professional_title, city, image_url, verified"),
       )
         .ilike("full_name", nameLike)
         .limit(limit * 2),
@@ -265,7 +300,9 @@ async function runStructuredSearch(data: z.infer<typeof Schema>): Promise<Struct
     if (structuredTherapistIds.size > 0) {
       const byStructured = unwrap(
         await applyEligibility(
-          sb.from("therapists").select("id, slug, full_name, professional_title, city, image_url, verified"),
+          sb
+            .from("therapists")
+            .select("id, slug, full_name, professional_title, city, image_url, verified"),
         ).in("id", Array.from(structuredTherapistIds).slice(0, 40)),
       );
       for (const r of byStructured ?? []) {

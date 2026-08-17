@@ -4,7 +4,10 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/integrations/supabase/types";
 import { SemanticEngine } from "../src/lib/semantic-engine";
-import { CLASSIFICATION_CASES, PROFILE_EXTRACTION_CASES } from "../src/lib/semantic-evaluation-corpus";
+import {
+  CLASSIFICATION_CASES,
+  PROFILE_EXTRACTION_CASES,
+} from "../src/lib/semantic-evaluation-corpus";
 
 const url = process.env.SUPABASE_URL!;
 const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
@@ -117,7 +120,9 @@ async function run() {
   console.log(`Top-5: ${top5}/${total} (${pct(top5, total)})  [engine caps at 3]`);
   console.log(`MRR:   ${mrr.toFixed(3)}`);
   console.log(`Avg candidates returned: ${avgCand.toFixed(2)}`);
-  console.log(`Candidate count distribution: 0=${dist[0]}  1=${dist[1]}  2=${dist[2]}  3=${dist[3]}`);
+  console.log(
+    `Candidate count distribution: 0=${dist[0]}  1=${dist[1]}  2=${dist[2]}  3=${dist[3]}`,
+  );
   console.log(`Confidence distribution (top result):`);
   for (const [k, v] of Object.entries(confBuckets)) console.log(`  ${k}: ${v}`);
   console.log("\nBy category (pass | top1 | top3):");
@@ -138,7 +143,9 @@ async function run() {
     slugRecall.set(s, b);
   }
   console.log("\nPer-slug top-3 recall (worst first):");
-  const sorted = Array.from(slugRecall.entries()).sort((a, b) => a[1].hit / a[1].total - b[1].hit / b[1].total);
+  const sorted = Array.from(slugRecall.entries()).sort(
+    (a, b) => a[1].hit / a[1].total - b[1].hit / b[1].total,
+  );
   for (const [slug, b] of sorted) {
     console.log(`  ${slug.padEnd(28)} ${b.hit}/${b.total}  ${pct(b.hit, b.total)}`);
   }

@@ -62,26 +62,30 @@ export const EMPTY_EXPLICIT: ValidatedExplicitFilters = {
 };
 
 export function hasExplicitFilters(raw: RawExplicitFilters): boolean {
-  const multi = (v: MultiValueInput) => (Array.isArray(v) ? v.length > 0 : Boolean(typeof v === "string" && v.trim()));
+  const multi = (v: MultiValueInput) =>
+    Array.isArray(v) ? v.length > 0 : Boolean(typeof v === "string" && v.trim());
   return Boolean(
     raw.city?.trim() ||
-      raw.population?.trim() ||
-      raw.language?.trim() ||
-      multi(raw.regions) ||
-      multi(raw.serviceTypes) ||
-      multi(raw.professions) ||
-      multi(raw.modalities) ||
-      multi(raw.therapyFormats) ||
-      raw.gender ||
-      raw.accessible ||
-      raw.verified ||
-      raw.lgbtqAffirming ||
-      raw.freeIntro,
+    raw.population?.trim() ||
+    raw.language?.trim() ||
+    multi(raw.regions) ||
+    multi(raw.serviceTypes) ||
+    multi(raw.professions) ||
+    multi(raw.modalities) ||
+    multi(raw.therapyFormats) ||
+    raw.gender ||
+    raw.accessible ||
+    raw.verified ||
+    raw.lgbtqAffirming ||
+    raw.freeIntro,
   );
 }
 
 /** Validate raw UI filter values against the canonical catalogs. */
-export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalog): ValidatedExplicitFilters {
+export function validateExplicitFilters(
+  raw: RawExplicitFilters,
+  catalog: Catalog,
+): ValidatedExplicitFilters {
   const out: ValidatedExplicitFilters = {
     cityNames: [],
     populationSlugs: [],
@@ -104,7 +108,8 @@ export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalo
     const n = normalizeForInterpretation(city);
     const hit = catalog.cities.find(
       (c) =>
-        normalizeForInterpretation(c.canonical) === n || c.aliases.some((a) => normalizeForInterpretation(a) === n),
+        normalizeForInterpretation(c.canonical) === n ||
+        c.aliases.some((a) => normalizeForInterpretation(a) === n),
     );
     if (hit) out.cityNames.push(hit.canonical);
     else out.rejected.push({ category: "city", value: city });
@@ -154,7 +159,12 @@ export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalo
     const allowed = new Set(catalogValues.map((item) => item.slug));
     const values = [
       ...new Set(
-        (Array.isArray(rawValues) ? rawValues : typeof rawValues === "string" ? rawValues.split(",") : [])
+        (Array.isArray(rawValues)
+          ? rawValues
+          : typeof rawValues === "string"
+            ? rawValues.split(",")
+            : []
+        )
           .map((value) => value.trim().toLowerCase())
           .filter(Boolean),
       ),
@@ -174,7 +184,8 @@ export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalo
   out.therapistGender = (THERAPIST_GENDERS as readonly string[]).includes(raw.gender ?? "")
     ? (raw.gender as "male" | "female")
     : null;
-  if (raw.gender && !out.therapistGender) out.rejected.push({ category: "gender", value: raw.gender });
+  if (raw.gender && !out.therapistGender)
+    out.rejected.push({ category: "gender", value: raw.gender });
   out.accessibleClinic = Boolean(raw.accessible);
   out.verifiedOnly = Boolean(raw.verified);
   out.lgbtqAffirming = Boolean(raw.lgbtqAffirming);

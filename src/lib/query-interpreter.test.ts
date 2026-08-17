@@ -20,15 +20,16 @@ const catalog: Catalog = {
     },
   ],
   modalities: [
-    { id: "m1", slug: "cbt", name_he: "טיפול קוגניטיבי התנהגותי", nameVariants: ["טיפול קוגניטיבי התנהגותי", "cbt"] },
+    {
+      id: "m1",
+      slug: "cbt",
+      name_he: "טיפול קוגניטיבי התנהגותי",
+      nameVariants: ["טיפול קוגניטיבי התנהגותי", "cbt"],
+    },
     { id: "m2", slug: "psychodynamic", name_he: "פסיכודינמי", nameVariants: ["פסיכודינמי"] },
   ],
-  populations: [
-    { slug: "children", name_he: "ילדים", aliases: ["ילדים", "ילד"] },
-  ],
-  languages: [
-    { code: "ru", name_he: "רוסית", aliases: ["רוסית", "russian", "ru"] },
-  ],
+  populations: [{ slug: "children", name_he: "ילדים", aliases: ["ילדים", "ילד"] }],
+  languages: [{ code: "ru", name_he: "רוסית", aliases: ["רוסית", "russian", "ru"] }],
   cities: [
     { canonical: "תל אביב", aliases: ["תל אביב", 'ת"א', "תא"] },
     { canonical: "ירושלים", aliases: ["ירושלים"] },
@@ -36,7 +37,10 @@ const catalog: Catalog = {
     { canonical: "רחובות", aliases: ["רחובות"] },
   ],
   therapistNames: [{ id: "t1", fullName: "יעל כהן", tokens: ["יעל", "כהן"] }],
-  firstNameCount: new Map([["יעל", 1], ["כהן", 1]]),
+  firstNameCount: new Map([
+    ["יעל", 1],
+    ["כהן", 1],
+  ]),
 };
 
 describe("interpretQuery", () => {

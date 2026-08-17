@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { OPENAI_MAX_OUTPUT_TOKENS, OPENAI_RESPONSE_JSON_SCHEMA, createOpenAiTransport } from "./llm-gateway-transport";
+import {
+  OPENAI_MAX_OUTPUT_TOKENS,
+  OPENAI_RESPONSE_JSON_SCHEMA,
+  createOpenAiTransport,
+} from "./llm-gateway-transport";
 import { LlmSemanticError } from "./llm-semantic-contract";
 import { fakeProviderConfig } from "./test-support/fake-llm-transport";
 
@@ -80,7 +84,10 @@ function respond(
   });
 }
 
-async function run(fetchImpl: (url: string, init: RequestInit) => Promise<Response>, config = CONFIG) {
+async function run(
+  fetchImpl: (url: string, init: RequestInit) => Promise<Response>,
+  config = CONFIG,
+) {
   return createOpenAiTransport(fetchImpl).request({
     system: "system instructions",
     user: "semantic input",
@@ -177,7 +184,10 @@ describe("OpenAI request formatting", () => {
       ...OPENAI_RESPONSE_JSON_SCHEMA,
     });
 
-    expect(Object.keys(OPENAI_RESPONSE_JSON_SCHEMA.schema.properties).sort()).toEqual(["abstained", "matches"]);
+    expect(Object.keys(OPENAI_RESPONSE_JSON_SCHEMA.schema.properties).sort()).toEqual([
+      "abstained",
+      "matches",
+    ]);
 
     expect(result.rawContent).toBe(VALID_SEMANTIC_RESULT);
   });
@@ -284,7 +294,12 @@ describe("OpenAI response extraction", () => {
         run(async () =>
           respond(
             envelope("", {
-              output: [assistantMessage([outputText(VALID_SEMANTIC_RESULT), outputText(VALID_SEMANTIC_RESULT)])],
+              output: [
+                assistantMessage([
+                  outputText(VALID_SEMANTIC_RESULT),
+                  outputText(VALID_SEMANTIC_RESULT),
+                ]),
+              ],
             }),
           ),
         ),

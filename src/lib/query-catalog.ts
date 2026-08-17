@@ -25,9 +25,7 @@ async function serverClient(): Promise<SupabaseClient<Database>> {
  * tests. Production callers pass the request-scoped server client so the
  * catalog and the search share one connection.
  */
-export async function loadSearchCatalog(
-  client?: SupabaseClient<Database>,
-): Promise<Catalog> {
+export async function loadSearchCatalog(client?: SupabaseClient<Database>): Promise<Catalog> {
   const now = Date.now();
   if (cache && now - cache.at < TTL_MS) return cache.catalog;
 
@@ -48,7 +46,10 @@ export async function loadSearchCatalog(
     sb.from("population_groups").select("id, slug, name"),
     sb.from("languages").select("id, code, name"),
     cityQ as unknown as Promise<{ data: Array<{ city: string | null }> | null; error: unknown }>,
-    nameQ as unknown as Promise<{ data: Array<{ id: string; full_name: string }> | null; error: unknown }>,
+    nameQ as unknown as Promise<{
+      data: Array<{ id: string; full_name: string }> | null;
+      error: unknown;
+    }>,
   ]);
   // Fail loudly rather than silently returning an empty catalog.
   for (const r of [profRes, modRes, popRes, langRes, cityRes, nameRes]) {
