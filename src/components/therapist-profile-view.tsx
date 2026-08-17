@@ -415,9 +415,11 @@ export function TherapistProfileView({
                   </span>
                 )}
               </div>
-              <p className="mt-1.5 break-words text-lg font-medium text-foreground/80">
-                {t.professional_title || "כותרת מקצועית"}
-              </p>
+              {t.professional_title && (
+                <p className="mt-1.5 break-words text-lg font-medium text-foreground/80">
+                  {t.professional_title}
+                </p>
+              )}
               {t.short_intro && (
                 <p className="mt-3 max-w-3xl break-words text-sm leading-6 text-muted-foreground sm:text-base">
                   {t.short_intro}
