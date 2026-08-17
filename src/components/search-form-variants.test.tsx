@@ -1,10 +1,20 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, mock } from "bun:test";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 
+// Bun module mocks are process-wide: replacing the whole router module would
+// strip exports (e.g. `isRedirect`) that other test files' imports rely on.
+// Keep every real export and override only the navigation hook.
+const actualRouter = await import("@tanstack/react-router");
+
 mock.module("@tanstack/react-router", () => ({
+  ...actualRouter,
   useNavigate: () => () => undefined,
 }));
+
+afterAll(() => {
+  mock.restore();
+});
 
 const { SearchForm } = await import("./search-form");
 
