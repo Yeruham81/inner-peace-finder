@@ -652,9 +652,11 @@ export function TherapistProfileView({
               <ProfileImage imageUrl={t.image_url} name={t.full_name} compact />
               <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="truncate font-bold text-foreground">{t.full_name || "שם המטפל/ת"}</p>
-                <p className="line-clamp-2 whitespace-normal break-words text-sm leading-snug text-muted-foreground">
-                  {t.professional_title || "כותרת מקצועית"}
-                </p>
+                {t.professional_title && (
+                  <p className="line-clamp-2 whitespace-normal break-words text-sm leading-snug text-muted-foreground">
+                    {t.professional_title}
+                  </p>
+                )}
               </div>
             </div>
 
