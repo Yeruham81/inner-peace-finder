@@ -1,19 +1,17 @@
-import { afterAll, describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, spyOn } from "bun:test";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
+import * as ReactRouter from "@tanstack/react-router";
 
-// Bun module mocks are process-wide: replacing the whole router module would
-// strip exports (e.g. `isRedirect`) that other test files' imports rely on.
-// Keep every real export and override only the navigation hook.
-const actualRouter = await import("@tanstack/react-router");
-
-mock.module("@tanstack/react-router", () => ({
-  ...actualRouter,
-  useNavigate: () => () => undefined,
-}));
+// Do not use mock.module() here: Bun module mocks are process-wide and are not
+// undone by mock.restore(). Spy only on the hook this test needs so every other
+// router export remains real and the spy can be restored after this file.
+const useNavigateSpy = spyOn(ReactRouter, "useNavigate").mockReturnValue(
+  (() => undefined) as ReturnType<typeof ReactRouter.useNavigate>,
+);
 
 afterAll(() => {
-  mock.restore();
+  useNavigateSpy.mockRestore();
 });
 
 const { SearchForm } = await import("./search-form");
