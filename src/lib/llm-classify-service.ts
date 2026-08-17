@@ -162,12 +162,22 @@ export async function classifySemanticRemainder(payload: unknown, deps: Classify
   let lastSize = 0;
 
   const log = (record: Omit<LlmClassifyLog, "event" | "providerId" | "durationMs">) => {
-    deps.logger?.({
+    const safeRecord: LlmClassifyLog = {
       event: "llm_semantic_classify",
       providerId: config.providerId,
       durationMs: now() - startedAt,
       ...record,
-    });
+    };
+
+    if (deps.logger) {
+      deps.logger(safeRecord);
+      return;
+    }
+
+    // Production fallback when no structured logger is injected. This record
+    // contains operational metadata only: never user text, prompts, aliases,
+    // credentials, provider payloads, therapist data or user identifiers.
+    console.info("[llm-usage]", safeRecord);
   };
 
   try {
