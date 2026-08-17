@@ -13,8 +13,6 @@ export function CtaCallButton({
 }: {
   therapistId: string;
   therapistName: string;
-  /** @deprecated phone is no longer exposed to the client */
-  fallbackPhone?: string | null;
   sourceProblemId?: string | null;
   sourceProblemName?: string | null;
   populationId?: string | null;
