@@ -12,8 +12,10 @@ const claimRouteSource = read("routes/_authenticated/claim.tsx");
 
 describe("therapist account and claim read failures", () => {
   it("does not turn therapist-account read failures into a missing account or profile", () => {
-    expect(accountsSource).toContain("error: accountErr");
-    expect(accountsSource).toContain("if (accountErr) throw new Error(accountErr.message)");
+    expect(accountsSource).toContain("error: readErr");
+    expect(accountsSource).toContain("if (readErr) throw new Error(readErr.message)");
+    expect(accountsSource).toContain("error: insErr");
+    expect(accountsSource).toContain("if (insErr) throw new Error(insErr.message)");
     expect(accountsSource).toContain("error: ownedErr");
     expect(accountsSource).toContain("if (ownedErr) throw new Error(ownedErr.message)");
   });
