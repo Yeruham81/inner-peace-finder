@@ -345,15 +345,20 @@ function VerificationForm({
       {method === "license_number" && (
         <div className="grid gap-3">
           <div>
-            <label className="text-sm font-medium text-foreground">מספר רישיון מקצועי</label>
+            <label className="text-sm font-medium text-foreground" htmlFor="claim-license-number">
+              מספר רישיון מקצועי
+            </label>
             <Input
+              id="claim-license-number"
               value={licenseNumber}
               onChange={(e) => setLicenseNumber(e.target.value)}
               maxLength={60}
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">מקצוע</label>
+            <label className="text-sm font-medium text-foreground" htmlFor="claim-profession">
+              מקצוע
+            </label>
             {professions.isError && (
               <InlineQueryError
                 message="לא הצלחנו לטעון את רשימת המקצועות."
@@ -362,6 +367,7 @@ function VerificationForm({
               />
             )}
             <select
+              id="claim-profession"
               value={professionId}
               onChange={(e) => setProfessionId(e.target.value)}
               disabled={professions.isLoading || professions.isError}
@@ -380,8 +386,11 @@ function VerificationForm({
 
       {method === "professional_email" && (
         <div>
-          <label className="text-sm font-medium text-foreground">כתובת מייל מקצועית</label>
+          <label className="text-sm font-medium text-foreground" htmlFor="claim-professional-email">
+            כתובת מייל מקצועית
+          </label>
           <Input
+            id="claim-professional-email"
             type="email"
             dir="ltr"
             value={professionalEmail}
@@ -396,8 +405,11 @@ function VerificationForm({
 
       {method === "manual_review" && (
         <div>
-          <label className="text-sm font-medium text-foreground">הערה לצוות (לא חובה)</label>
+          <label className="text-sm font-medium text-foreground" htmlFor="claim-note">
+            הערה לצוות (לא חובה)
+          </label>
           <textarea
+            id="claim-note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={1000}
