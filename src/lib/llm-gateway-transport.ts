@@ -99,7 +99,12 @@ function mapStatus(status: number): LlmSemanticError {
 }
 
 function safeTokenCount(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
     return undefined;
   }
 
@@ -115,7 +120,9 @@ function extractUsage(root: JsonRecord): LlmTransportResult["usage"] | undefined
 
   const promptTokens = safeTokenCount(usage.input_tokens);
   const completionTokens = safeTokenCount(usage.output_tokens);
-  const inputTokenDetails = isRecord(usage.input_tokens_details) ? usage.input_tokens_details : undefined;
+  const inputTokenDetails = isRecord(usage.input_tokens_details)
+    ? usage.input_tokens_details
+    : undefined;
   const cachedTokens = safeTokenCount(inputTokenDetails?.cached_tokens);
 
   if (promptTokens === undefined && cachedTokens === undefined && completionTokens === undefined) {
@@ -133,7 +140,10 @@ function extractUsage(root: JsonRecord): LlmTransportResult["usage"] | undefined
  * Read a successful provider response without allowing an unbounded body to
  * be accumulated in memory.
  */
-async function readBodyWithLimit(response: Response, maxBytes: number): Promise<{ text: string; byteLength: number }> {
+async function readBodyWithLimit(
+  response: Response,
+  maxBytes: number,
+): Promise<{ text: string; byteLength: number }> {
   const declaredHeader = response.headers.get("content-length");
 
   if (declaredHeader !== null) {
@@ -273,16 +283,21 @@ function extractOpenAiContent(body: unknown): {
   }
 
   if (status === "incomplete") {
-    const incompleteDetails = isRecord(body.incomplete_details) ? body.incomplete_details : undefined;
+    const incompleteDetails = isRecord(body.incomplete_details)
+      ? body.incomplete_details
+      : undefined;
 
-    const reason = typeof incompleteDetails?.reason === "string" ? incompleteDetails.reason : undefined;
+    const reason =
+      typeof incompleteDetails?.reason === "string" ? incompleteDetails.reason : undefined;
 
     /*
      * Retrying the same request with the same max_output_tokens would not
      * correct a deterministic truncation or content-filter outcome.
      */
     if (reason === "max_output_tokens") {
-      throw new LlmProviderClientError("OpenAI response exceeded the configured output-token limit");
+      throw new LlmProviderClientError(
+        "OpenAI response exceeded the configured output-token limit",
+      );
     }
 
     if (reason === "content_filter") {
@@ -329,7 +344,10 @@ function extractOpenAiContent(body: unknown): {
 
     for (const contentItem of outputItem.content) {
       if (!isRecord(contentItem)) {
-        throw new LlmSemanticError("invalid_schema", "OpenAI message contains an invalid content item");
+        throw new LlmSemanticError(
+          "invalid_schema",
+          "OpenAI message contains an invalid content item",
+        );
       }
 
       if (contentItem.type === "refusal") {
@@ -339,14 +357,20 @@ function extractOpenAiContent(body: unknown): {
 
       if (contentItem.type === "output_text") {
         if (typeof contentItem.text !== "string") {
-          throw new LlmSemanticError("invalid_schema", "OpenAI output_text item has no string text");
+          throw new LlmSemanticError(
+            "invalid_schema",
+            "OpenAI output_text item has no string text",
+          );
         }
 
         outputTexts.push(contentItem.text);
         continue;
       }
 
-      throw new LlmSemanticError("invalid_schema", "OpenAI message contains an unsupported content type");
+      throw new LlmSemanticError(
+        "invalid_schema",
+        "OpenAI message contains an unsupported content type",
+      );
     }
   }
 

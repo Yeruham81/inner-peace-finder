@@ -161,9 +161,9 @@ describe("strict domain evidence rules", () => {
   });
 
   it("therapy methods CBT / ACT / MBSR / MBCT create no domains", () => {
-    expect(
-      slugsFor("אני משלב CBT, C.B.T, ACT, MBSR ו-MBCT בעבודתי הטיפולית עם מבוגרים"),
-    ).toEqual([]);
+    expect(slugsFor("אני משלב CBT, C.B.T, ACT, MBSR ו-MBCT בעבודתי הטיפולית עם מבוגרים")).toEqual(
+      [],
+    );
   });
 });
 
@@ -175,12 +175,7 @@ describe("combineFeedbackDomains", () => {
   const text = "מתמחה בטיפול בדיכאון, OCD, התמכרויות, הפרעות חרדה";
 
   it("keeps direct matches when extractProfile returns []", () => {
-    expect(slugsFor(text, [])).toEqual([
-      "depression",
-      "ocd_compulsions",
-      "addiction",
-      "anxiety",
-    ]);
+    expect(slugsFor(text, [])).toEqual(["depression", "ocd_compulsions", "addiction", "anxiety"]);
   });
 
   it("keeps direct matches when semantic results omit their slugs", () => {
@@ -229,16 +224,12 @@ describe("combineFeedbackDomains", () => {
 
   it("is identical when problem rows are shuffled", () => {
     const shuffled: FeedbackCatalog = { ...catalog, problems: shuffle(catalog.problems) };
-    expect(combineFeedbackDomains(text, shuffled, []).map((d) => d.slug)).toEqual(
-      slugsFor(text),
-    );
+    expect(combineFeedbackDomains(text, shuffled, []).map((d) => d.slug)).toEqual(slugsFor(text));
   });
 
   it("is identical when alias rows are shuffled", () => {
     const shuffled: FeedbackCatalog = { ...catalog, aliases: shuffle(catalog.aliases) };
-    expect(combineFeedbackDomains(text, shuffled, []).map((d) => d.slug)).toEqual(
-      slugsFor(text),
-    );
+    expect(combineFeedbackDomains(text, shuffled, []).map((d) => d.slug)).toEqual(slugsFor(text));
   });
 
   it("uses weight desc then slug as a deterministic semantic tie-breaker", () => {

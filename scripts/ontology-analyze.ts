@@ -8,7 +8,10 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/integrations/supabase/types";
 import { writeFile, mkdir } from "fs/promises";
 import { SemanticEngine } from "../src/lib/semantic-engine";
-import { CLASSIFICATION_CASES, PROFILE_EXTRACTION_CASES } from "../src/lib/semantic-evaluation-corpus";
+import {
+  CLASSIFICATION_CASES,
+  PROFILE_EXTRACTION_CASES,
+} from "../src/lib/semantic-evaluation-corpus";
 
 const url = process.env.SUPABASE_URL!;
 const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
@@ -198,7 +201,12 @@ async function main() {
     if (actualSet.has(primary)) continue; // no confusion
     for (const got of r.actual) {
       const key = primary < got ? `${primary}||${got}` : `${got}||${primary}`;
-      const p = pairMap.get(key) ?? { a: primary, b: got, count: 0, direction: `${got} outranks ${primary}` };
+      const p = pairMap.get(key) ?? {
+        a: primary,
+        b: got,
+        count: 0,
+        direction: `${got} outranks ${primary}`,
+      };
       p.count++;
       pairMap.set(key, p);
     }
@@ -221,7 +229,8 @@ async function main() {
     // Penalty: total confusion instances where THIS slug outranked another
     // expected slug.
     let penalty = 0;
-    for (const p of conflictPairs) if (p.direction.startsWith(s.slug + " outranks")) penalty += p.count;
+    for (const p of conflictPairs)
+      if (p.direction.startsWith(s.slug + " outranks")) penalty += p.count;
     const norm = Math.min(1, penalty / 10);
     const score = 0.4 * precision + 0.4 * recall + 0.2 * uniqueness - 0.3 * norm;
     return { score, precision, recall, uniqueness, penalty };
@@ -245,7 +254,13 @@ async function main() {
   }
 
   // ---- Merge overlap analysis ----
-  type MergeReport = { a: string; b: string; coFire: number; jaccardAliasOverlapNote: string; recommendation: string };
+  type MergeReport = {
+    a: string;
+    b: string;
+    coFire: number;
+    jaccardAliasOverlapNote: string;
+    recommendation: string;
+  };
   const merges: MergeReport[] = [];
   for (const [a, b] of MERGE_CANDIDATES) {
     let coFire = 0;
@@ -265,7 +280,13 @@ async function main() {
       const filled = aExpected === 0 ? b : a;
       rec = `sibling suppression — treat "${empty}" as alias/child of "${filled}"`;
     } else if (coFire >= 3) rec = "parent/child — high co-fire indicates overlapping domain";
-    merges.push({ a, b, coFire, jaccardAliasOverlapNote: "n/a (alias text not compared here)", recommendation: rec });
+    merges.push({
+      a,
+      b,
+      coFire,
+      jaccardAliasOverlapNote: "n/a (alias text not compared here)",
+      recommendation: rec,
+    });
   }
 
   // ---- Umbrella domain FP frequency ----
@@ -300,7 +321,9 @@ async function main() {
 
   /* ------------------------- Emit markdown report ------------------------ */
   const slugRows = Array.from(stats.values()).sort((a, b) =>
-    a.expectedTotal === b.expectedTotal ? a.slug.localeCompare(b.slug) : b.expectedTotal - a.expectedTotal,
+    a.expectedTotal === b.expectedTotal
+      ? a.slug.localeCompare(b.slug)
+      : b.expectedTotal - a.expectedTotal,
   );
 
   const lines: string[] = [];
@@ -406,7 +429,11 @@ async function main() {
 
   const json = {
     baseline: { source: "phase-17c3", pass: 0.926, top1: 0.787, mrr: 0.867 },
-    totals: { slugs: problems.length, cases: rows.length, profile_cases: PROFILE_EXTRACTION_CASES.length },
+    totals: {
+      slugs: problems.length,
+      cases: rows.length,
+      profile_cases: PROFILE_EXTRACTION_CASES.length,
+    },
     slugStats: slugRows.map((s) => {
       const h = health(s);
       return {

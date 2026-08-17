@@ -29,10 +29,14 @@ function walk(dir: string): string[] {
   });
 }
 
-const PRODUCTION_FILES = walk(SRC).filter((f) => !/\.test\.tsx?$/.test(f) && !f.includes("/test-support/"));
+const PRODUCTION_FILES = walk(SRC).filter(
+  (f) => !/\.test\.tsx?$/.test(f) && !f.includes("/test-support/"),
+);
 const CLIENT_SURFACE_FILES = PRODUCTION_FILES.filter(
   (f) =>
-    (f.includes("/routes/") || f.includes("/components/")) && !f.endsWith(".server.ts") && !f.endsWith(".server.tsx"),
+    (f.includes("/routes/") || f.includes("/components/")) &&
+    !f.endsWith(".server.ts") &&
+    !f.endsWith(".server.tsx"),
 );
 
 describe("LLM isolation", () => {
@@ -41,8 +45,12 @@ describe("LLM isolation", () => {
   });
 
   it("client routes/components never import provider, transport or classify-service modules", () => {
-    const serverBoundaryRe = new RegExp(`(?:${SERVER_LLM_MODULES.join("|")}|unified-semantic-classifier\\.server)`);
-    const offenders = CLIENT_SURFACE_FILES.filter((f) => serverBoundaryRe.test(readFileSync(f, "utf8")));
+    const serverBoundaryRe = new RegExp(
+      `(?:${SERVER_LLM_MODULES.join("|")}|unified-semantic-classifier\\.server)`,
+    );
+    const offenders = CLIENT_SURFACE_FILES.filter((f) =>
+      serverBoundaryRe.test(readFileSync(f, "utf8")),
+    );
     expect(offenders).toEqual([]);
   });
 

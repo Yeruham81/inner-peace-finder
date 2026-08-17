@@ -13,7 +13,13 @@
  * distance, no token-set overlap, no single generic token.
  */
 
-import { collapseRepeatedChars, foldSofit, isLatinToken, stripHebrewPrefix, stripNikud } from "./semantic-engine";
+import {
+  collapseRepeatedChars,
+  foldSofit,
+  isLatinToken,
+  stripHebrewPrefix,
+  stripNikud,
+} from "./semantic-engine";
 
 /* ------------------------------------------------------------------ */
 /* Normalization (editor-local)                                       */
@@ -156,7 +162,8 @@ export function preparePhrase(phrase: string): PreparedPhrase | null {
     const min = isLatinToken(t) ? MIN_LATIN_SINGLE_TOKEN : MIN_HEBREW_SINGLE_TOKEN;
     if (t.length < min) return null;
   }
-  const joined = tokens.length > 1 && tokens.every((t) => t.length >= MIN_JOINED_PART) ? tokens.join("") : null;
+  const joined =
+    tokens.length > 1 && tokens.every((t) => t.length >= MIN_JOINED_PART) ? tokens.join("") : null;
   return { original: phrase, tokens, joined };
 }
 
@@ -285,7 +292,10 @@ function phrasesBySlug(catalog: FeedbackCatalog): Map<string, string[]> {
   return map;
 }
 
-export function findDirectEvidence(description: string, catalog: FeedbackCatalog): DirectEvidence[] {
+export function findDirectEvidence(
+  description: string,
+  catalog: FeedbackCatalog,
+): DirectEvidence[] {
   const descTokens = tokenizeFeedback(description);
   if (descTokens.length === 0) return [];
   const byPhrase = phrasesBySlug(catalog);
@@ -310,7 +320,9 @@ export type FeedbackDomain = { slug: string; name: string };
 
 /** Deterministic order for semantic-only results: weight desc, then slug. */
 export function orderSemanticOnly(entries: SemanticEntry[]): SemanticEntry[] {
-  return [...entries].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.slug.localeCompare(b.slug));
+  return [...entries].sort(
+    (a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.slug.localeCompare(b.slug),
+  );
 }
 
 /**
@@ -335,7 +347,9 @@ export function combineFeedbackDomains(
   const semanticOnly = orderSemanticOnly(
     semantic
       .filter((e) => nameBySlug.has(e.slug) && !directSlugs.has(e.slug))
-      .filter((e) => (phrases.get(e.slug) ?? []).some((p) => phraseHasDirectEvidence(p, description))),
+      .filter((e) =>
+        (phrases.get(e.slug) ?? []).some((p) => phraseHasDirectEvidence(p, description)),
+      ),
   );
 
   const seen = new Set<string>();

@@ -109,7 +109,9 @@ describe("therapist semantic extraction — canonical 62-domain / 483-alias E2E"
     for (const alias of CATALOG.aliases) {
       const target = slugById.get(String(alias.problem_id));
       if (!target) {
-        failures.push(`orphan alias ${JSON.stringify(alias.alias)} -> problem_id=${alias.problem_id}`);
+        failures.push(
+          `orphan alias ${JSON.stringify(alias.alias)} -> problem_id=${alias.problem_id}`,
+        );
         continue;
       }
 
@@ -136,7 +138,8 @@ describe("therapist semantic extraction — canonical 62-domain / 483-alias E2E"
     }
 
     expect(failures).toEqual([]);
-  });
+    // 483 aliases x full extraction is CPU-bound and exceeds Bun's 5s default.
+  }, 120_000);
 
   it("retains more than eight independently stated treatment domains", async () => {
     const selectedSlugs = [

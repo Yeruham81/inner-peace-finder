@@ -87,8 +87,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       config,
       transport: createOpenAiTransport(),
 
-      // deno-lint-ignore no-explicit-any
-      loadCatalog: () => SemanticEngine.loadCanonicalProblems(supabase as any),
+      // The Deno-resolved supabase-js types are structurally distinct from the
+      // app-side ones; cast to the exact parameter type instead of `any`.
+      loadCatalog: () =>
+        SemanticEngine.loadCanonicalProblems(
+          supabase as unknown as Parameters<typeof SemanticEngine.loadCanonicalProblems>[0],
+        ),
 
       /*
        * The classify service limits records to safe operational metadata.

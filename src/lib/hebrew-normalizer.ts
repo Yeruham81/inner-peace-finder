@@ -30,11 +30,11 @@ const REPEATED_CHAR_RE = /(.)\1{2,}/gu;
  * "בלחצצצ") converge to the same skeleton after repeat-collapse.
  */
 const SOFIT_MAP: Record<string, string> = {
-  "ם": "מ",
-  "ן": "נ",
-  "ץ": "צ",
-  "ף": "פ",
-  "ך": "כ",
+  ם: "מ",
+  ן: "נ",
+  ץ: "צ",
+  ף: "פ",
+  ך: "כ",
 };
 const SOFIT_RE = /[םןץףך]/g;
 
@@ -102,8 +102,10 @@ export function foldInflections(input: string): string {
       if (tok.length < 3) return tok;
       let t = tok;
       // plurals
-      if (t.endsWith("ים") && t.length > 3) t = t.slice(0, -2); // masc plural
-      else if (t.endsWith("ות") && t.length > 3) t = t.slice(0, -2); // fem plural
+      if (t.endsWith("ים") && t.length > 3)
+        t = t.slice(0, -2); // masc plural
+      else if (t.endsWith("ות") && t.length > 3)
+        t = t.slice(0, -2); // fem plural
       else if (t.endsWith("יות") && t.length > 4) t = t.slice(0, -3);
       // feminine singular → masculine
       if (t.endsWith("ית") && t.length > 3) t = t.slice(0, -2) + "י";
@@ -208,20 +210,53 @@ export function stripHebrewPrefix(token: string): string {
  * high-frequency filler doesn't cause false positives.
  */
 const HEBREW_STOPWORDS = new Set([
-  "אני", "אתה", "את", "הוא", "היא", "אנחנו", "הם", "הן",
-  "של", "עם", "על", "אל", "לא", "כן", "זה", "זו", "יש", "אין",
-  "מה", "מי", "איך", "למה", "כי", "אם", "או", "גם", "רק", "כל",
+  "אני",
+  "אתה",
+  "את",
+  "הוא",
+  "היא",
+  "אנחנו",
+  "הם",
+  "הן",
+  "של",
+  "עם",
+  "על",
+  "אל",
+  "לא",
+  "כן",
+  "זה",
+  "זו",
+  "יש",
+  "אין",
+  "מה",
+  "מי",
+  "איך",
+  "למה",
+  "כי",
+  "אם",
+  "או",
+  "גם",
+  "רק",
+  "כל",
   // NOTE: "אבל" intentionally omitted — it is a content word for grief_loss
   // (mourning) as well as a conjunction, and blocking it drops legitimate
   // alias hits.
-  "היה", "היתה", "להיות", "מאוד", "יותר", "פחות", "לפני", "אחרי",
-  "שלי", "שלך", "שלו", "שלה",
+  "היה",
+  "היתה",
+  "להיות",
+  "מאוד",
+  "יותר",
+  "פחות",
+  "לפני",
+  "אחרי",
+  "שלי",
+  "שלך",
+  "שלו",
+  "שלה",
 ]);
 
 /** Sofit-folded stopwords — matched against the normalized form. */
-const HEBREW_STOPWORDS_NORM = new Set(
-  Array.from(HEBREW_STOPWORDS).map((w) => foldSofit(w)),
-);
+const HEBREW_STOPWORDS_NORM = new Set(Array.from(HEBREW_STOPWORDS).map((w) => foldSofit(w)));
 
 export function tokenizeHebrew(input: string): string[] {
   const normalized = lightNormalizeHebrew(input);
@@ -229,7 +264,10 @@ export function tokenizeHebrew(input: string): string[] {
   const out: string[] = [];
   for (const raw of normalized.split(" ")) {
     if (!raw || raw.length < 2) continue;
-    if (isLatinToken(raw)) { out.push(raw); continue; }
+    if (isLatinToken(raw)) {
+      out.push(raw);
+      continue;
+    }
     const stripped = stripHebrewPrefix(raw);
     if (stripped.length < 2) continue;
     if (
@@ -237,7 +275,8 @@ export function tokenizeHebrew(input: string): string[] {
       HEBREW_STOPWORDS.has(raw) ||
       HEBREW_STOPWORDS_NORM.has(stripped) ||
       HEBREW_STOPWORDS_NORM.has(raw)
-    ) continue;
+    )
+      continue;
     out.push(stripped);
   }
   return out;
@@ -278,10 +317,7 @@ export function flexibleHebrewMatch(phrase: string, haystack: string): boolean {
   if (!nPhrase || !nHay) return false;
   // Stopword safety: a phrase whose ENTIRE normalized form is a stopword
   // must never produce a match by itself — it carries no semantic weight.
-  if (
-    HEBREW_STOPWORDS.has(nPhrase) ||
-    HEBREW_STOPWORDS_NORM.has(nPhrase)
-  ) return false;
+  if (HEBREW_STOPWORDS.has(nPhrase) || HEBREW_STOPWORDS_NORM.has(nPhrase)) return false;
   if (nPhrase.length >= 2 && nHay.includes(nPhrase)) return true;
   const pTokens = tokenizeHebrew(phrase);
   if (pTokens.length === 0) return false;

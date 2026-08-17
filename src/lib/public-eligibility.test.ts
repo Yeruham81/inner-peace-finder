@@ -63,11 +63,17 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
   ["archived", { visibility: "archived" }],
 ];
 
-function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}, errors: Record<string, unknown> = {}) {
+function db(
+  rows: FakeRow[],
+  overrides: Record<string, FakeRow[]> = {},
+  errors: Record<string, unknown> = {},
+) {
   return createFakeSupabase(
     {
       therapists: rows,
-      therapist_populations: [{ therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } }],
+      therapist_populations: [
+        { therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } },
+      ],
       therapist_languages: [{ therapist_id: "t-1", languages: { code: "he", name: "עברית" } }],
       therapist_professions: [
         {
@@ -110,10 +116,20 @@ function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}, errors: 
         },
       ],
       therapist_professional_memberships: [
-        { therapist_id: "t-1", organization_name: "איגוד מקצועי", member_since: 2020, sort_order: 0 },
+        {
+          therapist_id: "t-1",
+          organization_name: "איגוד מקצועי",
+          member_since: 2020,
+          sort_order: 0,
+        },
       ],
       therapist_service_arrangements: [
-        { therapist_id: "t-1", organization_name: "גוף מסדיר", note: "בכפוף לזכאות", sort_order: 0 },
+        {
+          therapist_id: "t-1",
+          organization_name: "גוף מסדיר",
+          note: "בכפוף לזכאות",
+          sort_order: 0,
+        },
       ],
       population_groups: [{ slug: "adults", name: "מבוגרים" }],
       languages: [{ code: "he", name: "עברית" }],
@@ -154,7 +170,10 @@ describe("public eligibility — shared predicate", () => {
   });
 
   it("preserves a missing years_experience value as null instead of coercing it to zero", async () => {
-    const res = await fetchPublicTherapistBySlug(db([therapistRow({ years_experience: null })]), "eligible-one");
+    const res = await fetchPublicTherapistBySlug(
+      db([therapistRow({ years_experience: null })]),
+      "eligible-one",
+    );
 
     expect(res?.years_experience).toBeNull();
   });
@@ -177,7 +196,9 @@ describe("public eligibility — shared predicate", () => {
 
   it("uses only the synchronized therapists.verified projection for the public badge", async () => {
     const client = db([therapistRow({ verified: false })], {
-      therapist_credentials: [{ therapist_id: "t-1", id: "credential-1", verification_status: "verified" }],
+      therapist_credentials: [
+        { therapist_id: "t-1", id: "credential-1", verification_status: "verified" },
+      ],
     });
 
     const res = await fetchPublicTherapistBySlug(client, "eligible-one");
@@ -216,7 +237,10 @@ describe("public eligibility — shared predicate", () => {
   });
 
   it("the public profile response contains no private or internal column", async () => {
-    const res = (await fetchPublicTherapistBySlug(db([therapistRow({})]), "eligible-one")) as Record<string, unknown>;
+    const res = (await fetchPublicTherapistBySlug(
+      db([therapistRow({})]),
+      "eligible-one",
+    )) as Record<string, unknown>;
     const keys = Object.keys(res);
     for (const col of PRIVATE_THERAPIST_COLUMNS) {
       expect(keys, col).not.toContain(col);
@@ -242,7 +266,13 @@ describe("public eligibility — shared predicate", () => {
   });
 
   it("listFilterOptions propagates catalog-query failures instead of returning empty filters", async () => {
-    for (const table of ["population_groups", "languages", "professions", "treatment_modalities", "therapy_formats"]) {
+    for (const table of [
+      "population_groups",
+      "languages",
+      "professions",
+      "treatment_modalities",
+      "therapy_formats",
+    ]) {
       await expect(
         listEligibleFilterOptions(db([therapistRow({})], {}, { [table]: new Error("boom") })),
       ).rejects.toThrow(`${table}: boom`);

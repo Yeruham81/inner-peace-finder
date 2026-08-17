@@ -25,7 +25,12 @@ function problemSlugFromPath(pathname: string): string | null {
  */
 export function buildResultsReturn(pathname: string, searchStr: string): string | undefined {
   if (pathname === SEARCH_PATH) {
-    const query = searchStr && searchStr !== "?" ? (searchStr.startsWith("?") ? searchStr : `?${searchStr}`) : "";
+    const query =
+      searchStr && searchStr !== "?"
+        ? searchStr.startsWith("?")
+          ? searchStr
+          : `?${searchStr}`
+        : "";
     return `${SEARCH_PATH}${query}`;
   }
   if (problemSlugFromPath(pathname)) return pathname;

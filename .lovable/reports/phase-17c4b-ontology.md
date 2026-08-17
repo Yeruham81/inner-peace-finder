@@ -10,30 +10,30 @@ the profile-extraction regression suite are stable by construction.
 
 ## 1. Before / After Metrics (against 17C.3 baseline)
 
-| Metric              | 17C.3 baseline | 17C.4B | Target      | Δ       |
-|---------------------|---------------:|-------:|-------------|--------:|
-| Overall accuracy    |          92.6% |  92.6% | ≥ 92%       |   ±0.0  |
-| Top-1 accuracy      |          78.7% |  78.7% | ≥ 78%       |   ±0.0  |
-| Top-3 accuracy      |          89.4% |  89.4% | ≥ 89%       |   ±0.0  |
-| Top-5 accuracy      |          89.4% |  89.4% | ≥ 89%       |   ±0.0  |
-| MRR                 |          0.867 |  0.869 | maintain    |  +0.002 |
-| Profile extraction  |          83.3% |  83.3% | ≥ 83.3%     |   ±0.0  |
-| Natural language    |          96.0% |  96.0% | maintain    |   ±0.0  |
-| Slang               |         100.0% | 100.0% | maintain    |   ±0.0  |
-| Typos               |          91.7% |  91.7% | maintain    |   ±0.0  |
+| Metric             | 17C.3 baseline | 17C.4B | Target   |      Δ |
+| ------------------ | -------------: | -----: | -------- | -----: |
+| Overall accuracy   |          92.6% |  92.6% | ≥ 92%    |   ±0.0 |
+| Top-1 accuracy     |          78.7% |  78.7% | ≥ 78%    |   ±0.0 |
+| Top-3 accuracy     |          89.4% |  89.4% | ≥ 89%    |   ±0.0 |
+| Top-5 accuracy     |          89.4% |  89.4% | ≥ 89%    |   ±0.0 |
+| MRR                |          0.867 |  0.869 | maintain | +0.002 |
+| Profile extraction |          83.3% |  83.3% | ≥ 83.3%  |   ±0.0 |
+| Natural language   |          96.0% |  96.0% | maintain |   ±0.0 |
+| Slang              |         100.0% | 100.0% | maintain |   ±0.0 |
+| Typos              |          91.7% |  91.7% | maintain |   ±0.0 |
 
 No regression on any category. All success criteria met.
 
 ### By category (pass | top1 | top3)
 
-| Category          | Pass          | Top-1  | Top-3  |
-|-------------------|--------------:|-------:|-------:|
-| direct            |  15/15 100.0% | 100.0% | 100.0% |
-| natural_language  |  24/25  96.0% |  88.0% |  96.0% |
-| ambiguous         |  12/12 100.0% |  33.3% |  66.7% |
-| multiple_domains  |  10/15  66.7% |  40.0% |  73.3% |
-| slang             |  15/15 100.0% | 100.0% | 100.0% |
-| typos             |  11/12  91.7% |  91.7% |  91.7% |
+| Category         |         Pass |  Top-1 |  Top-3 |
+| ---------------- | -----------: | -----: | -----: |
+| direct           | 15/15 100.0% | 100.0% | 100.0% |
+| natural_language |  24/25 96.0% |  88.0% |  96.0% |
+| ambiguous        | 12/12 100.0% |  33.3% |  66.7% |
+| multiple_domains |  10/15 66.7% |  40.0% |  73.3% |
+| slang            | 15/15 100.0% | 100.0% | 100.0% |
+| typos            |  11/12 91.7% |  91.7% |  91.7% |
 
 ---
 
@@ -42,15 +42,15 @@ No regression on any category. All success criteria met.
 Applied only in `classify()`. Historical data and `extractProfile()`
 continue to see the deprecated slug verbatim.
 
-| Deprecated slug        | Replacement       | Reason                                                |
-|------------------------|-------------------|-------------------------------------------------------|
-| `burnout_depression`   | `burnout`         | Empty vocab; 5 FPs against the burnout cluster.       |
-| `loss`                 | `grief_loss`      | Near-synonym; zero vocab of its own.                  |
-| `bereavement`          | `grief_loss`      | Same domain; zero vocab of its own.                   |
-| `complex_trauma`       | `trauma`          | Trauma subtype without independent classify vocab.    |
-| `generalized_anxiety`  | `anxiety`         | Anxiety subtype without independent classify vocab.   |
-| `major_life_change`    | `life_transitions`| Duplicate of `life_transitions`.                      |
-| `social_isolation`     | `loneliness`      | Sibling with zero vocab; FP against `loneliness`.     |
+| Deprecated slug       | Replacement        | Reason                                              |
+| --------------------- | ------------------ | --------------------------------------------------- |
+| `burnout_depression`  | `burnout`          | Empty vocab; 5 FPs against the burnout cluster.     |
+| `loss`                | `grief_loss`       | Near-synonym; zero vocab of its own.                |
+| `bereavement`         | `grief_loss`       | Same domain; zero vocab of its own.                 |
+| `complex_trauma`      | `trauma`           | Trauma subtype without independent classify vocab.  |
+| `generalized_anxiety` | `anxiety`          | Anxiety subtype without independent classify vocab. |
+| `major_life_change`   | `life_transitions` | Duplicate of `life_transitions`.                    |
+| `social_isolation`    | `loneliness`       | Sibling with zero vocab; FP against `loneliness`.   |
 
 ---
 
@@ -64,10 +64,10 @@ continue to see the deprecated slug verbatim.
 
 ### Additions in 17C.4B (child → parent)
 
-| Child            | Parent            | Motivation (17C.4A §2)                          |
-|------------------|-------------------|-------------------------------------------------|
-| `low_self_esteem`| `identity_crisis` | 3 confusions where LSE outranks identity_crisis |
-| `identity_crisis`| `self_identity`   | 3 confusions where IC outranks self_identity    |
+| Child             | Parent            | Motivation (17C.4A §2)                          |
+| ----------------- | ----------------- | ----------------------------------------------- |
+| `low_self_esteem` | `identity_crisis` | 3 confusions where LSE outranks identity_crisis |
+| `identity_crisis` | `self_identity`   | 3 confusions where IC outranks self_identity    |
 
 Suppression still requires the child to outrank the parent AND the parent
 to be weaker than `PARENT_SUPPRESS_RATIO * child.raw` — i.e. both concepts
@@ -108,14 +108,14 @@ Therapist profile tags for these domains continue to be produced by
 All phrases below remain in the DB and remain usable for
 `extractProfile()`. They are skipped only at classify time.
 
-| Slug             | Blocked phrase(s)                              | Action    | Reason                                                              |
-|------------------|------------------------------------------------|-----------|---------------------------------------------------------------------|
-| `identity_crisis`| `אני מחפש/מחפשת את עצמי`                       | narrow    | Life-transition phrasing → over-fires against transitions queries.  |
-| `social_anxiety` | `פחד מאנשים`                                   | narrow    | Fires on generic "afraid of people" without social specificity.     |
-| `psychosomatic`  | `כאב ראש מלחץ`, `כאבי בטן מלחץ`                | narrow    | Short overlap with stress / burnout queries.                        |
-| `trust_issues`   | `קשה לי לסמוך`                                 | narrow    | Near-duplicate of a `relationships` alias.                          |
-| `low_mood`       | *(evaluated, reverted)*                        | keep      | Blocking hurt recall on the low_mood ambiguous case; the FPs are already handled by the depression→low_mood parent-suppression edge. |
-| `loneliness`     | *(evaluated, reverted)*                        | keep      | Aliases carry real signal; social_belonging FPs are gone now that social_belonging is profile-only. |
+| Slug              | Blocked phrase(s)               | Action | Reason                                                                                                                               |
+| ----------------- | ------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `identity_crisis` | `אני מחפש/מחפשת את עצמי`        | narrow | Life-transition phrasing → over-fires against transitions queries.                                                                   |
+| `social_anxiety`  | `פחד מאנשים`                    | narrow | Fires on generic "afraid of people" without social specificity.                                                                      |
+| `psychosomatic`   | `כאב ראש מלחץ`, `כאבי בטן מלחץ` | narrow | Short overlap with stress / burnout queries.                                                                                         |
+| `trust_issues`    | `קשה לי לסמוך`                  | narrow | Near-duplicate of a `relationships` alias.                                                                                           |
+| `low_mood`        | _(evaluated, reverted)_         | keep   | Blocking hurt recall on the low_mood ambiguous case; the FPs are already handled by the depression→low_mood parent-suppression edge. |
+| `loneliness`      | _(evaluated, reverted)_         | keep   | Aliases carry real signal; social_belonging FPs are gone now that social_belonging is profile-only.                                  |
 
 No vocabulary was deleted from the database.
 
@@ -171,7 +171,7 @@ Residual failures (all pre-existing, none newly introduced):
    `loss` / `bereavement` / `generalized_anxiety`).
 2. Re-measure precision under `MAX_MATCHES=5`; if it degrades noticeably,
    pair it with the low-confidence tail-truncation (`confidence <
-   CONFIDENCE_THRESHOLD - 0.15` → drop) rather than reverting the cap.
+CONFIDENCE_THRESHOLD - 0.15` → drop) rather than reverting the cap.
 3. Consider a further ontology pass ("17C.4C") only if 17C.5 exposes new
    sibling confusion that ranking alone cannot solve — do not preempt.
 4. Beyond 17C.5, the residual `natural_language` insomnia failure and

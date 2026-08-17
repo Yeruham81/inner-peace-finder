@@ -141,8 +141,7 @@ export type LocalityOption = {
 };
 
 const LOCALITIES_RESOURCE_ID = "5c78e9fa-c2e2-4771-93ff-7f400a12f7ba";
-const LOCALITIES_URL =
-  `https://data.gov.il/api/3/action/datastore_search?resource_id=${LOCALITIES_RESOURCE_ID}&limit=32000`;
+const LOCALITIES_URL = `https://data.gov.il/api/3/action/datastore_search?resource_id=${LOCALITIES_RESOURCE_ID}&limit=32000`;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -258,12 +257,15 @@ export function productRegionForLocality(input: {
   // Defensive fallback for a future source that changes numeric codes but
   // keeps the official Hebrew subdistrict names.
   if (subdistrict === compactKey("ירושלים")) return "ירושלים והסביבה";
-  if (["צפת", "כנרת", "עפולה", "עכו", "נצרת", "גולן"].map(compactKey).includes(subdistrict)) return "צפון";
+  if (["צפת", "כנרת", "עפולה", "עכו", "נצרת", "גולן"].map(compactKey).includes(subdistrict))
+    return "צפון";
   if (subdistrict === compactKey("חיפה")) return "חיפה והקריות";
   if (["חדרה", "השרון"].map(compactKey).includes(subdistrict)) return "השרון";
-  if (subdistrict === compactKey("פתח תקווה")) return productRegionForPetahTikva(input.name, council);
+  if (subdistrict === compactKey("פתח תקווה"))
+    return productRegionForPetahTikva(input.name, council);
   if (["רמלה", "רחובות"].map(compactKey).includes(subdistrict)) return "מרכז והשפלה";
-  if (["תל אביב", "רמת גן", "חולון"].map(compactKey).includes(subdistrict)) return "תל אביב וגוש דן";
+  if (["תל אביב", "רמת גן", "חולון"].map(compactKey).includes(subdistrict))
+    return "תל אביב וגוש דן";
   if (["אשקלון", "באר שבע"].map(compactKey).includes(subdistrict)) return "דרום";
   if (
     ["ג'נין", "שכם", "טול כרם", "רמאללה", "ירדן יריחו", "בית לחם", "חברון"]
@@ -285,7 +287,12 @@ function parseRecords(records: unknown[]): LocalityOption[] {
 
     const code = getField(row, ["סמל_ישוב", "סמל_יישוב", "Code", "code", "SETL_CODE"]);
     const name = getField(row, ["שם_ישוב", "שם_יישוב", "Name_Hebrew", "name_he", "SETL_NAME"]);
-    const subdistrictCode = getField(row, ["סמל_נפה", "קוד_נפה", "Subdistrict_Code", "subdistrict_code"]);
+    const subdistrictCode = getField(row, [
+      "סמל_נפה",
+      "קוד_נפה",
+      "Subdistrict_Code",
+      "subdistrict_code",
+    ]);
     const subdistrictName = getField(row, ["שם_נפה", "נפה", "Subdistrict", "subdistrict_name"]);
     const regionalCouncil = getField(row, [
       "שם_מועצה",
@@ -339,12 +346,14 @@ export async function loadLocalityOptions(): Promise<LocalityOption[]> {
       result?: { records?: unknown[] };
     };
     const records = payload.result?.records;
-    if (!payload.success || !Array.isArray(records)) throw new Error("localities response is invalid");
+    if (!payload.success || !Array.isArray(records))
+      throw new Error("localities response is invalid");
 
     const items = parseRecords(records);
     // A low count strongly suggests a source/schema failure. Do not silently
     // treat a partial list as canonical.
-    if (items.length < 500) throw new Error(`localities response contained only ${items.length} usable records`);
+    if (items.length < 500)
+      throw new Error(`localities response contained only ${items.length} usable records`);
 
     localityCache = { expiresAt: now + CACHE_TTL_MS, items };
     return items;

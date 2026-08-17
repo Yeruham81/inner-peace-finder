@@ -9,10 +9,7 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
-    meta: [
-      { title: "איפוס סיסמה | Tipulinks" },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
+    meta: [{ title: "איפוס סיסמה | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
   }),
   component: ResetPasswordPage,
 });
@@ -33,19 +30,32 @@ function ResetPasswordPage() {
         setReady(true);
       }
     });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
-    return () => { sub.subscription.unsubscribe(); };
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setReady(true);
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    if (password.length < 8) { setMsg({ kind: "err", text: "סיסמה חייבת להיות באורך 8 תווים לפחות." }); return; }
-    if (password !== confirm) { setMsg({ kind: "err", text: "הסיסמאות לא תואמות." }); return; }
+    if (password.length < 8) {
+      setMsg({ kind: "err", text: "סיסמה חייבת להיות באורך 8 תווים לפחות." });
+      return;
+    }
+    if (password !== confirm) {
+      setMsg({ kind: "err", text: "הסיסמאות לא תואמות." });
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
-    if (error) { setMsg({ kind: "err", text: error.message }); return; }
+    if (error) {
+      setMsg({ kind: "err", text: error.message });
+      return;
+    }
     setMsg({ kind: "ok", text: "הסיסמה עודכנה. מעביר לחשבון…" });
     setTimeout(() => navigate({ to: "/account" }), 900);
   }
@@ -56,24 +66,48 @@ function ResetPasswordPage() {
         <h1 className="text-xl font-bold text-foreground">איפוס סיסמה</h1>
         {!ready && (
           <p className="mt-4 text-sm text-muted-foreground">
-            הקישור לא תקין או פג תוקף. חזרו לעמוד <Link to="/auth" className="underline">הכניסה</Link> ובקשו קישור חדש.
+            הקישור לא תקין או פג תוקף. חזרו לעמוד{" "}
+            <Link to="/auth" className="underline">
+              הכניסה
+            </Link>{" "}
+            ובקשו קישור חדש.
           </p>
         )}
         {ready && (
           <form onSubmit={onSubmit} className="mt-4 grid gap-3">
             <div>
               <Label htmlFor="pw">סיסמה חדשה</Label>
-              <Input id="pw" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
+              <Input
+                id="pw"
+                type="password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                dir="ltr"
+              />
             </div>
             <div>
               <Label htmlFor="pw2">אישור סיסמה</Label>
-              <Input id="pw2" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} dir="ltr" />
+              <Input
+                id="pw2"
+                type="password"
+                required
+                minLength={8}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                dir="ltr"
+              />
             </div>
-            <Button type="submit" disabled={loading}>{loading ? "מעדכן…" : "עדכון סיסמה"}</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "מעדכן…" : "עדכון סיסמה"}
+            </Button>
           </form>
         )}
         {msg && (
-          <div className={`mt-4 rounded-md border px-3 py-2 text-sm ${msg.kind === "err" ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"}`}>
+          <div
+            className={`mt-4 rounded-md border px-3 py-2 text-sm ${msg.kind === "err" ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"}`}
+          >
             {msg.text}
           </div>
         )}

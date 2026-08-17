@@ -10,7 +10,11 @@
  *   D. yearsExperience    (desc)
  */
 
-import type { CandidateForRanking, SemanticSignal, SoftPreferences } from "./query-interpreter.types";
+import type {
+  CandidateForRanking,
+  SemanticSignal,
+  SoftPreferences,
+} from "./query-interpreter.types";
 import type { SemanticProfileEntry } from "./therapist-semantic-profile";
 import { resolveDeprecatedSlug } from "./semantic-ontology";
 
@@ -22,7 +26,10 @@ import { resolveDeprecatedSlug } from "./semantic-ontology";
  */
 export const MAX_PREFERENCE_SCORE = 7;
 
-export function computePreferenceScore(candidate: CandidateForRanking, soft: SoftPreferences): number {
+export function computePreferenceScore(
+  candidate: CandidateForRanking,
+  soft: SoftPreferences,
+): number {
   return (
     (soft.professionSlugs.some((s) => candidate.professionSlugs.includes(s)) ? 1 : 0) +
     (soft.modalitySlugs.some((s) => candidate.modalitySlugs.includes(s)) ? 1 : 0) +
@@ -88,7 +95,10 @@ export function computeSemanticScoreWithProfile(
 
 export type RankedCandidate = CandidateForRanking & { preferenceScore: number };
 
-export function rankCandidates(candidates: CandidateForRanking[], soft: SoftPreferences): RankedCandidate[] {
+export function rankCandidates(
+  candidates: CandidateForRanking[],
+  soft: SoftPreferences,
+): RankedCandidate[] {
   const scored: RankedCandidate[] = candidates.map((c) => ({
     ...c,
     preferenceScore: computePreferenceScore(c, soft),
@@ -104,7 +114,10 @@ export function rankCandidates(candidates: CandidateForRanking[], soft: SoftPref
   return scored;
 }
 
-export function applySemanticGate<T extends { semanticOverlap: number }>(candidates: T[], hasSignals: boolean): T[] {
+export function applySemanticGate<T extends { semanticOverlap: number }>(
+  candidates: T[],
+  hasSignals: boolean,
+): T[] {
   if (!hasSignals) return candidates;
   return candidates.filter((c) => c.semanticOverlap > 0);
 }

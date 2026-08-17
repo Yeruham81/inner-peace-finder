@@ -20,7 +20,9 @@ describe("hasStrongExtractionEvidence", () => {
 
   it("accepts strong multi-token evidence (quality ≥ 0.6)", () => {
     // Phrase with no generic-anchor tokens ("התקפי", "חרדה" ∉ anchors).
-    expect(hasStrongExtractionEvidence([ev({ phrase: "התקפי חרדה", tokens: 2, quality: 0.7 })])).toBe(true);
+    expect(
+      hasStrongExtractionEvidence([ev({ phrase: "התקפי חרדה", tokens: 2, quality: 0.7 })]),
+    ).toBe(true);
   });
 
   it("rejects multi-token evidence when tokens are not proximate", () => {
@@ -55,15 +57,23 @@ describe("hasStrongExtractionEvidence", () => {
 
   it("rejects weak multi-token overlap (quality < 0.6)", () => {
     // e.g. "הבנה עצמית" vs alias "דימוי עצמי נמוך" — one shared token.
-    expect(hasStrongExtractionEvidence([ev({ phrase: "דימוי עצמי נמוך", tokens: 3, quality: 0.11 })])).toBe(false);
+    expect(
+      hasStrongExtractionEvidence([ev({ phrase: "דימוי עצמי נמוך", tokens: 3, quality: 0.11 })]),
+    ).toBe(false);
   });
 
   it("CASE 1: accepts an explicit single-token treatment term", () => {
     // Alias "אני בדיכאון" → after tokenization the only content token is "דיכאון".
-    expect(hasStrongExtractionEvidence([ev({ phrase: "אני בדיכאון", tokens: 1, quality: 1 })])).toBe(true);
+    expect(
+      hasStrongExtractionEvidence([ev({ phrase: "אני בדיכאון", tokens: 1, quality: 1 })]),
+    ).toBe(true);
     // Direct single-token alias like "טראומה" or canonical name "אוטיזם".
-    expect(hasStrongExtractionEvidence([ev({ phrase: "טראומה", tokens: 1, quality: 1 })])).toBe(true);
-    expect(hasStrongExtractionEvidence([ev({ kind: "name", phrase: "אוטיזם", tokens: 1, quality: 1 })])).toBe(true);
+    expect(hasStrongExtractionEvidence([ev({ phrase: "טראומה", tokens: 1, quality: 1 })])).toBe(
+      true,
+    );
+    expect(
+      hasStrongExtractionEvidence([ev({ kind: "name", phrase: "אוטיזם", tokens: 1, quality: 1 })]),
+    ).toBe(true);
   });
 
   it("CASE 1: rejects generic-anchor single tokens", () => {
@@ -78,6 +88,8 @@ describe("hasStrongExtractionEvidence", () => {
   });
 
   it("rejects intent-kind evidence outright", () => {
-    expect(hasStrongExtractionEvidence([ev({ kind: "intent", phrase: "טראומה", full: true })])).toBe(false);
+    expect(
+      hasStrongExtractionEvidence([ev({ kind: "intent", phrase: "טראומה", full: true })]),
+    ).toBe(false);
   });
 });

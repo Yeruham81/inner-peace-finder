@@ -22,7 +22,11 @@ import { triageSearchSafety, type SearchSafetyTriage } from "./search-safety-tri
 import { parseStoredProfile } from "./therapist-semantic-profile";
 import { loadSearchCatalog } from "./query-catalog";
 import { interpretQuery } from "./query-interpreter";
-import { applyExplicitFilters, validateExplicitFilters, type RawExplicitFilters } from "./explicit-filters";
+import {
+  applyExplicitFilters,
+  validateExplicitFilters,
+  type RawExplicitFilters,
+} from "./explicit-filters";
 import { applyEligibility } from "./search-eligibility";
 import {
   executeUnifiedSearch,
@@ -34,7 +38,11 @@ import { matchesLocationAvailability } from "./unified-search-executor";
 import { regionSlugForStoredValue, resolveStoredRegion } from "./locality-options";
 import { PHYSICAL_SERVICE_TYPES } from "./search-contract";
 import { hasExplicitFilters } from "./explicit-filters";
-import { buildCardLocationDisplay, type ActiveLocationRow, type SearchResultCard } from "./search-result-card";
+import {
+  buildCardLocationDisplay,
+  type ActiveLocationRow,
+  type SearchResultCard,
+} from "./search-result-card";
 import type {
   InterpretationResult,
   SemanticSignal,
@@ -196,7 +204,9 @@ async function buildPlan(
       .eq("is_active", true);
     if (error) throw error;
     const active = new Set((activeProblems ?? []).map((problem) => problem.slug));
-    semanticSignals = normalizedRequested.filter((slug) => active.has(slug)).map((slug) => ({ slug, confidence: 1 }));
+    semanticSignals = normalizedRequested
+      .filter((slug) => active.has(slug))
+      .map((slug) => ({ slug, confidence: 1 }));
   }
   if (
     semanticSignals.length === 0 &&
@@ -207,7 +217,8 @@ async function buildPlan(
     // Server-only normal semantic route: exact curated aliases/names are
     // authoritative, the LLM handles free wording/context, and the old
     // SemanticEngine classifier remains a temporary failure fallback.
-    const { classifyUnifiedSemanticRemainder } = await import("./unified-semantic-classifier.server");
+    const { classifyUnifiedSemanticRemainder } =
+      await import("./unified-semantic-classifier.server");
     const classified = await classifyUnifiedSemanticRemainder(interpretation.semanticRemainder, sb);
     semanticSignals = classified.signals;
   }
@@ -215,7 +226,11 @@ async function buildPlan(
   // Explicit UI filters are canonicalized and folded in as HARD filters.
   // They are authoritative over anything the query inferred.
   const explicit = validateExplicitFilters(explicitRaw, catalog);
-  const merged = applyExplicitFilters(interpretation.hardFilters, interpretation.softPreferences, explicit);
+  const merged = applyExplicitFilters(
+    interpretation.hardFilters,
+    interpretation.softPreferences,
+    explicit,
+  );
 
   const plan: TherapistSearchPlan = {
     interpretation,
@@ -228,7 +243,8 @@ async function buildPlan(
         ? "unrecognized_query"
         : null,
     safetyTriage,
-    browseAll: query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
+    browseAll:
+      query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
     explicitFilters: explicit,
     filterConflicts: merged.conflicts,
   };
@@ -244,7 +260,10 @@ async function buildPlan(
  * semantic signal and the normal unified executor performs eligibility,
  * semantic gating, ranking and display hydration.
  */
-export function buildProblemSearchPlan(problem: { slug: string; name: string }): TherapistSearchPlan {
+export function buildProblemSearchPlan(problem: {
+  slug: string;
+  name: string;
+}): TherapistSearchPlan {
   const hardFilters = emptyStructuredFilters();
   const softPreferences = emptySoftPreferences();
   const interpretation: InterpretationResult = {
@@ -388,7 +407,10 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .from("therapist_locations")
           .select("therapist_id, location_type, region")
           .eq("is_active", true)
-          .in("location_type", typesToLoad as Array<Database["public"]["Enums"]["location_type"]>)) as unknown as {
+          .in(
+            "location_type",
+            typesToLoad as Array<Database["public"]["Enums"]["location_type"]>,
+          )) as unknown as {
           data: Array<{
             therapist_id: string;
             location_type: string;
@@ -398,7 +420,10 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         },
       );
 
-      const byTherapist = new Map<string, Array<{ location_type: string; region_slug: string | null }>>();
+      const byTherapist = new Map<
+        string,
+        Array<{ location_type: string; region_slug: string | null }>
+      >();
       for (const r of rows ?? []) {
         const list = byTherapist.get(r.therapist_id) ?? [];
         list.push({
@@ -416,7 +441,9 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     },
     async idsByGender(gender) {
       const rows = unwrap(
-        (await applyEligibility(sb.from("therapists").select("id").eq("gender", gender))) as unknown as {
+        (await applyEligibility(
+          sb.from("therapists").select("id").eq("gender", gender),
+        )) as unknown as {
           data: Array<{ id: string }> | null;
           error: unknown;
         },
@@ -468,15 +495,26 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         applyEligibility(
           sb
             .from("therapists")
-            .select("id, verified, image_url, gender, years_experience, full_description, semantic_profile"),
+            .select(
+              "id, verified, image_url, gender, years_experience, full_description, semantic_profile",
+            ),
         ).in("id", ids),
-        sb.from("therapist_professions").select("therapist_id, professions!inner(slug)").in("therapist_id", ids),
+        sb
+          .from("therapist_professions")
+          .select("therapist_id, professions!inner(slug)")
+          .in("therapist_id", ids),
         sb
           .from("therapist_modalities")
           .select("therapist_id, treatment_modalities!inner(slug)")
           .in("therapist_id", ids),
-        sb.from("therapist_populations").select("therapist_id, population_groups!inner(slug)").in("therapist_id", ids),
-        sb.from("therapist_languages").select("therapist_id, languages!inner(code)").in("therapist_id", ids),
+        sb
+          .from("therapist_populations")
+          .select("therapist_id, population_groups!inner(slug)")
+          .in("therapist_id", ids),
+        sb
+          .from("therapist_languages")
+          .select("therapist_id, languages!inner(code)")
+          .in("therapist_id", ids),
         sb
           .from("therapist_locations")
           .select("therapist_id, city, location_type")
@@ -498,7 +536,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         full_description: string | null;
         semantic_profile: unknown;
       }>;
-      const pushInto = <V,>(m: Map<string, V[]>, k: string, v: V) => {
+      const pushInto = <V>(m: Map<string, V[]>, k: string, v: V) => {
         const arr = m.get(k);
         if (arr) arr.push(v);
         else m.set(k, [v]);
@@ -515,7 +553,8 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         therapist_id: string;
         treatment_modalities: { slug: string };
       }>) {
-        if (r.treatment_modalities?.slug) pushInto(modBy, r.therapist_id, r.treatment_modalities.slug);
+        if (r.treatment_modalities?.slug)
+          pushInto(modBy, r.therapist_id, r.treatment_modalities.slug);
       }
       const popBy = new Map<string, string[]>();
       for (const r of (popRes.data ?? []) as Array<{
@@ -544,7 +583,8 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
 
       return tRows.map((t) => {
         const bio = t.full_description ?? "";
-        const g: TherapistGender | null = t.gender === "male" || t.gender === "female" ? t.gender : null;
+        const g: TherapistGender | null =
+          t.gender === "male" || t.gender === "female" ? t.gender : null;
         return {
           id: t.id,
           gender: g,
@@ -581,7 +621,10 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .select("therapist_id, location_type, city, region, is_primary, accessibility_status")
           .eq("is_active", true)
           .in("therapist_id", ids),
-        sb.from("therapist_languages").select("therapist_id, languages!inner(name)").in("therapist_id", ids),
+        sb
+          .from("therapist_languages")
+          .select("therapist_id, languages!inner(name)")
+          .in("therapist_id", ids),
         sb
           .from("therapist_populations")
           .select("therapist_id, population_groups!inner(slug, name)")

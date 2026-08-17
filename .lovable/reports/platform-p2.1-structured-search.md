@@ -25,20 +25,20 @@ experience.
 
 ```ts
 type StructuredResult =
-  | TherapistStructuredResult   // { type: "therapist",  ... }
-  | ProfessionStructuredResult  // { type: "profession", ... }
-  | ModalityStructuredResult    // { type: "modality",   ... }
-  | LocationStructuredResult;   // { type: "location",   ... }
+  | TherapistStructuredResult // { type: "therapist",  ... }
+  | ProfessionStructuredResult // { type: "profession", ... }
+  | ModalityStructuredResult // { type: "modality",   ... }
+  | LocationStructuredResult; // { type: "location",   ... }
 ```
 
 ## Searchable entity types (this phase)
 
-| Type         | Authoritative source                                       |
-|--------------|------------------------------------------------------------|
-| `therapist`  | `public.therapists` (identity) + structured joins below    |
-| `profession` | `public.professions` ⨝ `public.therapist_professions`      |
+| Type         | Authoritative source                                          |
+| ------------ | ------------------------------------------------------------- |
+| `therapist`  | `public.therapists` (identity) + structured joins below       |
+| `profession` | `public.professions` ⨝ `public.therapist_professions`         |
 | `modality`   | `public.treatment_modalities` ⨝ `public.therapist_modalities` |
-| `location`   | `public.therapist_locations` (city, region, is_active)     |
+| `location`   | `public.therapist_locations` (city, region, is_active)        |
 
 ### Key changes vs. Phase P2 Entity Search
 
@@ -83,13 +83,13 @@ union, and no changes to Semantic Search.
 
 ## Relationship to Semantic Search
 
-| Concern                        | Semantic Search                | Structured Search              |
-|--------------------------------|--------------------------------|--------------------------------|
-| Input                          | Natural-language descriptions  | Named structured entities      |
-| Sources                        | Ontology, aliases, intents     | Relational tables of record    |
-| Ranking model                  | SemanticEngine (ontology-aware) | Lexical / structured matching |
-| Owner                          | `classifyAndSearch`            | `searchStructured`             |
-| Modified in P2.1?              | ❌ Untouched                    | ✅ Generalized & renamed       |
+| Concern           | Semantic Search                 | Structured Search             |
+| ----------------- | ------------------------------- | ----------------------------- |
+| Input             | Natural-language descriptions   | Named structured entities     |
+| Sources           | Ontology, aliases, intents      | Relational tables of record   |
+| Ranking model     | SemanticEngine (ontology-aware) | Lexical / structured matching |
+| Owner             | `classifyAndSearch`             | `searchStructured`            |
+| Modified in P2.1? | ❌ Untouched                    | ✅ Generalized & renamed      |
 
 The two layers currently run independently. Fusion into a unified ranked
 experience is deferred to Phase P6 (Unified Search Experience).

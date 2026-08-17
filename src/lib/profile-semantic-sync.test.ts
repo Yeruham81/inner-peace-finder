@@ -154,7 +154,9 @@ describe("saveMyProfile — semantic wiring", () => {
     const payloadEnd = saveSource.indexOf('.rpc("save_therapist_profile"');
     expect(payloadStart).toBeGreaterThan(-1);
     expect(payloadEnd).toBeGreaterThan(payloadStart);
-    expect(saveSource.slice(payloadStart, payloadEnd)).toContain("semantic_profile: semanticProfile");
+    expect(saveSource.slice(payloadStart, payloadEnd)).toContain(
+      "semantic_profile: semanticProfile",
+    );
     // Create and update share one atomic database operation.
     expect(saveSource).toContain("_payload: payload as never");
   });

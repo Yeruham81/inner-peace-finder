@@ -32,11 +32,7 @@ export default tseslint.config(
           ],
           patterns: [
             {
-              group: [
-                "**/hebrew-normalizer",
-                "**/hebrew-normalizer.ts",
-                "@/lib/hebrew-normalizer",
-              ],
+              group: ["**/hebrew-normalizer", "**/hebrew-normalizer.ts", "@/lib/hebrew-normalizer"],
               message:
                 "Phase 16: import semantic helpers via `./semantic-engine` (SemanticEngine). Only semantic-engine.ts and its tests may import hebrew-normalizer directly.",
             },

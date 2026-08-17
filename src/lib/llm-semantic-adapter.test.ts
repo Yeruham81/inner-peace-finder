@@ -41,7 +41,15 @@ describe("adapter input surface", () => {
       expect(Object.keys(p).sort()).toEqual(["aliases", "name", "slug"]);
     }
     const serialized = JSON.stringify(seen);
-    for (const forbidden of ["therapist", "user_id", "userId", "city", "gender", "language", "token"]) {
+    for (const forbidden of [
+      "therapist",
+      "user_id",
+      "userId",
+      "city",
+      "gender",
+      "language",
+      "token",
+    ]) {
       expect(serialized.includes(forbidden)).toBe(false);
     }
   });
@@ -114,9 +122,9 @@ describe("failure behavior", () => {
   });
 
   it("noop classifier throws instead of inventing a fallback signal", async () => {
-    await expect(
-      NoopLlmSemanticClassifier.classify(input("חרדה")),
-    ).rejects.toBeInstanceOf(LlmSemanticError);
+    await expect(NoopLlmSemanticClassifier.classify(input("חרדה"))).rejects.toBeInstanceOf(
+      LlmSemanticError,
+    );
   });
 
   it("catalog ordering does not change validation or ordering guarantees", async () => {

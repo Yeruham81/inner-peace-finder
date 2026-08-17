@@ -5,7 +5,10 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { searchStructuredTherapists, type TherapistStructuredResult } from "@/lib/structured-search.functions";
+import {
+  searchStructuredTherapists,
+  type TherapistStructuredResult,
+} from "@/lib/structured-search.functions";
 import {
   submitClaimRequest,
   cancelClaimRequest,
@@ -19,7 +22,10 @@ import {
 
 export const Route = createFileRoute("/_authenticated/claim")({
   head: () => ({
-    meta: [{ title: "שיוך פרופיל מטפל | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
+    meta: [
+      { title: "שיוך פרופיל מטפל | Tipulinks" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
   }),
   component: ClaimPage,
 });
@@ -55,7 +61,8 @@ function ClaimPage() {
       <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-foreground">שיוך פרופיל מטפל קיים</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          הזינו את שמכם כדי לאתר את הפרופיל שלכם. שיוך פרופיל אינו מהווה אישור מקצועי — האימות המקצועי נעשה בשלב נפרד.
+          הזינו את שמכם כדי לאתר את הפרופיל שלכם. שיוך פרופיל אינו מהווה אישור מקצועי — האימות
+          המקצועי נעשה בשלב נפרד.
         </p>
 
         <form
@@ -133,14 +140,21 @@ function ClaimPage() {
             />
           )}
           {cancelMut.isError && (
-            <p className="mt-2 text-sm text-destructive">לא הצלחנו לבטל את הבקשה. ניתן לנסות שוב.</p>
+            <p className="mt-2 text-sm text-destructive">
+              לא הצלחנו לבטל את הבקשה. ניתן לנסות שוב.
+            </p>
           )}
           {claims.data && claims.data.length === 0 && (
             <p className="mt-2 text-sm text-muted-foreground">עדיין לא שלחת בקשות.</p>
           )}
           <ul className="mt-3 grid gap-2">
             {claims.data?.map((c) => (
-              <ClaimRow key={c.id} claim={c} onCancel={() => cancelMut.mutate(c.id)} cancelling={cancelMut.isPending} />
+              <ClaimRow
+                key={c.id}
+                claim={c}
+                onCancel={() => cancelMut.mutate(c.id)}
+                cancelling={cancelMut.isPending && cancelMut.variables === c.id}
+              />
             ))}
           </ul>
         </section>
@@ -188,7 +202,9 @@ function ActionPicker({
         </Button>
       </div>
 
-      {detail.isLoading && <p className="mt-3 text-sm text-muted-foreground">בודק את פרטי הפרופיל…</p>}
+      {detail.isLoading && (
+        <p className="mt-3 text-sm text-muted-foreground">בודק את פרטי הפרופיל…</p>
+      )}
       {detail.isError && (
         <InlineQueryError
           message="לא הצלחנו לבדוק את מצב הפרופיל."
@@ -219,7 +235,9 @@ function ActionPicker({
               className="rounded-lg border border-border bg-surface p-3 text-right transition hover:border-brand disabled:opacity-50"
             >
               <div className="font-semibold text-foreground">שיוך פרופיל מטפל קיים</div>
-              <p className="mt-1 text-xs text-muted-foreground">חיבור החשבון לפרופיל שכבר קיים באתר.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                חיבור החשבון לפרופיל שכבר קיים באתר.
+              </p>
             </button>
             <button
               type="button"
@@ -290,13 +308,16 @@ function VerificationForm({
     onError: (e: Error) => setError(e.message),
   });
 
-  const submitLabel = requestType === "remove_profile" ? "שליחת בקשה להסרת פרופיל" : "שליחת בקשת שיוך";
+  const submitLabel =
+    requestType === "remove_profile" ? "שליחת בקשה להסרת פרופיל" : "שליחת בקשת שיוך";
 
   return (
     <div className="mt-4 grid gap-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">
-          {requestType === "remove_profile" ? "בחרו שיטת אימות להסרת הפרופיל" : "בחרו שיטת אימות בעלות"}
+          {requestType === "remove_profile"
+            ? "בחרו שיטת אימות להסרת הפרופיל"
+            : "בחרו שיטת אימות בעלות"}
         </p>
         <button type="button" onClick={onBack} className="text-xs text-muted-foreground underline">
           חזרה
@@ -304,10 +325,16 @@ function VerificationForm({
       </div>
 
       <div className="grid gap-2 md:grid-cols-3">
-        <MethodChip active={method === "license_number"} onClick={() => setMethod("license_number")}>
+        <MethodChip
+          active={method === "license_number"}
+          onClick={() => setMethod("license_number")}
+        >
           מספר רישיון מקצועי
         </MethodChip>
-        <MethodChip active={method === "professional_email"} onClick={() => setMethod("professional_email")}>
+        <MethodChip
+          active={method === "professional_email"}
+          onClick={() => setMethod("professional_email")}
+        >
           כתובת מייל מקצועית
         </MethodChip>
         <MethodChip active={method === "manual_review"} onClick={() => setMethod("manual_review")}>
@@ -318,11 +345,20 @@ function VerificationForm({
       {method === "license_number" && (
         <div className="grid gap-3">
           <div>
-            <label className="text-sm font-medium text-foreground">מספר רישיון מקצועי</label>
-            <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} maxLength={60} />
+            <label className="text-sm font-medium text-foreground" htmlFor="claim-license-number">
+              מספר רישיון מקצועי
+            </label>
+            <Input
+              id="claim-license-number"
+              value={licenseNumber}
+              onChange={(e) => setLicenseNumber(e.target.value)}
+              maxLength={60}
+            />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">מקצוע</label>
+            <label className="text-sm font-medium text-foreground" htmlFor="claim-profession">
+              מקצוע
+            </label>
             {professions.isError && (
               <InlineQueryError
                 message="לא הצלחנו לטעון את רשימת המקצועות."
@@ -331,6 +367,7 @@ function VerificationForm({
               />
             )}
             <select
+              id="claim-profession"
               value={professionId}
               onChange={(e) => setProfessionId(e.target.value)}
               disabled={professions.isLoading || professions.isError}
@@ -349,8 +386,11 @@ function VerificationForm({
 
       {method === "professional_email" && (
         <div>
-          <label className="text-sm font-medium text-foreground">כתובת מייל מקצועית</label>
+          <label className="text-sm font-medium text-foreground" htmlFor="claim-professional-email">
+            כתובת מייל מקצועית
+          </label>
           <Input
+            id="claim-professional-email"
             type="email"
             dir="ltr"
             value={professionalEmail}
@@ -365,8 +405,11 @@ function VerificationForm({
 
       {method === "manual_review" && (
         <div>
-          <label className="text-sm font-medium text-foreground">הערה לצוות (לא חובה)</label>
+          <label className="text-sm font-medium text-foreground" htmlFor="claim-note">
+            הערה לצוות (לא חובה)
+          </label>
           <textarea
+            id="claim-note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={1000}
@@ -386,7 +429,10 @@ function VerificationForm({
           <div className="flex gap-2">
             <Button
               onClick={() => submit.mutate()}
-              disabled={submit.isPending || !isFormValid(method, { licenseNumber, professionId, professionalEmail })}
+              disabled={
+                submit.isPending ||
+                !isFormValid(method, { licenseNumber, professionId, professionalEmail })
+              }
             >
               {submit.isPending ? "שולח…" : submitLabel}
             </Button>
@@ -409,7 +455,15 @@ function isFormValid(
   return true;
 }
 
-function InlineQueryError({ message, retrying, onRetry }: { message: string; retrying: boolean; onRetry: () => void }) {
+function InlineQueryError({
+  message,
+  retrying,
+  onRetry,
+}: {
+  message: string;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
   return (
     <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
       <p className="text-destructive">{message}</p>
@@ -472,7 +526,9 @@ function ClaimRow({
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusChipClass(claim.status)}`}>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusChipClass(claim.status)}`}
+        >
           {claimStatusLabel(claim.status)}
         </span>
         {canCancel && (

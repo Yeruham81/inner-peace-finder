@@ -38,7 +38,10 @@ describe("SemanticEngine database-error propagation", () => {
     it(`a '${table}' read error propagates out of the Unified path`, async () => {
       const boom = new Error(`${table} read failed`);
       await expect(
-        runUnifiedSearch({ query: SEMANTIC_QUERY, explicit: {}, limit: 20 }, client({ [table]: boom })),
+        runUnifiedSearch(
+          { query: SEMANTIC_QUERY, explicit: {}, limit: 20 },
+          client({ [table]: boom }),
+        ),
       ).rejects.toThrow(`${table} read failed`);
     });
   }
@@ -53,7 +56,10 @@ describe("SemanticEngine database-error propagation", () => {
   it("a therapist-side read error is not degraded into an empty result either", async () => {
     const boom = new Error("therapists read failed");
     await expect(
-      runUnifiedSearch({ query: "", explicit: { city: "חיפה" }, limit: 20 }, client({ therapists: boom })),
+      runUnifiedSearch(
+        { query: "", explicit: { city: "חיפה" }, limit: 20 },
+        client({ therapists: boom }),
+      ),
     ).rejects.toThrow("therapists read failed");
   });
 });

@@ -71,7 +71,8 @@ function TherapistPage() {
   const { data: t } = useSuspenseQuery(therapistQuery(slug));
   if (!t) return null;
 
-  const backLinkClass = "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
+  const backLinkClass =
+    "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
 
   return (
     <div className="min-h-screen overflow-x-clip bg-brand-soft/30">

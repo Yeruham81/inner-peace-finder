@@ -11,10 +11,7 @@
  * "פסיכולוגית" remain distinguishable.
  */
 
-import {
-  normalizeForInterpretation,
-  normalizeList as normList,
-} from "./query-normalization";
+import { normalizeForInterpretation, normalizeList as normList } from "./query-normalization";
 import type {
   Catalog,
   GenderEvidence,
@@ -27,21 +24,34 @@ import type {
 } from "./query-interpreter.types";
 
 const GENERIC_PREFIXES: string[] = normList([
-  "אני מחפש את", "אני מחפש", "אני מחפשת",
-  "אני צריך", "אני צריכה",
-  "אשמח לקבל", "אשמח למצוא",
-  "רוצה למצוא", "רוצה לפגוש", "אני רוצה",
-  "אפשר לקבל", "יש לכם", "יש לך",
-  "מחפש", "מחפשת", "צריך", "צריכה", "רוצה",
-  "מעוניין ב", "מעוניינת ב", "מעוניין", "מעוניינת",
+  "אני מחפש את",
+  "אני מחפש",
+  "אני מחפשת",
+  "אני צריך",
+  "אני צריכה",
+  "אשמח לקבל",
+  "אשמח למצוא",
+  "רוצה למצוא",
+  "רוצה לפגוש",
+  "אני רוצה",
+  "אפשר לקבל",
+  "יש לכם",
+  "יש לך",
+  "מחפש",
+  "מחפשת",
+  "צריך",
+  "צריכה",
+  "רוצה",
+  "מעוניין ב",
+  "מעוניינת ב",
+  "מעוניין",
+  "מעוניינת",
 ]);
 
 const PREFERENCE_MARKERS: string[] = normList(["עדיף", "רצוי", "אם אפשר", "כדאי"]);
 const PREFERENCE_MARKER_SET = new Set(PREFERENCE_MARKERS);
 
-const EXPLICIT_FEMALE_TOKENS = new Set(
-  normList(["אישה", "אשה", "נשית", "מטפלת"]),
-);
+const EXPLICIT_FEMALE_TOKENS = new Set(normList(["אישה", "אשה", "נשית", "מטפלת"]));
 const EXPLICIT_MALE_TOKENS = new Set(normList(["גבר", "זכר"]));
 
 /**
@@ -51,17 +61,22 @@ const EXPLICIT_MALE_TOKENS = new Set(normList(["גבר", "זכר"]));
  * "גבר" describing the patient ("אני גבר שמחפש טיפול") must never filter
  * therapists by gender.
  */
-const THERAPIST_NOUNS = new Set(
-  normList(["מטפל", "מטפלת", "מטפלים", "מטפלות", "מטופל"]),
-);
+const THERAPIST_NOUNS = new Set(normList(["מטפל", "מטפלת", "מטפלים", "מטפלות", "מטופל"]));
 
 const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
   const raw: Record<string, string> = {
-    אונליין: "online", אונלין: "online", זום: "online",
-    מקוון: "online", מקוונת: "online", מרחוק: "online",
+    אונליין: "online",
+    אונלין: "online",
+    זום: "online",
+    מקוון: "online",
+    מקוונת: "online",
+    מרחוק: "online",
     // Canonical `location_type` enum values only — no `in_person`.
-    פרונטלי: "clinic", בקליניקה: "clinic", קליניקה: "clinic",
-    "בית": "home_visit", "ביקור בית": "home_visit",
+    פרונטלי: "clinic",
+    בקליניקה: "clinic",
+    קליניקה: "clinic",
+    בית: "home_visit",
+    "ביקור בית": "home_visit",
   };
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
@@ -73,7 +88,8 @@ const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
 
 const UNRECOGNIZED_SERVICE_PHRASES: string[] = normList([
   // Deliberately minimal — LLM phase will handle broader coverage.
-  "מאבחן קשב", "אבחון קשב",
+  "מאבחן קשב",
+  "אבחון קשב",
   "הדרכת הורים",
   "טיפול זוגי",
 ]);
@@ -223,7 +239,10 @@ function buildLookupIndex(catalog: Catalog): {
   }
   for (const t of catalog.therapistNames) {
     const full = normVariant(t.tokens.join(" "));
-    if (full) { nameByPhrase.set(full, t.id); bump(full); }
+    if (full) {
+      nameByPhrase.set(full, t.id);
+      bump(full);
+    }
     const first = t.tokens[0];
     if (first && catalog.firstNameCount.get(first) === 1) {
       const nf = normVariant(first);
@@ -231,8 +250,12 @@ function buildLookupIndex(catalog: Catalog): {
     }
   }
   return {
-    professionByPhrase, modalityByPhrase, populationByPhrase,
-    languageByPhrase, cityByPhrase, nameByPhrase,
+    professionByPhrase,
+    modalityByPhrase,
+    populationByPhrase,
+    languageByPhrase,
+    cityByPhrase,
+    nameByPhrase,
     maxLen: Math.max(maxLen, 3),
   };
 }
@@ -396,8 +419,11 @@ function detectUnresolvedService(head: string): string | null {
 }
 
 function classifyIntent(args: {
-  hasStructured: boolean; hasSemantic: boolean; hasName: boolean;
-  unresolvedPrimary: boolean; hasAnyToken: boolean;
+  hasStructured: boolean;
+  hasSemantic: boolean;
+  hasName: boolean;
+  unresolvedPrimary: boolean;
+  hasAnyToken: boolean;
 }): Intent {
   if (args.unresolvedPrimary) return "unresolved_service";
   if (!args.hasAnyToken) return "unknown";
@@ -411,20 +437,36 @@ function classifyIntent(args: {
 export function interpretQuery(raw: string, catalog: Catalog): InterpretationResult {
   const normalized = normalizeForInterpretation(raw);
   const emptyHard: StructuredFilters = {
-    professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-    languageCodes: [], deliveryModes: [], cityNames: [], therapistGender: null,
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    deliveryModes: [],
+    cityNames: [],
+    therapistGender: null,
   };
   const emptySoft: SoftPreferences = {
-    professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-    languageCodes: [], cities: [], deliveryModes: [], genders: [],
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    cities: [],
+    deliveryModes: [],
+    genders: [],
   };
   if (!normalized) {
     return {
-      raw, normalized, intent: "unknown",
-      unresolvedPrimary: false, primaryHead: null,
-      hardFilters: emptyHard, softPreferences: emptySoft,
-      therapistNameIds: [], semanticRemainder: "",
-      genderEvidence: [], unresolvedCodes: ["empty_query"],
+      raw,
+      normalized,
+      intent: "unknown",
+      unresolvedPrimary: false,
+      primaryHead: null,
+      hardFilters: emptyHard,
+      softPreferences: emptySoft,
+      therapistNameIds: [],
+      semanticRemainder: "",
+      genderEvidence: [],
+      unresolvedCodes: ["empty_query"],
     };
   }
 
@@ -490,14 +532,19 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
 
   const hardFilters: StructuredFilters = { ...emptyHard };
   const softPreferences: SoftPreferences = {
-    professionSlugs: [], modalitySlugs: [], populationSlugs: [],
-    languageCodes: [], cities: [], deliveryModes: [], genders: [],
+    professionSlugs: [],
+    modalitySlugs: [],
+    populationSlugs: [],
+    languageCodes: [],
+    cities: [],
+    deliveryModes: [],
+    genders: [],
   };
   const therapistNameIds: string[] = [];
   const genderEvidence: GenderEvidence[] = [];
   const unresolvedCodes: UnresolvedCode[] = [];
 
-  const uniq = <T,>(arr: T[]): T[] => Array.from(new Set(arr));
+  const uniq = <T>(arr: T[]): T[] => Array.from(new Set(arr));
 
   // Spans consumed by hits that END at or before `start` — the
   // preference-marker walker must never cross into another hit's
@@ -623,17 +670,25 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   if (unresolvedPrimary) unresolvedCodes.push("unrecognized_service");
 
   const intent = classifyIntent({
-    hasStructured, hasSemantic, hasName,
-    unresolvedPrimary, hasAnyToken: tokens.length > 0,
+    hasStructured,
+    hasSemantic,
+    hasName,
+    unresolvedPrimary,
+    hasAnyToken: tokens.length > 0,
   });
 
   return {
-    raw, normalized, intent,
+    raw,
+    normalized,
+    intent,
     unresolvedPrimary,
     primaryHead: headForIntent || null,
-    hardFilters, softPreferences,
-    therapistNameIds, semanticRemainder,
-    genderEvidence, unresolvedCodes,
+    hardFilters,
+    softPreferences,
+    therapistNameIds,
+    semanticRemainder,
+    genderEvidence,
+    unresolvedCodes,
   };
 }
 

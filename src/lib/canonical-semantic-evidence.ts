@@ -84,7 +84,9 @@ export function findExactCanonicalEvidence(
   return accepted;
 }
 
-export function exactEvidenceToSignals(evidence: readonly ExactCanonicalEvidence[]): SemanticSignal[] {
+export function exactEvidenceToSignals(
+  evidence: readonly ExactCanonicalEvidence[],
+): SemanticSignal[] {
   return evidence.slice(0, SEMANTIC_MAX_MATCHES).map(({ slug }) => ({ slug, confidence: 1 }));
 }
 

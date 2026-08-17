@@ -149,10 +149,25 @@ const SaveSchema = z.object({
     .max(120, "שם מלא ארוך מדי (עד 120 תווים)."),
   gender: z.enum(["male", "female", "unspecified"]).nullable().optional(),
   professional_title: z.string().trim().max(160, "כותרת מקצועית ארוכה מדי.").nullable().optional(),
-  full_description: z.string().trim().max(DESCRIPTION_MAX, "התיאור המקצועי ארוך מדי.").nullable().optional(),
+  full_description: z
+    .string()
+    .trim()
+    .max(DESCRIPTION_MAX, "התיאור המקצועי ארוך מדי.")
+    .nullable()
+    .optional(),
   short_intro: z.string().trim().max(400, "תיאור קצר ארוך מדי.").nullable().optional(),
-  education_training: z.string().trim().max(4000, "טקסט ההשכלה וההכשרה ארוך מדי.").nullable().optional(),
-  professional_experience: z.string().trim().max(4000, "טקסט הניסיון המקצועי ארוך מדי.").nullable().optional(),
+  education_training: z
+    .string()
+    .trim()
+    .max(4000, "טקסט ההשכלה וההכשרה ארוך מדי.")
+    .nullable()
+    .optional(),
+  professional_experience: z
+    .string()
+    .trim()
+    .max(4000, "טקסט הניסיון המקצועי ארוך מדי.")
+    .nullable()
+    .optional(),
   years_experience: z
     .number()
     .int("שנות ניסיון חייבות להיות מספר שלם.")
@@ -160,7 +175,14 @@ const SaveSchema = z.object({
     .max(80, "שנות ניסיון לא תקין.")
     .nullable()
     .optional(),
-  email: z.string().trim().email("כתובת אימייל לא תקינה.").max(160).nullable().optional().or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .email("כתובת אימייל לא תקינה.")
+    .max(160)
+    .nullable()
+    .optional()
+    .or(z.literal("")),
   phone: z.string().trim().max(40).nullable().optional().or(z.literal("")),
   image_url: z.string().trim().max(500).nullable().optional().or(z.literal("")),
   profession_ids: z.array(z.string().uuid()).max(10).default([]),
@@ -172,7 +194,13 @@ const SaveSchema = z.object({
       z.object({
         city: z.string().trim().min(1, "יש לבחור יישוב.").max(80, "שם היישוב ארוך מדי."),
         region: z.enum(PRODUCT_REGIONS),
-        address: z.string().trim().max(200, "הכתובת ארוכה מדי.").nullable().optional().or(z.literal("")),
+        address: z
+          .string()
+          .trim()
+          .max(200, "הכתובת ארוכה מדי.")
+          .nullable()
+          .optional()
+          .or(z.literal("")),
         accessibility_status: z
           .enum(["accessible", "partially_accessible", "not_accessible", "unknown"])
           .default("unknown"),
@@ -195,7 +223,8 @@ const SaveSchema = z.object({
     .max(3, "ניתן להוסיף עד שלושה מיקומים פיזיים.")
     .refine(
       (locations) =>
-        new Set(locations.map((location) => normalizeLocalityName(location.city))).size === locations.length,
+        new Set(locations.map((location) => normalizeLocalityName(location.city))).size ===
+        locations.length,
       "לא ניתן להוסיף את אותו יישוב יותר מפעם אחת.",
     )
     .default([]),
@@ -204,7 +233,10 @@ const SaveSchema = z.object({
   home_visit_regions: z
     .array(z.enum(PRODUCT_REGIONS))
     .max(PRODUCT_REGIONS.length, "נבחרו יותר מדי אזורי ביקורי בית.")
-    .refine((regions) => new Set(regions).size === regions.length, "לא ניתן לבחור אותו אזור ביקורי בית יותר מפעם אחת.")
+    .refine(
+      (regions) => new Set(regions).size === regions.length,
+      "לא ניתן לבחור אותו אזור ביקורי בית יותר מפעם אחת.",
+    )
     .default([]),
   therapy_format_ids: z.array(z.string().uuid()).max(6).default([]),
   lgbtq_affirming: z.boolean().default(false),
@@ -288,48 +320,58 @@ async function resolveAccount(
 /* Public options (available to editor without auth restrictions)     */
 /* ------------------------------------------------------------------ */
 
-export const getEditorOptions = createServerFn({ method: "GET" }).handler(async (): Promise<EditorOptions> => {
-  const sb = publicClient();
-  const localitiesPromise = loadLocalityOptions()
-    .then((items) => ({ items, error: false }))
-    .catch(() => ({ items: [] as LocalityOption[], error: true }));
+export const getEditorOptions = createServerFn({ method: "GET" }).handler(
+  async (): Promise<EditorOptions> => {
+    const sb = publicClient();
+    const localitiesPromise = loadLocalityOptions()
+      .then((items) => ({ items, error: false }))
+      .catch(() => ({ items: [] as LocalityOption[], error: true }));
 
-  const [profs, mods, langs, pops, formats, localityResult] = await Promise.all([
-    sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
-    sb.from("treatment_modalities").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
-    sb
-      .from("languages")
-      .select("id, name, code")
-      .in("code", [...CANONICAL_LANGUAGE_CODES]),
-    sb.from("population_groups").select("id, name, slug").order("sort_order"),
-    sb.from("therapy_formats").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
-    localitiesPromise,
-  ]);
+    const [profs, mods, langs, pops, formats, localityResult] = await Promise.all([
+      sb.from("professions").select("id, name_he, slug").eq("is_active", true).order("sort_order"),
+      sb
+        .from("treatment_modalities")
+        .select("id, name_he, slug")
+        .eq("is_active", true)
+        .order("sort_order"),
+      sb
+        .from("languages")
+        .select("id, name, code")
+        .in("code", [...CANONICAL_LANGUAGE_CODES]),
+      sb.from("population_groups").select("id, name, slug").order("sort_order"),
+      sb
+        .from("therapy_formats")
+        .select("id, name_he, slug")
+        .eq("is_active", true)
+        .order("sort_order"),
+      localitiesPromise,
+    ]);
 
-  // Core editor catalogs must fail closed. Returning [] on a database error
-  // would make existing options appear to have been deleted and could lead to
-  // an invalid or destructive save. Locality loading intentionally keeps its
-  // separate fallback flag because the editor already handles that case.
-  for (const [catalog, result] of [
-    ["professions", profs],
-    ["treatment_modalities", mods],
-    ["languages", langs],
-    ["population_groups", pops],
-    ["therapy_formats", formats],
-  ] as const) {
-    if (result.error) throw new Error(`${catalog}: ${result.error.message}`);
-  }
+    // Core editor catalogs must fail closed. Returning [] on a database error
+    // would make existing options appear to have been deleted and could lead to
+    // an invalid or destructive save. Locality loading intentionally keeps its
+    // separate fallback flag because the editor already handles that case.
+    for (const [catalog, result] of [
+      ["professions", profs],
+      ["treatment_modalities", mods],
+      ["languages", langs],
+      ["population_groups", pops],
+      ["therapy_formats", formats],
+    ] as const) {
+      if (result.error) throw new Error(`${catalog}: ${result.error.message}`);
+    }
 
-  return {
-    professions: profs.data ?? [],
-    modalities: mods.data ?? [],
-    languages: orderCanonicalLanguages(langs.data ?? []),
-    populations: pops.data ?? [],
-    therapy_formats: formats.data ?? [],
-    localities: localityResult.items,
-    locality_options_error: localityResult.error,
-  };
-});
+    return {
+      professions: profs.data ?? [],
+      modalities: mods.data ?? [],
+      languages: orderCanonicalLanguages(langs.data ?? []),
+      populations: pops.data ?? [],
+      therapy_formats: formats.data ?? [],
+      localities: localityResult.items,
+      locality_options_error: localityResult.error,
+    };
+  },
+);
 
 /* ------------------------------------------------------------------ */
 /* Get my profile                                                     */
@@ -348,32 +390,40 @@ export const getMyProfile = createServerFn({ method: "GET" })
     if (profileError) throw new Error(`therapists: ${profileError.message}`);
     if (!t) return null;
 
-    const [profs, mods, langs, pops, locs, formats, memberships, arrangements, credentials] = await Promise.all([
-      supabase.from("therapist_professions").select("profession_id").eq("therapist_id", t.id),
-      supabase.from("therapist_modalities").select("modality_id").eq("therapist_id", t.id),
-      supabase.from("therapist_languages").select("language_id").eq("therapist_id", t.id),
-      supabase.from("therapist_populations").select("population_id").eq("therapist_id", t.id),
-      supabase.from("therapist_locations").select("*").eq("therapist_id", t.id).eq("is_active", true),
-      supabase.from("therapist_therapy_formats").select("therapy_format_id").eq("therapist_id", t.id),
-      supabase
-        .from("therapist_professional_memberships")
-        .select("organization_name, member_since, membership_start_date")
-        .eq("therapist_id", t.id)
-        .order("sort_order"),
-      supabase
-        .from("therapist_service_arrangements")
-        .select("organization_name, note")
-        .eq("therapist_id", t.id)
-        .order("sort_order"),
-      supabase
-        .from("therapist_credentials")
-        .select(
-          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason, submitted_at, updated_at",
-        )
-        .eq("therapist_id", t.id)
-        .order("updated_at", { ascending: false })
-        .order("id", { ascending: true }),
-    ]);
+    const [profs, mods, langs, pops, locs, formats, memberships, arrangements, credentials] =
+      await Promise.all([
+        supabase.from("therapist_professions").select("profession_id").eq("therapist_id", t.id),
+        supabase.from("therapist_modalities").select("modality_id").eq("therapist_id", t.id),
+        supabase.from("therapist_languages").select("language_id").eq("therapist_id", t.id),
+        supabase.from("therapist_populations").select("population_id").eq("therapist_id", t.id),
+        supabase
+          .from("therapist_locations")
+          .select("*")
+          .eq("therapist_id", t.id)
+          .eq("is_active", true),
+        supabase
+          .from("therapist_therapy_formats")
+          .select("therapy_format_id")
+          .eq("therapist_id", t.id),
+        supabase
+          .from("therapist_professional_memberships")
+          .select("organization_name, member_since, membership_start_date")
+          .eq("therapist_id", t.id)
+          .order("sort_order"),
+        supabase
+          .from("therapist_service_arrangements")
+          .select("organization_name, note")
+          .eq("therapist_id", t.id)
+          .order("sort_order"),
+        supabase
+          .from("therapist_credentials")
+          .select(
+            "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason, submitted_at, updated_at",
+          )
+          .eq("therapist_id", t.id)
+          .order("updated_at", { ascending: false })
+          .order("id", { ascending: true }),
+      ]);
 
     // A failed relation query must never be flattened into an empty editor
     // field. That would let a temporary read failure look like saved data was
@@ -396,12 +446,16 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .filter((location) => location.location_type === "clinic")
       .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)));
     const online = (locs.data ?? []).some((l) => l.location_type === "online");
-    const homeVisitLocations = (locs.data ?? []).filter((location) => location.location_type === "home_visit");
+    const homeVisitLocations = (locs.data ?? []).filter(
+      (location) => location.location_type === "home_visit",
+    );
     const homeVisitRegions = [
       ...new Set(
         homeVisitLocations
           .map((location) => location.region)
-          .filter((region): region is ProductRegion => PRODUCT_REGIONS.includes(region as ProductRegion)),
+          .filter((region): region is ProductRegion =>
+            PRODUCT_REGIONS.includes(region as ProductRegion),
+          ),
       ),
     ];
 
@@ -429,7 +483,9 @@ export const getMyProfile = createServerFn({ method: "GET" })
       population_ids: (pops.data ?? []).map((r) => r.population_id),
       locations: physicalLocations.map((location) => ({
         city: location.city ?? "",
-        region: PRODUCT_REGIONS.includes(location.region as ProductRegion) ? (location.region as ProductRegion) : null,
+        region: PRODUCT_REGIONS.includes(location.region as ProductRegion)
+          ? (location.region as ProductRegion)
+          : null,
         address: location.address ?? null,
         is_primary: Boolean(location.is_primary),
         accessibility_status: location.accessibility_status,
@@ -458,9 +514,11 @@ function validateForPublish(input: SaveInput): string[] {
   const missing: string[] = [];
   if (!input.full_name || input.full_name.trim().length < 2) missing.push("שם מלא");
   if (!input.gender) missing.push("מין");
-  if (!input.professional_title || input.professional_title.trim().length === 0) missing.push("כותרת מקצועית");
+  if (!input.professional_title || input.professional_title.trim().length === 0)
+    missing.push("כותרת מקצועית");
   if (!input.profession_ids || input.profession_ids.length === 0) missing.push("מקצועות");
-  if (input.years_experience === null || input.years_experience === undefined) missing.push("שנות ניסיון");
+  if (input.years_experience === null || input.years_experience === undefined)
+    missing.push("שנות ניסיון");
   if (!input.full_description || input.full_description.trim().length < DESCRIPTION_MIN) {
     missing.push("תיאור מקצועי");
   }
@@ -469,7 +527,8 @@ function validateForPublish(input: SaveInput): string[] {
   if (!input.email) missing.push("כתובת אימייל");
   if (!input.phone) missing.push("מספר טלפון");
   const hasPhysicalLocation = input.locations.length > 0;
-  if (input.home_visit_available && input.home_visit_regions.length === 0) missing.push("אזורי ביקורי בית");
+  if (input.home_visit_available && input.home_visit_regions.length === 0)
+    missing.push("אזורי ביקורי בית");
   if (!hasPhysicalLocation && !input.online_available && !input.home_visit_available) {
     missing.push("מיקום פיזי, טיפול אונליין או ביקורי בית");
   }
@@ -490,7 +549,9 @@ async function resolvePhysicalLocations(
     // already-derived, enum-validated region sent by the editor.
   }
 
-  const byName = catalog ? new Map(catalog.map((locality) => [normalizeLocalityName(locality.name), locality])) : null;
+  const byName = catalog
+    ? new Map(catalog.map((locality) => [normalizeLocalityName(locality.name), locality]))
+    : null;
 
   return locations.map((location) => {
     const normalizedCity = normalizeLocalityName(location.city);
@@ -541,16 +602,18 @@ export const saveMyProfile = createServerFn({ method: "POST" })
 
     // Location rows managed by this editor. Any other location type is left
     // untouched by the database operation below.
-    const locationRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
-      location_type: "clinic",
-      city: location.city,
-      region: location.region,
-      address: location.address,
-      accessibility_status: data.locations[index]?.accessibility_status ?? "unknown",
-      accessibility_features: data.locations[index]?.accessibility_features ?? [],
-      accessibility_note: data.locations[index]?.accessibility_note ?? null,
-      is_primary: index === 0,
-    }));
+    const locationRows: Array<Record<string, unknown>> = resolvedLocations.map(
+      (location, index) => ({
+        location_type: "clinic",
+        city: location.city,
+        region: location.region,
+        address: location.address,
+        accessibility_status: data.locations[index]?.accessibility_status ?? "unknown",
+        accessibility_features: data.locations[index]?.accessibility_features ?? [],
+        accessibility_note: data.locations[index]?.accessibility_note ?? null,
+        is_primary: index === 0,
+      }),
+    );
 
     if (data.online_available) {
       locationRows.push({
@@ -593,7 +656,9 @@ export const saveMyProfile = createServerFn({ method: "POST" })
         lgbtq_affirming: data.lgbtq_affirming,
         offers_free_intro: data.offers_free_intro,
         free_intro_types: data.offers_free_intro ? data.free_intro_types : [],
-        free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
+        free_intro_duration_minutes: data.offers_free_intro
+          ? (data.free_intro_duration_minutes ?? null)
+          : null,
         city: resolvedLocations[0]?.city ?? null,
         region: resolvedLocations[0]?.region ?? null,
         profile_status: nextStatus,
@@ -621,7 +686,10 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
     if (!result.therapist_id) throw new Error("שמירת הפרופיל נכשלה. נסו שוב.");
 
-    return { therapist_id: result.therapist_id, profile_status: result.profile_status ?? nextStatus };
+    return {
+      therapist_id: result.therapist_id,
+      profile_status: result.profile_status ?? nextStatus,
+    };
   });
 
 const ProfileVisibilitySchema = z.object({ visible: z.boolean() });
@@ -637,7 +705,9 @@ export const setMyProfileVisibility = createServerFn({ method: "POST" })
 
 export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ confirmation: z.literal("מחיקת הפרופיל לצמיתות") }).parse(input),
+  )
   .handler(async ({ context }) => {
     await resolveAccount(context.supabase, context.userId);
     const { permanentlyDeleteOwnedProfile } = await import("./profile-management.server");
@@ -671,7 +741,8 @@ export const submitMyCredential = createServerFn({ method: "POST" })
     // The document must live in the authenticated user's own private folder AND
     // the stored object itself must exist and really be a PDF/JPG/PNG under
     // 10MB — a client-declared MIME type is never trusted.
-    const { verifyStoredCredentialObject } = await import("./credential-object-verification.server");
+    const { verifyStoredCredentialObject } =
+      await import("./credential-object-verification.server");
     await verifyStoredCredentialObject(data.document_url, context.userId);
 
     // Verification columns are server-owned; the client never supplies them.
@@ -705,7 +776,8 @@ export const submitMyCredential = createServerFn({ method: "POST" })
         .maybeSingle();
       if (ownedError) throw new Error(ownedError.message);
       if (!owned) throw new Error("רשומת ההסמכה אינה שייכת לפרופיל.");
-      if (owned.verification_status === "verified") throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
+      if (owned.verification_status === "verified")
+        throw new Error("לא ניתן לשנות הסמכה שכבר אומתה.");
       if (owned.verification_status === "expired")
         throw new Error("לא ניתן לעדכן הסמכה שתוקפה פג. יש להוסיף הסמכה חדשה.");
       const { error } = await supabaseAdmin
@@ -747,7 +819,9 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
     // Two fixed queries (no N+1): the FULL active canonical catalog plus the
     // aliases of those active problems. Direct matching must never be gated
     // by what the semantic engine happened to propose.
-    const catalog = await loadFeedbackCatalog(context.supabase as unknown as Parameters<typeof loadFeedbackCatalog>[0]);
+    const catalog = await loadFeedbackCatalog(
+      context.supabase as unknown as Parameters<typeof loadFeedbackCatalog>[0],
+    );
 
     // Semantic extraction stays untouched; its results are only *validated*
     // against the active catalog + strict explicit evidence.

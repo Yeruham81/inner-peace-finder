@@ -22,14 +22,22 @@ function HighlightableTagRow({ items }: { items: HighlightableTag[] }) {
     if (!container || !measurement) return;
 
     const measure = () => {
-      const itemWidths = Array.from(measurement.querySelectorAll<HTMLElement>("[data-measure-item]")).map(
-        (node) => node.getBoundingClientRect().width,
-      );
+      const itemWidths = Array.from(
+        measurement.querySelectorAll<HTMLElement>("[data-measure-item]"),
+      ).map((node) => node.getBoundingClientRect().width);
       const moreWidths: Record<number, number> = {};
       measurement.querySelectorAll<HTMLElement>("[data-measure-more]").forEach((node) => {
         moreWidths[Number(node.dataset.measureMore)] = node.getBoundingClientRect().width;
       });
-      setVisibleCount(visibleItemCountForRows(itemWidths, container.getBoundingClientRect().width, moreWidths, 2, 6));
+      setVisibleCount(
+        visibleItemCountForRows(
+          itemWidths,
+          container.getBoundingClientRect().width,
+          moreWidths,
+          2,
+          6,
+        ),
+      );
     };
 
     measure();
@@ -57,7 +65,9 @@ function HighlightableTagRow({ items }: { items: HighlightableTag[] }) {
           </span>
         ))}
         {hiddenCount > 0 && (
-          <span className={`${COMPACT_TAG_CLASS} border-border bg-background font-medium text-muted-foreground`}>
+          <span
+            className={`${COMPACT_TAG_CLASS} border-border bg-background font-medium text-muted-foreground`}
+          >
             +{hiddenCount} נוספים
           </span>
         )}
@@ -94,7 +104,10 @@ function HighlightableTagRow({ items }: { items: HighlightableTag[] }) {
 
 function MetaIcon({ children }: { children: React.ReactNode }) {
   return (
-    <span aria-hidden="true" className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center text-primary">
+    <span
+      aria-hidden="true"
+      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center text-primary"
+    >
       {children}
     </span>
   );
@@ -129,7 +142,9 @@ export function TherapistCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.id]);
 
-  const clinicLabel = [...new Set(t.clinic_locations.map((location) => location.city).filter(Boolean))].join(", ");
+  const clinicLabel = [
+    ...new Set(t.clinic_locations.map((location) => location.city).filter(Boolean)),
+  ].join(", ");
   const fallbackInitial = t.full_name.trim().charAt(0) || "ט";
 
   return (
@@ -159,7 +174,9 @@ export function TherapistCard({
 
         <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-bold leading-snug text-foreground sm:text-2xl">{t.full_name}</h2>
+            <h2 className="text-xl font-bold leading-snug text-foreground sm:text-2xl">
+              {t.full_name}
+            </h2>
             {t.verified && (
               <span
                 title="הפרופיל אומת על ידי Tipulinks"
@@ -177,11 +194,14 @@ export function TherapistCard({
           )}
           {(t.years_experience ?? 0) > 0 && (
             <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              <span className="ltr-num">{t.years_experience ?? 0}</span> {experienceSuffix(t.years_experience ?? 0)}
+              <span className="ltr-num">{t.years_experience ?? 0}</span>{" "}
+              {experienceSuffix(t.years_experience ?? 0)}
             </p>
           )}
           {t.language_names.length > 0 && (
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">שפות: {t.language_names.join(", ")}</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              שפות: {t.language_names.join(", ")}
+            </p>
           )}
           {(t.offers_free_intro || t.lgbtq_affirming) && (
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -202,7 +222,9 @@ export function TherapistCard({
 
       {t.short_intro && (
         <div className="mt-4 rounded-xl border-r-4 border-brand bg-brand-soft/40 px-4 py-3">
-          <p className="line-clamp-3 text-base font-medium leading-7 text-foreground">{t.short_intro}</p>
+          <p className="line-clamp-3 text-base font-medium leading-7 text-foreground">
+            {t.short_intro}
+          </p>
         </div>
       )}
 
@@ -210,7 +232,11 @@ export function TherapistCard({
         {clinicLabel && (
           <li className="flex items-start gap-2">
             <MetaIcon>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-none stroke-current"
+                strokeWidth="1.8"
+              >
                 <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
                 <circle cx="12" cy="10" r="2.5" />
               </svg>
@@ -222,7 +248,11 @@ export function TherapistCard({
         {t.home_visit_regions.length > 0 && (
           <li className="flex items-start gap-2">
             <MetaIcon>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-none stroke-current"
+                strokeWidth="1.8"
+              >
                 <path d="m3 11 9-7 9 7" />
                 <path d="M5.5 9.5V20h13V9.5M9 20v-6h6v6" />
               </svg>
@@ -234,7 +264,11 @@ export function TherapistCard({
         {t.online_available && (
           <li className="flex items-start gap-2">
             <MetaIcon>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-none stroke-current"
+                strokeWidth="1.8"
+              >
                 <rect x="3" y="5" width="18" height="12" rx="2" />
                 <path d="M8 21h8M12 17v4" />
               </svg>

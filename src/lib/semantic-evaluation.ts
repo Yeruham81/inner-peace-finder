@@ -48,13 +48,7 @@ export {
   PROFILE_CASES,
   PROFILE_EXTRACTION_CASES,
 };
-export type {
-  EvaluationCategory,
-  MatchCase,
-  NormalizationCase,
-  ProfileMatchCase,
-  SemanticCase,
-};
+export type { EvaluationCategory, MatchCase, NormalizationCase, ProfileMatchCase, SemanticCase };
 
 /* ------------------------------------------------------------------ */
 /* Legacy typed case union (primitive evaluators) — Phase 10 shape.    */
@@ -100,9 +94,7 @@ export const ALL_CASES: EvaluationCase[] = [
 
 const TOLERANCE = 1e-3;
 
-export function runEvaluation(
-  cases: EvaluationCase[] = ALL_CASES,
-): EvaluationResult[] {
+export function runEvaluation(cases: EvaluationCase[] = ALL_CASES): EvaluationResult[] {
   return cases.map((c) => {
     const base = { name: c.name, kind: c.kind, category: c.category };
     try {
@@ -186,11 +178,7 @@ const DEFAULT_RUN_OPTIONS: Required<RunOptions> = {
   minConfidence: 0,
 };
 
-function compareSlugs(
-  expected: string[],
-  actual: string[],
-  mode: ExpectationMode,
-): boolean {
+function compareSlugs(expected: string[], actual: string[], mode: ExpectationMode): boolean {
   const a = new Set(actual);
   switch (mode) {
     case "subset":
@@ -222,9 +210,7 @@ export async function runSemanticCases(
       const { slugs, confidence } = await evaluator.evaluate(c.input);
       const slugsOk = compareSlugs(c.expected, slugs, opts.expectationMode);
       const confOk =
-        c.allowLowConfidence ||
-        confidence === undefined ||
-        confidence >= opts.minConfidence;
+        c.allowLowConfidence || confidence === undefined || confidence >= opts.minConfidence;
       const passed = slugsOk && confOk;
       results.push({
         ...base,
@@ -332,10 +318,7 @@ export type TopKAccuracy = {
   accuracy: number;
 };
 
-export function computeTopKAccuracy(
-  results: EvaluationResult[],
-  k: number,
-): TopKAccuracy {
+export function computeTopKAccuracy(results: EvaluationResult[], k: number): TopKAccuracy {
   let hits = 0;
   let total = 0;
   for (const r of results) {
@@ -403,9 +386,7 @@ export function formatEvaluationReport(summary: EvaluationSummary): string {
     lines.push("");
     lines.push("By category:");
     for (const c of summary.byCategory) {
-      lines.push(
-        `  - ${c.category}: ${c.passed}/${c.total} (${pct(c.passRate)})`,
-      );
+      lines.push(`  - ${c.category}: ${c.passed}/${c.total} (${pct(c.passRate)})`);
     }
   }
 

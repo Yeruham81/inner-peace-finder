@@ -79,9 +79,7 @@ class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknow
   }
 
   then<R1 = { data: FakeRow[] | null; error: unknown }, R2 = never>(
-    onfulfilled?:
-      | ((v: { data: FakeRow[] | null; error: unknown }) => R1 | PromiseLike<R1>)
-      | null,
+    onfulfilled?: ((v: { data: FakeRow[] | null; error: unknown }) => R1 | PromiseLike<R1>) | null,
     onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
   ): PromiseLike<R1 | R2> {
     return Promise.resolve(this.run()).then(onfulfilled, onrejected);
@@ -102,12 +100,7 @@ export function createFakeSupabase(
   return {
     reads,
     from(table: string) {
-      return new FakeBuilder(
-        tables[table] ?? [],
-        errors[table],
-        (t) => reads.push(t),
-        table,
-      );
+      return new FakeBuilder(tables[table] ?? [], errors[table], (t) => reads.push(t), table);
     },
   };
 }

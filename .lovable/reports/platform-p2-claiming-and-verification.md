@@ -13,13 +13,14 @@ auth.users.id
 
 Derived ownership status (not a column):
 
-| State           | Definition                                                                 |
-|-----------------|----------------------------------------------------------------------------|
-| `unclaimed`     | `owner_account_id IS NULL` AND no `pending` claim request                  |
-| `claim_pending` | `owner_account_id IS NULL` AND ≥1 `pending` claim request                  |
-| `claimed`       | `owner_account_id IS NOT NULL`                                             |
+| State           | Definition                                                |
+| --------------- | --------------------------------------------------------- |
+| `unclaimed`     | `owner_account_id IS NULL` AND no `pending` claim request |
+| `claim_pending` | `owner_account_id IS NULL` AND ≥1 `pending` claim request |
+| `claimed`       | `owner_account_id IS NOT NULL`                            |
 
 Uniqueness guarantees:
+
 - `therapists_owner_account_id_key` — 1:1 account↔therapist.
 - `therapist_claim_requests_active_key` — at most one pending/approved request per therapist (blocks races).
 - `therapist_claim_requests_requester_open_key` — same requester cannot hold two open requests for the same profile.
@@ -43,16 +44,16 @@ Ownership approval never requires a professional credential — see §3.
 
 `therapist_credentials` is the foundation; no workflow wired yet.
 
-| Column                | Purpose                                                       |
-|-----------------------|---------------------------------------------------------------|
-| `therapist_id`        | Owning profile                                                |
-| `profession_id`       | Optional link to `professions`                                |
-| `credential_type`     | `license`, `diploma`, `association`, `self`, …                |
-| `institution`         | Issuing body                                                  |
-| `license_number`      | For registry-checked professions                              |
-| `document_url`        | Uploaded evidence                                             |
+| Column                | Purpose                                                               |
+| --------------------- | --------------------------------------------------------------------- |
+| `therapist_id`        | Owning profile                                                        |
+| `profession_id`       | Optional link to `professions`                                        |
+| `credential_type`     | `license`, `diploma`, `association`, `self`, …                        |
+| `institution`         | Issuing body                                                          |
+| `license_number`      | For registry-checked professions                                      |
+| `document_url`        | Uploaded evidence                                                     |
 | `verification_status` | `unverified` / `pending_review` / `verified` / `rejected` / `expired` |
-| `verified_by/at`      | Reviewer stamps                                               |
+| `verified_by/at`      | Reviewer stamps                                                       |
 
 Deliberately independent of ownership: an owned profile with `verification_status='unverified'` is normal. P4 will wire verification per profession using any subset of: professional license, registry lookup, uploaded diploma, association membership, manual review, self-declared status.
 
@@ -70,21 +71,23 @@ searchTherapistEntities({ query, limit? }) → TherapistEntityMatch[]
 
 Deterministic scoring:
 
-| Signal                             | entity_score |
-|-----------------------------------|--------------|
-| `full_name` exact (case-insens.)  | 1.00         |
-| `full_name` prefix                | 0.90         |
-| `full_name` substring             | 0.75         |
-| `professional_title` substring    | 0.50         |
-| `city` substring                  | 0.35         |
+| Signal                           | entity_score |
+| -------------------------------- | ------------ |
+| `full_name` exact (case-insens.) | 1.00         |
+| `full_name` prefix               | 0.90         |
+| `full_name` substring            | 0.75         |
+| `professional_title` substring   | 0.50         |
+| `city` substring                 | 0.35         |
 
 Storage/perf: `pg_trgm` enabled; GIN trigram indexes on `therapists.full_name` and `therapists.professional_title` accelerate the `ILIKE '%q%'` scan and future high-volume fuzzy queries.
 
 Rendering:
+
 - `/search` renders an "התאמות לפי שם או מקצוע" strip above the semantic result list whenever `entityMatches.length > 0`. The strip is additive; the semantic list ordering is unchanged.
 - `/account/claim` uses the same server fn for the picker.
 
 Deliberate non-goals this phase:
+
 - No name-detection heuristic. Every query is matched against the entity index — short/common tokens like `מור` still hit.
 - No fusion with `SemanticEngine` scores (P6).
 - No clinic-name index yet (added when a clinics table exists).
@@ -103,6 +106,7 @@ Credentials   ─►  "Is this therapist qualified in profession X?"
 ```
 
 Valid combinations:
+
 - claimed + unverified — owner controls, no credential displayed.
 - claimed + verified — future public "verified" badge (P4).
 - unclaimed + verified — legacy back-office verification, no live owner.
@@ -111,10 +115,10 @@ No column conflates the two.
 
 ## 6. RLS Summary
 
-| Table                        | anon | authenticated                                                                | service_role |
-|------------------------------|------|-------------------------------------------------------------------------------|--------------|
-| `therapist_claim_requests`   | –    | insert own+unclaimed; select own; update-cancel own pending                   | full |
-| `therapist_credentials`      | –    | select own (owner)                                                            | full |
+| Table                      | anon | authenticated                                               | service_role |
+| -------------------------- | ---- | ----------------------------------------------------------- | ------------ |
+| `therapist_claim_requests` | –    | insert own+unclaimed; select own; update-cancel own pending | full         |
+| `therapist_credentials`    | –    | select own (owner)                                          | full         |
 
 All approval writes to `therapists.owner_account_id` funnel through `public.approve_therapist_claim`, keeping the ownership transition atomic and auditable.
 

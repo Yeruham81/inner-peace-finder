@@ -139,10 +139,18 @@ export function SearchForm({
   const [population, setPopulation] = useState(appliedContract.population);
   const [language, setLanguage] = useState(appliedContract.language);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([...appliedContract.regions]);
-  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([...appliedContract.serviceTypes]);
-  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([...appliedContract.professionSlugs]);
-  const [selectedModalities, setSelectedModalities] = useState<string[]>([...appliedContract.modalitySlugs]);
-  const [selectedTherapyFormats, setSelectedTherapyFormats] = useState<string[]>([...appliedContract.therapyFormats]);
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([
+    ...appliedContract.serviceTypes,
+  ]);
+  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([
+    ...appliedContract.professionSlugs,
+  ]);
+  const [selectedModalities, setSelectedModalities] = useState<string[]>([
+    ...appliedContract.modalitySlugs,
+  ]);
+  const [selectedTherapyFormats, setSelectedTherapyFormats] = useState<string[]>([
+    ...appliedContract.therapyFormats,
+  ]);
   const [gender, setGender] = useState(appliedContract.gender);
   const [accessible, setAccessible] = useState(appliedContract.accessible);
   const [verified, setVerified] = useState(appliedContract.verified);
@@ -191,25 +199,38 @@ export function SearchForm({
       selectedRegions.length === 0
         ? cities
         : cities.filter((cityName) =>
-            (cityRegions[cityName] ?? []).some((regionSlug) => selectedRegions.includes(regionSlug)),
+            (cityRegions[cityName] ?? []).some((regionSlug) =>
+              selectedRegions.includes(regionSlug),
+            ),
           );
     const unique = new Set(visibleCities.map((value) => value.trim()).filter(Boolean));
-    return [...unique].sort((a, b) => a.localeCompare(b, "he")).map((value) => ({ value, label: value }));
+    return [...unique]
+      .sort((a, b) => a.localeCompare(b, "he"))
+      .map((value) => ({ value, label: value }));
   }, [cities, cityRegions, selectedRegions]);
 
   useEffect(() => {
-    if (city && selectedRegions.length > 0 && !cityOptions.some((option) => option.value === city)) {
+    if (
+      city &&
+      selectedRegions.length > 0 &&
+      !cityOptions.some((option) => option.value === city)
+    ) {
       setCity("");
     }
   }, [city, cityOptions, selectedRegions.length]);
 
   const languageOptions = useMemo<FilterOption[]>(
     () =>
-      languages.length ? languages.map(({ code, name }) => ({ value: code, label: name })) : fallbackLanguageOptions,
+      languages.length
+        ? languages.map(({ code, name }) => ({ value: code, label: name }))
+        : fallbackLanguageOptions,
     [languages],
   );
 
-  const populationOptions = useMemo<FilterOption[]>(() => buildPopulationOptions(populations), [populations]);
+  const populationOptions = useMemo<FilterOption[]>(
+    () => buildPopulationOptions(populations),
+    [populations],
+  );
 
   const filters = useMemo<FilterDefinition[]>(
     () => [
@@ -283,7 +304,9 @@ export function SearchForm({
   );
 
   const visibleFilters = isHero
-    ? filters.filter((filter) => ["regions", "language", "population", "serviceType"].includes(filter.key))
+    ? filters.filter((filter) =>
+        ["regions", "language", "population", "serviceType"].includes(filter.key),
+      )
     : filters.filter((filter) => filter.key !== "gender" && filter.key !== "serviceType");
   const activeFilter = visibleFilters.find((filter) => filter.key === openFilter);
 
@@ -410,7 +433,9 @@ export function SearchForm({
     { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
     { key: "lgbtqAffirming", label: "מותאם לקהילה הגאה", active: appliedContract.lgbtqAffirming },
     { key: "freeIntro", label: "היכרות ללא תשלום", active: appliedContract.freeIntro },
-  ].filter((item) => item.active || !availableQuickFilters || availableQuickFilters.includes(item.key));
+  ].filter(
+    (item) => item.active || !availableQuickFilters || availableQuickFilters.includes(item.key),
+  );
 
   function navigateToContract(input: {
     q: string;
@@ -478,13 +503,17 @@ export function SearchForm({
   function toggleOption(filter: FilterDefinition, value: string) {
     if (filter.key === "regions") {
       setSelectedRegions((current) =>
-        current.includes(value) ? current.filter((region) => region !== value) : [...current, value],
+        current.includes(value)
+          ? current.filter((region) => region !== value)
+          : [...current, value],
       );
       return;
     }
     if (filter.key === "serviceType") {
       setSelectedServiceTypes((current) =>
-        current.includes(value) ? current.filter((serviceType) => serviceType !== value) : [...current, value],
+        current.includes(value)
+          ? current.filter((serviceType) => serviceType !== value)
+          : [...current, value],
       );
       return;
     }
@@ -507,7 +536,8 @@ export function SearchForm({
       setSelectedTherapyFormats((current) =>
         current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
       );
-    if (filter.key === "gender") setGender((current) => (current === value ? "" : (value as "male" | "female")));
+    if (filter.key === "gender")
+      setGender((current) => (current === value ? "" : (value as "male" | "female")));
   }
 
   function clearDraftFilter(key: FilterKey) {
@@ -579,7 +609,11 @@ export function SearchForm({
           : [...appliedContract.serviceTypes, key]
         : appliedContract.serviceTypes;
     const gender =
-      key === "female" || key === "male" ? (appliedContract.gender === key ? "" : key) : appliedContract.gender;
+      key === "female" || key === "male"
+        ? appliedContract.gender === key
+          ? ""
+          : key
+        : appliedContract.gender;
     navigateToContract({
       ...appliedContract,
       professions: appliedContract.professionSlugs,
@@ -588,7 +622,8 @@ export function SearchForm({
       gender,
       accessible: key === "accessible" ? !appliedContract.accessible : appliedContract.accessible,
       verified: key === "verified" ? !appliedContract.verified : appliedContract.verified,
-      lgbtqAffirming: key === "lgbtqAffirming" ? !appliedContract.lgbtqAffirming : appliedContract.lgbtqAffirming,
+      lgbtqAffirming:
+        key === "lgbtqAffirming" ? !appliedContract.lgbtqAffirming : appliedContract.lgbtqAffirming,
       freeIntro: key === "freeIntro" ? !appliedContract.freeIntro : appliedContract.freeIntro,
     });
   }
@@ -608,7 +643,9 @@ export function SearchForm({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={
-            isHero ? "לדוגמה: חרדה לפני עבודה, משבר בזוגיות או מטפל ב-CBT בחיפה" : "מה תרצו למצוא? למשל: טיפול בחרדה"
+            isHero
+              ? "לדוגמה: חרדה לפני עבודה, משבר בזוגיות או מטפל ב-CBT בחיפה"
+              : "מה תרצו למצוא? למשל: טיפול בחרדה"
           }
           autoComplete="off"
           className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -643,7 +680,10 @@ export function SearchForm({
             </button>
           </div>
 
-          <div id="search-filter-controls" className={`${mobileFiltersOpen ? "block" : "hidden"} lg:block`}>
+          <div
+            id="search-filter-controls"
+            className={`${mobileFiltersOpen ? "block" : "hidden"} lg:block`}
+          >
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-7 lg:gap-3">
               {visibleFilters.map((filter) => {
                 const values = selectedValues(filter.key);
@@ -685,7 +725,9 @@ export function SearchForm({
                   key={item.key}
                   type="button"
                   aria-pressed={item.active}
-                  onClick={() => toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])}
+                  onClick={() =>
+                    toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])
+                  }
                   className={`rounded-full border px-3 py-2 text-xs font-medium transition-colors ${item.active ? "border-brand bg-brand text-brand-foreground" : "border-border bg-background text-foreground hover:border-brand/50"}`}
                 >
                   {item.active && <span aria-hidden="true">✓ </span>}
@@ -790,7 +832,9 @@ function FilterButton({
           <span className="block truncate text-[11px] font-medium text-muted-foreground sm:text-xs">
             {filter.label}
           </span>
-          <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">{summary}</span>
+          <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">
+            {summary}
+          </span>
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
           {count > 0 && (
@@ -832,7 +876,9 @@ function FilterOptions({
         <div>
           <p className="text-sm font-semibold text-foreground">{filter.label}</p>
           {filter.helperText && (
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">{filter.helperText}</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+              {filter.helperText}
+            </p>
           )}
         </div>
         <button
@@ -876,7 +922,11 @@ function FilterOptions({
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
         {selected.length > 0 ? (
-          <button type="button" onClick={onClear} className="text-xs font-medium text-primary hover:underline">
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-xs font-medium text-primary hover:underline"
+          >
             ניקוי בחירה
           </button>
         ) : (

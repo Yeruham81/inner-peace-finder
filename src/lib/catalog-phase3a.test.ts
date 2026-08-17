@@ -47,9 +47,9 @@ function parseSpec(): Spec {
   }));
 
   const movedBlock = block("WITH moved(child_slug, parent_slug, alias) AS (");
-  const moved = [
-    ...movedBlock.matchAll(/\('([a-z_]+)',\s*'([a-z_]+)',\s*'([^']+)'\)/g),
-  ].map((m) => ({ child: m[1]!, parent: m[2]!, alias: m[3]! }));
+  const moved = [...movedBlock.matchAll(/\('([a-z_]+)',\s*'([a-z_]+)',\s*'([^']+)'\)/g)].map(
+    (m) => ({ child: m[1]!, parent: m[2]!, alias: m[3]! }),
+  );
 
   const unsafeBlock = SQL.slice(SQL.lastIndexOf("lower(trim(a.alias)) IN ("));
   const unsafe = [...unsafeBlock.matchAll(/'([^']+)'/g)].map((m) => m[1]!);
@@ -70,7 +70,12 @@ type ProblemRow = {
   parent_id: number | null;
 };
 type AliasRow = { id: number; problem_id: number; alias: string };
-type State = { problems: ProblemRow[]; aliases: AliasRow[]; nextProblemId: number; nextAliasId: number };
+type State = {
+  problems: ProblemRow[];
+  aliases: AliasRow[];
+  nextProblemId: number;
+  nextAliasId: number;
+};
 
 const ACTIVE: [number, string, string][] = [
   [1, "anxiety", "חרדה ופחדים"],
@@ -209,7 +214,11 @@ function initialState(): State {
 const norm = (s: string) => normalizeFeedbackText(s);
 
 /** Replay the migration semantics. */
-function applyMigration(state: State): { insertedProblems: number; insertedAliases: number; deleted: number } {
+function applyMigration(state: State): {
+  insertedProblems: number;
+  insertedAliases: number;
+  deleted: number;
+} {
   let insertedProblems = 0;
   let insertedAliases = 0;
   let deleted = 0;
@@ -357,9 +366,24 @@ describe("Phase 3A alias mapping", () => {
 
   it("removes every unsafe exact standalone alias", () => {
     const forbidden = [
-      "אבל", "אובדן", "שכול", "לחץ", "משבר", "כעס", "זעם", "סמים", "פרידה",
-      "דאון", "גמור", "שחוק", "כפייתיות", "פלאשבקים", "סיוטים", "שימוש לרעה",
-      "הורים", "עצמי",
+      "אבל",
+      "אובדן",
+      "שכול",
+      "לחץ",
+      "משבר",
+      "כעס",
+      "זעם",
+      "סמים",
+      "פרידה",
+      "דאון",
+      "גמור",
+      "שחוק",
+      "כפייתיות",
+      "פלאשבקים",
+      "סיוטים",
+      "שימוש לרעה",
+      "הורים",
+      "עצמי",
     ];
     for (const term of forbidden) {
       expect(migrated.state.aliases.some((a) => norm(a.alias) === norm(term))).toBe(false);
@@ -367,18 +391,22 @@ describe("Phase 3A alias mapping", () => {
   });
 
   it("keeps longer contextual phrases", () => {
-    for (const phrase of [
-      "אבל ושכול",
-      "פרידה זוגית",
-      "התמודדות עם פרידה",
-      "קשיים בשליטה בכעסים",
-    ]) {
+    for (const phrase of ["אבל ושכול", "פרידה זוגית", "התמודדות עם פרידה", "קשיים בשליטה בכעסים"]) {
       expect(migrated.state.aliases.some((a) => norm(a.alias) === norm(phrase))).toBe(true);
     }
   });
 
   it("adds no broad standalone alias for deferred terms", () => {
-    for (const term of ["מחלות נפש", "הורות", "ילדים", "משפחה", "זהות", "קשיי שינה", "הפרעות שינה", "נדודי שינה"]) {
+    for (const term of [
+      "מחלות נפש",
+      "הורות",
+      "ילדים",
+      "משפחה",
+      "זהות",
+      "קשיי שינה",
+      "הפרעות שינה",
+      "נדודי שינה",
+    ]) {
       expect(spec.aliases.some((c) => norm(c.alias) === norm(term))).toBe(false);
     }
   });
@@ -445,7 +473,9 @@ describe("Phase 3A catalog integrity", () => {
   });
 
   it("contains no wildcard deletion and no schema change", () => {
-    expect(SQL).not.toMatch(/LIKE|ILIKE|~\*|DROP |ALTER TABLE|CREATE INDEX|UPDATE public\.problems/);
+    expect(SQL).not.toMatch(
+      /LIKE|ILIKE|~\*|DROP |ALTER TABLE|CREATE INDEX|UPDATE public\.problems/,
+    );
   });
 });
 
@@ -468,8 +498,7 @@ function migratedCatalog(): FeedbackCatalog {
 
 describe("full-description fixtures against the migrated catalog", () => {
   const catalog = migratedCatalog();
-  const slugs = (text: string) =>
-    combineFeedbackDomains(text, catalog, []).map((d) => d.slug);
+  const slugs = (text: string) => combineFeedbackDomains(text, catalog, []).map((d) => d.slug);
 
   it("fixture 1 keeps its Phase 2 domains in order", () => {
     const out = slugs(FIXTURE_1);
@@ -496,7 +525,17 @@ describe("full-description fixtures against the migrated catalog", () => {
   });
 
   it("broad standalone terms stay unmapped", () => {
-    for (const text of ["מחלות נפש", "לחץ", "משבר", "אבל", "הורים", "פרידה", "כפייתיות", "פלאשבקים", "סיוטים"]) {
+    for (const text of [
+      "מחלות נפש",
+      "לחץ",
+      "משבר",
+      "אבל",
+      "הורים",
+      "פרידה",
+      "כפייתיות",
+      "פלאשבקים",
+      "סיוטים",
+    ]) {
       expect(slugs(`אני מטפל ב${text} בקליניקה שלי בתל אביב`)).toEqual([]);
     }
   });

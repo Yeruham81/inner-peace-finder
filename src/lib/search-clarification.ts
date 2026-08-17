@@ -103,7 +103,10 @@ export async function buildClarificationPrompt(
   const { data } = await sb
     .from("problems")
     .select("slug, name:name_he")
-    .in("slug", top.map((m) => m.slug));
+    .in(
+      "slug",
+      top.map((m) => m.slug),
+    );
   const nameBySlug = new Map(data?.map((r) => [r.slug, r.name]) ?? []);
 
   const options: ClarificationOption[] = top
@@ -116,9 +119,7 @@ export async function buildClarificationPrompt(
 
   return {
     question:
-      reason === "disambiguation"
-        ? "מצאנו שתי התאמות חזקות. למה התכוונתם?"
-        : "האם זה יותר קשור ל:",
+      reason === "disambiguation" ? "מצאנו שתי התאמות חזקות. למה התכוונתם?" : "האם זה יותר קשור ל:",
     options,
     reason,
   };

@@ -267,7 +267,10 @@ export function validateLlmSemanticResult(
   }
   const parsed = responseSchema.safeParse(payload);
   if (!parsed.success) {
-    throw new LlmSemanticError("invalid_schema", parsed.error.issues[0]?.message ?? "invalid schema");
+    throw new LlmSemanticError(
+      "invalid_schema",
+      parsed.error.issues[0]?.message ?? "invalid schema",
+    );
   }
   const data = parsed.data;
 
@@ -284,7 +287,10 @@ export function validateLlmSemanticResult(
   }
 
   if (data.abstained && validated.length > 0) {
-    throw new LlmSemanticError("conflicting_abstention", "abstained:true cannot coexist with matches");
+    throw new LlmSemanticError(
+      "conflicting_abstention",
+      "abstained:true cannot coexist with matches",
+    );
   }
 
   // Deterministic dedup: highest confidence wins, first occurrence breaks ties.
@@ -296,7 +302,10 @@ export function validateLlmSemanticResult(
   const deduped = sortMatches([...byslug.values()]);
 
   if (deduped.length > LLM_SEMANTIC_MAX_MATCHES) {
-    throw new LlmSemanticError("too_many_matches", `at most ${LLM_SEMANTIC_MAX_MATCHES} matches are accepted`);
+    throw new LlmSemanticError(
+      "too_many_matches",
+      `at most ${LLM_SEMANTIC_MAX_MATCHES} matches are accepted`,
+    );
   }
 
   return {
@@ -309,7 +318,9 @@ export function validateLlmSemanticResult(
 
 /** Deterministic order: confidence desc, then slug asc. */
 function sortMatches(matches: LlmSemanticMatch[]): LlmSemanticMatch[] {
-  return [...matches].sort((a, b) => b.confidence - a.confidence || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  return [...matches].sort(
+    (a, b) => b.confidence - a.confidence || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0),
+  );
 }
 
 /* ------------------------------------------------------------------ */

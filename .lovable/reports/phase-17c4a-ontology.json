@@ -1742,196 +1742,92 @@
   "multiDomain": [
     {
       "input": "אני בלחץ מהעבודה וגם הזוגיות שלי לא טובה",
-      "expected": [
-        "burnout",
-        "relationships"
-      ],
-      "actual": [
-        "anxiety",
-        "couples_conflict",
-        "relationships"
-      ],
+      "expected": ["burnout", "relationships"],
+      "actual": ["anxiety", "couples_conflict", "relationships"],
       "classification": "MAX_MATCHES limitation"
     },
     {
       "input": "אני לא ישן טוב ואני מרגיש חרדה",
-      "expected": [
-        "anxiety"
-      ],
-      "actual": [
-        "anxiety",
-        "social_anxiety",
-        "low_mood"
-      ],
+      "expected": ["anxiety"],
+      "actual": ["anxiety", "social_anxiety", "low_mood"],
       "classification": "pass"
     },
     {
       "input": "יש לי פחד מטיסה וגם בעיות בביטחון עצמי",
-      "expected": [
-        "anxiety",
-        "low_self_esteem"
-      ],
-      "actual": [
-        "relationships",
-        "eating_body",
-        "trust_issues"
-      ],
+      "expected": ["anxiety", "low_self_esteem"],
+      "actual": ["relationships", "eating_body", "trust_issues"],
       "classification": "MAX_MATCHES limitation"
     },
     {
       "input": "דיכאון וחרדה שמלווים אותי מזה שנים",
-      "expected": [
-        "depression",
-        "anxiety"
-      ],
-      "actual": [
-        "anxiety",
-        "depression",
-        "social_anxiety"
-      ],
+      "expected": ["depression", "anxiety"],
+      "actual": ["anxiety", "depression", "social_anxiety"],
       "classification": "pass"
     },
     {
       "input": "אחרי טראומה מהצבא יש לי גם התקפי פאניקה",
-      "expected": [
-        "ptsd",
-        "panic"
-      ],
-      "actual": [
-        "panic",
-        "trauma",
-        "ptsd"
-      ],
+      "expected": ["ptsd", "panic"],
+      "actual": ["panic", "trauma", "ptsd"],
       "classification": "pass"
     },
     {
       "input": "אני שותה יותר מדי בגלל הדיכאון",
-      "expected": [
-        "substance_use",
-        "depression"
-      ],
-      "actual": [
-        "substance_use",
-        "depression",
-        "eating_body"
-      ],
+      "expected": ["substance_use", "depression"],
+      "actual": ["substance_use", "depression", "eating_body"],
       "classification": "pass"
     },
     {
       "input": "בעיות אכילה על רקע דימוי גוף נמוך",
-      "expected": [
-        "eating_body",
-        "body_image"
-      ],
-      "actual": [
-        "body_image",
-        "eating_body",
-        "low_self_esteem"
-      ],
+      "expected": ["eating_body", "body_image"],
+      "actual": ["body_image", "eating_body", "low_self_esteem"],
       "classification": "pass"
     },
     {
       "input": "אני כועסת על בן הזוג שלי ומתפרצת על הילדים",
-      "expected": [
-        "couples_conflict",
-        "parenting_stress"
-      ],
-      "actual": [
-        "couples_conflict",
-        "anger",
-        "parenting_stress"
-      ],
+      "expected": ["couples_conflict", "parenting_stress"],
+      "actual": ["couples_conflict", "anger", "parenting_stress"],
       "classification": "pass"
     },
     {
       "input": "עברתי גירושין ומאז אני בדיכאון עמוק",
-      "expected": [
-        "divorce",
-        "depression"
-      ],
-      "actual": [
-        "divorce",
-        "depression",
-        "burnout_depression"
-      ],
+      "expected": ["divorce", "depression"],
+      "actual": ["divorce", "depression", "burnout_depression"],
       "classification": "pass"
     },
     {
       "input": "אבל על אמא שנפטרה ובדידות קשה",
-      "expected": [
-        "grief_loss",
-        "loneliness"
-      ],
-      "actual": [
-        "loneliness",
-        "grief_loss",
-        "breakup"
-      ],
+      "expected": ["grief_loss", "loneliness"],
+      "actual": ["loneliness", "grief_loss", "breakup"],
       "classification": "pass"
     },
     {
       "input": "OCD וחרדה שמשתקים אותי בעבודה",
-      "expected": [
-        "ocd_compulsions",
-        "anxiety"
-      ],
-      "actual": [
-        "anxiety",
-        "social_anxiety",
-        "panic"
-      ],
+      "expected": ["ocd_compulsions", "anxiety"],
+      "actual": ["anxiety", "social_anxiety", "panic"],
       "classification": "MAX_MATCHES limitation"
     },
     {
       "input": "בעיות אינטימיות בזוגיות ופחד מקרבה",
-      "expected": [
-        "intimacy_issues",
-        "relationships"
-      ],
-      "actual": [
-        "intimacy_issues",
-        "relationships",
-        "couples_conflict"
-      ],
+      "expected": ["intimacy_issues", "relationships"],
+      "actual": ["intimacy_issues", "relationships", "couples_conflict"],
       "classification": "pass"
     },
     {
       "input": "שחיקה בעבודה ומחשבות אובדניות",
-      "expected": [
-        "burnout",
-        "depression"
-      ],
-      "actual": [
-        "burnout",
-        "loss",
-        "grief_loss"
-      ],
+      "expected": ["burnout", "depression"],
+      "actual": ["burnout", "loss", "grief_loss"],
       "classification": "MAX_MATCHES limitation"
     },
     {
       "input": "התמכרות לסמים אחרי טראומה בילדות",
-      "expected": [
-        "addiction",
-        "childhood_trauma"
-      ],
-      "actual": [
-        "substance_use",
-        "trauma",
-        "childhood_trauma"
-      ],
+      "expected": ["addiction", "childhood_trauma"],
+      "actual": ["substance_use", "trauma", "childhood_trauma"],
       "classification": "MAX_MATCHES limitation"
     },
     {
       "input": "בעיות זוגיות אחרי בגידה, אני לא מצליחה לסמוך יותר",
-      "expected": [
-        "couples_conflict",
-        "trust_issues"
-      ],
-      "actual": [
-        "trust_issues",
-        "relationships",
-        "couples_conflict"
-      ],
+      "expected": ["couples_conflict", "trust_issues"],
+      "actual": ["trust_issues", "relationships", "couples_conflict"],
       "classification": "pass"
     }
   ]

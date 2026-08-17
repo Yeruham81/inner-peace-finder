@@ -20,7 +20,10 @@ function client() {
   return createFakeSupabase(searchFixture()) as unknown as SupabaseClient<Database>;
 }
 
-function run(query: string, explicit: { city?: string; population?: string; language?: string } = {}) {
+function run(
+  query: string,
+  explicit: { city?: string; population?: string; language?: string } = {},
+) {
   return runUnifiedSearch({ query, explicit, limit: 20 }, client());
 }
 
@@ -83,7 +86,9 @@ describe("unified search — explicit UI filters on the real production path", (
     expect(out.plan.interpretation.hardFilters.cityNames).toEqual(["תל אביב"]);
     expect(out.plan.hardFilters.cityNames).toEqual(["חיפה"]);
     expect(out.plan.hardFilters.cityNames).not.toContain("תל אביב");
-    expect(out.plan.filterConflicts).toEqual([{ category: "city", inferred: ["תל אביב"], explicit: ["חיפה"] }]);
+    expect(out.plan.filterConflicts).toEqual([
+      { category: "city", inferred: ["תל אביב"], explicit: ["חיפה"] },
+    ]);
     expect(out.results.map((r) => r.id)).toEqual(["t-haifa"]);
   });
 
