@@ -7,6 +7,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
 
+    env:
+      LEAD_IDENTITY_HMAC_SECRET: ${{ secrets.LEAD_IDENTITY_HMAC_SECRET }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
