@@ -69,9 +69,61 @@ async function sendSms(to: string, body: string): Promise<DeliveryResult> {
   return { status: "sent", providerMessageId: json?.sid ?? null };
 }
 
-async function sendEmail(_to: string, _body: string): Promise<DeliveryResult> {
-  // Email adapter scaffold — not yet implemented.
-  return { status: "pending", error: "email_adapter_not_implemented" };
+const BREVO_TEMPLATE_ID = 1;
+
+async function sendEmail(to: string, payload: LeadPayload): Promise<DeliveryResult> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    return { status: "pending", error: "brevo_not_configured" };
+  }
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      to: [
+        {
+          email: to,
+          ...(payload.therapistName ? { name: payload.therapistName } : {}),
+        },
+      ],
+      templateId: BREVO_TEMPLATE_ID,
+      params: {
+        therapist_name: payload.therapistName,
+        sender_name: payload.visitorName,
+        message: payload.message,
+        phone: payload.visitorPhone,
+        // The current lead form does not collect an email address.
+        // Keeping this empty makes the template's "is not empty"
+        // visibility rule hide the email block.
+        email: "",
+      },
+    }),
+  });
+
+  const json = (await res.json().catch(() => null)) as {
+    messageId?: string;
+    messageIds?: string[];
+    message?: string;
+  } | null;
+
+  if (!res.ok) {
+    return {
+      status: "failed",
+      error: json?.message ?? `brevo_${res.status}`,
+    };
+  }
+
+  // "sent" here means Brevo accepted the transactional email request.
+  // Final mailbox delivery/bounce status is a separate provider event.
+  return {
+    status: "sent",
+    providerMessageId: json?.messageId ?? json?.messageIds?.[0] ?? null,
+  };
 }
 
 export async function dispatchLead(
@@ -83,7 +135,7 @@ export async function dispatchLead(
   try {
     if (channel === "whatsapp") return await sendWhatsApp(destination, body);
     if (channel === "sms") return await sendSms(destination, body);
-    if (channel === "email") return await sendEmail(destination, body);
+    if (channel === "email") return await sendEmail(destination, payload);
     return { status: "failed", error: "unknown_channel" };
   } catch (e) {
     return { status: "failed", error: e instanceof Error ? e.message : "dispatch_error" };
