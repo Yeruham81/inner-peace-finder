@@ -24,9 +24,12 @@ export const PUBLIC_THERAPIST_COLUMNS = [
   "offers_free_intro",
   "free_intro_types",
   "free_intro_duration_minutes",
+  "contact_methods",
+  "preferred_contact_method",
 ] as const;
 
 export type PublicTherapistColumn = (typeof PUBLIC_THERAPIST_COLUMNS)[number];
+export type PublicContactMethod = "whatsapp" | "email" | "phone";
 
 export const PUBLIC_THERAPIST_SELECT = PUBLIC_THERAPIST_COLUMNS.join(", ");
 
@@ -73,6 +76,8 @@ export type PublicTherapistProfile = {
   offers_free_intro: boolean;
   free_intro_types: string[];
   free_intro_duration_minutes: number | null;
+  contact_methods: PublicContactMethod[];
+  preferred_contact_method: PublicContactMethod | null;
   professions: { slug: string; name: string; is_primary: boolean }[];
   modalities: { slug: string; name: string }[];
   therapy_formats: { slug: string; name: string }[];

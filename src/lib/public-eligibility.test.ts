@@ -45,6 +45,8 @@ function therapistRow(over: FakeRow): FakeRow {
     visibility: "published",
     email: "private@example.test",
     phone: "0500000000",
+    contact_methods: ["whatsapp", "email", "phone"],
+    preferred_contact_method: "whatsapp",
     owner_account_id: "acct-1",
     semantic_profile: [{ slug: "anxiety", weight: 1 }],
     bio_raw: "staging",
@@ -63,17 +65,11 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
   ["archived", { visibility: "archived" }],
 ];
 
-function db(
-  rows: FakeRow[],
-  overrides: Record<string, FakeRow[]> = {},
-  errors: Record<string, unknown> = {},
-) {
+function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}, errors: Record<string, unknown> = {}) {
   return createFakeSupabase(
     {
       therapists: rows,
-      therapist_populations: [
-        { therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } },
-      ],
+      therapist_populations: [{ therapist_id: "t-1", population_groups: { slug: "adults", name: "מבוגרים" } }],
       therapist_languages: [{ therapist_id: "t-1", languages: { code: "he", name: "עברית" } }],
       therapist_professions: [
         {
@@ -167,13 +163,12 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.professions.map((item) => item.slug)).toEqual(["psychologist"]);
     expect(res?.modalities.map((item) => item.slug)).toEqual(["cbt"]);
     expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
+    expect(res?.contact_methods).toEqual(["whatsapp", "email", "phone"]);
+    expect(res?.preferred_contact_method).toBe("whatsapp");
   });
 
   it("preserves a missing years_experience value as null instead of coercing it to zero", async () => {
-    const res = await fetchPublicTherapistBySlug(
-      db([therapistRow({ years_experience: null })]),
-      "eligible-one",
-    );
+    const res = await fetchPublicTherapistBySlug(db([therapistRow({ years_experience: null })]), "eligible-one");
 
     expect(res?.years_experience).toBeNull();
   });
@@ -196,9 +191,7 @@ describe("public eligibility — shared predicate", () => {
 
   it("uses only the synchronized therapists.verified projection for the public badge", async () => {
     const client = db([therapistRow({ verified: false })], {
-      therapist_credentials: [
-        { therapist_id: "t-1", id: "credential-1", verification_status: "verified" },
-      ],
+      therapist_credentials: [{ therapist_id: "t-1", id: "credential-1", verification_status: "verified" }],
     });
 
     const res = await fetchPublicTherapistBySlug(client, "eligible-one");
@@ -237,10 +230,7 @@ describe("public eligibility — shared predicate", () => {
   });
 
   it("the public profile response contains no private or internal column", async () => {
-    const res = (await fetchPublicTherapistBySlug(
-      db([therapistRow({})]),
-      "eligible-one",
-    )) as Record<string, unknown>;
+    const res = (await fetchPublicTherapistBySlug(db([therapistRow({})]), "eligible-one")) as Record<string, unknown>;
     const keys = Object.keys(res);
     for (const col of PRIVATE_THERAPIST_COLUMNS) {
       expect(keys, col).not.toContain(col);
@@ -266,13 +256,7 @@ describe("public eligibility — shared predicate", () => {
   });
 
   it("listFilterOptions propagates catalog-query failures instead of returning empty filters", async () => {
-    for (const table of [
-      "population_groups",
-      "languages",
-      "professions",
-      "treatment_modalities",
-      "therapy_formats",
-    ]) {
+    for (const table of ["population_groups", "languages", "professions", "treatment_modalities", "therapy_formats"]) {
       await expect(
         listEligibleFilterOptions(db([therapistRow({})], {}, { [table]: new Error("boom") })),
       ).rejects.toThrow(`${table}: boom`);
@@ -311,6 +295,7 @@ describe("public eligibility — centralization", () => {
     "lib/structured-search.functions.ts",
     "lib/query-interpreter.functions.ts",
     "lib/public-therapist-queries.ts",
+    "lib/contact-actions.functions.ts",
   ];
 
   it("no public query file hard-codes the eligibility values inline", () => {
@@ -373,14 +358,18 @@ describe("public eligibility — centralization", () => {
     }
   });
 
-  it("recordCtaClick remains the only path returning a phone number", () => {
-    const src = read("lib/therapists.functions.ts");
-    const phoneSelects = src.match(/select\("phone"\)/g) ?? [];
-    expect(phoneSelects.length).toBe(1);
-    // …and it goes through the privileged server client, not the public one.
-    const ctaSection = src.slice(src.indexOf("export const recordCtaClick"));
+  it("contact targets are released only by privileged, eligibility-gated server actions", () => {
+    const legacySrc = read("lib/therapists.functions.ts");
+    const ctaSection = legacySrc.slice(legacySrc.indexOf("export const recordCtaClick"));
+    expect(ctaSection.includes('select("phone")')).toBe(true);
     expect(ctaSection.includes("client.server")).toBe(true);
     expect(ctaSection.includes("publicClient()")).toBe(false);
+
+    const directSrc = read("lib/contact-actions.functions.ts");
+    expect(directSrc.includes('select("phone, contact_methods")')).toBe(true);
+    expect(directSrc.includes("applyEligibility")).toBe(true);
+    expect(directSrc.includes("supabaseAdmin")).toBe(true);
+    expect(directSrc.includes("record_cta_click")).toBe(false);
   });
 
   it("production search remains Unified-only with no Legacy fallback", () => {

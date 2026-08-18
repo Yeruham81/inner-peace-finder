@@ -12,10 +12,7 @@ import { join } from "node:path";
 import { buildPreviewViewData, type PreviewFormState } from "./profile-preview-adapter";
 import type { EditorOptions } from "./therapist-profile.functions";
 
-const editorSource = readFileSync(
-  join(import.meta.dir, "..", "routes", "_authenticated", "new-profile.tsx"),
-  "utf8",
-);
+const editorSource = readFileSync(join(import.meta.dir, "..", "routes", "_authenticated", "new-profile.tsx"), "utf8");
 
 const options = {
   professions: [{ id: "p1", name_he: "פסיכולוגית", slug: "psychologist" }],
@@ -40,6 +37,8 @@ function form(overrides: Partial<PreviewFormState> = {}): PreviewFormState {
     professional_experience: "12 שנות ניסיון במרפאה ציבורית ובקליניקה פרטית",
     years_experience: "12",
     image_url: "https://example.com/a.jpg",
+    contact_methods: ["whatsapp", "email", "phone"],
+    preferred_contact_method: "whatsapp",
     profession_ids: ["p1"],
     modality_ids: ["m1"],
     language_ids: ["l2"],
@@ -88,13 +87,13 @@ describe("buildPreviewViewData", () => {
     expect(view.populations.map((p) => p.name)).toEqual(["מתבגרים"]);
     expect(view.languages.map((l) => l.code)).toEqual(["en"]);
     expect(view.therapy_formats.map((f) => f.slug)).toEqual(["couples"]);
-    expect(view.professional_memberships).toEqual([
-      { organization_name: "הסתדרות הפסיכולוגים", member_since: 2015 },
-    ]);
+    expect(view.professional_memberships).toEqual([{ organization_name: "הסתדרות הפסיכולוגים", member_since: 2015 }]);
     expect(view.service_arrangements).toEqual([{ organization_name: "מכבי", note: "הסדר" }]);
     expect(view.lgbtq_affirming).toBe(true);
     expect(view.offers_free_intro).toBe(true);
     expect(view.free_intro_duration_minutes).toBe(20);
+    expect(view.contact_methods).toEqual(["whatsapp", "email", "phone"]);
+    expect(view.preferred_contact_method).toBe("whatsapp");
     expect(view.locations.map((l) => l.location_type)).toEqual(["clinic", "online"]);
     expect(view.verified).toBe(true);
   });
@@ -114,6 +113,8 @@ describe("buildPreviewViewData", () => {
         professional_experience: "",
         years_experience: "",
         image_url: "",
+        contact_methods: [],
+        preferred_contact_method: "",
         profession_ids: [],
         modality_ids: [],
         language_ids: [],
@@ -154,9 +155,7 @@ describe("preview rendering reuses the public profile presentation", () => {
     const { TherapistProfileView } = await import("@/components/therapist-profile-view");
 
     const view = buildPreviewViewData(form(), options, { id: "t1", verified: false });
-    const html = renderToStaticMarkup(
-      <TherapistProfileView therapist={view} interactive={false} />,
-    );
+    const html = renderToStaticMarkup(<TherapistProfileView therapist={view} interactive={false} />);
 
     expect(html).toContain("רות לוי");
     expect(html).toContain("טקסט לא שמור על אודותיי");
@@ -164,6 +163,9 @@ describe("preview rendering reuses the public profile presentation", () => {
     expect(html).toContain("תואר שני בפסיכולוגיה קלינית והכשרת CBT");
     expect(html).toContain("ניסיון מקצועי");
     expect(html).toContain("12 שנות ניסיון במרפאה ציבורית ובקליניקה פרטית");
+    expect(html).toContain("שליחת הודעה ב־WhatsApp");
+    expect(html).toContain("שיחה טלפונית");
+    expect(html).toContain("שליחת פנייה באימייל");
     expect(html).toContain("disabled");
     expect(html).toContain('aria-disabled="true"');
     // The real lead dialog / phone reveal never mounts in preview mode.
@@ -230,9 +232,7 @@ describe("editor preview wiring", () => {
 
   it("builds the preview from live form state, not a refetch", () => {
     expect(editorSource).toContain("buildPreviewViewData(form, options.data, profile.data)");
-    expect(editorSource).toContain(
-      "<TherapistProfileView therapist={previewData} interactive={false} />",
-    );
+    expect(editorSource).toContain("<TherapistProfileView therapist={previewData} interactive={false} />");
   });
 
   it("opening the preview only toggles local state — no save, publish or refetch call", () => {

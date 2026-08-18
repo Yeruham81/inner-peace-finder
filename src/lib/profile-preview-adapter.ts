@@ -7,6 +7,7 @@
  * reads the database, never saves, and never widens the public DTO.
  */
 import type { TherapistProfileViewData } from "@/components/therapist-profile-view";
+import type { PublicContactMethod } from "@/lib/public-therapist-profile";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import type { EditorOptions } from "@/lib/therapist-profile.functions";
 
@@ -27,6 +28,8 @@ export type PreviewFormState = {
   professional_experience: string;
   years_experience: string;
   image_url: string;
+  contact_methods?: PublicContactMethod[];
+  preferred_contact_method?: PublicContactMethod | "";
   profession_ids: string[];
   modality_ids: string[];
   language_ids: string[];
@@ -110,9 +113,12 @@ export function buildPreviewViewData(
     lgbtq_affirming: form.lgbtq_affirming,
     offers_free_intro: form.offers_free_intro,
     free_intro_types: form.free_intro_types,
-    free_intro_duration_minutes: form.free_intro_duration_minutes
-      ? Number(form.free_intro_duration_minutes)
-      : null,
+    free_intro_duration_minutes: form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
+    contact_methods: form.contact_methods ?? [],
+    preferred_contact_method:
+      form.preferred_contact_method && (form.contact_methods ?? []).includes(form.preferred_contact_method)
+        ? form.preferred_contact_method
+        : ((form.contact_methods ?? [])[0] ?? null),
     professions: (options?.professions ?? [])
       .filter((item) => form.profession_ids.includes(item.id))
       .map((item) => ({ slug: item.slug, name: item.name_he, is_primary: false })),

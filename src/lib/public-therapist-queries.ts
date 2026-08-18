@@ -7,12 +7,22 @@
  */
 
 import { applyEligibility } from "./search-eligibility";
-import { PUBLIC_THERAPIST_SELECT, type PublicTherapistProfile } from "./public-therapist-profile";
+import {
+  PUBLIC_THERAPIST_SELECT,
+  type PublicContactMethod,
+  type PublicTherapistProfile,
+} from "./public-therapist-profile";
 import { regionSlugForStoredValue } from "./locality-options";
 import { parseStoredProfile } from "./therapist-semantic-profile";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type PublicReadClient = { from: (table: string) => any };
+
+const PUBLIC_CONTACT_METHODS = new Set<PublicContactMethod>(["whatsapp", "email", "phone"]);
+
+function isPublicContactMethod(value: unknown): value is PublicContactMethod {
+  return typeof value === "string" && PUBLIC_CONTACT_METHODS.has(value as PublicContactMethod);
+}
 
 function unwrap<T>(res: { data: T | null; error: unknown }): T | null {
   if (res.error) throw res.error;
@@ -42,10 +52,7 @@ export async function fetchPublicTherapistBySlug(
     semanticSource,
     problemCatalog,
   ] = await Promise.all([
-    sb
-      .from("therapist_populations")
-      .select("population_groups(slug, name)")
-      .eq("therapist_id", t.id),
+    sb.from("therapist_populations").select("population_groups(slug, name)").eq("therapist_id", t.id),
     sb.from("therapist_languages").select("languages(code, name)").eq("therapist_id", t.id),
     sb
       .from("therapist_professions")
@@ -57,10 +64,7 @@ export async function fetchPublicTherapistBySlug(
       .select("treatment_modalities!inner(slug, name:name_he, sort_order, is_active)")
       .eq("therapist_id", t.id)
       .eq("treatment_modalities.is_active", true),
-    sb
-      .from("therapist_therapy_formats")
-      .select("therapy_formats(slug, name:name_he)")
-      .eq("therapist_id", t.id),
+    sb.from("therapist_therapy_formats").select("therapy_formats(slug, name:name_he)").eq("therapist_id", t.id),
     sb
       .from("therapist_locations")
       .select(
@@ -136,6 +140,15 @@ export async function fetchPublicTherapistBySlug(
       slug: problem.slug,
       parent_id: problem.parent_id === null ? null : String(problem.parent_id),
     }));
+
+  const contactMethods = Array.isArray(t.contact_methods)
+    ? [...new Set(t.contact_methods.filter(isPublicContactMethod))].slice(0, 3)
+    : [];
+  const preferredContactMethod =
+    isPublicContactMethod(t.preferred_contact_method) && contactMethods.includes(t.preferred_contact_method)
+      ? t.preferred_contact_method
+      : (contactMethods[0] ?? null);
+
   // Explicit projection — never spread the database row.
   return {
     id: t.id,
@@ -156,6 +169,8 @@ export async function fetchPublicTherapistBySlug(
     offers_free_intro: !!t.offers_free_intro,
     free_intro_types: t.free_intro_types ?? [],
     free_intro_duration_minutes: t.free_intro_duration_minutes ?? null,
+    contact_methods: contactMethods,
+    preferred_contact_method: preferredContactMethod,
     professions: mappedProfessions,
     modalities: mappedModalities,
     therapy_formats: ((formats?.data ?? []) as any[]).map((r) => r.therapy_formats).filter(Boolean),
@@ -182,9 +197,7 @@ export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<
 async function listEligibleClinicCities(
   sb: PublicReadClient,
 ): Promise<{ cities: string[]; cityRegions: Record<string, string[]> }> {
-  const eligibleTherapists = unwrap(
-    await applyEligibility(sb.from("therapists").select("id")),
-  ) as Array<{
+  const eligibleTherapists = unwrap(await applyEligibility(sb.from("therapists").select("id"))) as Array<{
     id: string;
   }> | null;
   const eligibleIds = (eligibleTherapists ?? []).map((row) => row.id);
@@ -220,23 +233,14 @@ async function listEligibleClinicCities(
 
 /** Filter options. Cities come from every active clinic of eligible profiles. */
 export async function listEligibleFilterOptions(sb: PublicReadClient) {
-  const [clinicCities, populations, languages, professions, modalities, therapyFormats] =
-    await Promise.all([
-      listEligibleClinicCities(sb),
-      sb.from("population_groups").select("slug, name").order("sort_order"),
-      sb.from("languages").select("code, name").order("name"),
-      sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
-      sb
-        .from("treatment_modalities")
-        .select("slug, name:name_he")
-        .eq("is_active", true)
-        .order("sort_order"),
-      sb
-        .from("therapy_formats")
-        .select("slug, name:name_he")
-        .eq("is_active", true)
-        .order("sort_order"),
-    ]);
+  const [clinicCities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
+    listEligibleClinicCities(sb),
+    sb.from("population_groups").select("slug, name").order("sort_order"),
+    sb.from("languages").select("code, name").order("name"),
+    sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
+    sb.from("treatment_modalities").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
+    sb.from("therapy_formats").select("slug, name:name_he").eq("is_active", true).order("sort_order"),
+  ]);
 
   // A failed catalog read is not an empty catalog. Propagate the failure so
   // the route/query error boundary can show an explicit load error instead of
