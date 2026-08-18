@@ -19,6 +19,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
 import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
 import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
@@ -74,6 +75,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const TherapistsSlugRoute = TherapistsSlugRouteImport.update({
   id: '/therapists/$slug',
   path: '/therapists/$slug',
@@ -102,7 +108,7 @@ const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
   '/profile-preview-demo': typeof ProfilePreviewDemoRoute
@@ -115,10 +121,10 @@ export interface FileRoutesByFullPath {
   '/new-profile': typeof AuthenticatedNewProfileRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteRoute
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
   '/profile-preview-demo': typeof ProfilePreviewDemoRoute
@@ -131,12 +137,13 @@ export interface FileRoutesByTo {
   '/new-profile': typeof AuthenticatedNewProfileRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/admin': typeof AdminRouteRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
   '/profile-preview-demo': typeof ProfilePreviewDemoRoute
@@ -149,6 +156,7 @@ export interface FileRoutesById {
   '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,10 +175,10 @@ export interface FileRouteTypes {
     | '/new-profile'
     | '/problems/$slug'
     | '/therapists/$slug'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/auth'
     | '/for-therapists'
     | '/profile-preview-demo'
@@ -183,6 +191,7 @@ export interface FileRouteTypes {
     | '/new-profile'
     | '/problems/$slug'
     | '/therapists/$slug'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -200,12 +209,13 @@ export interface FileRouteTypes {
     | '/_authenticated/new-profile'
     | '/problems/$slug'
     | '/therapists/$slug'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AdminRouteRoute: typeof AdminRouteRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ForTherapistsRoute: typeof ForTherapistsRoute
   ProfilePreviewDemoRoute: typeof ProfilePreviewDemoRoute
@@ -289,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/therapists/$slug': {
       id: '/therapists/$slug'
       path: '/therapists/$slug'
@@ -342,10 +359,22 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AdminRouteRoute: AdminRouteRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ForTherapistsRoute: ForTherapistsRoute,
   ProfilePreviewDemoRoute: ProfilePreviewDemoRoute,
