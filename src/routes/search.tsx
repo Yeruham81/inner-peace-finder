@@ -367,11 +367,10 @@ function UrgentHelpState() {
       aria-labelledby="urgent-help-title"
     >
       <h2 id="urgent-help-title" className="text-xl font-bold text-foreground sm:text-2xl">
-        ייתכן שנדרשת עזרה מיידית
+        ייתכן שאתם זקוקים לעזרה מיידית
       </h2>
       <p className="mt-3 max-w-3xl text-sm leading-7 text-foreground/80 sm:text-base">
-        טיפולינקס אינו שירות חירום. אם קיימת סכנה מיידית, מחשבה על פגיעה עצמית או מצב רפואי דחוף,
-        מומלץ לפנות עכשיו לגורם סיוע מתאים ולא להסתמך על חיפוש מטפלים באתר.
+        טיפולינקס מסייע במציאת מטפלים ואינו מיועד למצבי חירום.
       </p>
       <div className="mt-5 flex flex-wrap gap-3">
         <a
