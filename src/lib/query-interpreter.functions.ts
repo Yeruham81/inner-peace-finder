@@ -120,6 +120,24 @@ function emptyStructuredFilters(): StructuredFilters {
   };
 }
 
+function hasStructuredSearchConstraint(filters: StructuredFilters): boolean {
+  return Boolean(
+    filters.professionSlugs.length ||
+    filters.modalitySlugs.length ||
+    filters.populationSlugs.length ||
+    filters.languageCodes.length ||
+    filters.deliveryModes.length ||
+    filters.cityNames.length ||
+    filters.therapistGender ||
+    (filters.regionSlugs?.length ?? 0) ||
+    (filters.therapyFormatSlugs?.length ?? 0) ||
+    filters.accessibleClinic ||
+    filters.verifiedOnly ||
+    filters.lgbtqAffirming ||
+    filters.freeIntroOnly,
+  );
+}
+
 function emptySoftPreferences(): SoftPreferences {
   return {
     professionSlugs: [],
@@ -331,6 +349,21 @@ async function buildPlan(
 
   const unresolvedRequestedProblem = hasRequestedProblem && !requestedProblemResolved && normalizedRequested.length > 0;
 
+  // A non-empty `excludedCriteria` means the user explicitly removed one or
+  // more criteria inferred from this exact query. If nothing searchable remains
+  // after those removals, that is an intentional broadening action — not a
+  // failure to understand the original wording. Seed from all eligible
+  // therapists (or let any remaining explicit/hard filters seed normally).
+  const hasRemainingHardConstraint = hasStructuredSearchConstraint(merged.hardFilters);
+  const userClearedAllInferredCriteria =
+    excludedCriteria.length > 0 &&
+    criteria.length === 0 &&
+    semanticSignals.length === 0 &&
+    interpretation.therapistNameIds.length === 0 &&
+    !hasRemainingHardConstraint &&
+    !hasExplicitFilters(explicitRaw) &&
+    !interpretation.unresolvedPrimary;
+
   const plan: TherapistSearchPlan = {
     interpretation,
     semanticSignals,
@@ -339,11 +372,18 @@ async function buildPlan(
     softPreferences: merged.softPreferences,
     therapistNameIds: interpretation.therapistNameIds,
     emptyReason:
-      semanticSignals.length === 0 && (unresolvedRequestedProblem || interpretation.unresolvedPrimary)
+      !userClearedAllInferredCriteria &&
+      semanticSignals.length === 0 &&
+      (unresolvedRequestedProblem || interpretation.unresolvedPrimary)
         ? "unrecognized_query"
         : null,
     safetyTriage,
-    browseAll: query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
+    browseAll:
+      semanticSignals.length === 0 &&
+      interpretation.therapistNameIds.length === 0 &&
+      !hasRemainingHardConstraint &&
+      !hasExplicitFilters(explicitRaw) &&
+      (query.trim().length === 0 || userClearedAllInferredCriteria),
     explicitFilters: explicit,
     filterConflicts: merged.conflicts,
   };

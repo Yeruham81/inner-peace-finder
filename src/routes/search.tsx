@@ -446,7 +446,10 @@ function UnifiedSearchResults({
 
   return (
     <>
-      <ResultsHeader count={results.length} hasFilters={Boolean(contract.q) || hasAnyExplicitFilter(contract)} />
+      <ResultsHeader
+        count={results.length}
+        hasFilters={!pipeline?.plan?.browseAll && (Boolean(contract.q) || hasAnyExplicitFilter(contract))}
+      />
       {results.length === 0 ? <EmptyState reason={nonUrgentEmptyReason} /> : <ResultsGrid results={results} />}
     </>
   );
