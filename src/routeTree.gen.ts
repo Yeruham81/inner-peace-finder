@@ -16,10 +16,20 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfilePreviewDemoRouteImport } from './routes/profile-preview-demo'
 import { Route as ForTherapistsRouteImport } from './routes/for-therapists'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
 import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
+import { Route as AdminTherapistsRouteImport } from './routes/admin/therapists'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
+import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
+import { Route as AdminCredentialsRouteImport } from './routes/admin/credentials'
+import { Route as AdminClaimsRouteImport } from './routes/admin/claims'
+import { Route as AdminCatalogsRouteImport } from './routes/admin/catalogs'
+import { Route as AdminBillingRouteImport } from './routes/admin/billing'
 import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
 import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
@@ -59,6 +69,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -67,6 +82,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const TherapistsSlugRoute = TherapistsSlugRouteImport.update({
   id: '/therapists/$slug',
@@ -77,6 +97,46 @@ const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
   id: '/problems/$slug',
   path: '/problems/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTherapistsRoute = AdminTherapistsRouteImport.update({
+  id: '/therapists',
+  path: '/therapists',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminIntegrationsRoute = AdminIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCredentialsRoute = AdminCredentialsRouteImport.update({
+  id: '/credentials',
+  path: '/credentials',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminClaimsRoute = AdminClaimsRouteImport.update({
+  id: '/claims',
+  path: '/claims',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCatalogsRoute = AdminCatalogsRouteImport.update({
+  id: '/catalogs',
+  path: '/catalogs',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminBillingRoute = AdminBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const AuthenticatedNewProfileRoute = AuthenticatedNewProfileRouteImport.update({
   id: '/new-profile',
@@ -96,6 +156,7 @@ const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
   '/profile-preview-demo': typeof ProfilePreviewDemoRoute
@@ -106,8 +167,17 @@ export interface FileRoutesByFullPath {
   '/account': typeof AuthenticatedAccountRoute
   '/claim': typeof AuthenticatedClaimRoute
   '/new-profile': typeof AuthenticatedNewProfileRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/catalogs': typeof AdminCatalogsRoute
+  '/admin/claims': typeof AdminClaimsRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/therapists': typeof AdminTherapistsRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -121,13 +191,23 @@ export interface FileRoutesByTo {
   '/account': typeof AuthenticatedAccountRoute
   '/claim': typeof AuthenticatedClaimRoute
   '/new-profile': typeof AuthenticatedNewProfileRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/catalogs': typeof AdminCatalogsRoute
+  '/admin/claims': typeof AdminClaimsRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/therapists': typeof AdminTherapistsRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/for-therapists': typeof ForTherapistsRoute
   '/profile-preview-demo': typeof ProfilePreviewDemoRoute
@@ -138,13 +218,23 @@ export interface FileRoutesById {
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/claim': typeof AuthenticatedClaimRoute
   '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/catalogs': typeof AdminCatalogsRoute
+  '/admin/claims': typeof AdminClaimsRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/therapists': typeof AdminTherapistsRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/auth'
     | '/for-therapists'
     | '/profile-preview-demo'
@@ -155,8 +245,17 @@ export interface FileRouteTypes {
     | '/account'
     | '/claim'
     | '/new-profile'
+    | '/admin/billing'
+    | '/admin/catalogs'
+    | '/admin/claims'
+    | '/admin/credentials'
+    | '/admin/integrations'
+    | '/admin/leads'
+    | '/admin/settings'
+    | '/admin/therapists'
     | '/problems/$slug'
     | '/therapists/$slug'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -170,12 +269,22 @@ export interface FileRouteTypes {
     | '/account'
     | '/claim'
     | '/new-profile'
+    | '/admin/billing'
+    | '/admin/catalogs'
+    | '/admin/claims'
+    | '/admin/credentials'
+    | '/admin/integrations'
+    | '/admin/leads'
+    | '/admin/settings'
+    | '/admin/therapists'
     | '/problems/$slug'
     | '/therapists/$slug'
+    | '/admin'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/admin'
     | '/auth'
     | '/for-therapists'
     | '/profile-preview-demo'
@@ -186,13 +295,23 @@ export interface FileRouteTypes {
     | '/_authenticated/account'
     | '/_authenticated/claim'
     | '/_authenticated/new-profile'
+    | '/admin/billing'
+    | '/admin/catalogs'
+    | '/admin/claims'
+    | '/admin/credentials'
+    | '/admin/integrations'
+    | '/admin/leads'
+    | '/admin/settings'
+    | '/admin/therapists'
     | '/problems/$slug'
     | '/therapists/$slug'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ForTherapistsRoute: typeof ForTherapistsRoute
   ProfilePreviewDemoRoute: typeof ProfilePreviewDemoRoute
@@ -255,6 +374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -269,6 +395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/therapists/$slug': {
       id: '/therapists/$slug'
       path: '/therapists/$slug'
@@ -282,6 +415,62 @@ declare module '@tanstack/react-router' {
       fullPath: '/problems/$slug'
       preLoaderRoute: typeof ProblemsSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/therapists': {
+      id: '/admin/therapists'
+      path: '/therapists'
+      fullPath: '/admin/therapists'
+      preLoaderRoute: typeof AdminTherapistsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/integrations': {
+      id: '/admin/integrations'
+      path: '/integrations'
+      fullPath: '/admin/integrations'
+      preLoaderRoute: typeof AdminIntegrationsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/credentials': {
+      id: '/admin/credentials'
+      path: '/credentials'
+      fullPath: '/admin/credentials'
+      preLoaderRoute: typeof AdminCredentialsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/claims': {
+      id: '/admin/claims'
+      path: '/claims'
+      fullPath: '/admin/claims'
+      preLoaderRoute: typeof AdminClaimsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/catalogs': {
+      id: '/admin/catalogs'
+      path: '/catalogs'
+      fullPath: '/admin/catalogs'
+      preLoaderRoute: typeof AdminCatalogsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/billing': {
+      id: '/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AdminBillingRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/_authenticated/new-profile': {
       id: '/_authenticated/new-profile'
@@ -322,9 +511,38 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AdminRouteRouteChildren {
+  AdminBillingRoute: typeof AdminBillingRoute
+  AdminCatalogsRoute: typeof AdminCatalogsRoute
+  AdminClaimsRoute: typeof AdminClaimsRoute
+  AdminCredentialsRoute: typeof AdminCredentialsRoute
+  AdminIntegrationsRoute: typeof AdminIntegrationsRoute
+  AdminLeadsRoute: typeof AdminLeadsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminTherapistsRoute: typeof AdminTherapistsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminBillingRoute: AdminBillingRoute,
+  AdminCatalogsRoute: AdminCatalogsRoute,
+  AdminClaimsRoute: AdminClaimsRoute,
+  AdminCredentialsRoute: AdminCredentialsRoute,
+  AdminIntegrationsRoute: AdminIntegrationsRoute,
+  AdminLeadsRoute: AdminLeadsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminTherapistsRoute: AdminTherapistsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ForTherapistsRoute: ForTherapistsRoute,
   ProfilePreviewDemoRoute: ProfilePreviewDemoRoute,
