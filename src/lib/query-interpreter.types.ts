@@ -62,13 +62,7 @@ export type Catalog = {
   firstNameCount: Map<string, number>;
 };
 
-export type Intent =
-  | "structured"
-  | "semantic"
-  | "hybrid"
-  | "named"
-  | "unresolved_service"
-  | "unknown";
+export type Intent = "structured" | "semantic" | "hybrid" | "named" | "unresolved_service" | "unknown";
 
 export type UnresolvedCode = "unrecognized_service" | "gender_conflict" | "empty_query";
 
@@ -167,6 +161,19 @@ export type InterpretationResult = {
   unresolvedCodes: UnresolvedCode[];
 };
 
+/**
+ * User-facing criterion inferred from the free-text query.
+ *
+ * Keep this deliberately small and presentation-safe: the UI needs a stable
+ * canonical value plus a Hebrew label, but it must not depend on internal
+ * interpreter evidence or LLM payloads.
+ */
+export type SearchCriterion = {
+  type: "problem" | "population";
+  value: string;
+  label: string;
+};
+
 /** Semantic evidence for one classified domain, from SemanticEngine.classify. */
 export type SemanticSignal = { slug: string; confidence: number };
 
@@ -174,6 +181,8 @@ export type SemanticSignal = { slug: string; confidence: number };
 export type TherapistSearchPlan = {
   interpretation: InterpretationResult;
   semanticSignals: SemanticSignal[];
+  /** Active query-inferred criteria that are safe to show and remove in the UI. */
+  criteria?: SearchCriterion[];
   hardFilters: StructuredFilters;
   softPreferences: SoftPreferences;
   therapistNameIds: string[];

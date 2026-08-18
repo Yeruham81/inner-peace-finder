@@ -6,6 +6,7 @@ import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { listFilterOptions, classifyAndSearch, type ScoredTherapist } from "@/lib/therapists.functions";
 import { searchStructuredTherapists } from "@/lib/structured-search.functions";
 import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter.functions";
+import type { SearchCriterion } from "@/lib/query-interpreter.types";
 import { legacyRowToCard, type SearchResultCard } from "@/lib/search-result-card";
 import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
 import { TherapistCard } from "@/components/therapist-card";
@@ -45,6 +46,7 @@ const searchSchema = z.object({
   verified: fallback(z.string(), "").default(""),
   lgbtqAffirming: fallback(z.string(), "").default(""),
   freeIntro: fallback(z.string(), "").default(""),
+  excludedCriteria: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
   flow: fallback(z.string(), "unified").default("unified"),
 });
 
@@ -106,6 +108,7 @@ export function unifiedResultsQuery(p: UnifiedParams) {
           verified: p.verified,
           lgbtqAffirming: p.lgbtqAffirming,
           freeIntro: p.freeIntro,
+          excludedCriteria: [...(p.excludedCriteria ?? [])],
           limit: 20,
         },
       }),
@@ -179,6 +182,7 @@ export function toUnifiedParams(s: SearchParams): UnifiedParams {
     verified: s.verified,
     lgbtqAffirming: s.lgbtqAffirming,
     freeIntro: s.freeIntro,
+    excludedCriteria: s.excludedCriteria,
   });
 }
 
@@ -191,13 +195,19 @@ export function SearchResultsSwitch({
   flow,
   search,
   onQuickFiltersChange,
+  onInferredCriteriaChange,
 }: {
   flow: FlowValue;
   search: SearchParams;
   onQuickFiltersChange?: (filters: string[]) => void;
+  onInferredCriteriaChange?: (criteria: SearchCriterion[]) => void;
 }) {
   return flow === "unified" ? (
-    <UnifiedSearchResults search={search} onQuickFiltersChange={onQuickFiltersChange} />
+    <UnifiedSearchResults
+      search={search}
+      onQuickFiltersChange={onQuickFiltersChange}
+      onInferredCriteriaChange={onInferredCriteriaChange}
+    />
   ) : (
     <LegacySearchResults search={search} />
   );
@@ -278,19 +288,11 @@ function resultCountLabel(count: number): string {
   return `${count} מטפלים`;
 }
 
-function ResultsHeader({ q, count, hasFilters }: { q: string; count: number | null; hasFilters: boolean }) {
+function ResultsHeader({ count, hasFilters }: { count: number | null; hasFilters: boolean }) {
   return (
     <div className="mt-7 flex flex-wrap items-end justify-between gap-2 sm:mt-8">
-      <h1 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-        {q ? (
-          <>
-            תוצאות עבור <span className="text-primary">״{q}״</span>
-          </>
-        ) : hasFilters ? (
-          "מטפלים לפי הסינון שבחרתם"
-        ) : (
-          "כל המטפלים"
-        )}
+      <h1 className="text-xl font-bold leading-tight text-foreground sm:text-2xl">
+        {hasFilters ? "מטפלים מתאימים" : "כל המטפלים"}
       </h1>
       {count !== null && (
         <span aria-live="polite" className="pb-0.5 text-sm text-muted-foreground sm:text-base">
@@ -410,18 +412,25 @@ export function availableQuickFilters(results: SearchResultCard[]): string[] {
 function UnifiedSearchResults({
   search,
   onQuickFiltersChange,
+  onInferredCriteriaChange,
 }: {
   search: SearchParams;
   onQuickFiltersChange?: (filters: string[]) => void;
+  onInferredCriteriaChange?: (criteria: SearchCriterion[]) => void;
 }) {
   const contract = toUnifiedParams(search);
   const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(contract));
   // No adaptation: the unified pipeline already returns the card contract.
   const results: SearchResultCard[] = pipeline?.results ?? [];
   const quickFilterKey = availableQuickFilters(results).join(",");
+  const criteria = pipeline?.plan?.criteria ?? [];
+  const criteriaKey = criteria.map((criterion) => `${criterion.type}:${criterion.value}:${criterion.label}`).join("|");
   useEffect(() => {
     onQuickFiltersChange?.(quickFilterKey ? quickFilterKey.split(",") : []);
   }, [onQuickFiltersChange, quickFilterKey]);
+  useEffect(() => {
+    onInferredCriteriaChange?.(criteria);
+  }, [onInferredCriteriaChange, criteriaKey]);
   const emptyReason = pipeline?.emptyReason ?? null;
   const isSafetyTriage = emptyReason === "urgent_help";
   useSearchAnalytics({
@@ -437,7 +446,7 @@ function UnifiedSearchResults({
 
   return (
     <>
-      <ResultsHeader q={contract.q} count={results.length} hasFilters={hasAnyExplicitFilter(contract)} />
+      <ResultsHeader count={results.length} hasFilters={Boolean(contract.q) || hasAnyExplicitFilter(contract)} />
       {results.length === 0 ? <EmptyState reason={nonUrgentEmptyReason} /> : <ResultsGrid results={results} />}
     </>
   );
@@ -469,9 +478,8 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
   return (
     <>
       <ResultsHeader
-        q={contract.q}
         count={isClarification ? null : results.length}
-        hasFilters={hasAnyExplicitFilter(contract)}
+        hasFilters={Boolean(contract.q) || hasAnyExplicitFilter(contract)}
       />
 
       {structuredMatches && structuredMatches.length > 0 && (
@@ -544,6 +552,7 @@ function SearchPage() {
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
   const contract = toUnifiedParams(search);
   const [quickFilters, setQuickFilters] = useState<string[] | undefined>(undefined);
+  const [inferredCriteria, setInferredCriteria] = useState<SearchCriterion[]>([]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -570,8 +579,13 @@ function SearchPage() {
           verified: contract.verified,
           lgbtqAffirming: contract.lgbtqAffirming,
           freeIntro: contract.freeIntro,
+          excludedCriteria: [...(contract.excludedCriteria ?? [])],
         }}
-        preserveSearch={import.meta.env.DEV ? { problem: search.problem, flow: search.flow } : undefined}
+        preserveSearch={{
+          problem: search.problem,
+          flow: import.meta.env.DEV ? search.flow : undefined,
+        }}
+        inferredCriteria={flow === "unified" ? inferredCriteria : []}
         variant="compact"
         availableQuickFilters={flow === "unified" ? quickFilters : undefined}
       />
@@ -601,7 +615,12 @@ function SearchPage() {
       {/* Exactly ONE branch is mounted. In production `flow` is always
           "unified", so the Legacy and structured queries are never
           instantiated and a failure there cannot affect Unified. */}
-      <SearchResultsSwitch flow={flow} search={search} onQuickFiltersChange={setQuickFilters} />
+      <SearchResultsSwitch
+        flow={flow}
+        search={search}
+        onQuickFiltersChange={setQuickFilters}
+        onInferredCriteriaChange={setInferredCriteria}
+      />
     </div>
   );
 }

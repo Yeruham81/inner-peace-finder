@@ -18,27 +18,22 @@ import * as TherapistCardModule from "@/components/therapist-card";
 
 const calls: string[] = [];
 
-const listFilterOptionsSpy = spyOn(TherapistsFunctions, "listFilterOptions").mockImplementation(
-  (() => {
-    calls.push("listFilterOptions");
-    return Promise.resolve({ cities: [], populations: [], languages: [] });
-  }) as typeof TherapistsFunctions.listFilterOptions,
-);
+const listFilterOptionsSpy = spyOn(TherapistsFunctions, "listFilterOptions").mockImplementation((() => {
+  calls.push("listFilterOptions");
+  return Promise.resolve({ cities: [], populations: [], languages: [] });
+}) as typeof TherapistsFunctions.listFilterOptions);
 
-const classifyAndSearchSpy = spyOn(TherapistsFunctions, "classifyAndSearch").mockImplementation(
-  (() => {
-    calls.push("classifyAndSearch");
-    throw new Error("legacy classifyAndSearch must not run in production mode");
-  }) as typeof TherapistsFunctions.classifyAndSearch,
-);
+const classifyAndSearchSpy = spyOn(TherapistsFunctions, "classifyAndSearch").mockImplementation((() => {
+  calls.push("classifyAndSearch");
+  throw new Error("legacy classifyAndSearch must not run in production mode");
+}) as typeof TherapistsFunctions.classifyAndSearch);
 
-const searchStructuredTherapistsSpy = spyOn(
-  StructuredSearchFunctions,
-  "searchStructuredTherapists",
-).mockImplementation((() => {
-  calls.push("searchStructuredTherapists");
-  throw new Error("structured search must not run in production mode");
-}) as typeof StructuredSearchFunctions.searchStructuredTherapists);
+const searchStructuredTherapistsSpy = spyOn(StructuredSearchFunctions, "searchStructuredTherapists").mockImplementation(
+  (() => {
+    calls.push("searchStructuredTherapists");
+    throw new Error("structured search must not run in production mode");
+  }) as typeof StructuredSearchFunctions.searchStructuredTherapists,
+);
 
 // The card renders TanStack <Link>, which needs a RouterProvider. Rendering
 // the real card is not the subject here, so replace only this export with a
@@ -49,53 +44,46 @@ const therapistCardSpy = spyOn(TherapistCardModule, "TherapistCard").mockImpleme
   t: { full_name: string };
 }) => <div>{t.full_name}</div>) as typeof TherapistCardModule.TherapistCard);
 
-const unifiedSearchSpy = spyOn(QueryInterpreterFunctions, "unifiedSearch").mockImplementation(
-  (() => {
-    calls.push("unifiedSearch");
-    return Promise.resolve({
-      plan: null,
-      results: [
-        {
-          id: "t-haifa",
-          slug: "t-haifa",
-          full_name: "יעל כהן",
-          professional_title: "פסיכולוגית",
-          image_url: null,
-          verified: true,
-          years_experience: 10,
-          short_intro: null,
-          primary_clinic: null,
-          clinic_locations: [],
-          additional_clinic_count: 0,
-          online_available: false,
-          gender: null,
-          accessible_clinic: false,
-          home_visit_regions: [],
-          language_names: [],
-          population_names: [],
-          population_tags: [],
-          modality_names: [],
-          treatment_domains: [],
-          lgbtq_affirming: false,
-          offers_free_intro: false,
-          scores: { semantic: 0, preference: 0, quality: 5 },
-        },
-      ],
-      emptyReason: null,
-      primaryClinicFallbackCount: 0,
-    });
-  }) as typeof QueryInterpreterFunctions.unifiedSearch,
-);
+const unifiedSearchSpy = spyOn(QueryInterpreterFunctions, "unifiedSearch").mockImplementation((() => {
+  calls.push("unifiedSearch");
+  return Promise.resolve({
+    plan: null,
+    results: [
+      {
+        id: "t-haifa",
+        slug: "t-haifa",
+        full_name: "יעל כהן",
+        professional_title: "פסיכולוגית",
+        image_url: null,
+        verified: true,
+        years_experience: 10,
+        short_intro: null,
+        primary_clinic: null,
+        clinic_locations: [],
+        additional_clinic_count: 0,
+        online_available: false,
+        gender: null,
+        accessible_clinic: false,
+        home_visit_regions: [],
+        language_names: [],
+        population_names: [],
+        population_tags: [],
+        modality_names: [],
+        treatment_domains: [],
+        lgbtq_affirming: false,
+        offers_free_intro: false,
+        scores: { semantic: 0, preference: 0, quality: 5 },
+      },
+    ],
+    emptyReason: null,
+    primaryClinicFallbackCount: 0,
+  });
+}) as typeof QueryInterpreterFunctions.unifiedSearch);
 
 const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
 const { renderToStaticMarkup } = await import("react-dom/server");
-const {
-  SearchResultsSwitch,
-  resolveFlow,
-  unifiedResultsQuery,
-  structuredTherapistQuery,
-  toUnifiedParams,
-} = await import("./search");
+const { SearchResultsSwitch, resolveFlow, unifiedResultsQuery, structuredTherapistQuery, toUnifiedParams } =
+  await import("./search");
 
 const search = {
   q: "פסיכולוג",
@@ -160,7 +148,9 @@ describe("search flow isolation", () => {
     // classifyAndSearch / searchStructuredTherapists throw synchronously
     // (see the spies above); unified rendering still succeeds.
     const { html } = await renderUnified();
-    expect(html).toContain("תוצאות עבור");
+    expect(html).not.toContain("תוצאות עבור");
+    expect(html).toContain("מטפלים מתאימים");
+    expect(html).toContain("מטפל אחד");
   });
 
   it("the legacy query caches are never populated in unified mode", async () => {

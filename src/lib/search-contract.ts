@@ -11,6 +11,7 @@
  *   language     one canonical language code
  *   regions      comma-separated canonical region slugs (normalized, deduped)
  *   serviceTypes comma-separated canonical `location_type` values
+ *   excludedCriteria comma-separated query-inference exclusions (`problem:slug`, `population:slug`)
  *
  * Multi-value parameters are normalized, deduplicated, sorted into the
  * canonical declaration order and rendered as a comma-separated string so
@@ -81,9 +82,7 @@ export function normalizeServiceTypesParam(raw: MultiValueInput): NormalizedMult
   return normalizeAgainst(raw, SERVICE_TYPES, isServiceType);
 }
 
-export function normalizeTherapyFormatsParam(
-  raw: MultiValueInput,
-): NormalizedMulti<TherapyFormatSlug> {
+export function normalizeTherapyFormatsParam(raw: MultiValueInput): NormalizedMulti<TherapyFormatSlug> {
   return normalizeAgainst(raw, THERAPY_FORMAT_SLUGS, (value): value is TherapyFormatSlug =>
     (THERAPY_FORMAT_SLUGS as readonly string[]).includes(value),
   );
@@ -100,6 +99,31 @@ function parseFlag(value: string | boolean | null | undefined): boolean {
 /** Canonical URL rendering of a multi-value parameter (`undefined` = absent). */
 export function serializeMultiValue(values: readonly string[]): string | undefined {
   return values.length > 0 ? values.join(",") : undefined;
+}
+
+export const EXCLUDABLE_CRITERION_TYPES = ["problem", "population"] as const;
+export type ExcludableCriterionType = (typeof EXCLUDABLE_CRITERION_TYPES)[number];
+
+const EXCLUDED_CRITERION_RE = /^(problem|population):[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
+
+/**
+ * Canonicalize query-inference exclusions carried in the URL.
+ *
+ * Exclusions are intentionally limited to criteria currently exposed as
+ * removable inferred chips. Unknown/malformed tokens are ignored.
+ */
+export function normalizeExcludedCriteriaParam(raw: MultiValueInput): string[] {
+  return [
+    ...new Set(
+      splitMultiValue(raw)
+        .map((value) => value.toLowerCase())
+        .filter((value) => EXCLUDED_CRITERION_RE.test(value)),
+    ),
+  ].sort();
+}
+
+export function criterionExclusionToken(type: ExcludableCriterionType, value: string): string {
+  return `${type}:${value.trim().toLowerCase()}`;
 }
 
 /**
@@ -138,6 +162,8 @@ export type ExplicitSearchContract = {
   verified: boolean;
   lgbtqAffirming: boolean;
   freeIntro: boolean;
+  /** Query-inferred criteria the user explicitly removed from this search. */
+  excludedCriteria?: string[];
 };
 
 /**
@@ -163,10 +189,12 @@ export function resolveSearchContract(input: {
   verified?: string | boolean | null;
   lgbtqAffirming?: string | boolean | null;
   freeIntro?: string | boolean | null;
+  excludedCriteria?: MultiValueInput;
 }): ExplicitSearchContract {
   const legacy = normalizeLegacyCityParam(input.city);
   const fromParam = normalizeRegionsParam(input.regions).values;
   const regions = fromParam.length > 0 ? fromParam : legacy.regions;
+  const excludedCriteria = normalizeExcludedCriteriaParam(input.excludedCriteria);
   return {
     q: (input.q ?? "").trim(),
     problemSlugs: normalizeSlugList(input.problem ?? input.problemSlugs),
@@ -185,6 +213,7 @@ export function resolveSearchContract(input: {
     verified: parseFlag(input.verified),
     lgbtqAffirming: parseFlag(input.lgbtqAffirming),
     freeIntro: parseFlag(input.freeIntro),
+    ...(excludedCriteria.length > 0 ? { excludedCriteria } : {}),
   };
 }
 

@@ -22,11 +22,7 @@ import { triageSearchSafety, type SearchSafetyTriage } from "./search-safety-tri
 import { parseStoredProfile } from "./therapist-semantic-profile";
 import { loadSearchCatalog } from "./query-catalog";
 import { interpretQuery } from "./query-interpreter";
-import {
-  applyExplicitFilters,
-  validateExplicitFilters,
-  type RawExplicitFilters,
-} from "./explicit-filters";
+import { applyExplicitFilters, validateExplicitFilters, type RawExplicitFilters } from "./explicit-filters";
 import { applyEligibility } from "./search-eligibility";
 import {
   executeUnifiedSearch,
@@ -36,15 +32,12 @@ import {
 } from "./unified-search-executor";
 import { matchesLocationAvailability } from "./unified-search-executor";
 import { regionSlugForStoredValue, resolveStoredRegion } from "./locality-options";
-import { PHYSICAL_SERVICE_TYPES } from "./search-contract";
+import { normalizeExcludedCriteriaParam, PHYSICAL_SERVICE_TYPES } from "./search-contract";
 import { hasExplicitFilters } from "./explicit-filters";
-import {
-  buildCardLocationDisplay,
-  type ActiveLocationRow,
-  type SearchResultCard,
-} from "./search-result-card";
+import { buildCardLocationDisplay, type ActiveLocationRow, type SearchResultCard } from "./search-result-card";
 import type {
   InterpretationResult,
+  SearchCriterion,
   SemanticSignal,
   SoftPreferences,
   StructuredFilters,
@@ -68,6 +61,7 @@ const Input = z.object({
   verified: z.boolean().optional(),
   lgbtqAffirming: z.boolean().optional(),
   freeIntro: z.boolean().optional(),
+  excludedCriteria: z.union([z.string().max(500), z.array(z.string().max(120)).max(12)]).optional(),
   limit: z.number().int().min(1).max(50).optional(),
 });
 
@@ -138,6 +132,89 @@ function emptySoftPreferences(): SoftPreferences {
   };
 }
 
+function excludedValues(tokens: readonly string[], type: "problem" | "population"): Set<string> {
+  const prefix = `${type}:`;
+  return new Set(
+    tokens
+      .filter((token) => token.startsWith(prefix))
+      .map((token) => token.slice(prefix.length))
+      .filter(Boolean),
+  );
+}
+
+function withoutExcludedPopulations(filters: StructuredFilters, excluded: ReadonlySet<string>): StructuredFilters {
+  if (excluded.size === 0) return filters;
+  return {
+    ...filters,
+    populationSlugs: filters.populationSlugs.filter((slug) => !excluded.has(slug)),
+  };
+}
+
+function withoutExcludedPopulationPreferences(
+  preferences: SoftPreferences,
+  excluded: ReadonlySet<string>,
+): SoftPreferences {
+  if (excluded.size === 0) return preferences;
+  return {
+    ...preferences,
+    populationSlugs: preferences.populationSlugs.filter((slug) => !excluded.has(slug)),
+  };
+}
+
+async function buildSearchCriteria(args: {
+  semanticSignals: readonly SemanticSignal[];
+  inferredHardFilters: StructuredFilters;
+  inferredSoftPreferences: SoftPreferences;
+  explicitPopulationSlugs: readonly string[];
+  catalog: Awaited<ReturnType<typeof loadSearchCatalog>>;
+  sb: SupabaseClient<Database>;
+}): Promise<SearchCriterion[]> {
+  const criteria: SearchCriterion[] = [];
+
+  if (args.semanticSignals.length > 0) {
+    const slugs = [...new Set(args.semanticSignals.map((signal) => signal.slug))];
+    const { data, error } = await args.sb
+      .from("problems")
+      .select("slug, name_he")
+      .in("slug", slugs)
+      .eq("is_active", true);
+    if (error) throw error;
+
+    const labels = new Map<string, string>();
+    for (const row of (data ?? []) as Array<{ slug: string; name_he: string | null }>) {
+      labels.set(row.slug, row.name_he ?? row.slug);
+    }
+    for (const slug of slugs) {
+      criteria.push({
+        type: "problem",
+        value: slug,
+        label: labels.get(slug) ?? slug,
+      });
+    }
+  }
+
+  // An explicit population filter is authoritative. In that case the regular
+  // filter already communicates the active population, so do not also show a
+  // removable query-inferred population chip that would appear to control it.
+  if (args.explicitPopulationSlugs.length === 0) {
+    const inferredPopulationSlugs = [
+      ...new Set([...args.inferredHardFilters.populationSlugs, ...args.inferredSoftPreferences.populationSlugs]),
+    ];
+    const labels = new Map<string, string>(
+      args.catalog.populations.map((population) => [population.slug, population.name_he] as [string, string]),
+    );
+    for (const slug of inferredPopulationSlugs) {
+      criteria.push({
+        type: "population",
+        value: slug,
+        label: labels.get(slug) ?? slug,
+      });
+    }
+  }
+
+  return criteria;
+}
+
 function buildSafetyBlockedPlan(safetyTriage: SearchSafetyTriage): TherapistSearchPlan {
   const hardFilters = emptyStructuredFilters();
   const softPreferences = emptySoftPreferences();
@@ -160,6 +237,7 @@ function buildSafetyBlockedPlan(safetyTriage: SearchSafetyTriage): TherapistSear
   return {
     interpretation,
     semanticSignals: [],
+    criteria: [],
     hardFilters,
     softPreferences,
     therapistNameIds: [],
@@ -176,6 +254,7 @@ async function buildPlan(
   explicitRaw: RawExplicitFilters,
   sb: SupabaseClient<Database>,
   requestedProblemSlugs: readonly string[] = [],
+  excludedCriteriaRaw: readonly string[] = [],
 ): Promise<{ plan: TherapistSearchPlan; interpretation: InterpretationResult }> {
   // Safety is the first semantic decision in the request. An urgent result
   // blocks catalog loading, classification, LLM calls and therapist reads.
@@ -187,6 +266,10 @@ async function buildPlan(
 
   const catalog = await loadSearchCatalog(sb);
   const interpretation = interpretQuery(query, catalog);
+  const excludedCriteria = normalizeExcludedCriteriaParam(excludedCriteriaRaw);
+  const excludedProblems = excludedValues(excludedCriteria, "problem");
+  const excludedPopulations = excludedValues(excludedCriteria, "population");
+
   const hasRequestedProblem = requestedProblemSlugs.some((slug) => slug.trim().length > 0);
   const normalizedRequested = [
     ...new Set(
@@ -195,6 +278,8 @@ async function buildPlan(
         .filter((slug) => /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/.test(slug)),
     ),
   ];
+
+  let requestedProblemResolved = false;
   let semanticSignals: SemanticSignal[] = [];
   if (normalizedRequested.length > 0) {
     const { data: activeProblems, error } = await sb
@@ -204,10 +289,12 @@ async function buildPlan(
       .eq("is_active", true);
     if (error) throw error;
     const active = new Set((activeProblems ?? []).map((problem) => problem.slug));
+    requestedProblemResolved = normalizedRequested.some((slug) => active.has(slug));
     semanticSignals = normalizedRequested
-      .filter((slug) => active.has(slug))
+      .filter((slug) => active.has(slug) && !excludedProblems.has(slug))
       .map((slug) => ({ slug, confidence: 1 }));
   }
+
   if (
     semanticSignals.length === 0 &&
     !hasRequestedProblem &&
@@ -217,34 +304,46 @@ async function buildPlan(
     // Server-only normal semantic route: exact curated aliases/names are
     // authoritative, the LLM handles free wording/context, and the old
     // SemanticEngine classifier remains a temporary failure fallback.
-    const { classifyUnifiedSemanticRemainder } =
-      await import("./unified-semantic-classifier.server");
+    const { classifyUnifiedSemanticRemainder } = await import("./unified-semantic-classifier.server");
     const classified = await classifyUnifiedSemanticRemainder(interpretation.semanticRemainder, sb);
-    semanticSignals = classified.signals;
+    semanticSignals = classified.signals.filter((signal) => !excludedProblems.has(signal.slug));
   }
+
+  const inferredHardFilters = withoutExcludedPopulations(interpretation.hardFilters, excludedPopulations);
+  const inferredSoftPreferences = withoutExcludedPopulationPreferences(
+    interpretation.softPreferences,
+    excludedPopulations,
+  );
 
   // Explicit UI filters are canonicalized and folded in as HARD filters.
   // They are authoritative over anything the query inferred.
   const explicit = validateExplicitFilters(explicitRaw, catalog);
-  const merged = applyExplicitFilters(
-    interpretation.hardFilters,
-    interpretation.softPreferences,
-    explicit,
-  );
+  const merged = applyExplicitFilters(inferredHardFilters, inferredSoftPreferences, explicit);
+
+  const criteria = await buildSearchCriteria({
+    semanticSignals,
+    inferredHardFilters,
+    inferredSoftPreferences,
+    explicitPopulationSlugs: explicit.populationSlugs,
+    catalog,
+    sb,
+  });
+
+  const unresolvedRequestedProblem = hasRequestedProblem && !requestedProblemResolved && normalizedRequested.length > 0;
 
   const plan: TherapistSearchPlan = {
     interpretation,
     semanticSignals,
+    criteria,
     hardFilters: merged.hardFilters,
     softPreferences: merged.softPreferences,
     therapistNameIds: interpretation.therapistNameIds,
     emptyReason:
-      semanticSignals.length === 0 && (hasRequestedProblem || interpretation.unresolvedPrimary)
+      semanticSignals.length === 0 && (unresolvedRequestedProblem || interpretation.unresolvedPrimary)
         ? "unrecognized_query"
         : null,
     safetyTriage,
-    browseAll:
-      query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
+    browseAll: query.trim().length === 0 && semanticSignals.length === 0 && !hasExplicitFilters(explicitRaw),
     explicitFilters: explicit,
     filterConflicts: merged.conflicts,
   };
@@ -260,10 +359,7 @@ async function buildPlan(
  * semantic signal and the normal unified executor performs eligibility,
  * semantic gating, ranking and display hydration.
  */
-export function buildProblemSearchPlan(problem: {
-  slug: string;
-  name: string;
-}): TherapistSearchPlan {
+export function buildProblemSearchPlan(problem: { slug: string; name: string }): TherapistSearchPlan {
   const hardFilters = emptyStructuredFilters();
   const softPreferences = emptySoftPreferences();
   const interpretation: InterpretationResult = {
@@ -283,6 +379,7 @@ export function buildProblemSearchPlan(problem: {
   return {
     interpretation,
     semanticSignals: [{ slug: problem.slug, confidence: 1 }],
+    criteria: [{ type: "problem", value: problem.slug, label: problem.name }],
     hardFilters,
     softPreferences,
     therapistNameIds: [],
@@ -407,10 +504,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .from("therapist_locations")
           .select("therapist_id, location_type, region")
           .eq("is_active", true)
-          .in(
-            "location_type",
-            typesToLoad as Array<Database["public"]["Enums"]["location_type"]>,
-          )) as unknown as {
+          .in("location_type", typesToLoad as Array<Database["public"]["Enums"]["location_type"]>)) as unknown as {
           data: Array<{
             therapist_id: string;
             location_type: string;
@@ -420,10 +514,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         },
       );
 
-      const byTherapist = new Map<
-        string,
-        Array<{ location_type: string; region_slug: string | null }>
-      >();
+      const byTherapist = new Map<string, Array<{ location_type: string; region_slug: string | null }>>();
       for (const r of rows ?? []) {
         const list = byTherapist.get(r.therapist_id) ?? [];
         list.push({
@@ -441,9 +532,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     },
     async idsByGender(gender) {
       const rows = unwrap(
-        (await applyEligibility(
-          sb.from("therapists").select("id").eq("gender", gender),
-        )) as unknown as {
+        (await applyEligibility(sb.from("therapists").select("id").eq("gender", gender))) as unknown as {
           data: Array<{ id: string }> | null;
           error: unknown;
         },
@@ -495,26 +584,15 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         applyEligibility(
           sb
             .from("therapists")
-            .select(
-              "id, verified, image_url, gender, years_experience, full_description, semantic_profile",
-            ),
+            .select("id, verified, image_url, gender, years_experience, full_description, semantic_profile"),
         ).in("id", ids),
-        sb
-          .from("therapist_professions")
-          .select("therapist_id, professions!inner(slug)")
-          .in("therapist_id", ids),
+        sb.from("therapist_professions").select("therapist_id, professions!inner(slug)").in("therapist_id", ids),
         sb
           .from("therapist_modalities")
           .select("therapist_id, treatment_modalities!inner(slug)")
           .in("therapist_id", ids),
-        sb
-          .from("therapist_populations")
-          .select("therapist_id, population_groups!inner(slug)")
-          .in("therapist_id", ids),
-        sb
-          .from("therapist_languages")
-          .select("therapist_id, languages!inner(code)")
-          .in("therapist_id", ids),
+        sb.from("therapist_populations").select("therapist_id, population_groups!inner(slug)").in("therapist_id", ids),
+        sb.from("therapist_languages").select("therapist_id, languages!inner(code)").in("therapist_id", ids),
         sb
           .from("therapist_locations")
           .select("therapist_id, city, location_type")
@@ -536,7 +614,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         full_description: string | null;
         semantic_profile: unknown;
       }>;
-      const pushInto = <V>(m: Map<string, V[]>, k: string, v: V) => {
+      const pushInto = <V,>(m: Map<string, V[]>, k: string, v: V) => {
         const arr = m.get(k);
         if (arr) arr.push(v);
         else m.set(k, [v]);
@@ -553,8 +631,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
         therapist_id: string;
         treatment_modalities: { slug: string };
       }>) {
-        if (r.treatment_modalities?.slug)
-          pushInto(modBy, r.therapist_id, r.treatment_modalities.slug);
+        if (r.treatment_modalities?.slug) pushInto(modBy, r.therapist_id, r.treatment_modalities.slug);
       }
       const popBy = new Map<string, string[]>();
       for (const r of (popRes.data ?? []) as Array<{
@@ -583,8 +660,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
 
       return tRows.map((t) => {
         const bio = t.full_description ?? "";
-        const g: TherapistGender | null =
-          t.gender === "male" || t.gender === "female" ? t.gender : null;
+        const g: TherapistGender | null = t.gender === "male" || t.gender === "female" ? t.gender : null;
         return {
           id: t.id,
           gender: g,
@@ -621,10 +697,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
           .select("therapist_id, location_type, city, region, is_primary, accessibility_status")
           .eq("is_active", true)
           .in("therapist_id", ids),
-        sb
-          .from("therapist_languages")
-          .select("therapist_id, languages!inner(name)")
-          .in("therapist_id", ids),
+        sb.from("therapist_languages").select("therapist_id, languages!inner(name)").in("therapist_id", ids),
         sb
           .from("therapist_populations")
           .select("therapist_id, population_groups!inner(slug, name)")
@@ -795,11 +868,12 @@ export async function runUnifiedSearch(
     explicit: RawExplicitFilters;
     limit: number;
     problemSlugs?: readonly string[];
+    excludedCriteria?: readonly string[];
   },
   client?: SupabaseClient<Database>,
 ): Promise<UnifiedSearchResult> {
   const sb = client ?? (await serverClient());
-  const { plan } = await buildPlan(args.query, args.explicit, sb, args.problemSlugs);
+  const { plan } = await buildPlan(args.query, args.explicit, sb, args.problemSlugs, args.excludedCriteria);
   return executeUnifiedPlan(plan, args.limit, sb);
 }
 
@@ -843,6 +917,8 @@ export const unifiedSearch = createServerFn({ method: "POST" })
     return runUnifiedSearch({
       query: data.query,
       problemSlugs: typeof data.problems === "string" ? data.problems.split(",") : data.problems,
+      excludedCriteria:
+        typeof data.excludedCriteria === "string" ? data.excludedCriteria.split(",") : data.excludedCriteria,
       explicit: {
         city: data.city,
         population: data.population,

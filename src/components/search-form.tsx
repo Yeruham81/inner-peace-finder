@@ -2,7 +2,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { CANONICAL_LANGUAGES } from "@/lib/language-options";
 import { REGION_DEFINITIONS, REGION_SLUGS } from "@/lib/locality-options";
-import { resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
+import { criterionExclusionToken, resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
+import type { SearchCriterion } from "@/lib/query-interpreter.types";
 import { buildPopulationOptions } from "@/lib/population-options";
 
 type FilterKey =
@@ -77,6 +78,7 @@ type SearchFormProps = {
     verified?: boolean;
     lgbtqAffirming?: boolean;
     freeIntro?: boolean;
+    excludedCriteria?: string[];
   };
   preserveSearch?: {
     problem?: string;
@@ -84,6 +86,7 @@ type SearchFormProps = {
   };
   variant?: "hero" | "compact" | "simple";
   availableQuickFilters?: string[];
+  inferredCriteria?: SearchCriterion[];
 };
 
 function multiValue(
@@ -107,6 +110,7 @@ export function SearchForm({
   preserveSearch,
   variant = "hero",
   availableQuickFilters,
+  inferredCriteria = [],
 }: SearchFormProps) {
   const navigate = useNavigate();
   const isHero = variant === "hero";
@@ -127,35 +131,38 @@ export function SearchForm({
     verified: initialFilters.verified,
     lgbtqAffirming: initialFilters.lgbtqAffirming,
     freeIntro: initialFilters.freeIntro,
+    excludedCriteria: initialFilters.excludedCriteria,
   });
   const appliedRegionKey = appliedContract.regions.join(",");
   const appliedServiceTypeKey = appliedContract.serviceTypes.join(",");
   const appliedProfessionKey = appliedContract.professionSlugs.join(",");
   const appliedModalityKey = appliedContract.modalitySlugs.join(",");
   const appliedTherapyFormatKey = appliedContract.therapyFormats.join(",");
+  const appliedExcludedCriteria = appliedContract.excludedCriteria ?? [];
+  const appliedExcludedCriteriaKey = appliedExcludedCriteria.join(",");
+  const inferredPopulation = !appliedContract.population
+    ? (inferredCriteria.find((criterion) => criterion.type === "population")?.value ?? "")
+    : "";
+  const inferredCriteriaKey = inferredCriteria
+    .map((criterion) => `${criterion.type}:${criterion.value}:${criterion.label}`)
+    .join("|");
 
   const [q, setQ] = useState(appliedContract.q);
   const [city, setCity] = useState(appliedContract.city);
-  const [population, setPopulation] = useState(appliedContract.population);
+  const [population, setPopulation] = useState(appliedContract.population || inferredPopulation);
   const [language, setLanguage] = useState(appliedContract.language);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([...appliedContract.regions]);
-  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([
-    ...appliedContract.serviceTypes,
-  ]);
-  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([
-    ...appliedContract.professionSlugs,
-  ]);
-  const [selectedModalities, setSelectedModalities] = useState<string[]>([
-    ...appliedContract.modalitySlugs,
-  ]);
-  const [selectedTherapyFormats, setSelectedTherapyFormats] = useState<string[]>([
-    ...appliedContract.therapyFormats,
-  ]);
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([...appliedContract.serviceTypes]);
+  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([...appliedContract.professionSlugs]);
+  const [selectedModalities, setSelectedModalities] = useState<string[]>([...appliedContract.modalitySlugs]);
+  const [selectedTherapyFormats, setSelectedTherapyFormats] = useState<string[]>([...appliedContract.therapyFormats]);
   const [gender, setGender] = useState(appliedContract.gender);
   const [accessible, setAccessible] = useState(appliedContract.accessible);
   const [verified, setVerified] = useState(appliedContract.verified);
   const [lgbtqAffirming, setLgbtqAffirming] = useState(appliedContract.lgbtqAffirming);
   const [freeIntro, setFreeIntro] = useState(appliedContract.freeIntro);
+  const [excludedCriteria, setExcludedCriteria] = useState<string[]>([...appliedExcludedCriteria]);
+  const [populationTouched, setPopulationTouched] = useState(false);
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -164,7 +171,7 @@ export function SearchForm({
   useEffect(() => {
     setQ(appliedContract.q);
     setCity(appliedContract.city);
-    setPopulation(appliedContract.population);
+    setPopulation(appliedContract.population || inferredPopulation);
     setLanguage(appliedContract.language);
     setSelectedRegions(appliedRegionKey ? appliedRegionKey.split(",") : []);
     setSelectedServiceTypes(appliedServiceTypeKey ? appliedServiceTypeKey.split(",") : []);
@@ -176,6 +183,8 @@ export function SearchForm({
     setVerified(appliedContract.verified);
     setLgbtqAffirming(appliedContract.lgbtqAffirming);
     setFreeIntro(appliedContract.freeIntro);
+    setExcludedCriteria([...appliedExcludedCriteria]);
+    setPopulationTouched(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     appliedContract.q,
@@ -192,6 +201,8 @@ export function SearchForm({
     appliedContract.verified,
     appliedContract.lgbtqAffirming,
     appliedContract.freeIntro,
+    appliedExcludedCriteriaKey,
+    inferredCriteriaKey,
   ]);
 
   const cityOptions = useMemo<FilterOption[]>(() => {
@@ -199,38 +210,25 @@ export function SearchForm({
       selectedRegions.length === 0
         ? cities
         : cities.filter((cityName) =>
-            (cityRegions[cityName] ?? []).some((regionSlug) =>
-              selectedRegions.includes(regionSlug),
-            ),
+            (cityRegions[cityName] ?? []).some((regionSlug) => selectedRegions.includes(regionSlug)),
           );
     const unique = new Set(visibleCities.map((value) => value.trim()).filter(Boolean));
-    return [...unique]
-      .sort((a, b) => a.localeCompare(b, "he"))
-      .map((value) => ({ value, label: value }));
+    return [...unique].sort((a, b) => a.localeCompare(b, "he")).map((value) => ({ value, label: value }));
   }, [cities, cityRegions, selectedRegions]);
 
   useEffect(() => {
-    if (
-      city &&
-      selectedRegions.length > 0 &&
-      !cityOptions.some((option) => option.value === city)
-    ) {
+    if (city && selectedRegions.length > 0 && !cityOptions.some((option) => option.value === city)) {
       setCity("");
     }
   }, [city, cityOptions, selectedRegions.length]);
 
   const languageOptions = useMemo<FilterOption[]>(
     () =>
-      languages.length
-        ? languages.map(({ code, name }) => ({ value: code, label: name }))
-        : fallbackLanguageOptions,
+      languages.length ? languages.map(({ code, name }) => ({ value: code, label: name })) : fallbackLanguageOptions,
     [languages],
   );
 
-  const populationOptions = useMemo<FilterOption[]>(
-    () => buildPopulationOptions(populations),
-    [populations],
-  );
+  const populationOptions = useMemo<FilterOption[]>(() => buildPopulationOptions(populations), [populations]);
 
   const filters = useMemo<FilterDefinition[]>(
     () => [
@@ -304,9 +302,7 @@ export function SearchForm({
   );
 
   const visibleFilters = isHero
-    ? filters.filter((filter) =>
-        ["regions", "language", "population", "serviceType"].includes(filter.key),
-      )
+    ? filters.filter((filter) => ["regions", "language", "population", "serviceType"].includes(filter.key))
     : filters.filter((filter) => filter.key !== "gender" && filter.key !== "serviceType");
   const activeFilter = visibleFilters.find((filter) => filter.key === openFilter);
 
@@ -410,6 +406,7 @@ export function SearchForm({
   ];
   const activeFilterCount =
     appliedChips.length +
+    Number(Boolean(inferredPopulation) && !appliedContract.population) +
     Number(appliedContract.accessible) +
     Number(appliedContract.verified) +
     Number(appliedContract.lgbtqAffirming) +
@@ -433,9 +430,7 @@ export function SearchForm({
     { key: "verified", label: "הסמכה מאומתת", active: appliedContract.verified },
     { key: "lgbtqAffirming", label: "מותאם לקהילה הגאה", active: appliedContract.lgbtqAffirming },
     { key: "freeIntro", label: "היכרות ללא תשלום", active: appliedContract.freeIntro },
-  ].filter(
-    (item) => item.active || !availableQuickFilters || availableQuickFilters.includes(item.key),
-  );
+  ].filter((item) => item.active || !availableQuickFilters || availableQuickFilters.includes(item.key));
 
   function navigateToContract(input: {
     q: string;
@@ -452,6 +447,7 @@ export function SearchForm({
     verified?: boolean;
     lgbtqAffirming?: boolean;
     freeIntro?: boolean;
+    excludedCriteria?: readonly string[];
   }) {
     const contract = resolveSearchContract(input);
     const keepCanonicalProblem = contract.q === appliedContract.q;
@@ -473,6 +469,7 @@ export function SearchForm({
         verified: contract.verified ? "1" : undefined,
         lgbtqAffirming: contract.lgbtqAffirming ? "1" : undefined,
         freeIntro: contract.freeIntro ? "1" : undefined,
+        excludedCriteria: serializeMultiValue(contract.excludedCriteria ?? []),
         flow: preserveSearch?.flow || undefined,
       },
     });
@@ -480,10 +477,15 @@ export function SearchForm({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    const normalizedQuery = q.trim();
+    const queryChanged = normalizedQuery !== appliedContract.q;
+    const submittedPopulation =
+      !populationTouched && !appliedContract.population && population === inferredPopulation ? "" : population;
+
     navigateToContract({
-      q,
+      q: normalizedQuery,
       city,
-      population,
+      population: submittedPopulation,
       language,
       regions: selectedRegions,
       serviceTypes: selectedServiceTypes,
@@ -495,6 +497,9 @@ export function SearchForm({
       verified,
       lgbtqAffirming,
       freeIntro,
+      // An exclusion belongs to the query that produced it. A new free-text
+      // query starts with a clean inference state.
+      excludedCriteria: queryChanged ? [] : excludedCriteria,
     });
     setOpenFilter(null);
     setMobileFiltersOpen(false);
@@ -503,17 +508,13 @@ export function SearchForm({
   function toggleOption(filter: FilterDefinition, value: string) {
     if (filter.key === "regions") {
       setSelectedRegions((current) =>
-        current.includes(value)
-          ? current.filter((region) => region !== value)
-          : [...current, value],
+        current.includes(value) ? current.filter((region) => region !== value) : [...current, value],
       );
       return;
     }
     if (filter.key === "serviceType") {
       setSelectedServiceTypes((current) =>
-        current.includes(value)
-          ? current.filter((serviceType) => serviceType !== value)
-          : [...current, value],
+        current.includes(value) ? current.filter((serviceType) => serviceType !== value) : [...current, value],
       );
       return;
     }
@@ -522,7 +523,17 @@ export function SearchForm({
       setLanguage((current) => (current === value ? "" : value));
     }
     if (filter.key === "population") {
-      setPopulation((current) => (current === value ? "" : value));
+      setPopulationTouched(true);
+      setPopulation((current) => {
+        const removing = current === value;
+        if (removing && !appliedContract.population && inferredPopulation === value) {
+          const token = criterionExclusionToken("population", value);
+          setExcludedCriteria((currentExcluded) =>
+            currentExcluded.includes(token) ? currentExcluded : [...currentExcluded, token],
+          );
+        }
+        return removing ? "" : value;
+      });
     }
     if (filter.key === "profession")
       setSelectedProfessions((current) =>
@@ -536,15 +547,21 @@ export function SearchForm({
       setSelectedTherapyFormats((current) =>
         current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
       );
-    if (filter.key === "gender")
-      setGender((current) => (current === value ? "" : (value as "male" | "female")));
+    if (filter.key === "gender") setGender((current) => (current === value ? "" : (value as "male" | "female")));
   }
 
   function clearDraftFilter(key: FilterKey) {
     if (key === "regions") setSelectedRegions([]);
     if (key === "city") setCity("");
     if (key === "language") setLanguage("");
-    if (key === "population") setPopulation("");
+    if (key === "population") {
+      setPopulationTouched(true);
+      if (!appliedContract.population && inferredPopulation) {
+        const token = criterionExclusionToken("population", inferredPopulation);
+        setExcludedCriteria((current) => (current.includes(token) ? current : [...current, token]));
+      }
+      setPopulation("");
+    }
     if (key === "serviceType") setSelectedServiceTypes([]);
     if (key === "profession") setSelectedProfessions([]);
     if (key === "modality") setSelectedModalities([]);
@@ -583,11 +600,36 @@ export function SearchForm({
       verified: appliedContract.verified,
       lgbtqAffirming: appliedContract.lgbtqAffirming,
       freeIntro: appliedContract.freeIntro,
+      excludedCriteria: appliedExcludedCriteria,
+    });
+  }
+
+  function removeInferredCriterion(criterion: SearchCriterion) {
+    const token = criterionExclusionToken(criterion.type, criterion.value);
+    navigateToContract({
+      q: appliedContract.q,
+      city: appliedContract.city,
+      population: appliedContract.population,
+      language: appliedContract.language,
+      regions: appliedContract.regions,
+      serviceTypes: appliedContract.serviceTypes,
+      professions: appliedContract.professionSlugs,
+      modalities: appliedContract.modalitySlugs,
+      therapyFormats: appliedContract.therapyFormats,
+      gender: appliedContract.gender,
+      accessible: appliedContract.accessible,
+      verified: appliedContract.verified,
+      lgbtqAffirming: appliedContract.lgbtqAffirming,
+      freeIntro: appliedContract.freeIntro,
+      excludedCriteria: [...appliedExcludedCriteria, token],
     });
   }
 
   function clearAppliedFilters() {
-    navigateToContract({ q: appliedContract.q });
+    navigateToContract({
+      q: appliedContract.q,
+      excludedCriteria: appliedExcludedCriteria,
+    });
   }
 
   function toggleQuickFilter(
@@ -609,11 +651,7 @@ export function SearchForm({
           : [...appliedContract.serviceTypes, key]
         : appliedContract.serviceTypes;
     const gender =
-      key === "female" || key === "male"
-        ? appliedContract.gender === key
-          ? ""
-          : key
-        : appliedContract.gender;
+      key === "female" || key === "male" ? (appliedContract.gender === key ? "" : key) : appliedContract.gender;
     navigateToContract({
       ...appliedContract,
       professions: appliedContract.professionSlugs,
@@ -622,8 +660,7 @@ export function SearchForm({
       gender,
       accessible: key === "accessible" ? !appliedContract.accessible : appliedContract.accessible,
       verified: key === "verified" ? !appliedContract.verified : appliedContract.verified,
-      lgbtqAffirming:
-        key === "lgbtqAffirming" ? !appliedContract.lgbtqAffirming : appliedContract.lgbtqAffirming,
+      lgbtqAffirming: key === "lgbtqAffirming" ? !appliedContract.lgbtqAffirming : appliedContract.lgbtqAffirming,
       freeIntro: key === "freeIntro" ? !appliedContract.freeIntro : appliedContract.freeIntro,
     });
   }
@@ -643,9 +680,7 @@ export function SearchForm({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={
-            isHero
-              ? "לדוגמה: חרדה לפני עבודה, משבר בזוגיות או מטפל ב-CBT בחיפה"
-              : "מה תרצו למצוא? למשל: טיפול בחרדה"
+            isHero ? "לדוגמה: חרדה לפני עבודה, משבר בזוגיות או מטפל ב-CBT בחיפה" : "מה תרצו למצוא? למשל: טיפול בחרדה"
           }
           autoComplete="off"
           className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -659,6 +694,26 @@ export function SearchForm({
           חיפוש מטפלים
         </button>
       </div>
+
+      {isCompact && inferredCriteria.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="קריטריונים שזוהו מהחיפוש">
+          <span className="text-xs font-medium text-muted-foreground">לפי החיפוש:</span>
+          {inferredCriteria.map((criterion) => (
+            <button
+              key={`${criterion.type}-${criterion.value}`}
+              type="button"
+              onClick={() => removeInferredCriterion(criterion)}
+              aria-label={`הסרת הקריטריון ${criterion.label}`}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-xs font-semibold text-primary transition-colors hover:border-brand/55 hover:bg-brand-soft/80"
+            >
+              <span>{criterion.label}</span>
+              <span aria-hidden="true" className="text-base leading-none">
+                ×
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {isCompact && (
         <div className="mt-3 border-t border-border pt-3">
@@ -680,10 +735,7 @@ export function SearchForm({
             </button>
           </div>
 
-          <div
-            id="search-filter-controls"
-            className={`${mobileFiltersOpen ? "block" : "hidden"} lg:block`}
-          >
+          <div id="search-filter-controls" className={`${mobileFiltersOpen ? "block" : "hidden"} lg:block`}>
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-7 lg:gap-3">
               {visibleFilters.map((filter) => {
                 const values = selectedValues(filter.key);
@@ -693,7 +745,7 @@ export function SearchForm({
                     <FilterButton
                       filter={filter}
                       summary={filterSummary(filter)}
-                      count={filter.multiple ? values.length : 0}
+                      count={values.length}
                       isOpen={isOpen}
                       onClick={() => setOpenFilter(isOpen ? null : filter.key)}
                     />
@@ -725,9 +777,7 @@ export function SearchForm({
                   key={item.key}
                   type="button"
                   aria-pressed={item.active}
-                  onClick={() =>
-                    toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])
-                  }
+                  onClick={() => toggleQuickFilter(item.key as Parameters<typeof toggleQuickFilter>[0])}
                   className={`rounded-full border px-3 py-2 text-xs font-medium transition-colors ${item.active ? "border-brand bg-brand text-brand-foreground" : "border-border bg-background text-foreground hover:border-brand/50"}`}
                 >
                   {item.active && <span aria-hidden="true">✓ </span>}
@@ -777,7 +827,7 @@ export function SearchForm({
                   key={filter.key}
                   filter={filter}
                   summary={filterSummary(filter)}
-                  count={filter.multiple ? values.length : 0}
+                  count={values.length}
                   isOpen={isOpen}
                   onClick={() => setOpenFilter(isOpen ? null : filter.key)}
                 />
@@ -832,9 +882,7 @@ function FilterButton({
           <span className="block truncate text-[11px] font-medium text-muted-foreground sm:text-xs">
             {filter.label}
           </span>
-          <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">
-            {summary}
-          </span>
+          <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">{summary}</span>
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
           {count > 0 && (
@@ -876,9 +924,7 @@ function FilterOptions({
         <div>
           <p className="text-sm font-semibold text-foreground">{filter.label}</p>
           {filter.helperText && (
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-              {filter.helperText}
-            </p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">{filter.helperText}</p>
           )}
         </div>
         <button
@@ -922,11 +968,7 @@ function FilterOptions({
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
         {selected.length > 0 ? (
-          <button
-            type="button"
-            onClick={onClear}
-            className="text-xs font-medium text-primary hover:underline"
-          >
+          <button type="button" onClick={onClear} className="text-xs font-medium text-primary hover:underline">
             ניקוי בחירה
           </button>
         ) : (

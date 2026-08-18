@@ -32,6 +32,25 @@ describe("SearchForm variants", () => {
     expect(html).toContain("מסננים נוספים");
   });
 
+  it("shows query-inferred criteria before the compact filters and syncs population display", () => {
+    const html = renderToStaticMarkup(
+      <SearchForm
+        variant="compact"
+        populations={[{ slug: "adolescents", name: "בני נוער" }]}
+        inferredCriteria={[
+          { type: "problem", value: "social_anxiety", label: "חרדה חברתית" },
+          { type: "population", value: "adolescents", label: "בני נוער" },
+        ]}
+      />,
+    );
+
+    expect(html).toContain("לפי החיפוש:");
+    expect(html).toContain("חרדה חברתית");
+    expect(html).toContain('aria-label="הסרת הקריטריון בני נוער"');
+    expect(html).toContain("אוכלוסיית יעד");
+    expect(html).toContain("בני נוער");
+  });
+
   it("uses simple mode only for the lower homepage search", () => {
     const homepageSource = readFileSync(new URL("../routes/index.tsx", import.meta.url), "utf8");
     const searchPageSource = readFileSync(new URL("../routes/search.tsx", import.meta.url), "utf8");
