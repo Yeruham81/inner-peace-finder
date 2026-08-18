@@ -380,13 +380,7 @@ function Index() {
 
       <ExplorerSection eyebrow="" title="חיפוש לפי נושא" description="" items={problemDomains} />
 
-      <ExplorerSection
-        eyebrow=""
-        title="חיפוש לפי אוכלוסייה"
-        description=""
-        items={populationGroups}
-        alternate
-      />
+      <ExplorerSection eyebrow="" title="חיפוש לפי אוכלוסייה" description="" items={populationGroups} alternate />
 
       <HowItWorks />
 
@@ -399,8 +393,8 @@ function Index() {
       <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20">
         <h2 className="text-2xl font-bold text-foreground sm:text-3xl">לא בטוחים מאיפה להתחיל?</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-          אתם לא חייבים לדעת איך קוראים לבעיה או איזה סוג טיפול עשוי להתאים. פשוט תארו מה מטריד אתכם
-          או איזו עזרה אתם מחפשים, והחיפוש יציג אנשי מקצוע רלוונטיים לפי התיאור שלכם
+          אתם לא חייבים לדעת איך קוראים לבעיה או איזה סוג טיפול עשוי להתאים. פשוט תארו מה מטריד אתכם או איזו עזרה אתם
+          מחפשים, והחיפוש יציג אנשי מקצוע רלוונטיים לפי התיאור שלכם
         </p>
         <div className="mx-auto mt-7 max-w-3xl text-right">
           <SearchForm variant="simple" />
@@ -435,16 +429,10 @@ const howItWorksSteps = [
 
 function HowItWorks() {
   return (
-    <section
-      className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20"
-      aria-labelledby="how-it-works-title"
-    >
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20" aria-labelledby="how-it-works-title">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold text-primary">שלושה צעדים פשוטים</p>
-        <h2
-          id="how-it-works-title"
-          className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-        >
+        <h2 id="how-it-works-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           איך החיפוש בטיפולינקס עובד?
         </h2>
       </div>
@@ -484,17 +472,11 @@ const trustItems = [
 
 function TrustSection() {
   return (
-    <section
-      className="border-y border-border/60 bg-surface-elevated/35"
-      aria-labelledby="trust-title"
-    >
+    <section className="border-y border-border/60 bg-surface-elevated/35" aria-labelledby="trust-title">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold text-primary">כל המידע במקום אחד</p>
-          <h2
-            id="trust-title"
-            className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-          >
+          <h2 id="trust-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             בודקים, משווים ומחליטים
           </h2>
         </div>
@@ -503,10 +485,7 @@ function TrustSection() {
           <ul className="grid gap-6 text-right md:grid-cols-3">
             {trustItems.map((item) => (
               <li key={item.title} className="relative pr-7">
-                <span
-                  aria-hidden="true"
-                  className="absolute right-0 top-2 h-3 w-3 rounded-full bg-brand"
-                />
+                <span aria-hidden="true" className="absolute right-0 top-2 h-3 w-3 rounded-full bg-brand" />
                 <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
               </li>
@@ -520,20 +499,14 @@ function TrustSection() {
 
 function ChoosingTherapistSection() {
   return (
-    <section
-      className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20"
-      aria-labelledby="choosing-title"
-    >
+    <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20" aria-labelledby="choosing-title">
       <p className="text-sm font-semibold text-primary">בחירה שמתאימה לכם</p>
-      <h2
-        id="choosing-title"
-        className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-      >
+      <h2 id="choosing-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
         מה כדאי לבדוק כשבוחרים מטפל?
       </h2>
       <p className="mx-auto mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-        בדקו את תחומי הניסיון, האוכלוסיות שבהן המטפל עוסק, שפת הטיפול, המיקום ואפשרויות הטיפול
-        מרחוק. לצד ההתאמה המקצועית, חשוב שתרגישו בנוח לשאול שאלות ולהבין כיצד התהליך צפוי להתנהל.
+        בדקו את תחומי הניסיון, האוכלוסיות שבהן המטפל עוסק, שפת הטיפול, המיקום ואפשרויות הטיפול מרחוק. לצד ההתאמה
+        המקצועית, חשוב שתרגישו בנוח לשאול שאלות ולהבין כיצד התהליך צפוי להתנהל.
       </p>
     </section>
   );
@@ -542,8 +515,7 @@ function ChoosingTherapistSection() {
 const frequentlyAskedQuestions = [
   {
     question: "האם צריך לדעת מראש איזה סוג טיפול לחפש?",
-    answer:
-      "לא. אפשר להתחיל מתיאור חופשי של מה שמטריד אתכם, גם בלי להכיר שמות של שיטות טיפול או מקצועות.",
+    answer: "לא. אפשר להתחיל מתיאור חופשי של מה שמטריד אתכם, גם בלי להכיר שמות של שיטות טיפול או מקצועות.",
   },
   {
     question: "כיצד נקבעות התוצאות?",
@@ -561,17 +533,11 @@ const frequentlyAskedQuestions = [
 
 function FrequentlyAskedQuestions() {
   return (
-    <section
-      className="border-y border-border/60 bg-surface-elevated/35"
-      aria-labelledby="faq-title"
-    >
+    <section className="border-y border-border/60 bg-surface-elevated/35" aria-labelledby="faq-title">
       <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="text-center">
           <p className="text-sm font-semibold text-primary">מידע שימושי לפני שמתחילים</p>
-          <h2
-            id="faq-title"
-            className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-          >
+          <h2 id="faq-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             שאלות נפוצות
           </h2>
         </div>
@@ -583,9 +549,7 @@ function FrequentlyAskedQuestions() {
               className="rounded-2xl border border-border bg-surface-elevated p-5 shadow-sm sm:p-6"
             >
               <dt className="text-base font-bold text-foreground sm:text-lg">{item.question}</dt>
-              <dd className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
-                {item.answer}
-              </dd>
+              <dd className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">{item.answer}</dd>
             </div>
           ))}
         </dl>
@@ -610,17 +574,14 @@ function CrisisNotice() {
 
   return (
     <>
-      <aside
-        className="border-t border-border/60 bg-background"
-        aria-labelledby="crisis-notice-title"
-      >
+      <aside className="border-t border-border/60 bg-background" aria-labelledby="crisis-notice-title">
         <div className="mx-auto max-w-5xl px-4 py-8 text-center sm:px-6">
           <h2 id="crisis-notice-title" className="text-sm font-bold text-foreground">
             זקוקים לעזרה מיידית?
           </h2>
           <p className="mx-auto mt-2 max-w-3xl text-xs leading-5 text-muted-foreground sm:text-sm">
-            טיפולינקס אינו שירות חירום. במקרה של סכנה מיידית או מצוקה חריפה יש לפנות לשירותי החירום
-            או ל
+            טיפולינקס מסייע במציאת מטפלים ואינו מיועד למצבי חירום. במקרה של סכנה מיידית או מצוקה חריפה, יש לפנות לשירותי
+            החירום או ל
             <button
               type="button"
               onClick={() => setIsOpen(true)}
@@ -702,15 +663,10 @@ function SupportHotlinesModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2
-              id="support-hotlines-title"
-              className="text-xl font-bold text-foreground sm:text-2xl"
-            >
+            <h2 id="support-hotlines-title" className="text-xl font-bold text-foreground sm:text-2xl">
               מוקדי סיוע וחירום
             </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              בחרו במוקד המתאים למצב ולחצו על המספר לחיוג.
-            </p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">בחרו במוקד המתאים למצב ולחצו על המספר לחיוג.</p>
           </div>
           <button
             type="button"
@@ -724,10 +680,7 @@ function SupportHotlinesModal({ onClose }: { onClose: () => void }) {
 
         <ul className="mt-6 space-y-3">
           {supportHotlines.map((hotline) => (
-            <li
-              key={hotline.name}
-              className="rounded-2xl border border-border bg-surface-elevated p-4 sm:p-5"
-            >
+            <li key={hotline.name} className="rounded-2xl border border-border bg-surface-elevated p-4 sm:p-5">
               <h3 className="font-bold text-foreground">{hotline.name}</h3>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">{hotline.description}</p>
               {hotline.phoneLinks ? (
@@ -770,9 +723,7 @@ function PopularSearches() {
 
   return (
     <div className="mx-auto mt-8 max-w-5xl border-t border-border/60 pt-7 text-center">
-      <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-        חיפושים לדוגמה
-      </h2>
+      <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים לדוגמה</h2>
 
       <div className="mt-5 grid grid-cols-2 gap-2.5 lg:hidden">
         {popularSearches.slice(0, 6).map((query) => (
@@ -813,31 +764,19 @@ type ExplorerSectionProps = {
   alternate?: boolean;
 };
 
-function ExplorerSection({
-  eyebrow,
-  title,
-  description,
-  items,
-  alternate = false,
-}: ExplorerSectionProps) {
+function ExplorerSection({ eyebrow, title, description, items, alternate = false }: ExplorerSectionProps) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   return (
-    <section
-      className={alternate ? "border-y border-border/60 bg-surface-elevated/35" : "bg-transparent"}
-    >
+    <section className={alternate ? "border-y border-border/60 bg-surface-elevated/35" : "bg-transparent"}>
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
           {eyebrow ? <p className="text-sm font-semibold text-primary">{eyebrow}</p> : null}
-          <h2
-            className={`${eyebrow ? "mt-2" : ""} text-2xl font-bold tracking-tight text-foreground sm:text-3xl`}
-          >
+          <h2 className={`${eyebrow ? "mt-2" : ""} text-2xl font-bold tracking-tight text-foreground sm:text-3xl`}>
             {title}
           </h2>
           {description ? (
-            <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              {description}
-            </p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
           ) : null}
         </div>
 
@@ -847,9 +786,7 @@ function ExplorerSection({
             items={items}
             columns={2}
             activeItemId={activeItemId}
-            onItemClick={(itemId) =>
-              setActiveItemId((current) => (current === itemId ? null : itemId))
-            }
+            onItemClick={(itemId) => setActiveItemId((current) => (current === itemId ? null : itemId))}
             onClose={() => setActiveItemId(null)}
           />
         </div>
@@ -860,9 +797,7 @@ function ExplorerSection({
             items={items}
             columns={4}
             activeItemId={activeItemId}
-            onItemClick={(itemId) =>
-              setActiveItemId((current) => (current === itemId ? null : itemId))
-            }
+            onItemClick={(itemId) => setActiveItemId((current) => (current === itemId ? null : itemId))}
             onClose={() => setActiveItemId(null)}
           />
         </div>
