@@ -1,12 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
@@ -46,9 +39,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
@@ -148,8 +139,7 @@ function RootComponent() {
   );
 }
 
-const navBaseClass =
-  "rounded-md px-3 py-2 transition-colors hover:bg-secondary hover:text-foreground";
+const navBaseClass = "rounded-md px-3 py-2 transition-colors hover:bg-secondary hover:text-foreground";
 const navActiveClass = "font-semibold text-foreground bg-secondary";
 const navInactiveClass = "text-muted-foreground";
 
@@ -190,9 +180,7 @@ function SiteHeader() {
             TIPULINKS
           </span>
 
-          <span className="hidden text-lg font-semibold tracking-tight text-foreground sm:inline">
-            Tipulinks
-          </span>
+          <span className="hidden text-lg font-semibold tracking-tight text-foreground sm:inline">Tipulinks</span>
         </Link>
 
         <nav
@@ -281,8 +269,8 @@ function SiteFooter() {
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
         <p>
-          © {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת אנשי מקצוע ומטפלים ואינו מהווה
-          תחליף לייעוץ מקצועי
+          © {new Date().getFullYear()} Tipulinks —האתר מסייע במציאת מטפלים. הוא אינו מחליף אבחון, ייעוץ או טיפול מקצועי
+          ואינו מספק מענה במצבי חירום.
         </p>
       </div>
     </footer>
