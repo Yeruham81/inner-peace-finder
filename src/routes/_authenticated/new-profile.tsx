@@ -1093,7 +1093,6 @@ function EditorPage() {
               <Section title="דרכי התקשרות">
                 <div className="space-y-5">
                   <div>
-                    <h4 className="text-base font-semibold text-foreground">דרכי התקשרות</h4>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       בחרו איך תרצו לקבל פניות. ניתן לבחור עד 3 אפשרויות, חובה להגדיר אפשרות אחת כמועדפת.
                     </p>
