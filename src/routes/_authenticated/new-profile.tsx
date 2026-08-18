@@ -1149,7 +1149,7 @@ function EditorPage() {
                                 selected ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"
                               }`}
                             >
-                              {selected ? "✓ פעיל" : "בחירה"}
+                              {selected ? "✓ פעיל" : "כבוי"}
                             </span>
                           </button>
 
