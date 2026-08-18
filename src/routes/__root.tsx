@@ -269,7 +269,7 @@ function SiteFooter() {
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
         <p>
-          © {new Date().getFullYear()} Tipulinks —האתר מסייע במציאת מטפלים. הוא אינו מחליף אבחון, ייעוץ או טיפול מקצועי
+          © {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת מטפלים. הוא אינו מחליף אבחון, ייעוץ או טיפול מקצועי
           ואינו מספק מענה במצבי חירום.
         </p>
       </div>
