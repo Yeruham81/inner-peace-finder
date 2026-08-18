@@ -3,19 +3,11 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import {
-  listFilterOptions,
-  classifyAndSearch,
-  type ScoredTherapist,
-} from "@/lib/therapists.functions";
+import { listFilterOptions, classifyAndSearch, type ScoredTherapist } from "@/lib/therapists.functions";
 import { searchStructuredTherapists } from "@/lib/structured-search.functions";
 import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter.functions";
 import { legacyRowToCard, type SearchResultCard } from "@/lib/search-result-card";
-import {
-  hasAnyExplicitFilter,
-  resolveSearchContract,
-  type ExplicitSearchContract,
-} from "@/lib/search-contract";
+import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { PublicRouteError } from "@/components/public-route-error";
@@ -128,9 +120,7 @@ export function structuredTherapistQuery(q: string) {
   return queryOptions({
     queryKey: ["structured-search", "therapist", q],
     queryFn: () =>
-      q.trim().length >= 2
-        ? searchStructuredTherapists({ data: { query: q.trim(), limit: 4 } })
-        : Promise.resolve([]),
+      q.trim().length >= 2 ? searchStructuredTherapists({ data: { query: q.trim(), limit: 4 } }) : Promise.resolve([]),
   });
 }
 
@@ -141,9 +131,7 @@ export const Route = createFileRoute("/search")({
     const flow = resolveFlowFromEnv(deps.flow);
     const promises: Promise<unknown>[] = [context.queryClient.ensureQueryData(filterOptionsQuery)];
     if (flow === "unified") {
-      promises.push(
-        context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps))),
-      );
+      promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps))));
     } else {
       promises.push(context.queryClient.ensureQueryData(structuredTherapistQuery(deps.q)));
       promises.push(context.queryClient.ensureQueryData(resultsQuery(deps)));
@@ -290,15 +278,7 @@ function resultCountLabel(count: number): string {
   return `${count} מטפלים`;
 }
 
-function ResultsHeader({
-  q,
-  count,
-  hasFilters,
-}: {
-  q: string;
-  count: number | null;
-  hasFilters: boolean;
-}) {
+function ResultsHeader({ q, count, hasFilters }: { q: string; count: number | null; hasFilters: boolean }) {
   return (
     <div className="mt-7 flex flex-wrap items-end justify-between gap-2 sm:mt-8">
       <h1 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
@@ -323,10 +303,7 @@ function ResultsHeader({
 
 function ResultsGrid({ results }: { results: SearchResultCard[] }) {
   return (
-    <section
-      aria-label="תוצאות חיפוש"
-      className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2 sm:mt-6 sm:gap-5"
-    >
+    <section aria-label="תוצאות חיפוש" className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2 sm:mt-6 sm:gap-5">
       {results.map((t, i) => (
         <TherapistCard key={t.id} t={t} rankPosition={i + 1} pageSource="search" />
       ))}
@@ -334,11 +311,7 @@ function ResultsGrid({ results }: { results: SearchResultCard[] }) {
   );
 }
 
-function EmptyState({
-  reason,
-}: {
-  reason: null | "unrecognized_query" | "no_matching_therapists";
-}) {
+function EmptyState({ reason }: { reason: null | "unrecognized_query" | "no_matching_therapists" }) {
   const msg = emptyStateMessage(reason);
   return (
     <div
@@ -369,22 +342,23 @@ function UrgentHelpState() {
       <h2 id="urgent-help-title" className="text-xl font-bold text-foreground sm:text-2xl">
         ייתכן שאתם זקוקים לעזרה מיידית
       </h2>
+
       <p className="mt-3 max-w-3xl text-sm leading-7 text-foreground/80 sm:text-base">
         טיפולינקס מסייע במציאת מטפלים ואינו מיועד למצבי חירום.
       </p>
-      <div className="mt-5 flex flex-wrap gap-3">
-        <a
-          href="tel:1201"
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
-        >
-          ער״ן — 1201
-        </a>
+
+      <p className="mt-5 max-w-3xl text-sm leading-7 text-foreground sm:text-base">
+        <strong>אם קיימת סכנה מיידית לך או לאדם אחר</strong>, יש לפנות מיד לשירותי החירום או להגיע לחדר המיון הקרוב.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-3">
         <a
           href="tel:101"
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
         >
-          מגן דוד אדום — 101
+          מד״א — 101
         </a>
+
         <a
           href="tel:100"
           className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground"
@@ -392,9 +366,24 @@ function UrgentHelpState() {
           משטרת ישראל — 100
         </a>
       </div>
-      <p className="mt-4 text-xs leading-5 text-muted-foreground sm:text-sm">
-        לאחר קבלת הסיוע המיידי, ניתן לחזור לחיפוש מטפל להמשך תמיכה וטיפול.
+
+      <p className="mt-6 max-w-3xl text-sm leading-7 text-foreground sm:text-base">
+        <strong>במקרה של מצוקה נפשית חריפה או מחשבות על פגיעה עצמית</strong>, מומלץ לא להישאר לבד ולפנות בהקדם לאדם קרוב
+        או לגורם מקצועי מתאים.
       </p>
+
+      <p className="mt-3 max-w-3xl text-sm leading-7 text-foreground/80 sm:text-base">
+        ניתן לפנות גם לער״ן – עזרה ראשונה נפשית בטלפון <strong>1201</strong>.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <a
+          href="tel:1201"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-bold text-foreground"
+        >
+          ער״ן — 1201
+        </a>
+      </div>
     </section>
   );
 }
@@ -444,21 +433,12 @@ function UnifiedSearchResults({
   });
 
   if (isSafetyTriage) return <UrgentHelpState />;
-  const nonUrgentEmptyReason =
-    emptyReason === "unrecognized_query" ? "unrecognized_query" : "no_matching_therapists";
+  const nonUrgentEmptyReason = emptyReason === "unrecognized_query" ? "unrecognized_query" : "no_matching_therapists";
 
   return (
     <>
-      <ResultsHeader
-        q={contract.q}
-        count={results.length}
-        hasFilters={hasAnyExplicitFilter(contract)}
-      />
-      {results.length === 0 ? (
-        <EmptyState reason={nonUrgentEmptyReason} />
-      ) : (
-        <ResultsGrid results={results} />
-      )}
+      <ResultsHeader q={contract.q} count={results.length} hasFilters={hasAnyExplicitFilter(contract)} />
+      {results.length === 0 ? <EmptyState reason={nonUrgentEmptyReason} /> : <ResultsGrid results={results} />}
     </>
   );
 }
@@ -495,10 +475,7 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
       />
 
       {structuredMatches && structuredMatches.length > 0 && (
-        <section
-          aria-label="התאמות לפי שם"
-          className="mt-4 rounded-2xl border border-border bg-surface p-4"
-        >
+        <section aria-label="התאמות לפי שם" className="mt-4 rounded-2xl border border-border bg-surface p-4">
           <p className="text-sm font-semibold text-foreground">התאמות לפי שם או מקצוע</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {structuredMatches.map((m) => (
@@ -523,9 +500,7 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
 
       {isClarification ? (
         <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-6 shadow-soft">
-          <p className="text-base font-semibold text-foreground">
-            {legacyPipeline!.clarification.question}
-          </p>
+          <p className="text-base font-semibold text-foreground">{legacyPipeline!.clarification.question}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {legacyPipeline!.clarification.reason === "disambiguation"
               ? "מצאנו כמה כיוונים קרובים. בחרו את המתאים ביותר כדי שנציג מטפלים רלוונטיים."
@@ -596,9 +571,7 @@ function SearchPage() {
           lgbtqAffirming: contract.lgbtqAffirming,
           freeIntro: contract.freeIntro,
         }}
-        preserveSearch={
-          import.meta.env.DEV ? { problem: search.problem, flow: search.flow } : undefined
-        }
+        preserveSearch={import.meta.env.DEV ? { problem: search.problem, flow: search.flow } : undefined}
         variant="compact"
         availableQuickFilters={flow === "unified" ? quickFilters : undefined}
       />
