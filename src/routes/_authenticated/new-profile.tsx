@@ -1090,7 +1090,7 @@ function EditorPage() {
                 </p>
               </Section>
 
-              <Section title="פרטי התקשרות">
+              <Section title="דרכי התקשרות">
                 <div className="space-y-5">
                   <div>
                     <h4 className="text-base font-semibold text-foreground">דרכי התקשרות</h4>
