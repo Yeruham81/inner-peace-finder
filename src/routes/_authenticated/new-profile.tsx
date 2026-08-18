@@ -69,9 +69,9 @@ const CONTACT_METHOD_OPTIONS: readonly {
   label: string;
   description: string;
 }[] = [
-  { id: "whatsapp", label: "WhatsApp", description: "קבלת פניות בהודעות WhatsApp" },
+  { id: "whatsapp", label: "WhatsApp", description: "קבלת הודעות ב-WhatsApp" },
   { id: "email", label: "אימייל", description: "קבלת פניות כתובות באימייל" },
-  { id: "phone", label: "שיחת טלפון", description: "אפשרות לפנייה באמצעות חיוג טלפוני" },
+  { id: "phone", label: "שיחת טלפון", description: "קבלת שיחה בחיוג טלפוני" },
 ];
 
 function blankLocation(): FormLocation {
@@ -1095,8 +1095,7 @@ function EditorPage() {
                   <div>
                     <h4 className="text-base font-semibold text-foreground">דרכי התקשרות</h4>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      בחרו עד 3 דרכים שבהן ניתן לפנות אליכם וסמנו את הדרך המועדפת. אם נבחרת דרך אחת בלבד, היא מוגדרת
-                      אוטומטית כמועדפת.
+                      בחרו איך תרצו לקבל פניות. ניתן לבחור עד 3 אפשרויות, חובה להגדיר אפשרות אחת כמועדפת.
                     </p>
                   </div>
 
