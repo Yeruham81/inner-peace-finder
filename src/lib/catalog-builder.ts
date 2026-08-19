@@ -11,8 +11,9 @@
  * inflection-folding pipeline for catalog names.
  */
 
+import { CANONICAL_MODALITIES } from "./modality-options";
 import { normalizeForInterpretation } from "./query-normalization";
-import { canonicalPopulationName, canonicalPopulationSlug } from "./population-options";
+import { canonicalPopulationName, canonicalPopulationSlug, populationAliasesFor } from "./population-options";
 import type {
   Catalog,
   CityEntry,
@@ -50,14 +51,153 @@ export const CITY_ALIASES: Record<string, string[]> = {
   "ראשון לציון": ['ראשל"צ'],
 };
 
+type ProfessionLanguageVariants = {
+  /** Explicit feminine profession titles. These also provide female-gender evidence. */
+  feminine?: readonly string[];
+  /** Safe title synonyms/spelling variants. Do not put treatment/service phrases here. */
+  aliases?: readonly string[];
+};
+
 /**
- * Explicit, curated feminine forms for supported canonical professions.
+ * Natural-language coverage for the complete 72-profession canonical catalog.
  *
- * A generic suffix heuristic produces invalid Hebrew (e.g. "עובד סוציאלי"
- * → "עובד סוציאלית"), so supported forms are listed by hand. Keys are the
- * canonical `name_he`; slugs are accepted as a secondary key.
+ * This is keyed by the stable canonical slug rather than `name_he`, so a UI
+ * label wording change cannot silently delete search coverage. Every canonical
+ * profession is represented here, including the few titles whose written form
+ * is already gender-neutral and therefore need no separate feminine variant.
+ *
+ * IMPORTANT: aliases here must describe what the practitioner IS. Do not add
+ * service phrases such as "טיפול רגשי", "דיקור סיני" or "פיזיותרפיה" — those
+ * belong to other search axes / semantic interpretation and would otherwise
+ * create false profession filters.
  */
-export const FEMININE_PROFESSION_FORMS: Record<string, string[]> = {
+export const PROFESSION_LANGUAGE_VARIANTS: Record<string, ProfessionLanguageVariants> = {
+  "emotional-therapist": { feminine: ["מטפלת רגשית"] },
+  psychotherapist: { feminine: ["פסיכותרפיסטית"] },
+  "cbt-psychotherapist": {
+    feminine: ["פסיכותרפיסטית קוגניטיבית-התנהגותית"],
+    aliases: ["פסיכותרפיסט CBT", "פסיכותרפיסטית CBT"],
+  },
+  "body-psychotherapist": { feminine: ["פסיכותרפיסטית גופנית"] },
+  psychoanalyst: {
+    feminine: ["פסיכואנליטיקאית", "פסיכואנליסטית"],
+    aliases: ["פסיכואנליסט"],
+  },
+  "other-therapeutic-profession": {},
+
+  psychologist: { feminine: ["פסיכולוגית"] },
+  "clinical-psychologist": { feminine: ["פסיכולוגית קלינית"] },
+  "educational-psychologist": { feminine: ["פסיכולוגית חינוכית"] },
+  "medical-psychologist": { feminine: ["פסיכולוגית רפואית"] },
+  "rehabilitation-psychologist": { feminine: ["פסיכולוגית שיקומית"] },
+  "developmental-psychologist": { feminine: ["פסיכולוגית התפתחותית"] },
+  "occupational-organizational-psychologist": {
+    feminine: ["פסיכולוגית תעסוקתית-ארגונית"],
+  },
+  psychiatrist: { feminine: ["פסיכיאטרית"] },
+  "child-adolescent-psychiatrist": { feminine: ["פסיכיאטרית ילדים ונוער"] },
+
+  "social-worker": {
+    feminine: ["עובדת סוציאלית"],
+    aliases: ['עו"ס', "עוס"],
+  },
+  "clinical-social-worker": {
+    feminine: ["עובדת סוציאלית קלינית", 'עו"ס קלינית', "עוס קלינית"],
+    aliases: ['עו"ס קליני', "עוס קליני"],
+  },
+  "couples-therapist": { feminine: ["מטפלת זוגית"] },
+  "family-therapist": { feminine: ["מטפלת משפחתית"] },
+  "sex-therapist": { feminine: ["מטפלת מינית"] },
+  "parent-counselor": { feminine: ["מדריכת הורים"] },
+  mediator: { feminine: ["מגשרת"] },
+
+  "arts-therapist": {
+    feminine: ["מטפלת באמצעות אומנויות", "מטפלת באומנויות"],
+    aliases: ["מטפל באומנויות"],
+  },
+  "visual-art-therapist": {
+    feminine: ["מטפלת באמנות חזותית", "מטפלת באמנות", "מטפלת באומנות"],
+    aliases: ["מטפל באמנות", "מטפל באומנות"],
+  },
+  "music-therapist": { feminine: ["מטפלת במוזיקה"] },
+  "dance-movement-therapist": {
+    feminine: ["מטפלת בתנועה ובמחול", "מטפלת בתנועה"],
+    aliases: ["מטפל בתנועה"],
+  },
+  "drama-therapist": { feminine: ["מטפלת בדרמה"] },
+  "psychodrama-therapist": { feminine: ["מטפלת בפסיכודרמה"] },
+  bibliotherapist: { feminine: ["ביבליותרפיסטית"] },
+  "animal-assisted-therapist": { feminine: ["מטפלת בעזרת בעלי חיים"] },
+  "horticultural-therapist": { feminine: ["מטפלת באמצעות גינון"] },
+
+  "occupational-therapist": { feminine: ["מרפאה בעיסוק"] },
+  "speech-language-pathologist": {
+    feminine: ["קלינאית תקשורת", "קלינאית שפה ותקשורת"],
+    aliases: ["קלינאי שפה ותקשורת"],
+  },
+  physiotherapist: { feminine: ["פיזיותרפיסטית"] },
+  "clinical-dietitian": {
+    feminine: ["דיאטנית קלינית", "תזונאית קלינית"],
+    aliases: ["תזונאי קליני"],
+  },
+  "clinical-criminologist": { feminine: ["קרימינולוגית קלינית"] },
+  "social-rehabilitation-criminologist": {
+    feminine: ["קרימינולוגית חברתית-שיקומית"],
+  },
+  "behavior-analyst": { feminine: ["מנתחת התנהגות"] },
+  hydrotherapist: { feminine: ["הידרותרפיסטית"] },
+
+  "educational-counselor": { feminine: ["יועצת חינוכית"] },
+  "didactic-diagnostician": { feminine: ["מאבחנת דידקטית"] },
+  "group-facilitator": { feminine: ["מנחת קבוצות"] },
+  "life-coach": {
+    feminine: ["מאמנת אישית", "קואצ'רית", "קואצ׳רית"],
+    aliases: ["קואצ'ר", "קואצ׳ר"],
+  },
+  "sleep-consultant": { feminine: ["יועצת שינה"] },
+  "lactation-consultant": { feminine: ["יועצת הנקה"] },
+  "career-counselor": { feminine: ["יועצת קריירה"] },
+  "nutrition-consultant": { feminine: ["יועצת תזונה"] },
+  doula: {},
+  "adaptive-teaching-specialist": { feminine: ["מומחית להוראה מותאמת"] },
+  "spiritual-care-provider": { feminine: ["מלווה רוחנית"] },
+
+  "chinese-medicine-practitioner": { feminine: ["מטפלת ברפואה סינית"] },
+  acupuncturist: { feminine: ["מדקרת", "מדקרת סינית"], aliases: ["מדקר סיני"] },
+  naturopath: { feminine: ["נטורופתית"] },
+  homeopath: { feminine: ["הומאופתית"] },
+  "bach-flower-practitioner": { feminine: ["מטפלת בפרחי באך"] },
+  aromatherapist: { feminine: ["ארומתרפיסטית"] },
+  "herbal-medicine-practitioner": {
+    feminine: ["מטפלת בצמחי מרפא / הרבליסטית", "מטפלת בצמחי מרפא", "הרבליסטית"],
+    aliases: ["מטפל בצמחי מרפא", "הרבליסט"],
+  },
+  "ayurveda-practitioner": { feminine: ["מטפלת באיורוודה"] },
+
+  reflexologist: { feminine: ["רפלקסולוגית"] },
+  "shiatsu-practitioner": { feminine: ["מטפלת בשיאצו"] },
+  "tuina-practitioner": { feminine: ["מטפלת בטווינא"] },
+  osteopath: { feminine: ["אוסטאופתית"] },
+  chiropractor: { feminine: ["כירופרקטית"] },
+  "massage-therapist": {
+    feminine: ["מטפלת בעיסוי", "מעסה רפואית"],
+    aliases: ["מעסה", "מעסה רפואי"],
+  },
+  "feldenkrais-practitioner": { feminine: ["מטפלת בשיטת פלדנקרייז"] },
+  "alexander-technique-teacher": { aliases: ["מורה לאלכסנדר"] },
+  "paula-method-practitioner": { feminine: ["מטפלת בשיטת פאולה"] },
+  "yoga-therapist": { feminine: ["מטפלת ביוגה טיפולית"] },
+  "reiki-practitioner": { feminine: ["מטפלת ברייקי"] },
+  "craniosacral-therapist": {
+    feminine: ["מטפלת בקרניוסקרל", "מטפלת בקרניו סקראל"],
+    aliases: ["מטפל בקרניו סקראל", "מטפל בקרניו-סקראל"],
+  },
+  "biofeedback-therapist": { feminine: ["מטפלת בביופידבק"] },
+  "neurofeedback-therapist": { feminine: ["מטפלת בנוירופידבק"] },
+};
+
+/** Backwards-compatible fallback variants for legacy/non-canonical rows. */
+const LEGACY_FEMININE_BY_NAME: Record<string, readonly string[]> = {
   מטפל: ["מטפלת"],
   פסיכולוג: ["פסיכולוגית"],
   "פסיכולוג קליני": ["פסיכולוגית קלינית"],
@@ -76,34 +216,53 @@ export const FEMININE_PROFESSION_FORMS: Record<string, string[]> = {
   דיאטן: ["דיאטנית"],
 };
 
-const FEMININE_BY_SLUG: Record<string, string[]> = {
+const LEGACY_FEMININE_BY_SLUG: Record<string, readonly string[]> = {
   therapist: ["מטפלת"],
-  psychologist: ["פסיכולוגית"],
-  psychiatrist: ["פסיכיאטרית"],
-  "social-worker": ["עובדת סוציאלית"],
-  social_worker: ["עובדת סוציאלית"],
-  psychotherapist: ["פסיכותרפיסטית"],
   counselor: ["יועצת"],
   coach: ["מאמנת"],
 };
 
 export function feminineFormsFor(row: { name_he: string; slug?: string }): string[] {
-  const byName = FEMININE_PROFESSION_FORMS[row.name_he.trim()];
-  if (byName) return byName;
-  const bySlug = row.slug ? FEMININE_BY_SLUG[row.slug] : undefined;
-  return bySlug ?? [];
+  if (row.slug) {
+    const canonical = PROFESSION_LANGUAGE_VARIANTS[row.slug]?.feminine;
+    if (canonical) return [...canonical];
+    const legacyBySlug = LEGACY_FEMININE_BY_SLUG[row.slug];
+    if (legacyBySlug) return [...legacyBySlug];
+  }
+  return [...(LEGACY_FEMININE_BY_NAME[row.name_he.trim()] ?? [])];
 }
 
-/** Minimal Hebrew aliases for the most common language codes. */
+export function professionAliasesFor(row: { slug?: string }): string[] {
+  if (!row.slug) return [];
+  return [...(PROFESSION_LANGUAGE_VARIANTS[row.slug]?.aliases ?? [])];
+}
+
+const CANONICAL_MODALITY_BY_SLUG = new Map(CANONICAL_MODALITIES.map((modality) => [modality.slug, modality] as const));
+
+export function modalityAliasesFor(slug: string): readonly string[] {
+  return CANONICAL_MODALITY_BY_SLUG.get(slug)?.aliases ?? [];
+}
+
+/** Hebrew/English natural-language aliases for all canonical language codes. */
 export const HE_LANG_ALIASES: Record<string, string[]> = {
-  he: ["עברית", "עיברית"],
+  he: ["עברית", "עיברית", "hebrew"],
   en: ["אנגלית", "english"],
-  ru: ["רוסית", "russian"],
   ar: ["ערבית", "arabic"],
+  ru: ["רוסית", "russian"],
   fr: ["צרפתית", "french"],
   es: ["ספרדית", "spanish"],
-  am: ["אמהרית"],
+  de: ["גרמנית", "german"],
+  am: ["אמהרית", "amharic"],
 };
+
+function normalizedUnique(values: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const value of values) {
+    const normalized = normalizeForInterpretation(value);
+    if (normalized) out.add(normalized);
+  }
+  return [...out];
+}
 
 export function buildSearchCatalog(input: {
   professions: ProfessionRow[];
@@ -117,27 +276,32 @@ export function buildSearchCatalog(input: {
 
   const professions: Profession[] = input.professions.map((p) => {
     const feminine = feminineFormsFor(p);
-    const variants = new Set<string>();
-    for (const v of [p.name_he, p.name_en ?? "", p.slug, ...feminine]) {
-      const n = nv(v);
-      if (n) variants.add(n);
-    }
+    const aliases = professionAliasesFor(p);
     return {
       id: p.id,
       slug: p.slug,
       name_he: p.name_he,
-      nameVariants: Array.from(variants),
-      feminineVariants: feminine.map(nv).filter(Boolean),
+      nameVariants: normalizedUnique([p.name_he, p.name_en ?? "", p.slug, ...feminine, ...aliases]),
+      feminineVariants: normalizedUnique(feminine),
     };
   });
 
   const modalities: Modality[] = input.modalities.map((m) => {
-    const variants = new Set<string>();
-    for (const v of [m.name_he, m.name_en ?? "", m.slug]) {
-      const n = nv(v);
-      if (n) variants.add(n);
-    }
-    return { id: m.id, slug: m.slug, name_he: m.name_he, nameVariants: Array.from(variants) };
+    const canonical = CANONICAL_MODALITY_BY_SLUG.get(m.slug);
+    const aliases = modalityAliasesFor(m.slug);
+    return {
+      id: m.id,
+      slug: m.slug,
+      name_he: m.name_he,
+      nameVariants: normalizedUnique([
+        m.name_he,
+        m.name_en ?? "",
+        m.slug,
+        canonical?.nameHe ?? "",
+        canonical?.nameEn ?? "",
+        ...aliases,
+      ]),
+    };
   });
 
   const populationMap = new Map<string, PopulationEntry>();
@@ -145,16 +309,22 @@ export function buildSearchCatalog(input: {
     const slug = canonicalPopulationSlug(population.slug);
     const name = canonicalPopulationName(population.slug, population.name);
     const current = populationMap.get(slug);
-    const aliases = new Set(current?.aliases ?? []);
-    for (const alias of [name, population.name, slug, population.slug]) aliases.add(alias);
-    populationMap.set(slug, { slug, name_he: name, aliases: [...aliases] });
+    const aliases = normalizedUnique([
+      ...(current?.aliases ?? []),
+      name,
+      population.name,
+      slug,
+      population.slug,
+      ...populationAliasesFor(slug),
+    ]);
+    populationMap.set(slug, { slug, name_he: name, aliases });
   }
   const populations = [...populationMap.values()];
 
   const languages: LanguageEntry[] = input.languages.map((l) => ({
     code: l.code,
     name_he: l.name,
-    aliases: [l.name, l.code, ...(HE_LANG_ALIASES[l.code.toLowerCase()] ?? [])],
+    aliases: normalizedUnique([l.name, l.code, ...(HE_LANG_ALIASES[l.code.toLowerCase()] ?? [])]),
   }));
 
   const cityMap = new Map<string, CityEntry>();
