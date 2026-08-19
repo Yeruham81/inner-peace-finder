@@ -35,7 +35,9 @@ const searchSchema = z.object({
   problem: fallback(z.string().trim().max(80), "").default(""),
   city: fallback(z.string().trim().max(80), "").default(""),
   population: fallback(z.string().trim().max(40), "").default(""),
+  /** Legacy single-language URL param; canonical navigation writes `languages`. */
   language: fallback(z.string().trim().max(8), "").default(""),
+  languages: fallback(z.union([z.string().trim().max(80), z.array(z.string().trim().max(8)).max(8)]), "").default(""),
   regions: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
   serviceTypes: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
   professions: fallback(z.union([z.string(), z.array(z.string())]), "").default(""),
@@ -65,6 +67,7 @@ const filterOptionsQuery = queryOptions({
 });
 
 function resultsQuery(params: z.infer<typeof searchSchema>) {
+  const contract = toUnifiedParams(params);
   return queryOptions({
     queryKey: ["search", params],
     queryFn: () =>
@@ -74,7 +77,9 @@ function resultsQuery(params: z.infer<typeof searchSchema>) {
           problemSlug: params.problem || null,
           city: params.city || null,
           populationSlug: params.population || null,
-          languageCode: params.language || null,
+          // Legacy flow is DEV-only and historically supports one language.
+          // Use the first canonical selection so old comparison URLs still work.
+          languageCode: contract.languages[0] || null,
         },
       }),
   });
@@ -97,7 +102,7 @@ export function unifiedResultsQuery(p: UnifiedParams) {
           problems: [...p.problemSlugs],
           city: p.city,
           population: p.population,
-          language: p.language,
+          languages: [...p.languages],
           regions: [...p.regions],
           serviceTypes: [...p.serviceTypes],
           professions: [...p.professionSlugs],
@@ -172,6 +177,7 @@ export function toUnifiedParams(s: SearchParams): UnifiedParams {
     city: s.city,
     population: s.population,
     language: s.language,
+    languages: s.languages,
     regions: s.regions,
     serviceTypes: s.serviceTypes,
     professions: s.professions,
@@ -275,6 +281,7 @@ function useSearchAnalytics(args: {
     search.city,
     search.population,
     search.language,
+    search.languages,
     search.regions,
     search.serviceTypes,
     count,
@@ -571,7 +578,7 @@ function SearchPage() {
         initialFilters={{
           city: contract.city,
           population: contract.population,
-          language: contract.language,
+          languages: [...contract.languages],
           regions: [...contract.regions],
           serviceTypes: [...contract.serviceTypes],
           professions: [...contract.professionSlugs],
