@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  normalizeLanguagesParam,
   normalizeLegacyCityParam,
   normalizeRegionsParam,
   normalizeServiceTypesParam,
@@ -45,6 +46,28 @@ describe("multi-value normalization", () => {
   });
 });
 
+describe("language URL compatibility", () => {
+  it("normalizes multiple languages in canonical declaration order", () => {
+    expect(normalizeLanguagesParam("ru,he,ru").values).toEqual(["he", "ru"]);
+  });
+
+  it("reads legacy language= links into the canonical languages array", () => {
+    expect(resolveSearchContract({ language: "ru" }).languages).toEqual(["ru"]);
+  });
+
+  it("does not let an empty new languages param mask a legacy language", () => {
+    expect(resolveSearchContract({ languages: "", language: "ru" }).languages).toEqual(["ru"]);
+  });
+
+  it("gives a non-empty canonical languages param precedence over legacy language", () => {
+    expect(resolveSearchContract({ languages: "he,en", language: "ru" }).languages).toEqual(["he", "en"]);
+  });
+
+  it("does not resurrect legacy language when a non-empty new value is invalid", () => {
+    expect(resolveSearchContract({ languages: "zz", language: "ru" }).languages).toEqual([]);
+  });
+});
+
 describe("city vs region separation", () => {
   it("keeps a real locality name in city and never turns it into a region", () => {
     expect(normalizeLegacyCityParam("חיפה")).toEqual({ city: "חיפה", regions: [] });
@@ -70,7 +93,7 @@ describe("resolveSearchContract", () => {
       q: "  חרדה  ",
       city: "חיפה",
       population: "children",
-      language: "ru",
+      languages: "ru",
       regions: "north,north",
       serviceTypes: ["online", "clinic"],
     });
@@ -84,7 +107,7 @@ describe("resolveSearchContract", () => {
       problemSlugs: [],
       city: "",
       population: "",
-      language: "",
+      languages: [],
       regions: [],
       serviceTypes: [],
       professionSlugs: [],
