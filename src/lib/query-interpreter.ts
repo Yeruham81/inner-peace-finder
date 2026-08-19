@@ -11,7 +11,9 @@
  * "פסיכולוגית" remain distinguishable.
  */
 
+import { REGION_DEFINITIONS, REGION_SLUGS, type RegionSlug } from "./locality-options";
 import { normalizeForInterpretation, normalizeList as normList } from "./query-normalization";
+import { THERAPY_FORMAT_SLUGS, type TherapyFormatSlug } from "./search-contract";
 import type {
   Catalog,
   GenderEvidence,
@@ -51,17 +53,38 @@ const GENERIC_PREFIXES: string[] = normList([
 const PREFERENCE_MARKERS: string[] = normList(["עדיף", "רצוי", "אם אפשר", "כדאי"]);
 const PREFERENCE_MARKER_SET = new Set(PREFERENCE_MARKERS);
 
-const EXPLICIT_FEMALE_TOKENS = new Set(normList(["אישה", "אשה", "נשית", "מטפלת"]));
+const EXPLICIT_FEMALE_TOKENS = new Set(normList(["אישה", "אשה", "נשית", "מטפלת", "מטפלות"]));
 const EXPLICIT_MALE_TOKENS = new Set(normList(["גבר", "זכר"]));
 
 /**
- * Generic therapist nouns. A male token ("גבר"/"זכר") only expresses a
- * *therapist-gender* request when it is adjacent to one of these or to a
- * canonical profession phrase ("פסיכולוג גבר", "מטפל גבר"). A standalone
- * "גבר" describing the patient ("אני גבר שמחפש טיפול") must never filter
- * therapists by gender.
+ * Generic THERAPIST nouns used only as anchors for an explicit therapist-gender
+ * request. Patient nouns such as "מטופל" deliberately do not belong here.
  */
-const THERAPIST_NOUNS = new Set(normList(["מטפל", "מטפלת", "מטפלים", "מטפלות", "מטופל"]));
+const THERAPIST_NOUNS = new Set(normList(["מטפל", "מטפלת", "מטפלים", "מטפלות"]));
+
+/** Phrases that explicitly say therapist gender is NOT a requirement. */
+const GENDER_NEUTRAL_PREFERENCE_PHRASES = normList([
+  "אין לי העדפה למגדר",
+  "אין העדפה למגדר",
+  "ללא העדפה למגדר",
+  "לא משנה לי המגדר",
+  "המגדר לא משנה לי",
+  "לא משנה לי גבר או אישה",
+  "לא משנה לי אישה או גבר",
+  "לא משנה גבר או אישה",
+  "לא משנה אישה או גבר",
+  "גבר או אישה לא משנה לי",
+  "אישה או גבר לא משנה לי",
+  "גבר או אישה זה לא משנה",
+  "אישה או גבר זה לא משנה",
+  "כל מגדר",
+  "לא משנה לי מטפל או מטפלת",
+  "לא משנה לי מטפלת או מטפל",
+  "אין לי העדפה בין מטפל למטפלת",
+  "אין לי העדפה אם זה מטפל או מטפלת",
+  "מטפל או מטפלת לא משנה לי",
+  "מטפל או מטפלת",
+]);
 
 const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
   const raw: Record<string, string> = {
@@ -71,12 +94,29 @@ const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
     מקוון: "online",
     מקוונת: "online",
     מרחוק: "online",
+    "טיפול מרחוק": "online",
+    "פגישה מרחוק": "online",
+    "טיפול אונליין": "online",
+    "פגישה אונליין": "online",
+    "שיחת וידאו": "online",
     // Canonical `location_type` enum values only — no `in_person`.
     פרונטלי: "clinic",
+    פרונטלית: "clinic",
     בקליניקה: "clinic",
     קליניקה: "clinic",
-    בית: "home_visit",
+    "טיפול בקליניקה": "clinic",
+    "פגישה בקליניקה": "clinic",
+    "פנים אל פנים": "clinic",
     "ביקור בית": "home_visit",
+    "ביקורי בית": "home_visit",
+    "טיפול בבית": "home_visit",
+    "פגישה בבית": "home_visit",
+    "בבית המטופל": "home_visit",
+    "בבית המטופלת": "home_visit",
+    "טיפול בבית המטופל": "home_visit",
+    "טיפול בבית המטופלת": "home_visit",
+    "הגעה לבית המטופל": "home_visit",
+    "הגעה לבית המטופלת": "home_visit",
   };
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
@@ -86,12 +126,77 @@ const DELIVERY_MODE_ALIASES: Record<string, string> = (() => {
   return out;
 })();
 
+/**
+ * "טיפול בבית" is useful, but it must not fire inside "טיפול בבית הספר",
+ * "טיפול בבית חולים" or a locality such as "בית שמש".
+ */
+const NON_HOME_VISIT_FOLLOWERS = new Set(normList(["ספר", "חולים", "אבות", "מרקחת", "משפט", "שמש"]));
+
+const THERAPY_FORMAT_ALIASES: Record<string, TherapyFormatSlug> = (() => {
+  const raw: Record<TherapyFormatSlug, readonly string[]> = {
+    individual: ["טיפול פרטני", "טיפול אישי", "טיפול אחד על אחד", "פגישה פרטנית"],
+    couples: ["טיפול זוגי", "טיפול לזוגות", "ייעוץ זוגי"],
+    family: ["טיפול משפחתי", "טיפול למשפחה", "טיפול למשפחות"],
+    parent_child: ["טיפול משותף להורה ולילד", "טיפול הורה וילד", "טיפול הורה וילדה"],
+    group: ["טיפול קבוצתי", "קבוצה טיפולית"],
+    parent_guidance: ["הדרכת הורים", "הדרכה הורית", "ייעוץ להורים", "ליווי הורים"],
+  };
+  const out: Record<string, TherapyFormatSlug> = {};
+  for (const slug of THERAPY_FORMAT_SLUGS) {
+    for (const phrase of raw[slug]) {
+      const normalized = normalizeForInterpretation(phrase);
+      if (normalized) out[normalized] = slug;
+    }
+  }
+  return out;
+})();
+
+/**
+ * Natural-language aliases for Tipulinks' eight product regions. City names
+ * alone stay cities: "חיפה" and "ירושלים" are intentionally NOT region
+ * aliases, while "אזור חיפה" / "אזור ירושלים" are.
+ */
+const REGION_QUERY_ALIASES: Record<string, RegionSlug> = (() => {
+  const raw: Record<RegionSlug, readonly string[]> = {
+    north: ["צפון", "הצפון", "אזור הצפון", "אזור צפון", "צפון הארץ"],
+    "haifa-krayot": ["חיפה והקריות", "אזור חיפה", "אזור חיפה והקריות", "הקריות", "קריות", "אזור הקריות"],
+    sharon: ["השרון", "שרון", "אזור השרון"],
+    "tel-aviv-gush-dan": ["תל אביב וגוש דן", "גוש דן", "אזור גוש דן", "אזור תל אביב", "אזור תל אביב וגוש דן"],
+    "center-shfela": [
+      "מרכז והשפלה",
+      "המרכז",
+      "מרכז",
+      "אזור המרכז",
+      "מרכז הארץ",
+      "השפלה",
+      "שפלה",
+      "אזור השפלה",
+      "אזור השפלה והמרכז",
+    ],
+    "jerusalem-area": ["ירושלים והסביבה", "אזור ירושלים", "אזור ירושלים והסביבה", "סביבת ירושלים"],
+    "judea-samaria": ["יהודה ושומרון", 'יו"ש', "יוש", "אזור יהודה ושומרון"],
+    south: ["דרום", "הדרום", "אזור הדרום", "אזור דרום", "דרום הארץ"],
+  };
+  const out: Record<string, RegionSlug> = {};
+  for (const slug of REGION_SLUGS) {
+    const variants = [REGION_DEFINITIONS[slug].label, ...raw[slug]];
+    for (const phrase of variants) {
+      const normalized = normalizeForInterpretation(phrase);
+      if (normalized) out[normalized] = slug;
+    }
+  }
+  return out;
+})();
+
+const LANGUAGE_CUE_TOKENS = new Set(
+  normList(["דובר", "דוברת", "דוברי", "דוברות", "מדבר", "מדברת", "מדברים", "מדברות", "שפה", "שפת"]),
+);
+const STRUCTURED_QUERY_FILLER_TOKENS = new Set(normList(["מטפל", "מטפלים", "מטפלות", "טיפול", "פגישה", "פגישות"]));
+
 const UNRECOGNIZED_SERVICE_PHRASES: string[] = normList([
-  // Deliberately minimal — LLM phase will handle broader coverage.
+  // These remain unsupported as canonical service/search axes.
   "מאבחן קשב",
   "אבחון קשב",
-  "הדרכת הורים",
-  "טיפול זוגי",
 ]);
 
 /**
@@ -152,10 +257,7 @@ function tokenizeNormalized(normalized: string): string[] {
   return normalized.split(" ").filter((t) => t.length >= 1);
 }
 
-function* windowsUpTo(
-  tokens: string[],
-  maxLen: number,
-): Iterable<{ start: number; end: number; text: string }> {
+function* windowsUpTo(tokens: string[], maxLen: number): Iterable<{ start: number; end: number; text: string }> {
   for (let start = 0; start < tokens.length; start++) {
     for (let len = 1; len <= maxLen && start + len <= tokens.length; len++) {
       const end = start + len;
@@ -169,8 +271,10 @@ type StructuredHit =
   | { kind: "modality"; slug: string; start: number; end: number }
   | { kind: "population"; slug: string; start: number; end: number }
   | { kind: "language"; code: string; start: number; end: number }
+  | { kind: "region"; slug: RegionSlug; start: number; end: number }
   | { kind: "city"; canonical: string; start: number; end: number }
   | { kind: "delivery"; mode: string; start: number; end: number }
+  | { kind: "therapyFormat"; slug: TherapyFormatSlug; start: number; end: number }
   | { kind: "name"; therapistId: string; start: number; end: number };
 
 /** Catalog variants are normalized via the same pipeline as user input. */
@@ -181,7 +285,9 @@ function buildLookupIndex(catalog: Catalog): {
   modalityByPhrase: Map<string, string>;
   populationByPhrase: Map<string, string>;
   languageByPhrase: Map<string, string>;
+  regionByPhrase: Map<string, RegionSlug>;
   cityByPhrase: Map<string, string>;
+  therapyFormatByPhrase: Map<string, TherapyFormatSlug>;
   nameByPhrase: Map<string, string>;
   maxLen: number;
 } {
@@ -189,7 +295,9 @@ function buildLookupIndex(catalog: Catalog): {
   const modalityByPhrase = new Map<string, string>();
   const populationByPhrase = new Map<string, string>();
   const languageByPhrase = new Map<string, string>();
+  const regionByPhrase = new Map<string, RegionSlug>();
   const cityByPhrase = new Map<string, string>();
+  const therapyFormatByPhrase = new Map<string, TherapyFormatSlug>();
   const nameByPhrase = new Map<string, string>();
   let maxLen = 1;
   const bump = (phrase: string) => {
@@ -229,6 +337,14 @@ function buildLookupIndex(catalog: Catalog): {
       bump(nv);
     }
   }
+  for (const [phrase, slug] of Object.entries(REGION_QUERY_ALIASES)) {
+    regionByPhrase.set(phrase, slug);
+    bump(phrase);
+  }
+  for (const [phrase, slug] of Object.entries(THERAPY_FORMAT_ALIASES)) {
+    therapyFormatByPhrase.set(phrase, slug);
+    bump(phrase);
+  }
   for (const c of catalog.cities) {
     for (const v of [c.canonical, ...c.aliases]) {
       const nv = normVariant(v);
@@ -254,7 +370,9 @@ function buildLookupIndex(catalog: Catalog): {
     modalityByPhrase,
     populationByPhrase,
     languageByPhrase,
+    regionByPhrase,
     cityByPhrase,
+    therapyFormatByPhrase,
     nameByPhrase,
     maxLen: Math.max(maxLen, 3),
   };
@@ -262,11 +380,29 @@ function buildLookupIndex(catalog: Catalog): {
 
 type LookupIndex = ReturnType<typeof buildLookupIndex>;
 
+function isBlockedHomeVisitPhrase(idx: LookupIndex, text: string, tokens: string[], end: number): boolean {
+  if (DELIVERY_MODE_ALIASES[text] !== "home_visit") return false;
+  const genericAtHome = new Set(normList(["טיפול בבית", "פגישה בבית"]));
+  if (!genericAtHome.has(text) || end >= tokens.length) return false;
+
+  const next = tokens[end]!;
+  if (tokenPrefixVariants(next).some((variant) => NON_HOME_VISIT_FOLLOWERS.has(variant))) return true;
+
+  // A following token may complete a real locality beginning with "בית"
+  // (most importantly בית שמש). Give the city matcher the phrase instead.
+  for (let len = 1; len <= 2 && end + len <= tokens.length; len++) {
+    const localityTail = tokens.slice(end, end + len).join(" ");
+    if (idx.cityByPhrase.has(normalizeForInterpretation(`בית ${localityTail}`))) return true;
+  }
+  return false;
+}
+
 function lookupPhrase(
   idx: LookupIndex,
   text: string,
   start: number,
   end: number,
+  tokens: string[],
 ): StructuredHit | null {
   const prof = idx.professionByPhrase.get(text);
   if (prof) return { kind: "profession", slug: prof.slug, feminine: prof.feminine, start, end };
@@ -276,19 +412,22 @@ function lookupPhrase(
   if (pop) return { kind: "population", slug: pop, start, end };
   const lang = idx.languageByPhrase.get(text);
   if (lang) return { kind: "language", code: lang, start, end };
+  const region = idx.regionByPhrase.get(text);
+  if (region) return { kind: "region", slug: region, start, end };
   const city = idx.cityByPhrase.get(text);
   if (city) return { kind: "city", canonical: city, start, end };
+  const therapyFormat = idx.therapyFormatByPhrase.get(text);
+  if (therapyFormat) return { kind: "therapyFormat", slug: therapyFormat, start, end };
   const name = idx.nameByPhrase.get(text);
   if (name) return { kind: "name", therapistId: name, start, end };
   const del = DELIVERY_MODE_ALIASES[text];
-  if (del) return { kind: "delivery", mode: del, start, end };
+  if (del && !isBlockedHomeVisitPhrase(idx, text, tokens, end)) {
+    return { kind: "delivery", mode: del, start, end };
+  }
   return null;
 }
 
-function extractStructured(
-  tokens: string[],
-  idx: LookupIndex,
-): { hits: StructuredHit[]; consumedMask: boolean[] } {
+function extractStructured(tokens: string[], idx: LookupIndex): { hits: StructuredHit[]; consumedMask: boolean[] } {
   const consumedMask = new Array<boolean>(tokens.length).fill(false);
   const hits: StructuredHit[] = [];
   const spans = Array.from(windowsUpTo(tokens, idx.maxLen));
@@ -306,7 +445,7 @@ function extractStructured(
     const tail = tokens.slice(span.start + 1, span.end);
     for (const firstVar of tokenPrefixVariants(firstToken)) {
       const phrase = tail.length === 0 ? firstVar : `${firstVar} ${tail.join(" ")}`;
-      hit = lookupPhrase(idx, phrase, span.start, span.end);
+      hit = lookupPhrase(idx, phrase, span.start, span.end, tokens);
       if (hit) break;
     }
     if (hit) {
@@ -331,11 +470,7 @@ function extractStructured(
  * so the walker can still see markers separated from their target by a
  * feminine profession form or a stray single-letter Hebrew prefix.
  */
-function hasImmediatePreferenceMarker(
-  tokens: string[],
-  hitStart: number,
-  consumedByPrevHit: boolean[],
-): boolean {
+function hasImmediatePreferenceMarker(tokens: string[], hitStart: number, consumedByPrevHit: boolean[]): boolean {
   if (hitStart === 0) return false;
   const back = Math.min(4, hitStart);
   for (let k = 1; k <= back; k++) {
@@ -360,17 +495,29 @@ function hasImmediatePreferenceMarker(
 
 export type GenderMention = { index: number; gender: TherapistGender };
 
+function genderNeutralPreferenceMask(tokens: string[]): boolean[] {
+  const mask = new Array<boolean>(tokens.length).fill(false);
+  for (const phrase of GENDER_NEUTRAL_PREFERENCE_PHRASES) {
+    const parts = phrase.split(" ");
+    for (let start = 0; start + parts.length <= tokens.length; start++) {
+      if (tokens.slice(start, start + parts.length).join(" ") !== phrase) continue;
+      for (let i = start; i < start + parts.length; i++) mask[i] = true;
+    }
+  }
+  return mask;
+}
+
 /**
  * Explicit gender mentions that describe the THERAPIST.
  *
- * Female tokens ("אישה", "מטפלת", ...) are accepted standalone.
- * Male tokens ("גבר", "זכר") require an adjacent therapist noun or a
- * canonical profession phrase, so a sentence about a male patient
- * ("אני גבר שמחפש טיפול בחרדה") never becomes a gender filter.
+ * "מטפלת" itself is an unambiguous therapist noun. Generic gender words
+ * ("אישה"/"גבר"/"זכר") require an adjacent therapist noun or canonical
+ * profession phrase, so patient self-descriptions never become filters.
  */
 function detectExplicitGender(
   tokens: string[],
   isProfessionPhraseAt: (start: number, end: number) => boolean,
+  neutralMask: boolean[],
 ): { mentions: GenderMention[]; consumed: Set<number> } {
   const mentions: GenderMention[] = [];
   const consumed = new Set<number>();
@@ -387,7 +534,13 @@ function detectExplicitGender(
   };
 
   tokens.forEach((tok, i) => {
+    if (neutralMask[i]) return;
     if (EXPLICIT_FEMALE_TOKENS.has(tok)) {
+      // "מטפלת" itself is a therapist noun. Generic female-gender words
+      // ("אישה", "נשית") need a nearby therapist/profession anchor so a
+      // patient self-description never becomes a therapist-gender filter.
+      const isTherapistNoun = THERAPIST_NOUNS.has(tok);
+      if (!isTherapistNoun && !therapistAnchorAt(i - 1) && !therapistAnchorAt(i + 1)) return;
       mentions.push({ index: i, gender: "female" });
       consumed.add(i);
       return;
@@ -444,6 +597,8 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     deliveryModes: [],
     cityNames: [],
     therapistGender: null,
+    regionSlugs: [],
+    therapyFormatSlugs: [],
   };
   const emptySoft: SoftPreferences = {
     professionSlugs: [],
@@ -491,8 +646,12 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     }
     return false;
   };
-  const gender = detectExplicitGender(tokens, isProfessionPhraseAt);
+  const neutralGenderMask = genderNeutralPreferenceMask(tokens);
+  const gender = detectExplicitGender(tokens, isProfessionPhraseAt, neutralGenderMask);
   for (const i of gender.consumed) consumedMask[i] = true;
+  for (let i = 0; i < neutralGenderMask.length; i++) {
+    if (neutralGenderMask[i]) consumedMask[i] = true;
+  }
 
   // Preference markers ("עדיף", "רצוי", ...) are functional cues, never
   // semantic content. Once we've used them to route a following entity
@@ -530,6 +689,42 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     if (nextConsumed || prevConsumed) consumedMask[i] = true;
   }
 
+  // Language syntax is structural only when it is attached to a recognized
+  // language hit. This removes "דוברת" / "שמדבר" / "בשפה" without ever
+  // stripping the word "שפה" from unrelated semantic content such as
+  // "שפה ותקשורת".
+  for (const hit of hits) {
+    if (hit.kind !== "language") continue;
+    for (const i of [hit.start - 1, hit.start - 2]) {
+      if (i < 0 || consumedMask[i]) continue;
+      if (tokenPrefixVariants(tokens[i]!).some((variant) => LANGUAGE_CUE_TOKENS.has(variant))) {
+        consumedMask[i] = true;
+      }
+    }
+    // "רוסית כשפת אם" / "רוסית שפת אם".
+    if (hit.end + 1 < tokens.length) {
+      const first = tokenPrefixVariants(tokens[hit.end]!).some((variant) => variant === "שפת");
+      const mother = normalizeForInterpretation("אם");
+      const second = tokenPrefixVariants(tokens[hit.end + 1]!).some((variant) => variant === mother);
+      if (first && second) {
+        consumedMask[hit.end] = true;
+        consumedMask[hit.end + 1] = true;
+      }
+    }
+  }
+
+  // Generic provider/query nouns are filler ONLY after at least one real
+  // structured entity was found. They therefore cannot erase meaningful
+  // free text from a purely semantic query.
+  if (hits.length > 0 || gender.mentions.length > 0) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (consumedMask[i]) continue;
+      if (tokenPrefixVariants(tokens[i]!).some((variant) => STRUCTURED_QUERY_FILLER_TOKENS.has(variant))) {
+        consumedMask[i] = true;
+      }
+    }
+  }
+
   const hardFilters: StructuredFilters = { ...emptyHard };
   const softPreferences: SoftPreferences = {
     professionSlugs: [],
@@ -544,7 +739,7 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   const genderEvidence: GenderEvidence[] = [];
   const unresolvedCodes: UnresolvedCode[] = [];
 
-  const uniq = <T>(arr: T[]): T[] => Array.from(new Set(arr));
+  const uniq = <T,>(arr: T[]): T[] => Array.from(new Set(arr));
 
   // Spans consumed by hits that END at or before `start` — the
   // preference-marker walker must never cross into another hit's
@@ -563,6 +758,24 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     }
     return m;
   };
+
+  // "פסיכולוג או פסיכולוגית" (and the reverse) names one profession while
+  // explicitly allowing either gender. Keep the profession constraint, but
+  // do not manufacture a female-therapist preference from the feminine half.
+  const neutralFeminineProfessionHits = new Set<StructuredHit>();
+  const professionHits = hits.filter(
+    (hit): hit is Extract<StructuredHit, { kind: "profession" }> => hit.kind === "profession",
+  );
+  for (const feminine of professionHits.filter((hit) => hit.feminine)) {
+    for (const masculine of professionHits.filter((hit) => !hit.feminine && hit.slug === feminine.slug)) {
+      const left = masculine.end <= feminine.start ? masculine : feminine;
+      const right = left === masculine ? feminine : masculine;
+      if (tokens.slice(left.end, right.start).join(" ") === "או") {
+        neutralFeminineProfessionHits.add(feminine);
+        for (let i = left.end; i < right.start; i++) consumedMask[i] = true;
+      }
+    }
+  }
 
   // Gender evidence is collected first (as hard/soft candidates) so a
   // criterion claimed by a preference marker is never ALSO hard.
@@ -589,10 +802,9 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     const preferred = hasImmediatePreferenceMarker(tokens, hit.start, prevHitMaskFor(hit.start));
     switch (hit.kind) {
       case "profession":
-        if (hit.feminine) {
+        if (hit.feminine && !neutralFeminineProfessionHits.has(hit)) {
           noteGender("female", preferred);
-          if (!genderEvidence.includes("feminine_profession_form"))
-            genderEvidence.push("feminine_profession_form");
+          if (!genderEvidence.includes("feminine_profession_form")) genderEvidence.push("feminine_profession_form");
         }
         (preferred ? softPreferences.professionSlugs : hardFilters.professionSlugs).push(hit.slug);
         break;
@@ -605,11 +817,20 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
       case "language":
         (preferred ? softPreferences.languageCodes : hardFilters.languageCodes).push(hit.code);
         break;
+      case "region":
+        // Region preferences are not a ranking dimension today, so a
+        // recognized region is a deterministic hard constraint.
+        (hardFilters.regionSlugs ??= []).push(hit.slug);
+        break;
       case "city":
         (preferred ? softPreferences.cities : hardFilters.cityNames).push(hit.canonical);
         break;
       case "delivery":
         (preferred ? softPreferences.deliveryModes : hardFilters.deliveryModes).push(hit.mode);
+        break;
+      case "therapyFormat":
+        // Therapy format is an explicit discovery axis, not semantic residue.
+        (hardFilters.therapyFormatSlugs ??= []).push(hit.slug);
         break;
       case "name":
         therapistNameIds.push(hit.therapistId);
@@ -641,6 +862,8 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
   hardFilters.languageCodes = uniq(hardFilters.languageCodes);
   hardFilters.deliveryModes = uniq(hardFilters.deliveryModes);
   hardFilters.cityNames = uniq(hardFilters.cityNames);
+  hardFilters.regionSlugs = uniq(hardFilters.regionSlugs ?? []);
+  hardFilters.therapyFormatSlugs = uniq(hardFilters.therapyFormatSlugs ?? []);
   softPreferences.professionSlugs = uniq(softPreferences.professionSlugs);
   softPreferences.modalitySlugs = uniq(softPreferences.modalitySlugs);
   softPreferences.populationSlugs = uniq(softPreferences.populationSlugs);
@@ -659,6 +882,8 @@ export function interpretQuery(raw: string, catalog: Catalog): InterpretationRes
     hardFilters.languageCodes.length > 0 ||
     hardFilters.deliveryModes.length > 0 ||
     hardFilters.cityNames.length > 0 ||
+    (hardFilters.regionSlugs?.length ?? 0) > 0 ||
+    (hardFilters.therapyFormatSlugs?.length ?? 0) > 0 ||
     hardFilters.therapistGender !== null;
   const hasName = therapistNameIds.length > 0;
   const hasSemantic = remainderTokens.length > 0;
@@ -698,4 +923,7 @@ export const __internals = {
   detectExplicitGender,
   detectUnresolvedService,
   tokenPrefixVariants,
+  DELIVERY_MODE_ALIASES,
+  THERAPY_FORMAT_ALIASES,
+  REGION_QUERY_ALIASES,
 };
