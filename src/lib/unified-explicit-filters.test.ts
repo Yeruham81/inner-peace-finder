@@ -22,7 +22,7 @@ function client() {
 
 function run(
   query: string,
-  explicit: { city?: string; population?: string; language?: string } = {},
+  explicit: { city?: string; population?: string; language?: string; languages?: string | string[] } = {},
 ) {
   return runUnifiedSearch({ query, explicit, limit: 20 }, client());
 }
@@ -73,6 +73,24 @@ describe("unified search — explicit UI filters on the real production path", (
     expect(out.results.map((r) => r.id)).toEqual(["t-haifa"]);
   });
 
+  it('q="" + languages=he,ru → languages are OR within the category', async () => {
+    const out = await run("", { languages: ["he", "ru"] });
+    expect(out.plan.hardFilters.languageCodes).toEqual(["he", "ru"]);
+    expect(out.results.map((r) => r.id).sort()).toEqual(["t-haifa", "t-telaviv"]);
+  });
+
+  it("empty languages does not mask legacy language=ru", async () => {
+    const out = await run("", { languages: "", language: "ru" });
+    expect(out.plan.hardFilters.languageCodes).toEqual(["ru"]);
+    expect(out.results.map((r) => r.id)).toEqual(["t-haifa"]);
+  });
+
+  it("non-empty languages takes precedence over legacy language", async () => {
+    const out = await run("", { languages: "he", language: "ru" });
+    expect(out.plan.hardFilters.languageCodes).toEqual(["he"]);
+    expect(out.results.map((r) => r.id)).toEqual(["t-telaviv"]);
+  });
+
   it('q="פסיכולוג" + explicit city=חיפה → profession from query AND city from UI', async () => {
     const out = await run("פסיכולוג", { city: "חיפה" });
     expect(out.plan.hardFilters.professionSlugs).toEqual(["psychologist"]);
@@ -86,9 +104,7 @@ describe("unified search — explicit UI filters on the real production path", (
     expect(out.plan.interpretation.hardFilters.cityNames).toEqual(["תל אביב"]);
     expect(out.plan.hardFilters.cityNames).toEqual(["חיפה"]);
     expect(out.plan.hardFilters.cityNames).not.toContain("תל אביב");
-    expect(out.plan.filterConflicts).toEqual([
-      { category: "city", inferred: ["תל אביב"], explicit: ["חיפה"] },
-    ]);
+    expect(out.plan.filterConflicts).toEqual([{ category: "city", inferred: ["תל אביב"], explicit: ["חיפה"] }]);
     expect(out.results.map((r) => r.id)).toEqual(["t-haifa"]);
   });
 
