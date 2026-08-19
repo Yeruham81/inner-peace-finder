@@ -1,5 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts } from "@tanstack/react-router";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  useRouterState,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
@@ -126,6 +134,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+
+  if (isAdmin) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
