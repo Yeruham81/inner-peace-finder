@@ -151,12 +151,10 @@ describe("saveMyProfile — semantic wiring", () => {
   it("includes semantic_profile in the single transactional save payload", () => {
     expect(saveSource).toContain("semantic_profile: semanticProfile");
     const payloadStart = saveSource.indexOf("const payload = {");
-    const payloadEnd = saveSource.indexOf('.rpc("save_therapist_profile"');
+    const payloadEnd = saveSource.indexOf('.rpc("save_therapist_profile_with_contacts"');
     expect(payloadStart).toBeGreaterThan(-1);
     expect(payloadEnd).toBeGreaterThan(payloadStart);
-    expect(saveSource.slice(payloadStart, payloadEnd)).toContain(
-      "semantic_profile: semanticProfile",
-    );
+    expect(saveSource.slice(payloadStart, payloadEnd)).toContain("semantic_profile: semanticProfile");
     // Create and update share one atomic database operation.
     expect(saveSource).toContain("_payload: payload as never");
   });
