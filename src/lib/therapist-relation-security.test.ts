@@ -31,9 +31,7 @@ function relationLockdownMigration(): string {
   const file = readdirSync(MIGRATIONS)
     .filter((f) => f.endsWith(".sql"))
     .map((f) => ({ f, sql: readFileSync(join(MIGRATIONS, f), "utf8") }))
-    .find(({ sql }) =>
-      /REVOKE ALL PRIVILEGES ON TABLE public\.therapist_populations FROM anon/i.test(sql),
-    );
+    .find(({ sql }) => /REVOKE ALL PRIVILEGES ON TABLE public\.therapist_populations FROM anon/i.test(sql));
   expect(file, "relation-table lockdown migration must exist").toBeDefined();
   return file!.sql;
 }
@@ -60,27 +58,18 @@ describe("therapist relation tables — lockdown migration", () => {
       });
 
       it("revokes every direct privilege from anon and never grants any back", () => {
-        expect(sql).toMatch(
-          new RegExp(`REVOKE ALL PRIVILEGES ON TABLE public\\.${t} FROM anon`, "i"),
-        );
-        expect(
-          new RegExp(`GRANT[^;]*\\bON TABLE public\\.${t}\\b[^;]*TO anon`, "i").test(sql),
-        ).toBe(false);
+        expect(sql).toMatch(new RegExp(`REVOKE ALL PRIVILEGES ON TABLE public\\.${t} FROM anon`, "i"));
+        expect(new RegExp(`GRANT[^;]*\\bON TABLE public\\.${t}\\b[^;]*TO anon`, "i").test(sql)).toBe(false);
       });
 
       it("narrows authenticated to exactly the editor operations", () => {
-        expect(sql).toMatch(
-          new RegExp(`REVOKE ALL PRIVILEGES ON TABLE public\\.${t} FROM authenticated`, "i"),
-        );
-        expect(sql).toContain(
-          `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.${t} TO authenticated;`,
-        );
+        expect(sql).toMatch(new RegExp(`REVOKE ALL PRIVILEGES ON TABLE public\\.${t} FROM authenticated`, "i"));
+        expect(sql).toContain(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.${t} TO authenticated;`);
         // no TRUNCATE / REFERENCES / TRIGGER / ALL for authenticated
         expect(
-          new RegExp(
-            `GRANT[^;]*(ALL|TRUNCATE|REFERENCES|TRIGGER)[^;]*public\\.${t}[^;]*TO authenticated`,
-            "i",
-          ).test(sql),
+          new RegExp(`GRANT[^;]*(ALL|TRUNCATE|REFERENCES|TRIGGER)[^;]*public\\.${t}[^;]*TO authenticated`, "i").test(
+            sql,
+          ),
         ).toBe(false);
       });
 
@@ -146,9 +135,7 @@ describe("therapist relation tables — server/client boundary", () => {
   it("the profile editor never mutates therapist tables directly from application code", () => {
     const src = read("lib/therapist-profile.functions.ts");
     expect(src).toContain("requireSupabaseAuth");
-    expect(src.includes("trusted-read-client"), "editor must not use the privileged client").toBe(
-      false,
-    );
+    expect(src.includes("trusted-read-client"), "editor must not use the privileged client").toBe(false);
     // Admin access is only ever reached through lazy in-handler imports.
     expect(/^import .*client\.server/m.test(src)).toBe(false);
     expect(src).toContain('await import("@/integrations/supabase/client.server")');
@@ -158,7 +145,7 @@ describe("therapist relation tables — server/client boundary", () => {
     // therapist tables at all.
     // (therapist_credentials is the one exception: verification columns are
     // written through the admin client after ownership + document checks.)
-    expect(src).toContain('.rpc("save_therapist_profile"');
+    expect(src).toContain('.rpc("save_therapist_profile_with_contacts"');
     // (therapist_accounts: only the self-row creation insert, whose status
     // columns a database trigger forces back to the platform defaults.)
     const editorWrites =
@@ -175,10 +162,7 @@ describe("therapist relation tables — server/client boundary", () => {
 
   it("public DTOs expose no raw location columns", () => {
     const dto = read("lib/public-therapist-profile.ts");
-    const publicList = dto.slice(
-      dto.indexOf("PUBLIC_THERAPIST_COLUMNS"),
-      dto.indexOf("] as const"),
-    );
+    const publicList = dto.slice(dto.indexOf("PUBLIC_THERAPIST_COLUMNS"), dto.indexOf("] as const"));
     for (const col of ["address", "postal_code", "latitude", "longitude", "region"]) {
       expect(publicList.includes(`"${col}"`), col).toBe(false);
     }
