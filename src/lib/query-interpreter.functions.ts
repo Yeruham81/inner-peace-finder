@@ -50,7 +50,9 @@ const Input = z.object({
   problems: z.union([z.string().max(240), z.array(z.string().max(80)).max(5)]).optional(),
   city: z.string().trim().max(80).optional().default(""),
   population: z.string().trim().max(40).optional().default(""),
-  language: z.string().trim().max(8).optional().default(""),
+  /** Legacy single-language input; new clients send `languages`. */
+  language: z.string().trim().max(40).optional().default(""),
+  languages: z.union([z.string().max(80), z.array(z.string().max(8)).max(8)]).optional(),
   regions: z.union([z.string().max(200), z.array(z.string().max(40))]).optional(),
   serviceTypes: z.union([z.string().max(120), z.array(z.string().max(40))]).optional(),
   professions: z.union([z.string().max(300), z.array(z.string().max(80))]).optional(),
@@ -963,6 +965,7 @@ export const unifiedSearch = createServerFn({ method: "POST" })
         city: data.city,
         population: data.population,
         language: data.language,
+        languages: data.languages,
         regions: data.regions,
         serviceTypes: data.serviceTypes,
         professions: data.professions,
