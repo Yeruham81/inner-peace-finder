@@ -8,7 +8,8 @@
  *   q            free text
  *   city         EXACTLY one canonical locality name (never region slugs)
  *   population   one canonical population slug
- *   language     one canonical language code
+ *   languages    comma-separated canonical language codes
+ *   language     legacy single-language parameter (read-only compatibility)
  *   regions      comma-separated canonical region slugs (normalized, deduped)
  *   serviceTypes comma-separated canonical `location_type` values
  *   excludedCriteria comma-separated query-inference exclusions (`problem:slug`, `population:slug`)
@@ -18,6 +19,7 @@
  * one filter selection always produces exactly one URL.
  */
 
+import { CANONICAL_LANGUAGE_CODES, type CanonicalLanguageCode } from "./language-options";
 import { REGION_SLUGS, isRegionSlug, type RegionSlug } from "./locality-options";
 
 /**
@@ -80,6 +82,15 @@ export function normalizeRegionsParam(raw: MultiValueInput): NormalizedMulti<Reg
 /** Validate + normalize + dedupe the `serviceTypes` parameter. */
 export function normalizeServiceTypesParam(raw: MultiValueInput): NormalizedMulti<ServiceType> {
   return normalizeAgainst(raw, SERVICE_TYPES, isServiceType);
+}
+
+export function isCanonicalLanguageCode(value: string): value is CanonicalLanguageCode {
+  return (CANONICAL_LANGUAGE_CODES as readonly string[]).includes(value);
+}
+
+/** Validate + normalize + dedupe the canonical multi-language parameter. */
+export function normalizeLanguagesParam(raw: MultiValueInput): NormalizedMulti<CanonicalLanguageCode> {
+  return normalizeAgainst(raw, CANONICAL_LANGUAGE_CODES, isCanonicalLanguageCode);
 }
 
 export function normalizeTherapyFormatsParam(raw: MultiValueInput): NormalizedMulti<TherapyFormatSlug> {
@@ -151,7 +162,7 @@ export type ExplicitSearchContract = {
   problemSlugs: string[];
   city: string;
   population: string;
-  language: string;
+  languages: CanonicalLanguageCode[];
   regions: RegionSlug[];
   serviceTypes: ServiceType[];
   professionSlugs: string[];
@@ -176,7 +187,9 @@ export function resolveSearchContract(input: {
   problemSlugs?: MultiValueInput;
   city?: string | null;
   population?: string | null;
+  /** Legacy single-language URL parameter. New navigation must write `languages`. */
   language?: string | null;
+  languages?: MultiValueInput;
   regions?: MultiValueInput;
   serviceTypes?: MultiValueInput;
   professions?: MultiValueInput;
@@ -195,12 +208,19 @@ export function resolveSearchContract(input: {
   const fromParam = normalizeRegionsParam(input.regions).values;
   const regions = fromParam.length > 0 ? fromParam : legacy.regions;
   const excludedCriteria = normalizeExcludedCriteriaParam(input.excludedCriteria);
+  // `languages` is the canonical URL parameter. Fall back to the legacy
+  // `language` only when the new parameter contains no actual value. This is
+  // deliberately based on raw presence rather than normalized output so an
+  // invalid non-empty new value cannot silently resurrect a stale legacy one.
+  const rawLanguages = splitMultiValue(input.languages);
+  const languageSource: MultiValueInput = rawLanguages.length > 0 ? rawLanguages : input.language;
+  const languages = normalizeLanguagesParam(languageSource).values;
   return {
     q: (input.q ?? "").trim(),
     problemSlugs: normalizeSlugList(input.problem ?? input.problemSlugs),
     city: legacy.city,
     population: (input.population ?? "").trim(),
-    language: (input.language ?? "").trim(),
+    languages,
     regions,
     serviceTypes: normalizeServiceTypesParam(input.serviceTypes).values,
     professionSlugs: normalizeSlugList(input.professions ?? input.professionSlugs),
@@ -222,7 +242,7 @@ export function hasAnyExplicitFilter(c: ExplicitSearchContract): boolean {
     c.city ||
     c.problemSlugs.length ||
     c.population ||
-    c.language ||
+    c.languages.length ||
     c.regions.length ||
     c.serviceTypes.length ||
     c.professionSlugs.length ||
