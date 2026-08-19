@@ -67,7 +67,9 @@ type SearchFormProps = {
     regions?: string[];
     city?: string | string[];
     population?: string;
+    /** Legacy single-language input; canonical state uses `languages`. */
     language?: string;
+    languages?: string[];
     serviceType?: string | string[];
     serviceTypes?: string[];
     professions?: string[];
@@ -121,6 +123,7 @@ export function SearchForm({
     city: Array.isArray(initialFilters.city) ? initialFilters.city[0] : initialFilters.city,
     population: initialFilters.population,
     language: initialFilters.language,
+    languages: initialFilters.languages,
     regions: multiValue(initialFilters.regions, initialFilters.region),
     serviceTypes: multiValue(initialFilters.serviceTypes, initialFilters.serviceType),
     professions: initialFilters.professions,
@@ -133,6 +136,7 @@ export function SearchForm({
     freeIntro: initialFilters.freeIntro,
     excludedCriteria: initialFilters.excludedCriteria,
   });
+  const appliedLanguageKey = appliedContract.languages.join(",");
   const appliedRegionKey = appliedContract.regions.join(",");
   const appliedServiceTypeKey = appliedContract.serviceTypes.join(",");
   const appliedProfessionKey = appliedContract.professionSlugs.join(",");
@@ -150,7 +154,7 @@ export function SearchForm({
   const [q, setQ] = useState(appliedContract.q);
   const [city, setCity] = useState(appliedContract.city);
   const [population, setPopulation] = useState(appliedContract.population || inferredPopulation);
-  const [language, setLanguage] = useState(appliedContract.language);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([...appliedContract.languages]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([...appliedContract.regions]);
   const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([...appliedContract.serviceTypes]);
   const [selectedProfessions, setSelectedProfessions] = useState<string[]>([...appliedContract.professionSlugs]);
@@ -172,7 +176,7 @@ export function SearchForm({
     setQ(appliedContract.q);
     setCity(appliedContract.city);
     setPopulation(appliedContract.population || inferredPopulation);
-    setLanguage(appliedContract.language);
+    setSelectedLanguages(appliedLanguageKey ? appliedLanguageKey.split(",") : []);
     setSelectedRegions(appliedRegionKey ? appliedRegionKey.split(",") : []);
     setSelectedServiceTypes(appliedServiceTypeKey ? appliedServiceTypeKey.split(",") : []);
     setSelectedProfessions([...appliedContract.professionSlugs]);
@@ -190,7 +194,7 @@ export function SearchForm({
     appliedContract.q,
     appliedContract.city,
     appliedContract.population,
-    appliedContract.language,
+    appliedLanguageKey,
     appliedRegionKey,
     appliedServiceTypeKey,
     appliedProfessionKey,
@@ -252,6 +256,8 @@ export function SearchForm({
         label: "שפת טיפול",
         placeholder: "כל השפות",
         options: languageOptions,
+        multiple: true,
+        helperText: "אפשר לבחור שפה אחת או יותר. מטפל/ת שמציע/ה לפחות אחת מהשפות שנבחרו ייכלל/תיכלל בתוצאות.",
       },
       {
         key: "population",
@@ -313,7 +319,7 @@ export function SearchForm({
       case "city":
         return city ? [city] : [];
       case "language":
-        return language ? [language] : [];
+        return selectedLanguages;
       case "population":
         return population ? [population] : [];
       case "serviceType":
@@ -356,15 +362,11 @@ export function SearchForm({
           },
         ]
       : []),
-    ...(appliedContract.language
-      ? [
-          {
-            key: "language" as const,
-            value: appliedContract.language,
-            label: optionLabel("language", appliedContract.language),
-          },
-        ]
-      : []),
+    ...appliedContract.languages.map((value) => ({
+      key: "language" as const,
+      value,
+      label: optionLabel("language", value),
+    })),
     ...(appliedContract.population
       ? [
           {
@@ -436,7 +438,9 @@ export function SearchForm({
     q: string;
     city?: string;
     population?: string;
+    /** Legacy read compatibility only. */
     language?: string;
+    languages?: readonly string[];
     regions?: readonly string[];
     serviceTypes?: readonly string[];
     professions?: readonly string[];
@@ -458,7 +462,9 @@ export function SearchForm({
         problem: keepCanonicalProblem ? preserveSearch?.problem || undefined : undefined,
         city: contract.city || undefined,
         population: contract.population || undefined,
-        language: contract.language || undefined,
+        // Canonical writes use only `languages`; explicitly drop legacy `language`.
+        language: undefined,
+        languages: serializeMultiValue(contract.languages),
         regions: serializeMultiValue(contract.regions),
         serviceTypes: serializeMultiValue(contract.serviceTypes),
         professions: serializeMultiValue(contract.professionSlugs),
@@ -486,7 +492,7 @@ export function SearchForm({
       q: normalizedQuery,
       city,
       population: submittedPopulation,
-      language,
+      languages: selectedLanguages,
       regions: selectedRegions,
       serviceTypes: selectedServiceTypes,
       professions: selectedProfessions,
@@ -520,7 +526,10 @@ export function SearchForm({
     }
     if (filter.key === "city") setCity((current) => (current === value ? "" : value));
     if (filter.key === "language") {
-      setLanguage((current) => (current === value ? "" : value));
+      setSelectedLanguages((current) =>
+        current.includes(value) ? current.filter((language) => language !== value) : [...current, value],
+      );
+      return;
     }
     if (filter.key === "population") {
       setPopulationTouched(true);
@@ -553,7 +562,7 @@ export function SearchForm({
   function clearDraftFilter(key: FilterKey) {
     if (key === "regions") setSelectedRegions([]);
     if (key === "city") setCity("");
-    if (key === "language") setLanguage("");
+    if (key === "language") setSelectedLanguages([]);
     if (key === "population") {
       setPopulationTouched(true);
       if (!appliedContract.population && inferredPopulation) {
@@ -574,7 +583,10 @@ export function SearchForm({
       q: appliedContract.q,
       city: chip.key === "city" ? "" : appliedContract.city,
       population: chip.key === "population" ? "" : appliedContract.population,
-      language: chip.key === "language" ? "" : appliedContract.language,
+      languages:
+        chip.key === "language"
+          ? appliedContract.languages.filter((value) => value !== chip.value)
+          : appliedContract.languages,
       regions:
         chip.key === "regions"
           ? appliedContract.regions.filter((value) => value !== chip.value)
@@ -610,7 +622,7 @@ export function SearchForm({
       q: appliedContract.q,
       city: appliedContract.city,
       population: appliedContract.population,
-      language: appliedContract.language,
+      languages: appliedContract.languages,
       regions: appliedContract.regions,
       serviceTypes: appliedContract.serviceTypes,
       professions: appliedContract.professionSlugs,
