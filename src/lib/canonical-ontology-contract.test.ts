@@ -1,22 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
-import {
-  CANONICAL_PROBLEM_SLUGS,
-  HOMEPAGE_PROBLEM_MAP,
-  homepageProblemSlugs,
-} from "./homepage-problem-map";
+import { CANONICAL_PROBLEM_SLUGS, HOMEPAGE_PROBLEM_MAP, homepageProblemSlugs } from "./homepage-problem-map";
 
-const POPULATION_SQL = readFileSync(
-  "supabase/migrations/20260814151000_canonical_population_slugs.sql",
-  "utf8",
-);
+const POPULATION_SQL = readFileSync("supabase/migrations/20260814151000_canonical_population_slugs.sql", "utf8");
 
 function homepageTerms(): string[] {
   const source = readFileSync("src/routes/index.tsx", "utf8");
-  const explorer = source.slice(
-    source.indexOf("const problemDomains"),
-    source.indexOf("const popularSearches"),
-  );
+  const explorer = source.slice(source.indexOf("const problemDomains"), source.indexOf("const popularSearches"));
   return [...explorer.matchAll(/problems:\s*\[([\s\S]*?)\]/g)].flatMap((match) =>
     [...match[1]!.matchAll(/"([^"]+)"/g)].map((value) => value[1]!),
   );
@@ -91,6 +81,8 @@ describe("canonical homepage ontology contract", () => {
 
     expect(homepageSource).toContain("homepageProblemSlugs(problem)");
     expect(homepageSource).toContain("problem: serializeMultiValue(problemSlugs)");
+    expect(homepageSource).toContain("const popularSearches = HOMEPAGE_SEARCH_PRESETS");
+    expect(homepageSource).toContain("search: preset.search");
 
     expect(searchSource).toContain("problem: s.problem");
     expect(searchSource).toContain("problems: [...p.problemSlugs]");
