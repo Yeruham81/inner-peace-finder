@@ -14,6 +14,7 @@
 
 import { normalizeForInterpretation } from "./query-normalization";
 import {
+  normalizeLanguagesParam,
   normalizeRegionsParam,
   normalizeServiceTypesParam,
   normalizeTherapyFormatsParam,
@@ -31,7 +32,9 @@ import type {
 export type RawExplicitFilters = {
   city?: string | null;
   population?: string | null;
+  /** Legacy single-language input. */
   language?: string | null;
+  languages?: MultiValueInput;
   regions?: MultiValueInput;
   serviceTypes?: MultiValueInput;
   professions?: MultiValueInput;
@@ -67,6 +70,7 @@ export function hasExplicitFilters(raw: RawExplicitFilters): boolean {
     raw.city?.trim() ||
     raw.population?.trim() ||
     raw.language?.trim() ||
+    multi(raw.languages) ||
     multi(raw.regions) ||
     multi(raw.serviceTypes) ||
     multi(raw.professions) ||
@@ -123,8 +127,30 @@ export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalo
     else out.rejected.push({ category: "population", value: population });
   }
 
-  const language = raw.language?.trim();
-  if (language) {
+  // Canonical multi-select language values are codes. Keep accepting the old
+  // single `language` field for existing links/callers. An empty `languages`
+  // value must NOT mask a non-empty legacy language.
+  const rawLanguages = Array.isArray(raw.languages)
+    ? raw.languages.map((value) => String(value).trim()).filter(Boolean)
+    : typeof raw.languages === "string"
+      ? raw.languages
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+  const languageValues = rawLanguages.length > 0 ? rawLanguages : raw.language?.trim() ? [raw.language.trim()] : [];
+  const canonicalLanguages = normalizeLanguagesParam(languageValues);
+  const availableLanguageCodes = new Set(catalog.languages.map((language) => language.code.toLowerCase()));
+  out.languageCodes = canonicalLanguages.values.filter((code) => availableLanguageCodes.has(code));
+  for (const code of canonicalLanguages.values) {
+    if (!availableLanguageCodes.has(code)) out.rejected.push({ category: "language", value: code });
+  }
+
+  // `normalizeLanguagesParam` intentionally accepts only canonical codes. For
+  // backward-compatible direct server callers, also resolve a rejected
+  // singleton legacy value through the loaded language catalog (e.g. רוסית).
+  if (rawLanguages.length === 0 && languageValues.length === 1 && canonicalLanguages.values.length === 0) {
+    const language = languageValues[0]!;
     const n = normalizeForInterpretation(language);
     const hit = catalog.languages.find(
       (l) =>
@@ -132,8 +158,10 @@ export function validateExplicitFilters(raw: RawExplicitFilters, catalog: Catalo
         normalizeForInterpretation(l.name_he) === n ||
         l.aliases.some((a) => normalizeForInterpretation(a) === n),
     );
-    if (hit) out.languageCodes.push(hit.code);
+    if (hit) out.languageCodes = [hit.code];
     else out.rejected.push({ category: "language", value: language });
+  } else {
+    for (const value of canonicalLanguages.rejected) out.rejected.push({ category: "language", value });
   }
 
   // Regions and service types are validated against the canonical contract
