@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { listFilterOptions } from "@/lib/therapists.functions";
 import { SearchForm } from "@/components/search-form";
 import { homepageProblemSlugs } from "@/lib/homepage-problem-map";
+import { HOMEPAGE_SEARCH_PRESETS, type HomepageSearchPreset } from "@/lib/homepage-search-presets";
 import { serializeMultiValue } from "@/lib/search-contract";
 
 const filterOptionsQuery = queryOptions({
@@ -283,16 +284,7 @@ const populationGroups: ExplorerItem[] = [
   },
 ];
 
-const popularSearches = [
-  "טיפול בחרדה חברתית לבני נוער",
-  "טיפול זוגי באזור השרון",
-  "קלינאית תקשורת לפעוטות בפתח תקווה",
-  "פסיכולוג ילדים לקשב וריכוז בתל אביב",
-  "טיפול אונליין בדיכאון בעברית",
-  "טיפול בטראומה באזור ירושלים",
-  "פסיכולוגית דוברת רוסית באזור חיפה",
-  "הדרכת הורים להתפרצויות זעם",
-];
+const popularSearches = HOMEPAGE_SEARCH_PRESETS;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -714,10 +706,10 @@ function SupportHotlinesModal({ onClose }: { onClose: () => void }) {
 function PopularSearches() {
   const navigate = useNavigate();
 
-  function startSearch(query: string) {
+  function startSearch(preset: HomepageSearchPreset) {
     navigate({
       to: "/search",
-      search: { q: query },
+      search: preset.search,
     });
   }
 
@@ -726,29 +718,29 @@ function PopularSearches() {
       <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">חיפושים לדוגמה</h2>
 
       <div className="mt-5 grid grid-cols-2 gap-2.5 lg:hidden">
-        {popularSearches.slice(0, 6).map((query) => (
+        {popularSearches.slice(0, 6).map((preset) => (
           <button
-            key={query}
+            key={preset.label}
             type="button"
-            aria-label={`חיפוש ישיר: ${query}`}
-            onClick={() => startSearch(query)}
+            aria-label={`חיפוש ישיר: ${preset.label}`}
+            onClick={() => startSearch(preset)}
             className="flex min-h-[4.75rem] w-full cursor-pointer items-center justify-center rounded-2xl border border-brand/20 bg-surface-elevated px-3 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
           >
-            <span className="line-clamp-3">{query}</span>
+            <span className="line-clamp-3">{preset.label}</span>
           </button>
         ))}
       </div>
 
       <div className="mt-5 hidden grid-cols-4 gap-3 lg:grid">
-        {popularSearches.map((query) => (
+        {popularSearches.map((preset) => (
           <button
-            key={query}
+            key={preset.label}
             type="button"
-            aria-label={`חיפוש ישיר: ${query}`}
-            onClick={() => startSearch(query)}
+            aria-label={`חיפוש ישיר: ${preset.label}`}
+            onClick={() => startSearch(preset)}
             className="flex min-h-[4.5rem] w-full cursor-pointer items-center justify-center rounded-2xl border border-brand/20 bg-surface-elevated px-4 py-2.5 text-center text-sm font-semibold leading-5 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/70 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
           >
-            <span className="line-clamp-2">{query}</span>
+            <span className="line-clamp-2">{preset.label}</span>
           </button>
         ))}
       </div>
