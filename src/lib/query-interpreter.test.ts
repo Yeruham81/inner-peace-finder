@@ -96,7 +96,7 @@ describe("interpretQuery", () => {
   });
 
   it("gender conflict is not resolved to either value", () => {
-    const r = interpretQuery("אישה גבר פסיכולוג", catalog);
+    const r = interpretQuery("פסיכולוגית גבר", catalog);
     expect(r.hardFilters.therapistGender).toBeNull();
     expect(r.unresolvedCodes).toContain("gender_conflict");
   });
@@ -155,16 +155,20 @@ describe("interpretQuery — Q1 mandatory regression cases", () => {
     expect(r.unresolvedCodes).toContain("unrecognized_service");
   });
 
-  it("'אני צריך הדרכת הורים' → unresolved_service", () => {
+  it("'אני צריך הדרכת הורים' → canonical parent-guidance format", () => {
     const r = interpretQuery("אני צריך הדרכת הורים", catalog);
-    expect(r.unresolvedPrimary).toBe(true);
-    expect(r.intent).toBe("unresolved_service");
+    expect(r.unresolvedPrimary).toBe(false);
+    expect(r.hardFilters.therapyFormatSlugs).toEqual(["parent_guidance"]);
+    expect(r.semanticRemainder).toBe("");
+    expect(r.intent).toBe("structured");
   });
 
-  it("'אשמח לקבל טיפול זוגי' → unresolved_service", () => {
+  it("'אשמח לקבל טיפול זוגי' → canonical couples format", () => {
     const r = interpretQuery("אשמח לקבל טיפול זוגי", catalog);
-    expect(r.unresolvedPrimary).toBe(true);
-    expect(r.intent).toBe("unresolved_service");
+    expect(r.unresolvedPrimary).toBe(false);
+    expect(r.hardFilters.therapyFormatSlugs).toEqual(["couples"]);
+    expect(r.semanticRemainder).toBe("");
+    expect(r.intent).toBe("structured");
   });
 
   it("'קשקושלאמוכר' → unknown intent, no hard filters, no name", () => {
