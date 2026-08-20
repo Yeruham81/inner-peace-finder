@@ -17,18 +17,14 @@ async function withRetry<T>(label: string, work: () => Promise<T>, attempts = 3)
 
 async function removeStorageFolder(bucket: ProfileStorageBucket, folder: string) {
   const listed = await supabaseAdmin.storage.from(bucket).list(folder, { limit: 1000 });
-  if (listed.error)
-    throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listed.error.message}`);
+  if (listed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${listed.error.message}`);
 
-  const paths = (listed.data ?? [])
-    .filter((file) => file.name)
-    .map((file) => `${folder}/${file.name}`);
+  const paths = (listed.data ?? []).filter((file) => file.name).map((file) => `${folder}/${file.name}`);
 
   if (!paths.length) return;
 
   const removed = await supabaseAdmin.storage.from(bucket).remove(paths);
-  if (removed.error)
-    throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removed.error.message}`);
+  if (removed.error) throw new Error(`לא ניתן למחוק קבצים מהמאגר ${bucket}: ${removed.error.message}`);
 }
 
 export async function setOwnedProfileVisibility(accountId: string, visible: boolean) {
@@ -39,15 +35,48 @@ export async function setOwnedProfileVisibility(accountId: string, visible: bool
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!profile) throw new Error("לא נמצא פרופיל לניהול.");
-  if (visible && profile.profile_status !== "published")
-    throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
+  if (visible && profile.profile_status !== "published") throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
   const visibility = visible ? ("visible" as const) : ("hidden" as const);
-  const updated = await supabaseAdmin
-    .from("therapists")
-    .update({ visibility })
-    .eq("id", profile.id);
+  const updated = await supabaseAdmin.from("therapists").update({ visibility }).eq("id", profile.id);
   if (updated.error) throw new Error(updated.error.message);
   return { visibility };
+}
+
+export async function updateOwnedProfileContactPreferences(
+  accountId: string,
+  preferences: {
+    email: string | null;
+    phone: string | null;
+    contact_methods: Array<"whatsapp" | "email" | "phone">;
+    preferred_contact_method: "whatsapp" | "email" | "phone";
+  },
+) {
+  const { data: profile, error } = await supabaseAdmin
+    .from("therapists")
+    .select("id")
+    .eq("owner_account_id", accountId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!profile) throw new Error("יש לשמור את הפרופיל לפחות פעם אחת לפני הגדרת דרכי התקשרות.");
+
+  const updated = await supabaseAdmin
+    .from("therapists")
+    .update({
+      email: preferences.email,
+      phone: preferences.phone,
+      contact_methods: preferences.contact_methods,
+      preferred_contact_method: preferences.preferred_contact_method,
+    })
+    .eq("id", profile.id)
+    .eq("owner_account_id", accountId);
+  if (updated.error) throw new Error(updated.error.message);
+
+  return {
+    email: preferences.email,
+    phone: preferences.phone,
+    contact_methods: preferences.contact_methods,
+    preferred_contact_method: preferences.preferred_contact_method,
+  };
 }
 
 /**
@@ -81,13 +110,9 @@ export async function permanentlyDeleteOwnedProfile(authUserId: string) {
 
   // The profile is already invisible to the public at this point, so storage
   // cleanup failures are retried rather than rolled back.
-  await withRetry("לא ניתן למחוק מסמכי הסמכה", () =>
-    removeStorageFolder("therapist-credentials", storageOwner),
-  );
+  await withRetry("לא ניתן למחוק מסמכי הסמכה", () => removeStorageFolder("therapist-credentials", storageOwner));
   if (therapistId) {
-    await withRetry("לא ניתן למחוק תמונות פרופיל", () =>
-      removeStorageFolder("therapist-images", therapistId),
-    );
+    await withRetry("לא ניתן למחוק תמונות פרופיל", () => removeStorageFolder("therapist-images", therapistId));
   }
 
   await withRetry("לא ניתן להשלים מחיקת פרופיל", async () => {
