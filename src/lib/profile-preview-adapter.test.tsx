@@ -350,4 +350,16 @@ describe("account settings ownership of contact preferences and deletion", () =>
     expect(editorSource).toContain('pendingAction === "save" ? "מתבצעת שמירה…" : "שמירת פרופיל"');
     expect(editorSource).toContain('pendingAction === "publish" ? "מתבצע פרסום…" : "פרסום פרופיל"');
   });
+
+  it("explains the 60-character publish minimum and only reveals missing fields after saving", () => {
+    expect(editorSource).toContain("לפרסום הפרופיל נדרש תיאור של לפחות");
+    expect(editorSource).toContain("אורך התיאור טוב");
+    expect(editorSource).toContain("form.full_description.trim().length >= DESCRIPTION_MIN");
+    expect(editorSource).toContain("const [showPublishMissing, setShowPublishMissing] = useState(false)");
+    expect(editorSource).toContain("setShowPublishMissing(true)");
+    expect(editorSource).toContain("publishMissingFields={publishMissingFields}");
+    expect(editorSource).toContain("showPublishMissing={showPublishMissing}");
+    expect(editorSource).toContain("כדי לפרסם את הפרופיל יש להשלים:");
+    expect(editorSource).not.toContain("מומלץ לפחות ${DESCRIPTION_MIN} תווים לתיאור מובן");
+  });
 });
