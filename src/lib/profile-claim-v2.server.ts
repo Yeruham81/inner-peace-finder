@@ -1,9 +1,11 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-function hashToken(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex");
+async function hashToken(token: string): Promise<string> {
+  const bytes = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -23,11 +25,7 @@ export async function createClaimInviteForTherapist(input: {
     .eq("id", input.therapistId)
     .single();
   if (therapistError) throw new Error(therapistError.message);
-  if (
-    therapist.owner_account_id ||
-    therapist.profile_origin !== "admin_public_info" ||
-    therapist.do_not_republish
-  ) {
+  if (therapist.owner_account_id || therapist.profile_origin !== "admin_public_info" || therapist.do_not_republish) {
     throw new Error("Profile is not claimable");
   }
   if (!therapist.email) throw new Error("Profile has no pre-existing email for verification");
@@ -37,7 +35,7 @@ export async function createClaimInviteForTherapist(input: {
   const { data: invite, error } = await supabaseAdmin.rpc("create_therapist_claim_invite", {
     _therapist_id: input.therapistId,
     _email: therapist.email,
-    _token_hash: hashToken(token),
+    _token_hash: await hashToken(token),
     _created_by: input.creatorUserId,
     _expires_at: expiresAt,
   });
@@ -53,7 +51,6 @@ export async function createClaimInviteForTherapist(input: {
     claimUrl: `${origin}/claim?token=${encodeURIComponent(token)}`,
   };
 }
-
 
 /** Call only after the invitation message was actually accepted by the mail provider. */
 export async function markClaimInviteAsSent(inviteId: string): Promise<void> {
