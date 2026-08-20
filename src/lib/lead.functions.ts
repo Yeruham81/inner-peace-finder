@@ -94,7 +94,7 @@ export const createLead = createServerFn({ method: "POST" })
     // external delivery fails.
     const leadId = row.lead_id as string;
     const billable = !!row.billable;
-    const awaitingTherapistConsent = row.reason === "accepted_unclaimed";
+    const awaitingTherapistConsent = row.delivery_channel === "consent_hold";
 
     // An admin-created, unclaimed profile gets at most one initial inquiry.
     // The visitor's personal details are held in the database and are NOT
