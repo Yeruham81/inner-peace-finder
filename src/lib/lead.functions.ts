@@ -69,6 +69,13 @@ export const createLead = createServerFn({ method: "POST" })
           message: "תוקף האימות פג. הוצג תרגיל חדש.",
         };
       }
+      if (reason === "unclaimed_contact_limit") {
+        return {
+          ok: false as const,
+          reason: "unclaimed_contact_limit" as const,
+          message: "לא ניתן לשלוח פנייה נוספת לפרופיל זה לפני אישור המטפל/ת.",
+        };
+      }
       if (reason === "therapist_unavailable") {
         return {
           ok: false as const,
@@ -87,6 +94,21 @@ export const createLead = createServerFn({ method: "POST" })
     // external delivery fails.
     const leadId = row.lead_id as string;
     const billable = !!row.billable;
+    const awaitingTherapistConsent = row.reason === "accepted_unclaimed";
+
+    // An admin-created, unclaimed profile gets at most one initial inquiry.
+    // The visitor's personal details are held in the database and are NOT
+    // dispatched to the therapist until the participation/claim flow is
+    // completed. This also keeps the first inquiry non-billable.
+    if (awaitingTherapistConsent) {
+      return {
+        ok: true as const,
+        leadId,
+        billable: false,
+        deliveryStatus: "pending" as const,
+        awaitingTherapistConsent: true as const,
+      };
+    }
     const channel = (row.delivery_channel ?? "whatsapp") as "whatsapp" | "sms" | "email";
     const destination = row.destination ?? "";
 
