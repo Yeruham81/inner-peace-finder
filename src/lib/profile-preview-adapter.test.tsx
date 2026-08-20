@@ -310,4 +310,44 @@ describe("account settings ownership of contact preferences and deletion", () =>
     expect(settingsSource).toContain("CONTACT_METHOD_OPTIONS");
     expect(settingsSource).toContain("updateMyContactPreferences");
   });
+
+  it("shows contact preferences as a read-only summary with a direct settings shortcut", () => {
+    expect(editorSource).toContain("function ContactPreferencesSummary");
+    expect(editorSource).toContain("ערוצים פעילים");
+    expect(editorSource).toContain("ערוץ מועדף");
+    expect(editorSource).toContain('to="/account/settings"');
+    expect(editorSource).toContain("ניהול דרכי התקשרות");
+
+    const summaryStart = editorSource.indexOf("function ContactPreferencesSummary");
+    const summaryEnd = editorSource.indexOf("function ProfileActions", summaryStart);
+    const summarySource = editorSource.slice(summaryStart, summaryEnd);
+
+    expect(summaryStart).toBeGreaterThan(-1);
+    expect(summaryEnd).toBeGreaterThan(summaryStart);
+    expect(summarySource).not.toContain("CONTACT_METHOD_OPTIONS");
+    expect(summarySource).not.toContain("onCheckedChange");
+    expect(settingsSource).toContain("CONTACT_METHOD_OPTIONS");
+  });
+
+  it("does not let hidden contact preferences block profile publishing", () => {
+    const gateStart = editorSource.indexOf("const publishMissing =");
+    const gateEnd = editorSource.indexOf("const previewData", gateStart);
+    const gateSource = editorSource.slice(gateStart, gateEnd);
+
+    expect(gateStart).toBeGreaterThan(-1);
+    expect(gateEnd).toBeGreaterThan(gateStart);
+    expect(gateSource).not.toContain("contact_methods");
+    expect(gateSource).not.toContain("preferred_contact_method");
+    expect(gateSource).not.toContain("form.email");
+    expect(gateSource).not.toContain("form.phone");
+    expect(editorSource).toContain("resolveEditorContactPreferences(form, defaultEmail)");
+  });
+
+  it("shows saving and publishing progress only on the action that is actually running", () => {
+    expect(editorSource).toContain(
+      'pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}',
+    );
+    expect(editorSource).toContain('pendingAction === "save" ? "מתבצעת שמירה…" : "שמירת פרופיל"');
+    expect(editorSource).toContain('pendingAction === "publish" ? "מתבצע פרסום…" : "פרסום פרופיל"');
+  });
 });
