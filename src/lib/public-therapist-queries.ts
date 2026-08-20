@@ -171,6 +171,8 @@ export async function fetchPublicTherapistBySlug(
     free_intro_duration_minutes: t.free_intro_duration_minutes ?? null,
     contact_methods: contactMethods,
     preferred_contact_method: preferredContactMethod,
+    profile_origin: t.profile_origin === "admin_public_info" ? "admin_public_info" : "self_created",
+    profile_claimed: !!t.profile_claimed,
     professions: mappedProfessions,
     modalities: mappedModalities,
     therapy_formats: ((formats?.data ?? []) as any[]).map((r) => r.therapy_formats).filter(Boolean),
