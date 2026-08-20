@@ -35,11 +35,12 @@ describe("therapist account and claim read failures", () => {
     expect(accountRouteSource).toContain("accountQuery.refetch()");
   });
 
-  it("surfaces claim search, request, ownership and profession read failures", () => {
-    expect(claimRouteSource).toContain("לא הצלחנו לבצע את החיפוש");
-    expect(claimRouteSource).toContain("לא הצלחנו לטעון את הבקשות");
-    expect(claimRouteSource).toContain("לא הצלחנו לבדוק את מצב הפרופיל");
-    expect(claimRouteSource).toContain("לא הצלחנו לטעון את רשימת המקצועות");
-    expect(claimRouteSource).toContain("detail.isSuccess && detail.data && !action");
+  it("surfaces invite validation and ownership-transfer failures in the new claim flow", () => {
+    expect(claimRouteSource).toContain("לא ניתן לבדוק את ההזמנה.");
+    expect(claimRouteSource).toContain("לא ניתן לקבל בעלות על הפרופיל.");
+    expect(claimRouteSource).toContain("כתובת האימייל של החשבון המחובר אינה תואמת");
+    expect(claimRouteSource).toContain("getClaimInvitePreview");
+    expect(claimRouteSource).toContain("acceptClaimInvite");
+    expect(claimRouteSource).not.toContain("חיפוש פרופיל");
   });
 });
