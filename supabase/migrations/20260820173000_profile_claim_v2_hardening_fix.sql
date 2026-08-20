@@ -1,4 +1,3 @@
-BEGIN;
 
 -- Claim v2 integration hardening. This migration intentionally re-asserts the
 -- effective security invariants of the profile-save and lead-submit paths
@@ -561,6 +560,3 @@ DROP FUNCTION IF EXISTS public.authorize_lead_submission(uuid, integer, text, te
 REVOKE ALL ON FUNCTION public.purge_expired_lead_challenges() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.purge_expired_lead_challenges() FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purge_expired_lead_challenges() TO service_role;
-
-
-COMMIT;
