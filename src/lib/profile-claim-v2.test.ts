@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 const migration = read("supabase/migrations/20260820070000_profile_claim_v2.sql");
+const hardeningMigration = read("supabase/migrations/20260820173000_profile_claim_v2_hardening_fix.sql");
 
 describe("profile claim v2", () => {
   it("marks admin-created public profiles explicitly without changing self-created defaults", () => {
@@ -15,7 +16,9 @@ describe("profile claim v2", () => {
 
   it("keeps public ownership/removal requests service-role only", () => {
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.therapist_profile_requests");
-    expect(migration).toContain("REVOKE ALL ON TABLE public.therapist_profile_requests FROM PUBLIC, anon, authenticated");
+    expect(migration).toContain(
+      "REVOKE ALL ON TABLE public.therapist_profile_requests FROM PUBLIC, anon, authenticated",
+    );
     expect(migration).toContain("GRANT ALL ON TABLE public.therapist_profile_requests TO service_role");
   });
 
@@ -26,8 +29,13 @@ describe("profile claim v2", () => {
 
   it("stores only a hash of the claim token", () => {
     expect(migration).toContain("token_hash text NOT NULL UNIQUE");
-    expect(read("src/lib/profile-claim-v2.functions.ts")).toContain('createHash("sha256")');
-    expect(read("src/lib/profile-claim-v2.server.ts")).toContain('randomBytes(32)');
+    const claimFunctions = read("src/lib/profile-claim-v2.functions.ts");
+    const claimServer = read("src/lib/profile-claim-v2.server.ts");
+    expect(claimFunctions).toContain('crypto.subtle.digest("SHA-256"');
+    expect(claimServer).toContain('crypto.subtle.digest("SHA-256"');
+    expect(claimFunctions).not.toContain("createHash(");
+    expect(claimServer).not.toContain("createHash(");
+    expect(read("src/lib/profile-claim-v2.server.ts")).toContain("randomBytes(32)");
   });
 
   it("enforces one global initial contact for an unclaimed profile", () => {
@@ -35,15 +43,18 @@ describe("profile claim v2", () => {
     expect(migration).toContain("first_contact_reserved_at IS NOT NULL");
     expect(migration).toContain("first_contact_sent_at IS NOT NULL");
     expect(migration).toContain("'unclaimed_contact_limit'");
-    expect(migration).toContain("'accepted_unclaimed'");
+    expect(hardeningMigration).toContain("'consent_hold'");
+    expect(hardeningMigration).toContain("RETURN QUERY SELECT true, 'accepted'");
     expect(migration).toContain("mark_therapist_claim_invite_sent");
-    expect(migration).toContain("'awaiting_consent'");
+    expect(hardeningMigration).toContain("'awaiting_consent'");
   });
 
   it("keeps the initial unclaimed inquiry non-billable and undispatched until claim", () => {
-    expect(migration).toContain("NOT (v_therapist.profile_origin = 'admin_public_info' AND v_therapist.owner_account_id IS NULL)");
+    expect(hardeningMigration).toContain(
+      "NOT (v_therapist.profile_origin = 'admin_public_info' AND v_therapist.owner_account_id IS NULL)",
+    );
     const lead = read("src/lib/lead.functions.ts");
-    expect(lead).toContain('row.reason === "accepted_unclaimed"');
+    expect(lead).toContain('row.delivery_channel === "consent_hold"');
     expect(lead).toContain("are NOT");
     expect(lead).toContain("billable: false");
   });
@@ -57,6 +68,13 @@ describe("profile claim v2", () => {
     expect(source).toContain('.eq("delivery_status", "awaiting_consent")');
     expect(source).toContain('delivery_status: "expired_before_consent"');
     expect(source).toContain('dispatchLead("email"');
+  });
+
+  it("marks an admin-created profile reviewed inside the transactional save RPC", () => {
+    expect(hardeningMigration).toContain("CREATE OR REPLACE FUNCTION public.save_therapist_profile_with_contacts");
+    expect(hardeningMigration).toContain("owner_reviewed_at = CASE");
+    expect(hardeningMigration).toContain("SET search_path = ''");
+    expect(read("src/lib/therapist-profile.functions.ts")).not.toContain(".update({ owner_reviewed_at:");
   });
 
   it("shows the required disclosure on public unclaimed profiles", () => {
