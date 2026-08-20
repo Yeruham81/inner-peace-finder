@@ -399,6 +399,7 @@ export function EditorPage({
   const [form, setForm] = useState<FormState>(emptyForm);
   const [initialized, setInitialized] = useState(false);
   const [missing, setMissing] = useState<string[] | null>(null);
+  const [showPublishMissing, setShowPublishMissing] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -551,17 +552,21 @@ export function EditorPage({
   const orderedLanguages = orderCanonicalLanguages(options.data?.languages ?? []);
 
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
-  const publishMissing =
-    form.full_name.trim().length < 2 ||
-    !form.gender ||
-    !form.professional_title.trim() ||
-    form.profession_ids.length === 0 ||
-    form.years_experience.trim() === "" ||
-    form.full_description.trim().length < DESCRIPTION_MIN ||
-    form.language_ids.length === 0 ||
-    form.population_ids.length === 0 ||
-    (form.home_visit_available && form.home_visit_regions.length === 0) ||
-    (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
+  const publishMissingFields = [
+    ...(form.full_name.trim().length < 2 ? ["שם מלא"] : []),
+    ...(!form.gender ? ["מין"] : []),
+    ...(!form.professional_title.trim() ? ["כותרת מקצועית"] : []),
+    ...(form.profession_ids.length === 0 ? ["מקצוע"] : []),
+    ...(form.years_experience.trim() === "" ? ["שנות ניסיון"] : []),
+    ...(form.full_description.trim().length < DESCRIPTION_MIN ? [`קצת עליי (לפחות ${DESCRIPTION_MIN} תווים)`] : []),
+    ...(form.language_ids.length === 0 ? ["שפת טיפול"] : []),
+    ...(form.population_ids.length === 0 ? ["אוכלוסיית טיפול"] : []),
+    ...(form.home_visit_available && form.home_visit_regions.length === 0 ? ["אזורי ביקורי בית"] : []),
+    ...(!hasPhysicalLocation && !form.online_available && !form.home_visit_available
+      ? ["מיקום פיזי, טיפול אונליין או ביקורי בית"]
+      : []),
+  ];
+  const publishMissing = publishMissingFields.length > 0;
 
   const previewData = buildPreviewViewData(form, options.data, profile.data);
   const contactPreferencesSummary = resolveEditorContactPreferences(form, defaultEmail);
@@ -697,13 +702,21 @@ export function EditorPage({
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   placeholder="לדוגמא: אני עובד סוציאלי קליני בעל ניסיון בטיפול במבוגרים ובמתבגרים. אני מסייע לאנשים המתמודדים עם חרדה וחרדה חברתית, קשיי שינה על רקע לחץ, טראומה, פרידה ומשברי חיים, וכן עם קשיים בוויסות רגשי ובתפקוד בעבודה או במערכות יחסים. אני עובד בגישה אינטגרטיבית ומאמין בקשר טיפולי בטוח שמאפשר התבוננות, התמודדות ושינוי."
                 />
-                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    {form.full_description.trim().length < DESCRIPTION_MIN
-                      ? `מומלץ לפחות ${DESCRIPTION_MIN} תווים לתיאור מובן`
-                      : "אורך תיאור טוב"}
-                  </span>
-                  <span>
+                <div className="mt-1 flex items-start justify-between gap-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-muted-foreground">
+                      לפרסום הפרופיל נדרש תיאור של לפחות {DESCRIPTION_MIN} תווים.
+                    </span>
+                    {form.full_description.trim().length >= DESCRIPTION_MIN && (
+                      <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+                        <span aria-hidden="true" className="text-sm leading-none">
+                          ✓
+                        </span>
+                        אורך התיאור טוב
+                      </span>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-muted-foreground">
                     {form.full_description.length} / {DESCRIPTION_MAX}
                   </span>
                 </div>
@@ -1112,8 +1125,13 @@ export function EditorPage({
                 status={status}
                 pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
                 publishMissing={publishMissing}
+                publishMissingFields={publishMissingFields}
+                showPublishMissing={showPublishMissing}
                 onPreview={() => setPreviewOpen(true)}
-                onSaveDraft={() => mutation.mutate(false)}
+                onSaveDraft={() => {
+                  setShowPublishMissing(true);
+                  mutation.mutate(false);
+                }}
                 onPublish={() => mutation.mutate(true)}
                 visibility={profile.data?.visibility ?? "hidden"}
                 visibilityPending={visibilityMutation.isPending}
@@ -1127,8 +1145,13 @@ export function EditorPage({
               status={status}
               pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
               publishMissing={publishMissing}
+              publishMissingFields={publishMissingFields}
+              showPublishMissing={showPublishMissing}
               onPreview={() => setPreviewOpen(true)}
-              onSaveDraft={() => mutation.mutate(false)}
+              onSaveDraft={() => {
+                setShowPublishMissing(true);
+                mutation.mutate(false);
+              }}
               onPublish={() => mutation.mutate(true)}
               visibility={profile.data?.visibility ?? "hidden"}
               visibilityPending={visibilityMutation.isPending}
@@ -1418,6 +1441,8 @@ function ProfileActions({
   status,
   pendingAction,
   publishMissing,
+  publishMissingFields,
+  showPublishMissing,
   onPreview,
   onSaveDraft,
   onPublish,
@@ -1428,6 +1453,8 @@ function ProfileActions({
   status: "draft" | "completed" | "published";
   pendingAction: "save" | "publish" | null;
   publishMissing: boolean;
+  publishMissingFields: string[];
+  showPublishMissing: boolean;
   onPreview: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -1469,9 +1496,22 @@ function ProfileActions({
             : "border-emerald-200 bg-emerald-50 text-emerald-900"
         }`}
       >
-        {publishMissing
-          ? "הפרופיל עדיין אינו מוכן לפרסום. ניתן לשמור טיוטה ולהמשיך בהמשך."
-          : "כל שדות החובה הושלמו. ניתן לפרסם את הפרופיל."}
+        {publishMissing ? (
+          showPublishMissing ? (
+            <div>
+              <p className="font-medium">כדי לפרסם את הפרופיל יש להשלים:</p>
+              <ul className="mt-1.5 list-disc space-y-0.5 pr-5">
+                {publishMissingFields.map((field) => (
+                  <li key={field}>{field}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            "ניתן לשמור את הפרופיל ולהמשיך לערוך אותו. לאחר השמירה יוצג כאן מידע שחסר לפרסום, אם יש."
+          )
+        ) : (
+          "כל שדות החובה הושלמו. ניתן לפרסם את הפרופיל."
+        )}
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
