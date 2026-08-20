@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ContactActions } from "@/components/cta-call-button";
+import { UnclaimedProfileNotice } from "@/components/unclaimed-profile-notice";
 import type { PublicContactMethod } from "@/lib/public-therapist-profile";
 import {
   accessibilityFeatureLabels,
@@ -40,6 +41,8 @@ export type TherapistProfileViewData = {
   free_intro_duration_minutes: number | null;
   contact_methods?: PublicContactMethod[];
   preferred_contact_method?: PublicContactMethod | null;
+  profile_origin?: "self_created" | "admin_public_info";
+  profile_claimed?: boolean;
   professions: { slug: string; name: string; is_primary: boolean }[];
   modalities: { slug: string; name: string }[];
   therapy_formats: { slug: string; name: string }[];
@@ -352,6 +355,7 @@ export function TherapistProfileView({
     !!t.education_training || !!t.professional_experience || t.professional_memberships.length > 0;
   const longAbout = (t.full_description?.length ?? 0) > 420;
   const freeIntroLabels = freeIntroTypeLabels(t.free_intro_types);
+  const isUnclaimedPublicProfile = t.profile_origin === "admin_public_info" && !t.profile_claimed;
 
   const heroServiceTags = useMemo(() => {
     const tags: { key: string; label: string; icon: React.ReactNode }[] = [];
@@ -440,6 +444,8 @@ export function TherapistProfileView({
           </div>
         </div>
       </header>
+
+      {isUnclaimedPublicProfile && <UnclaimedProfileNotice therapistId={t.id} therapistName={t.full_name} />}
 
       <div className="box-border block w-full min-w-0 max-w-full lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-6">
         <main className="box-border min-w-0 max-w-full space-y-5">
@@ -662,14 +668,19 @@ export function TherapistProfileView({
 
             <h2 className="mt-5 text-lg font-bold text-foreground">רוצים לתאם טיפול עם {firstName(t.full_name)}?</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              בחרו כיצד לפנות ל{firstName(t.full_name)} כדי לבדוק התאמה וזמינות.
+              {isUnclaimedPublicProfile
+                ? "המטפל/ת עדיין לא אישרו את השתתפותם בטיפולינקס. ניתן לשלוח פנייה ראשונית אחת בלבד."
+                : `בחרו כיצד לפנות ל${firstName(t.full_name)} כדי לבדוק התאמה וזמינות.`}
             </p>
             <div className="mt-4">
               <ContactActions
                 therapistId={t.id}
                 therapistName={t.full_name}
-                contactMethods={t.contact_methods ?? ["email"]}
-                preferredContactMethod={t.preferred_contact_method ?? t.contact_methods?.[0] ?? "email"}
+                contactMethods={isUnclaimedPublicProfile ? ["email"] : (t.contact_methods ?? ["email"])}
+                preferredContactMethod={
+                  isUnclaimedPublicProfile ? "email" : (t.preferred_contact_method ?? t.contact_methods?.[0] ?? "email")
+                }
+                unclaimedProfile={isUnclaimedPublicProfile}
                 pageSource="therapist_profile"
                 interactive={interactive}
               />
