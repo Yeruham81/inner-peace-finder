@@ -136,8 +136,9 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAccount = pathname === "/account" || pathname.startsWith("/account/");
 
-  if (isAdmin) {
+  if (isAdmin || isAccount) {
     return (
       <QueryClientProvider client={queryClient}>
         <Outlet />
