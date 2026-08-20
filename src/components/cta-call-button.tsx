@@ -22,6 +22,7 @@ type ContactActionsProps = SharedContactProps & {
   contactMethods: PublicContactMethod[];
   preferredContactMethod?: PublicContactMethod | null;
   interactive?: boolean;
+  unclaimedProfile?: boolean;
 };
 
 const CONTACT_LABELS: Record<PublicContactMethod, string> = {
@@ -71,12 +72,14 @@ function ContactButtons({
   disabled,
   pendingMethod,
   onSelect,
+  unclaimedProfile = false,
 }: {
   methods: PublicContactMethod[];
   preferred: PublicContactMethod | null | undefined;
   disabled: boolean;
   pendingMethod: PublicContactMethod | null;
   onSelect: (method: PublicContactMethod) => void;
+  unclaimedProfile?: boolean;
 }) {
   const ordered = orderedContactMethods(methods, preferred);
 
@@ -102,7 +105,13 @@ function ContactButtons({
             }
           >
             <ContactIcon method={method} className={primary ? "h-5 w-5" : "h-4 w-4"} />
-            <span>{pending ? "פותח…" : CONTACT_LABELS[method]}</span>
+            <span>
+              {pending
+                ? "פותח…"
+                : unclaimedProfile && method === "email"
+                  ? "שליחת פנייה ראשונית"
+                  : CONTACT_LABELS[method]}
+            </span>
           </button>
         );
       })}
@@ -128,6 +137,7 @@ export function ContactActions(props: ContactActionsProps) {
         disabled
         pendingMethod={null}
         onSelect={() => undefined}
+        unclaimedProfile={props.unclaimedProfile}
       />
     );
   }
@@ -145,6 +155,7 @@ function InteractiveContactActions({
   populationId,
   populationName,
   pageSource,
+  unclaimedProfile = false,
 }: ContactActionsProps) {
   const getContactTarget = useServerFn(getDirectContactTarget);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -214,6 +225,7 @@ function InteractiveContactActions({
         disabled={false}
         pendingMethod={pendingMethod}
         onSelect={(method) => void handleSelect(method)}
+        unclaimedProfile={unclaimedProfile}
       />
 
       {contactMethods.includes("email") && (
@@ -227,6 +239,7 @@ function InteractiveContactActions({
           populationId={populationId ?? null}
           populationName={populationName ?? null}
           pageSource={pageSource ?? undefined}
+          unclaimedProfile={unclaimedProfile}
         />
       )}
     </>
