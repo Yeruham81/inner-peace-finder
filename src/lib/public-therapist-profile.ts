@@ -26,6 +26,8 @@ export const PUBLIC_THERAPIST_COLUMNS = [
   "free_intro_duration_minutes",
   "contact_methods",
   "preferred_contact_method",
+  "profile_origin",
+  "profile_claimed",
 ] as const;
 
 export type PublicTherapistColumn = (typeof PUBLIC_THERAPIST_COLUMNS)[number];
@@ -44,13 +46,18 @@ export const PRIVATE_THERAPIST_COLUMNS = [
   "contact_destination",
   "preferred_contact_channel",
   "owner_account_id",
+  "owner_reviewed_at",
+  "first_contact_reserved_at",
+  "first_contact_sent_at",
+  "participation_consent_at",
+  "participation_consent_source",
+  "do_not_republish",
   "license_number",
   "bio_raw",
   "semantic_profile",
   "profile_status",
   "visibility",
   "is_active",
-  "profile_claimed",
   "gender",
   "region",
   "country",
@@ -78,6 +85,8 @@ export type PublicTherapistProfile = {
   free_intro_duration_minutes: number | null;
   contact_methods: PublicContactMethod[];
   preferred_contact_method: PublicContactMethod | null;
+  profile_origin: "self_created" | "admin_public_info";
+  profile_claimed: boolean;
   professions: { slug: string; name: string; is_primary: boolean }[];
   modalities: { slug: string; name: string }[];
   therapy_formats: { slug: string; name: string }[];
