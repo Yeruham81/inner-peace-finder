@@ -360,6 +360,26 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions, default
   };
 }
 
+function resolveEditorContactPreferences(form: FormState, defaultEmail: string) {
+  const email = form.email.trim() || defaultEmail.trim();
+  const phone = form.phone.trim();
+  const usableMethods = form.contact_methods.filter((method) =>
+    method === "email" ? email.length > 0 : phone.length > 0,
+  );
+  const contactMethods: ContactMethod[] = usableMethods.length > 0 ? usableMethods : email ? ["email"] : [];
+  const preferredContactMethod =
+    form.preferred_contact_method && contactMethods.includes(form.preferred_contact_method)
+      ? form.preferred_contact_method
+      : (contactMethods[0] ?? null);
+
+  return {
+    email: email || null,
+    phone: phone || null,
+    contact_methods: contactMethods,
+    preferred_contact_method: preferredContactMethod,
+  };
+}
+
 export function EditorPage({
   embedded = false,
   defaultEmail = "",
@@ -397,8 +417,9 @@ export function EditorPage({
   }, [profile.data, profile.isSuccess, options.data, options.isSuccess, initialized, defaultEmail]);
 
   const mutation = useMutation({
-    mutationFn: (publish: boolean) =>
-      saveFn({
+    mutationFn: (publish: boolean) => {
+      const contactPreferences = resolveEditorContactPreferences(form, defaultEmail);
+      return saveFn({
         data: {
           full_name: form.full_name,
           gender: form.gender || null,
@@ -408,10 +429,10 @@ export function EditorPage({
           education_training: form.education_training || null,
           professional_experience: form.professional_experience || null,
           years_experience: form.years_experience ? Number(form.years_experience) : null,
-          email: form.email || null,
-          phone: form.phone || null,
-          contact_methods: form.contact_methods,
-          preferred_contact_method: form.preferred_contact_method || null,
+          email: contactPreferences.email,
+          phone: contactPreferences.phone,
+          contact_methods: contactPreferences.contact_methods,
+          preferred_contact_method: contactPreferences.preferred_contact_method,
           image_url: form.image_url || null,
           profession_ids: form.profession_ids,
           modality_ids: form.modality_ids,
@@ -457,7 +478,8 @@ export function EditorPage({
             })),
           publish,
         },
-      }),
+      });
+    },
     onSuccess: (res, publish) => {
       if (res.missing && res.missing.length > 0) {
         setMissing(res.missing);
@@ -529,12 +551,6 @@ export function EditorPage({
   const orderedLanguages = orderCanonicalLanguages(options.data?.languages ?? []);
 
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
-  const needsEmail = form.contact_methods.includes("email");
-  const needsPhone = form.contact_methods.includes("whatsapp") || form.contact_methods.includes("phone");
-  const contactPreferenceInvalid =
-    form.contact_methods.length === 0 ||
-    !form.preferred_contact_method ||
-    !form.contact_methods.includes(form.preferred_contact_method);
   const publishMissing =
     form.full_name.trim().length < 2 ||
     !form.gender ||
@@ -544,13 +560,11 @@ export function EditorPage({
     form.full_description.trim().length < DESCRIPTION_MIN ||
     form.language_ids.length === 0 ||
     form.population_ids.length === 0 ||
-    contactPreferenceInvalid ||
-    (needsEmail && !form.email.trim()) ||
-    (needsPhone && !form.phone.trim()) ||
     (form.home_visit_available && form.home_visit_regions.length === 0) ||
     (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
 
   const previewData = buildPreviewViewData(form, options.data, profile.data);
+  const contactPreferencesSummary = resolveEditorContactPreferences(form, defaultEmail);
 
   return (
     <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
@@ -1087,10 +1101,16 @@ export function EditorPage({
               </Section>
             </FormArea>
 
+            <ContactPreferencesSummary
+              contactMethods={contactPreferencesSummary.contact_methods}
+              preferredContactMethod={contactPreferencesSummary.preferred_contact_method}
+              hasSavedProfile={isEdit}
+            />
+
             <div className="lg:hidden">
               <ProfileActions
                 status={status}
-                isPending={mutation.isPending}
+                pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
                 publishMissing={publishMissing}
                 onPreview={() => setPreviewOpen(true)}
                 onSaveDraft={() => mutation.mutate(false)}
@@ -1105,7 +1125,7 @@ export function EditorPage({
           <aside className="sticky top-24 hidden h-fit self-start lg:block">
             <ProfileActions
               status={status}
-              isPending={mutation.isPending}
+              pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
               publishMissing={publishMissing}
               onPreview={() => setPreviewOpen(true)}
               onSaveDraft={() => mutation.mutate(false)}
@@ -1329,9 +1349,74 @@ function FormArea({
   );
 }
 
+const CONTACT_METHOD_LABELS: Record<ContactMethod, string> = {
+  email: "אימייל",
+  whatsapp: "WhatsApp",
+  phone: "שיחת טלפון",
+};
+
+function ContactPreferencesSummary({
+  contactMethods,
+  preferredContactMethod,
+  hasSavedProfile,
+}: {
+  contactMethods: ContactMethod[];
+  preferredContactMethod: ContactMethod | null;
+  hasSavedProfile: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border border-brand/20 bg-brand-soft/30 p-4 shadow-sm sm:p-5">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">קבלת פניות</h2>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          ניתן להוסיף, להסיר או לשנות את דרכי קבלת הפניות בהגדרות החשבון. בפרופיל חדש אימייל מוגדר כברירת המחדל.
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ערוצים פעילים</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {contactMethods.length > 0 ? (
+              contactMethods.map((method) => (
+                <span
+                  key={method}
+                  className="inline-flex items-center rounded-full border border-brand/25 bg-white px-3 py-1.5 text-sm font-medium text-foreground"
+                >
+                  {CONTACT_METHOD_LABELS[method]}
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">טרם הוגדר ערוץ פעיל.</span>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ערוץ מועדף</p>
+          <p className="mt-2 text-sm font-semibold text-foreground">
+            {preferredContactMethod ? CONTACT_METHOD_LABELS[preferredContactMethod] : "טרם הוגדר"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 border-t border-brand/15 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm leading-6 text-muted-foreground">
+          {hasSavedProfile
+            ? "רוצים לקבל פניות גם בערוץ נוסף או לשנות את הערוץ המועדף?"
+            : "לאחר שמירת הפרופיל ניתן להוסיף WhatsApp או שיחת טלפון ולבחור ערוץ מועדף."}
+        </p>
+        <Button asChild variant="outline" className="shrink-0">
+          <Link to="/account/settings">ניהול דרכי התקשרות</Link>
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function ProfileActions({
   status,
-  isPending,
+  pendingAction,
   publishMissing,
   onPreview,
   onSaveDraft,
@@ -1341,7 +1426,7 @@ function ProfileActions({
   onVisibilityChange,
 }: {
   status: "draft" | "completed" | "published";
-  isPending: boolean;
+  pendingAction: "save" | "publish" | null;
   publishMissing: boolean;
   onPreview: () => void;
   onSaveDraft: () => void;
@@ -1393,16 +1478,16 @@ function ProfileActions({
         <Button variant="outline" onClick={onPreview} className="w-full">
           תצוגה מקדימה
         </Button>
-        <Button variant="outline" disabled={isPending} onClick={onSaveDraft} className="w-full">
-          {isPending ? "מתבצעת שמירה…" : "שמירת פרופיל"}
+        <Button variant="outline" disabled={pendingAction !== null} onClick={onSaveDraft} className="w-full">
+          {pendingAction === "save" ? "מתבצעת שמירה…" : "שמירת פרופיל"}
         </Button>
         <Button
-          disabled={isPending || publishMissing}
+          disabled={pendingAction !== null || publishMissing}
           title={publishMissing ? "יש להשלים את כל שדות החובה כדי לפרסם" : undefined}
           onClick={onPublish}
           className="w-full"
         >
-          {isPending ? "מתבצע פרסום…" : "פרסום פרופיל"}
+          {pendingAction === "publish" ? "מתבצע פרסום…" : "פרסום פרופיל"}
         </Button>
       </div>
 
