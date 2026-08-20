@@ -289,7 +289,9 @@ function friendlyZodMessage(err: z.ZodError): string {
     case "full_name":
       return "נא למלא את שדה 'שם מלא' לפני שמירת טיוטה.";
     case "email":
-      return "כתובת אימייל לא תקינה.";
+      return first.message || "כתובת אימייל לא תקינה.";
+    case "phone":
+      return first.message || "מספר טלפון לא תקין.";
     case "contact_methods":
     case "preferred_contact_method":
       return first.message || "נא לבדוק את דרכי ההתקשרות שנבחרו.";
@@ -687,6 +689,66 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     };
   });
 
+const ContactPreferencesSchema = z
+  .object({
+    email: z.string().trim().max(160, "כתובת האימייל ארוכה מדי.").nullable().optional(),
+    phone: z.string().trim().max(40, "מספר הטלפון ארוך מדי.").nullable().optional(),
+    contact_methods: z
+      .array(ContactMethodSchema)
+      .min(1, "יש לבחור לפחות דרך התקשרות אחת.")
+      .max(3, "ניתן לבחור עד שלוש דרכי התקשרות.")
+      .refine((methods) => new Set(methods).size === methods.length, "לא ניתן לבחור אותה דרך התקשרות יותר מפעם אחת."),
+    preferred_contact_method: ContactMethodSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.contact_methods.includes(data.preferred_contact_method)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["preferred_contact_method"],
+        message: "יש לבחור דרך התקשרות מועדפת מתוך הדרכים הפעילות.",
+      });
+    }
+
+    const email = data.email?.trim() ?? "";
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["email"],
+        message: "כתובת אימייל לא תקינה.",
+      });
+    }
+    if (data.contact_methods.includes("email") && !email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["email"],
+        message: "יש להזין כתובת אימייל לקבלת פניות.",
+      });
+    }
+
+    const phone = data.phone?.trim() ?? "";
+    if (phone) {
+      const allowed = /^[+\d\s().-]+$/.test(phone);
+      const digits = phone.replace(/\D/g, "");
+      const validLength = phone.startsWith("+")
+        ? digits.length >= 10 && digits.length <= 15
+        : digits.length >= 9 && digits.length <= 10;
+      if (!allowed || !validLength) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["phone"],
+          message: "מספר טלפון לא תקין.",
+        });
+      }
+    }
+    if ((data.contact_methods.includes("whatsapp") || data.contact_methods.includes("phone")) && !phone) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["phone"],
+        message: "יש להזין מספר טלפון לקבלת פניות.",
+      });
+    }
+  });
+
 const ProfileVisibilitySchema = z.object({ visible: z.boolean() });
 
 export const setMyProfileVisibility = createServerFn({ method: "POST" })
@@ -696,6 +758,24 @@ export const setMyProfileVisibility = createServerFn({ method: "POST" })
     const accountId = await resolveAccount(context.supabase, context.userId);
     const { setOwnedProfileVisibility } = await import("./profile-management.server");
     return setOwnedProfileVisibility(accountId, data.visible);
+  });
+
+export const updateMyContactPreferences = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => {
+    const parsed = ContactPreferencesSchema.safeParse(input);
+    if (!parsed.success) throw new Error(friendlyZodMessage(parsed.error));
+    return parsed.data;
+  })
+  .handler(async ({ data, context }) => {
+    const accountId = await resolveAccount(context.supabase, context.userId);
+    const { updateOwnedProfileContactPreferences } = await import("./profile-management.server");
+    return updateOwnedProfileContactPreferences(accountId, {
+      email: data.email?.trim() || null,
+      phone: data.phone?.trim() || null,
+      contact_methods: data.contact_methods,
+      preferred_contact_method: data.preferred_contact_method,
+    });
   });
 
 export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
