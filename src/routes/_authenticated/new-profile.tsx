@@ -35,7 +35,6 @@ import {
   getEditorOptions,
   getMyProfile,
   getSemanticFeedback,
-  deleteMyProfilePermanently,
   saveMyProfile,
   setMyProfileVisibility,
   type ContactMethod,
@@ -48,8 +47,13 @@ export const Route = createFileRoute("/_authenticated/new-profile")({
   head: () => ({
     meta: [{ title: "עורך פרופיל מטפל | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
   }),
-  component: EditorPage,
+  component: NewProfileRoutePage,
 });
+
+function NewProfileRoutePage() {
+  const { user } = Route.useRouteContext();
+  return <EditorPage defaultEmail={user.email ?? ""} />;
+}
 
 type ProductRegion = EditorOptions["localities"][number]["region"];
 
@@ -64,16 +68,6 @@ type FormLocation = {
 
 const MAX_PHYSICAL_LOCATIONS = 3;
 
-const CONTACT_METHOD_OPTIONS: readonly {
-  id: ContactMethod;
-  label: string;
-  description: string;
-}[] = [
-  { id: "whatsapp", label: "WhatsApp", description: "קבלת הודעות ב-WhatsApp" },
-  { id: "email", label: "אימייל", description: "קבלת פניות כתובות באימייל" },
-  { id: "phone", label: "שיחת טלפון", description: "קבלת שיחה בחיוג טלפוני" },
-];
-
 function blankLocation(): FormLocation {
   return {
     city: "",
@@ -83,21 +77,6 @@ function blankLocation(): FormLocation {
     accessibility_features: [],
     accessibility_note: "",
   };
-}
-
-function isValidEmailInput(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function isValidPhoneInput(value: string): boolean {
-  const raw = value.trim();
-  if (!raw || !/^[+\d\s().-]+$/.test(raw)) return false;
-
-  const digits = raw.replace(/\D/g, "");
-  if (raw.startsWith("+")) return digits.length >= 10 && digits.length <= 15;
-
-  // Israeli local numbers: landlines are commonly 9 digits and mobile numbers 10.
-  return digits.length >= 9 && digits.length <= 10;
 }
 
 type FormState = {
@@ -321,7 +300,13 @@ const CATEGORY_CARD_TITLE_CLASS =
 const SELECTED_OPTION_TAG_CLASS =
   "inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border border-brand bg-brand px-3.5 py-1 text-sm font-semibold text-brand-foreground shadow-sm transition hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30";
 
-function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormState {
+function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions, defaultEmail: string): FormState {
+  const contactMethods: ContactMethod[] = p.contact_methods?.length ? p.contact_methods : ["email"];
+  const preferredContactMethod: ContactMethod =
+    p.preferred_contact_method && contactMethods.includes(p.preferred_contact_method)
+      ? p.preferred_contact_method
+      : (contactMethods[0] ?? "email");
+
   const locations: FormLocation[] = p.locations.length
     ? p.locations.map((location) => {
         const canonical = editorOptions.localities.find((item) => item.name === location.city);
@@ -345,10 +330,10 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
     education_training: p.education_training ?? "",
     professional_experience: p.professional_experience ?? "",
     years_experience: p.years_experience !== null ? String(p.years_experience) : "",
-    email: p.email ?? "",
+    email: p.email?.trim() || defaultEmail,
     phone: p.phone ?? "",
-    contact_methods: p.contact_methods ?? [],
-    preferred_contact_method: p.preferred_contact_method ?? "",
+    contact_methods: contactMethods,
+    preferred_contact_method: preferredContactMethod,
     image_url: p.image_url ?? "",
     profession_ids: p.profession_ids,
     modality_ids: p.modality_ids,
@@ -375,13 +360,18 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
   };
 }
 
-export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
+export function EditorPage({
+  embedded = false,
+  defaultEmail = "",
+}: {
+  embedded?: boolean;
+  defaultEmail?: string;
+} = {}) {
   const queryClient = useQueryClient();
   const getProfileFn = useServerFn(getMyProfile);
   const getOptionsFn = useServerFn(getEditorOptions);
   const saveFn = useServerFn(saveMyProfile);
   const setVisibilityFn = useServerFn(setMyProfileVisibility);
-  const deleteProfileFn = useServerFn(deleteMyProfilePermanently);
 
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
   const options = useQuery({ queryKey: ["editor-options"], queryFn: () => getOptionsFn() });
@@ -393,9 +383,18 @@ export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
 
   useEffect(() => {
     if (initialized || !profile.isSuccess || !options.isSuccess) return;
-    if (profile.data) setForm(fromProfile(profile.data, options.data));
+    if (profile.data) {
+      setForm(fromProfile(profile.data, options.data, defaultEmail));
+    } else {
+      setForm({
+        ...emptyForm,
+        email: defaultEmail,
+        contact_methods: ["email"],
+        preferred_contact_method: "email",
+      });
+    }
     setInitialized(true);
-  }, [profile.data, profile.isSuccess, options.data, options.isSuccess, initialized]);
+  }, [profile.data, profile.isSuccess, options.data, options.isSuccess, initialized, defaultEmail]);
 
   const mutation = useMutation({
     mutationFn: (publish: boolean) =>
@@ -483,15 +482,6 @@ export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
     onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteProfileFn({ data: { confirmation: "מחיקת הפרופיל לצמיתות" } }),
-    onSuccess: () => {
-      queryClient.clear();
-      window.location.assign("/account");
-    },
-    onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
-  });
-
   if (profile.isError || options.isError) {
     return (
       <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
@@ -541,8 +531,6 @@ export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
   const needsEmail = form.contact_methods.includes("email");
   const needsPhone = form.contact_methods.includes("whatsapp") || form.contact_methods.includes("phone");
-  const emailInvalid = form.email.trim().length > 0 && !isValidEmailInput(form.email);
-  const phoneInvalid = form.phone.trim().length > 0 && !isValidPhoneInput(form.phone);
   const contactPreferenceInvalid =
     form.contact_methods.length === 0 ||
     !form.preferred_contact_method ||
@@ -557,8 +545,8 @@ export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
     form.language_ids.length === 0 ||
     form.population_ids.length === 0 ||
     contactPreferenceInvalid ||
-    (needsEmail && (!form.email.trim() || emailInvalid)) ||
-    (needsPhone && (!form.phone.trim() || phoneInvalid)) ||
+    (needsEmail && !form.email.trim()) ||
+    (needsPhone && !form.phone.trim()) ||
     (form.home_visit_available && form.home_visit_regions.length === 0) ||
     (!hasPhysicalLocation && !form.online_available && !form.home_visit_available);
 
@@ -1097,147 +1085,6 @@ export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
                   לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור שירות.
                 </p>
               </Section>
-
-              <Section title="דרכי התקשרות">
-                <div className="space-y-5">
-                  <div>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      בחרו איך תרצו לקבל פניות. ניתן לבחור עד 3 אפשרויות, חובה להגדיר אפשרות אחת כמועדפת.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {CONTACT_METHOD_OPTIONS.map((option) => {
-                      const selected = form.contact_methods.includes(option.id);
-                      const preferred = form.preferred_contact_method === option.id;
-
-                      return (
-                        <div
-                          key={option.id}
-                          className={`rounded-2xl border p-3 transition-colors ${
-                            selected
-                              ? preferred
-                                ? "border-brand bg-brand-soft/70 shadow-sm"
-                                : "border-brand/50 bg-white"
-                              : "border-border bg-white/70"
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            aria-pressed={selected}
-                            onClick={() =>
-                              setForm((current) => {
-                                const isSelected = current.contact_methods.includes(option.id);
-                                const nextMethods = isSelected
-                                  ? current.contact_methods.filter((method) => method !== option.id)
-                                  : [...current.contact_methods, option.id].slice(0, 3);
-                                const nextPreferred = isSelected
-                                  ? current.preferred_contact_method === option.id
-                                    ? (nextMethods[0] ?? "")
-                                    : current.preferred_contact_method
-                                  : current.preferred_contact_method || option.id;
-
-                                return {
-                                  ...current,
-                                  contact_methods: nextMethods,
-                                  preferred_contact_method: nextPreferred,
-                                };
-                              })
-                            }
-                            className="flex w-full items-start justify-between gap-3 rounded-xl px-1 py-1 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
-                          >
-                            <span className="min-w-0">
-                              <span className="block font-semibold text-foreground">{option.label}</span>
-                              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                                {option.description}
-                              </span>
-                            </span>
-                            <span
-                              className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
-                                selected ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {selected ? "✓ פעיל" : "כבוי"}
-                            </span>
-                          </button>
-
-                          {selected && (
-                            <button
-                              type="button"
-                              aria-pressed={preferred}
-                              onClick={() =>
-                                setForm((current) => ({
-                                  ...current,
-                                  preferred_contact_method: option.id,
-                                }))
-                              }
-                              className={`mt-3 flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
-                                preferred
-                                  ? "border-brand bg-brand text-brand-foreground"
-                                  : "border-border bg-background text-foreground hover:border-brand/60"
-                              }`}
-                            >
-                              <span aria-hidden>{preferred ? "★" : "☆"}</span>
-                              <span>{preferred ? "מועדפת" : "הגדרה כמועדפת"}</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {form.contact_methods.length === 0 && (
-                    <p className="text-sm text-muted-foreground">יש לבחור לפחות דרך התקשרות אחת לפני פרסום הפרופיל.</p>
-                  )}
-
-                  <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                    <Field label={`אימייל לקבלת פניות${needsEmail ? " *" : ""}`}>
-                      <Input
-                        dir="ltr"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="name@example.com"
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        maxLength={160}
-                        aria-invalid={emailInvalid}
-                        className={`bg-white text-left transition-colors focus:border-brand focus:ring-brand/30 ${
-                          emailInvalid ? "border-destructive focus:border-destructive focus:ring-destructive/20" : ""
-                        }`}
-                      />
-                      {emailInvalid ? (
-                        <p className="mt-1.5 text-sm text-destructive">נא להזין כתובת אימייל תקינה.</p>
-                      ) : (
-                        <p className="mt-1.5 text-sm text-muted-foreground">נדרש כאשר האפשרות "אימייל" פעילה.</p>
-                      )}
-                    </Field>
-
-                    <Field label={`טלפון לקבלת פניות${needsPhone ? " *" : ""}`}>
-                      <Input
-                        dir="ltr"
-                        type="tel"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        placeholder="050-1234567"
-                        value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        maxLength={40}
-                        aria-invalid={phoneInvalid}
-                        className={`bg-white text-left transition-colors focus:border-brand focus:ring-brand/30 ${
-                          phoneInvalid ? "border-destructive focus:border-destructive focus:ring-destructive/20" : ""
-                        }`}
-                      />
-                      <p className={`mt-1.5 text-sm ${phoneInvalid ? "text-destructive" : "text-muted-foreground"}`}>
-                        {phoneInvalid
-                          ? "נא להזין מספר טלפון תקין."
-                          : needsPhone
-                            ? 'נדרש כאשר האפשרויות "WhatsApp" או "שיחת טלפון" פעילות.'
-                            : 'נדרש כאשר האפשרויות "WhatsApp" או "שיחת טלפון" פעילות.'}
-                      </p>
-                    </Field>
-                  </div>
-                </div>
-              </Section>
             </FormArea>
 
             <div className="lg:hidden">
@@ -1269,12 +1116,6 @@ export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
             />
           </aside>
         </div>
-
-        {isEdit && (
-          <div className="mt-10">
-            <DeleteProfilePanel pending={deleteMutation.isPending} onConfirm={() => deleteMutation.mutate()} />
-          </div>
-        )}
       </div>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -1569,79 +1410,6 @@ function ProfileActions({
         חזרה לחשבון
       </Link>
     </div>
-  );
-}
-
-function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [confirmation, setConfirmation] = useState("");
-  const phrase = "מחיקת הפרופיל לצמיתות";
-
-  function close(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (!nextOpen && !pending) {
-      setAcknowledged(false);
-      setConfirmation("");
-    }
-  }
-
-  return (
-    <section className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted-foreground marker:content-none">
-          <span>אפשרויות מחיקת הפרופיל</span>
-          <span className="text-xs group-open:hidden">הצגה</span>
-          <span className="hidden text-xs group-open:inline">הסתרה</span>
-        </summary>
-
-        <div className="mt-4 border-t border-destructive/30 pt-4">
-          <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או
-            לשחזר את הפרופיל לאחר מכן.
-          </p>
-          <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
-            מחיקת הפרופיל
-          </Button>
-        </div>
-      </details>
-
-      <Dialog open={open} onOpenChange={close}>
-        <DialogContent dir="rtl" className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>אישור מחיקה לצמיתות</DialogTitle>
-            <DialogDescription>זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות שחזור.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-              <Checkbox checked={acknowledged} onCheckedChange={(value) => setAcknowledged(value === true)} />
-              <span className="text-sm text-foreground">ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את הפרופיל.</span>
-            </label>
-            <Field label={`כדי לאשר, הקלידו: ${phrase}`}>
-              <Input
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                autoComplete="off"
-              />
-            </Field>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <Button type="button" variant="outline" disabled={pending} onClick={() => close(false)}>
-                ביטול
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={pending || !acknowledged || confirmation !== phrase}
-                onClick={onConfirm}
-              >
-                {pending ? "הפרופיל נמחק…" : "כן, מחיקת הפרופיל לצמיתות"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </section>
   );
 }
 

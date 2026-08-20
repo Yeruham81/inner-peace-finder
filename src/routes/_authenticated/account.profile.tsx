@@ -10,5 +10,6 @@ export const Route = createFileRoute("/_authenticated/account/profile")({
 });
 
 function AccountProfilePage() {
-  return <EditorPage embedded />;
+  const { user } = Route.useRouteContext();
+  return <EditorPage embedded defaultEmail={user.email ?? ""} />;
 }
