@@ -41,6 +41,7 @@ export function LeadModal({
   populationId,
   populationName,
   pageSource,
+  unclaimedProfile = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,6 +52,7 @@ export function LeadModal({
   populationId?: string | null;
   populationName?: string | null;
   pageSource?: string;
+  unclaimedProfile?: boolean;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -165,10 +167,7 @@ export function LeadModal({
 
   const challengeAnswerNum = Number(challengeAnswer);
   const challengeOk =
-    challenge !== null &&
-    !challengeLoading &&
-    challengeAnswer.trim() !== "" &&
-    Number.isFinite(challengeAnswerNum);
+    challenge !== null && !challengeLoading && challengeAnswer.trim() !== "" && Number.isFinite(challengeAnswerNum);
 
   const phoneOk = PHONE_RE.test(phone.trim());
   const nameOk = name.trim().length >= 2;
@@ -200,6 +199,11 @@ export function LeadModal({
         },
       });
       if (!res.ok) {
+        if (res.reason === "unclaimed_contact_limit") {
+          setError(res.message ?? "לא ניתן לשלוח פנייה נוספת לפרופיל זה לפני אישור המטפל/ת.");
+          setSubmitting(false);
+          return;
+        }
         if (res.reason === "therapist_unavailable") {
           setError(res.message ?? "לא ניתן לשלוח פנייה לפרופיל זה כרגע.");
           setSubmitting(false);
@@ -215,9 +219,7 @@ export function LeadModal({
           return;
         }
         setError(
-          res.reason === "challenge_expired"
-            ? CHALLENGE_ERROR_MESSAGES.expired
-            : CHALLENGE_ERROR_MESSAGES.failed,
+          res.reason === "challenge_expired" ? CHALLENGE_ERROR_MESSAGES.expired : CHALLENGE_ERROR_MESSAGES.failed,
         );
         setChallengeAnswer("");
         setSubmitting(false);
@@ -248,11 +250,7 @@ export function LeadModal({
       aria-labelledby={titleId}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
     >
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleCloseRequest}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseRequest} aria-hidden="true" />
       <div
         ref={panelRef}
         aria-busy={submitting}
@@ -278,7 +276,9 @@ export function LeadModal({
               הפנייה נשלחה
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.
+              {unclaimedProfile
+                ? "הפנייה הראשונית נשמרה. היא תימסר בהתאם לאישור המטפל/ת להשתתף בטיפולינקס."
+                : "הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות."}
             </p>
           </div>
         ) : (
@@ -288,7 +288,9 @@ export function LeadModal({
                 פנייה ל{therapistName}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                מלאו פרטים והפנייה תועבר ישירות למטפל/ת.
+                {unclaimedProfile
+                  ? "המטפל/ת עדיין לא אישרו את השתתפותם בטיפולינקס. הפנייה תישמר כפנייה ראשונית ותימסר בהתאם לאישורם."
+                  : "מלאו פרטים והפנייה תועבר ישירות למטפל/ת."}
               </p>
             </div>
 
@@ -362,11 +364,7 @@ export function LeadModal({
               />
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+            {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
 
             <button
               type="submit"
