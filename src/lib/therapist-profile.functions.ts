@@ -683,6 +683,17 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
     if (!result.therapist_id) throw new Error("שמירת הפרופיל נכשלה. נסו שוב.");
 
+    // A claimed profile that Tipulinks originally created from public
+    // information stops being "unreviewed by the therapist" after the first
+    // successful owner save. Do not mark ordinary self-created profiles.
+    const { error: reviewedError } = await supabaseAdmin
+      .from("therapists")
+      .update({ owner_reviewed_at: new Date().toISOString() })
+      .eq("id", result.therapist_id)
+      .eq("profile_origin", "admin_public_info")
+      .is("owner_reviewed_at", null);
+    if (reviewedError) throw new Error(reviewedError.message);
+
     return {
       therapist_id: result.therapist_id,
       profile_status: result.profile_status ?? nextStatus,
