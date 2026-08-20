@@ -13,6 +13,10 @@ import { buildPreviewViewData, type PreviewFormState } from "./profile-preview-a
 import type { EditorOptions } from "./therapist-profile.functions";
 
 const editorSource = readFileSync(join(import.meta.dir, "..", "routes", "_authenticated", "new-profile.tsx"), "utf8");
+const settingsSource = readFileSync(
+  join(import.meta.dir, "..", "routes", "_authenticated", "account.settings.tsx"),
+  "utf8",
+);
 
 const options = {
   professions: [{ id: "p1", name_he: "פסיכולוגית", slug: "psychologist" }],
@@ -275,25 +279,35 @@ describe("profile visibility actions", () => {
   });
 });
 
-describe("permanent profile deletion disclosure", () => {
-  it("keeps the destructive button hidden behind a preliminary native disclosure", () => {
-    const panelStart = editorSource.indexOf("function DeleteProfilePanel");
-    const panelEnd = editorSource.indexOf("function Section", panelStart);
-    const panelSource = editorSource.slice(panelStart, panelEnd);
+describe("account settings ownership of contact preferences and deletion", () => {
+  it("moves permanent profile deletion out of the editor and keeps it behind a preliminary native disclosure", () => {
+    expect(editorSource).not.toContain("function DeleteProfilePanel");
+
+    const panelStart = settingsSource.indexOf("function DeleteProfilePanel");
+    const panelSource = settingsSource.slice(panelStart);
     const detailsOpen = panelSource.indexOf('<details className="group">');
     const summary = panelSource.indexOf("אפשרויות מחיקת הפרופיל", detailsOpen);
     const destructiveButton = panelSource.indexOf('variant="destructive"', summary);
     const detailsClose = panelSource.indexOf("</details>", destructiveButton);
 
+    expect(panelStart).toBeGreaterThan(-1);
     expect(detailsOpen).toBeGreaterThan(-1);
     expect(summary).toBeGreaterThan(detailsOpen);
     expect(destructiveButton).toBeGreaterThan(summary);
     expect(detailsClose).toBeGreaterThan(destructiveButton);
   });
 
-  it("retains the existing final dialog safeguards after the disclosure", () => {
-    expect(editorSource).toContain("ברור לי שהמחיקה היא לצמיתות");
-    expect(editorSource).toContain("confirmation !== phrase");
-    expect(editorSource).toContain("כן, מחיקת הפרופיל לצמיתות");
+  it("retains the existing final deletion safeguards in account settings", () => {
+    expect(settingsSource).toContain("ברור לי שהמחיקה היא לצמיתות");
+    expect(settingsSource).toContain("confirmation !== phrase");
+    expect(settingsSource).toContain("כן, מחיקת הפרופיל לצמיתות");
+  });
+
+  it("defaults new profiles to email and manages channel choices only from account settings", () => {
+    expect(editorSource).toContain('contact_methods: ["email"]');
+    expect(editorSource).toContain('preferred_contact_method: "email"');
+    expect(editorSource).not.toContain("CONTACT_METHOD_OPTIONS");
+    expect(settingsSource).toContain("CONTACT_METHOD_OPTIONS");
+    expect(settingsSource).toContain("updateMyContactPreferences");
   });
 });
