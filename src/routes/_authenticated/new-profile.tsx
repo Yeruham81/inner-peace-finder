@@ -375,7 +375,7 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions): FormSt
   };
 }
 
-function EditorPage() {
+export function EditorPage({ embedded = false }: { embedded?: boolean } = {}) {
   const queryClient = useQueryClient();
   const getProfileFn = useServerFn(getMyProfile);
   const getOptionsFn = useServerFn(getEditorOptions);
@@ -494,8 +494,8 @@ function EditorPage() {
 
   if (profile.isError || options.isError) {
     return (
-      <div className="min-h-screen bg-brand-soft/50">
-        <div className="mx-auto max-w-4xl px-4 py-10">
+      <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
+        <div className={embedded ? "w-full" : "mx-auto max-w-4xl px-4 py-10"}>
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
             <p className="text-sm font-medium text-destructive">לא הצלחנו לטעון את עורך הפרופיל.</p>
             <button
@@ -517,8 +517,16 @@ function EditorPage() {
 
   if (profile.isLoading || options.isLoading || !initialized) {
     return (
-      <div className="min-h-screen bg-brand-soft/50">
-        <div className="mx-auto max-w-4xl px-4 py-10 text-sm text-muted-foreground">טוען…</div>
+      <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
+        <div
+          className={
+            embedded
+              ? "w-full py-6 text-sm text-muted-foreground"
+              : "mx-auto max-w-4xl px-4 py-10 text-sm text-muted-foreground"
+          }
+        >
+          טוען…
+        </div>
       </div>
     );
   }
@@ -557,8 +565,8 @@ function EditorPage() {
   const previewData = buildPreviewViewData(form, options.data, profile.data);
 
   return (
-    <div className="min-h-screen bg-brand-soft/50">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+    <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
+      <div className={embedded ? "w-full" : "mx-auto max-w-6xl px-4 py-8 sm:py-10"}>
         <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
