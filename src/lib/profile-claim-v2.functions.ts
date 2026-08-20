@@ -28,8 +28,9 @@ export type ClaimInvitePreview = {
 };
 
 async function hashToken(token: string): Promise<string> {
-  const { createHash } = await import("node:crypto");
-  return createHash("sha256").update(token, "utf8").digest("hex");
+  const bytes = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function normalizeEmail(email: string): string {
@@ -43,9 +44,7 @@ function maskEmail(email: string): string {
   return `${visible}${"*".repeat(Math.max(3, local.length - visible.length))}@${domain}`;
 }
 
-async function signedInEmail(
-  supabase: import("@supabase/supabase-js").SupabaseClient,
-): Promise<string | null> {
+async function signedInEmail(supabase: import("@supabase/supabase-js").SupabaseClient): Promise<string | null> {
   const { data, error } = await supabase.auth.getUser();
   if (error) throw new Error(error.message);
   return data.user?.email ? normalizeEmail(data.user.email) : null;
@@ -234,7 +233,10 @@ export const acceptClaimInvite = createServerFn({ method: "POST" })
           .eq("id", heldLead.id)
           .eq("delivery_status", "awaiting_consent");
         if (expiryError) {
-          console.error("[claim] held lead expiry status update failed", { leadId: heldLead.id, code: expiryError.code });
+          console.error("[claim] held lead expiry status update failed", {
+            leadId: heldLead.id,
+            code: expiryError.code,
+          });
         }
         expiredHeldLead = true;
       } else if (therapist.email) {
