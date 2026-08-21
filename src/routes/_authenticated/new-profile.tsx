@@ -466,12 +466,19 @@ export function EditorPage({
     if (initialized || !actorMode.isSuccess || !profile.isSuccess || !options.isSuccess) return;
     if (profile.data) {
       setForm(fromProfile(profile.data, options.data, editorDefaultEmail));
+    } else if (isAdmin) {
+      // Admin-created public profiles must never inherit the admin account's
+      // login email or contact preferences. The therapist's professional
+      // contact details can be entered explicitly when available.
+      setForm({ ...emptyForm });
     } else {
+      // A therapist creating their own profile keeps the existing default:
+      // email is enabled and preferred from the start.
       setForm({
         ...emptyForm,
-        email: editorDefaultEmail,
-        contact_methods: editorDefaultEmail ? ["email"] : [],
-        preferred_contact_method: editorDefaultEmail ? "email" : "",
+        email: defaultEmail,
+        contact_methods: ["email"],
+        preferred_contact_method: "email",
       });
     }
     setInitialized(true);
@@ -483,11 +490,15 @@ export function EditorPage({
     options.isSuccess,
     initialized,
     editorDefaultEmail,
+    isAdmin,
+    defaultEmail,
   ]);
 
   const mutation = useMutation({
     mutationFn: (publish: boolean) => {
-      const contactPreferences = resolveEditorContactPreferences(form, editorDefaultEmail);
+      const contactPreferences = isAdmin
+        ? resolveEditorContactPreferences(form, "")
+        : resolveEditorContactPreferences(form, defaultEmail);
       const profilePayload = {
         full_name: form.full_name,
         gender: form.gender || null,
@@ -641,7 +652,6 @@ export function EditorPage({
     ...(form.full_description.trim().length < DESCRIPTION_MIN ? [`קצת עליי (לפחות ${DESCRIPTION_MIN} תווים)`] : []),
     ...(form.language_ids.length === 0 ? ["שפת טיפול"] : []),
     ...(form.population_ids.length === 0 ? ["אוכלוסיית טיפול"] : []),
-    ...(isAdmin && !form.email.trim() ? ["אימייל מקצועי"] : []),
     ...(form.home_visit_available && form.home_visit_regions.length === 0 ? ["אזורי ביקורי בית"] : []),
     ...(!hasPhysicalLocation && !form.online_available && !form.home_visit_available
       ? ["מיקום פיזי, טיפול אונליין או ביקורי בית"]
@@ -1516,7 +1526,7 @@ function ContactPreferencesSummary({
         <h2 className="text-lg font-semibold text-foreground">קבלת פניות</h2>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
           {adminMode
-            ? "בפרופיל שנוצר מטעם Tipulinks, אימייל מקצועי שהוזן לעיל מוגדר כערוץ הפעיל הראשוני."
+            ? "בפרופיל שנוצר מטעם Tipulinks, אימייל מקצועי שיוזן לעיל יוכל לשמש כערוץ הקשר הראשוני."
             : "ניתן להוסיף, להסיר או לשנות את דרכי קבלת הפניות בהגדרות החשבון. בפרופיל חדש אימייל מוגדר כברירת המחדל."}
         </p>
       </div>
@@ -1600,25 +1610,26 @@ function ProfileActions({
         <StatusBadge status={status} />
       </div>
 
-      {status === "published" && allowVisibilityManagement && (
-        <div className="mt-4 border-t border-border pt-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
-            />
-            {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+      {status === "published" &&
+        (allowVisibilityManagement ? (
+          <div className="mt-4 border-t border-border pt-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
+              />
+              {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={visibilityPending}
+              onClick={() => onVisibilityChange(visibility !== "visible")}
+              className="mt-3 w-full"
+            >
+              {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={visibilityPending}
-            onClick={() => onVisibilityChange(visibility !== "visible")}
-            className="mt-3 w-full"
-          >
-            {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
-          </Button>
-        </div>
-      )}
+        ) : null)}
 
       <div
         className={`mt-4 rounded-xl border p-3 text-sm leading-relaxed ${
