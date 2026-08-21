@@ -36,6 +36,9 @@ const STATUS_TONES: Record<string, Tone> = {
   // catalogs / integrations
   "לא פעיל": "neutral",
   "טרם חובר": "pending",
+  // admin task urgency
+  דחוף: "negative",
+  לבדיקה: "neutral",
 };
 
 export function AdminStatusBadge({ status, className }: { status: string; className?: string }) {
