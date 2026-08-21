@@ -61,7 +61,7 @@ function AccountCredentialsPage() {
             ההסמכות מקושרות לפרופיל המטפל, ולכן ניתן להגיש מסמכים לאחר יצירת הפרופיל.
           </p>
           <Button className="mt-5" asChild>
-            <Link to="/new-profile" search={{}}>
+            <Link to="/new-profile" search={{ therapistId: undefined }}>
               יצירת פרופיל
             </Link>
           </Button>
