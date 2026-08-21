@@ -16,8 +16,8 @@ const imageMigration = readFileSync(
 describe("admin profile editor mode", () => {
   it("derives admin mode from the authenticated server actor instead of a browser flag", () => {
     expect(editorSource).toContain("getProfileEditorActorMode");
-    expect(editorSource).toContain('actorMode.data?.is_admin === true');
-    expect(editorSource).not.toContain('tipulinks1@gmail.com');
+    expect(editorSource).toContain("actorMode.data?.is_admin === true");
+    expect(editorSource).not.toContain("tipulinks1@gmail.com");
   });
 
   it("uses the dedicated admin save/load functions and an explicit therapist id", () => {
@@ -29,13 +29,15 @@ describe("admin profile editor mode", () => {
 
   it("persists the newly-created therapist id into the route so refresh edits the same profile", () => {
     expect(editorSource).toContain("onAdminTherapistIdChange?.(res.therapist_id)");
-    expect(editorSource).toContain('search: { therapistId: nextTherapistId }');
-    expect(accountProfileSource).toContain('search: { therapistId: nextTherapistId }');
+    expect(editorSource).toContain("search: { therapistId: nextTherapistId }");
+    expect(accountProfileSource).toContain("search: { therapistId: nextTherapistId }");
   });
 
   it("never copies the admin login email into a therapist profile", () => {
-    expect(editorSource).toContain('const editorDefaultEmail = isAdmin ? "" : defaultEmail');
-    expect(editorSource).toContain("כתובת האימייל של חשבון האדמין אינה מועתקת לפרופיל");
+    // The implementation may be refactored/formatted by Lovable, so verify the
+    // invariant rather than one exact declaration or explanatory UI sentence.
+    expect(editorSource).not.toContain("tipulinks1@gmail.com");
+    expect(editorSource).toMatch(/isAdmin\s*\?\s*["']{2}\s*:\s*defaultEmail/);
   });
 
   it("keeps credential verification as a therapist-owned action", () => {
