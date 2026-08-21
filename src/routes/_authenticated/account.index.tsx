@@ -57,7 +57,6 @@ function AccountOverviewPage() {
         }
       />
 
-
       {!isLoading && !isError && account && !account.owned_therapist_id && (
         <NoProfileState email={user.email ?? ""} accountStatus={statusLabel(account.account_status)} />
       )}
@@ -152,13 +151,7 @@ function AccountOverviewPage() {
                       strokeWidth={2}
                       fill="url(#accountImpressions)"
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="views"
-                      stroke="var(--primary)"
-                      strokeWidth={2}
-                      fill="transparent"
-                    />
+                    <Area type="monotone" dataKey="views" stroke="var(--primary)" strokeWidth={2} fill="transparent" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -206,7 +199,10 @@ function AccountOverviewPage() {
                 {ACCOUNT_MOCK_LEADS.slice(0, 4).map((lead) => (
                   <div key={lead.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">פנייה ב{lead.channel === "טלפון" ? "" : "-"}{lead.channel}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        פנייה ב{lead.channel === "טלפון" ? "" : "-"}
+                        {lead.channel}
+                      </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {lead.date} · {lead.time} · {lead.status}
                       </p>
@@ -256,10 +252,14 @@ function NoProfileState({ email, accountStatus }: { email: string; accountStatus
           אפשר ליצור פרופיל מקצועי חדש. פרופיל קיים שנוצר על ידי טיפולינקס יחובר לחשבון רק לאחר השלמת תהליך קבלת הבעלות.
         </p>
         <Button className="mt-5" asChild>
-          <Link to="/new-profile">יצירת פרופיל חדש</Link>
+          <Link to="/new-profile" search={{}}>
+            יצירת פרופיל חדש
+          </Link>
         </Button>
         <div className="mt-6 grid gap-2 rounded-xl bg-muted/60 p-4 text-right text-xs text-muted-foreground sm:grid-cols-2">
-          <span>חשבון: <span dir="ltr">{email}</span></span>
+          <span>
+            חשבון: <span dir="ltr">{email}</span>
+          </span>
           <span>סטטוס: {accountStatus}</span>
         </div>
       </div>
