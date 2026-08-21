@@ -264,7 +264,7 @@ describe("profile visibility actions", () => {
   it("keeps the draft readiness message and the three standard actions outside the visibility guard", () => {
     const visibilityGuard = editorSource.indexOf('{status === "published" && (');
     const draftMessage = editorSource.indexOf(
-      "הפרופיל עדיין אינו מוכן לפרסום. ניתן לשמור טיוטה ולהמשיך בהמשך.",
+      "ניתן לשמור את הפרופיל ולהמשיך לערוך אותו. לאחר השמירה יוצג כאן מידע שחסר לפרסום, אם יש.",
       visibilityGuard,
     );
     const previewButton = editorSource.indexOf("תצוגה מקדימה", draftMessage);
