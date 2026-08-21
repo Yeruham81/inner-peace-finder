@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
+import { formatAdminDate } from "@/components/admin/admin-formatters";
 import { MOCK_CLAIMS, type MockClaim } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
@@ -36,7 +37,12 @@ function ClaimsPage() {
   const filtered = useMemo(() => {
     const term = search.trim();
     return claims.filter((row) => {
-      if (term && !row.applicantName.includes(term) && !row.requestedProfile.includes(term) && !row.email.includes(term))
+      if (
+        term &&
+        !row.applicantName.includes(term) &&
+        !row.requestedProfile.includes(term) &&
+        !row.email.includes(term)
+      )
         return false;
       if (status !== "all" && row.status !== status) return false;
       if (period === "7 ימים אחרונים" && row.requestedAt < "2026-08-12") return false;
@@ -54,12 +60,36 @@ function ClaimsPage() {
   }
 
   const columns: AdminColumn<MockClaim>[] = [
-    { key: "applicantName", header: "שם המבקש/ת", render: (row) => <span className="font-medium">{row.applicantName}</span> },
+    {
+      key: "applicantName",
+      header: "שם המבקש/ת",
+      render: (row) => <span className="font-medium">{row.applicantName}</span>,
+    },
     { key: "requestedProfile", header: "פרופיל מבוקש", render: (row) => row.requestedProfile },
     { key: "email", header: "אימייל", hideOnNarrow: true, render: (row) => <span dir="ltr">{row.email}</span> },
     { key: "phone", header: "טלפון", hideOnNarrow: true, render: (row) => <span dir="ltr">{row.phone}</span> },
-    { key: "requestedAt", header: "תאריך בקשה", render: (row) => row.requestedAt },
+    {
+      key: "requestedAt",
+      header: "תאריך בקשה",
+      render: (row) => <span dir="ltr">{formatAdminDate(row.requestedAt)}</span>,
+    },
     { key: "status", header: "סטטוס", render: (row) => <AdminStatusBadge status={row.status} /> },
+    {
+      key: "actions",
+      header: "פעולות",
+      render: (row) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            setSelectedId(row.id);
+          }}
+        >
+          בדיקה
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -100,9 +130,22 @@ function ClaimsPage() {
               <AdminStatusBadge status={row.status} />
             </div>
             <p className="text-xs text-muted-foreground">{row.requestedProfile}</p>
-            <p className="text-[11px] text-muted-foreground" dir="ltr">
-              {row.email} · {row.requestedAt}
-            </p>
+            <div className="flex items-end justify-between gap-2">
+              <p className="min-w-0 text-[11px] text-muted-foreground">
+                <span dir="ltr">{row.email}</span> · <span dir="ltr">{formatAdminDate(row.requestedAt)}</span>
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedId(row.id);
+                }}
+              >
+                בדיקה
+              </Button>
+            </div>
           </div>
         )}
         emptyTitle="אין בקשות מתאימות"
@@ -162,9 +205,14 @@ function ClaimsPage() {
 
             <AdminDetailSection title="הבקשה">
               <AdminDetailRow label="פרופיל מבוקש" value={selected.requestedProfile} />
-              <AdminDetailRow label="תאריך הבקשה" value={selected.requestedAt} />
+              <AdminDetailRow
+                label="תאריך הבקשה"
+                value={<span dir="ltr">{formatAdminDate(selected.requestedAt)}</span>}
+              />
               <AdminDetailRow label="סטטוס" value={<AdminStatusBadge status={selected.status} />} />
-              {selected.rejectionReason ? <AdminDetailRow label="סיבת הדחייה" value={selected.rejectionReason} /> : null}
+              {selected.rejectionReason ? (
+                <AdminDetailRow label="סיבת הדחייה" value={selected.rejectionReason} />
+              ) : null}
             </AdminDetailSection>
 
             <AdminDetailSection title="מידע תומך">
@@ -176,7 +224,12 @@ function ClaimsPage() {
                 <Label htmlFor="claim-reason" className="text-xs text-muted-foreground">
                   סיבת הדחייה
                 </Label>
-                <Textarea id="claim-reason" value={reason} onChange={(event) => setReason(event.target.value)} rows={3} />
+                <Textarea
+                  id="claim-reason"
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  rows={3}
+                />
               </AdminDetailSection>
             ) : null}
           </>
