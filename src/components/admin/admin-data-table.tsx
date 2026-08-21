@@ -59,7 +59,7 @@ export function AdminDataTable<T>({
                 <TableHead
                   key={column.key}
                   className={cn(
-                    "text-end text-xs font-semibold text-foreground/80",
+                    "text-right text-xs font-semibold text-foreground/80",
                     column.hideOnNarrow && "hidden lg:table-cell",
                     column.className,
                   )}
@@ -93,7 +93,7 @@ export function AdminDataTable<T>({
                   <TableCell
                     key={column.key}
                     className={cn(
-                      "text-end align-middle text-sm",
+                      "text-right align-middle text-sm",
                       column.hideOnNarrow && "hidden lg:table-cell",
                       column.className,
                     )}
@@ -132,7 +132,7 @@ export function AdminDataTable<T>({
               : columns.map((column) => (
                   <div key={column.key} className="flex items-center justify-between gap-3 py-0.5">
                     <span className="text-xs text-muted-foreground">{column.header}</span>
-                    <span className="min-w-0 text-end">{column.render(row)}</span>
+                    <span className="min-w-0 text-right">{column.render(row)}</span>
                   </div>
                 ))}
           </div>
