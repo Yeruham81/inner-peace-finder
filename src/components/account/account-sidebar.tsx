@@ -41,7 +41,7 @@ export function AccountSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-xs font-semibold text-foreground">צריכים לעדכן משהו בפרופיל?</p>
         <Link
           to="/account/profile"
-          search={{}}
+          search={{ therapistId: undefined }}
           onClick={onNavigate}
           className="mt-1 inline-block text-xs font-medium text-brand underline-offset-4 hover:underline"
         >

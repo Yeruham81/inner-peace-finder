@@ -252,7 +252,7 @@ function NoProfileState({ email, accountStatus }: { email: string; accountStatus
           אפשר ליצור פרופיל מקצועי חדש. פרופיל קיים שנוצר על ידי טיפולינקס יחובר לחשבון רק לאחר השלמת תהליך קבלת הבעלות.
         </p>
         <Button className="mt-5" asChild>
-          <Link to="/new-profile" search={{}}>
+          <Link to="/new-profile" search={{ therapistId: undefined }}>
             יצירת פרופיל חדש
           </Link>
         </Button>

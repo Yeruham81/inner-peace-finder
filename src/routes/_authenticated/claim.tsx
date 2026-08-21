@@ -45,7 +45,7 @@ function ClaimInvitePage() {
     setError(null);
     try {
       await acceptFn({ data: { token } });
-      await navigate({ to: "/account/profile", search: {} });
+      await navigate({ to: "/account/profile", search: { therapistId: undefined } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "לא ניתן לקבל בעלות על הפרופיל.");
     } finally {
