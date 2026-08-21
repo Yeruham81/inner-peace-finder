@@ -34,17 +34,49 @@ const MOCK_ACTIVITY = [
   { text: "בקשת שיוך חדשה", meta: "לפני 3 שעות" },
 ];
 
-const MOCK_TASKS: Array<{ text: string; status: string; tone: "warn" | "info" | "alert" }> = [
-  { text: "אימות הסמכה ממתין", status: "ממתין", tone: "warn" },
-  { text: "פרופיל שדורש בדיקה", status: "לבדיקה", tone: "info" },
-  { text: "בקשת שיוך שטרם טופלה", status: "דחוף", tone: "alert" },
-];
-
-const TONE_CLASS: Record<"warn" | "info" | "alert", string> = {
-  warn: "bg-accent/25 text-accent-foreground",
-  info: "bg-secondary text-secondary-foreground",
-  alert: "bg-destructive/10 text-destructive",
+type MockTask = {
+  id: string;
+  type: string;
+  entity: string;
+  waiting: string;
+  urgency: "דחוף" | "ממתין" | "לבדיקה";
+  action: { label: string; to: "/admin/credentials" | "/admin/claims" | "/admin/therapists" | "/admin/leads" };
 };
+
+const MOCK_TASKS: MockTask[] = [
+  {
+    id: "t1",
+    type: "אימות הסמכה",
+    entity: "יובל אשכנזי",
+    waiting: "ממתין 5 ימים",
+    urgency: "ממתין",
+    action: { label: "בדיקה", to: "/admin/credentials" },
+  },
+  {
+    id: "t2",
+    type: "בקשת שיוך",
+    entity: "דנה מזרחי",
+    waiting: "ממתינה 3 ימים",
+    urgency: "דחוף",
+    action: { label: "בדיקה", to: "/admin/claims" },
+  },
+  {
+    id: "t3",
+    type: "פרופיל לבדיקה",
+    entity: "רותם אלמוג",
+    waiting: "ממתין יום",
+    urgency: "לבדיקה",
+    action: { label: "צפייה", to: "/admin/therapists" },
+  },
+  {
+    id: "t4",
+    type: "פניה חדשה",
+    entity: "נועה בר-אילן",
+    waiting: "ממתינה 4 שעות",
+    urgency: "ממתין",
+    action: { label: "צפייה", to: "/admin/leads" },
+  },
+];
 
 function AdminDashboardPage() {
   return (
