@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -32,9 +32,12 @@ import {
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  getAdminManagedProfile,
   getEditorOptions,
   getMyProfile,
+  getProfileEditorActorMode,
   getSemanticFeedback,
+  saveAdminManagedProfile,
   saveMyProfile,
   setMyProfileVisibility,
   type ContactMethod,
@@ -43,7 +46,13 @@ import {
   type ProfileEditorData,
 } from "@/lib/therapist-profile.functions";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export const Route = createFileRoute("/_authenticated/new-profile")({
+  validateSearch: (input: Record<string, unknown>) => ({
+    therapistId:
+      typeof input.therapistId === "string" && UUID_PATTERN.test(input.therapistId) ? input.therapistId : undefined,
+  }),
   head: () => ({
     meta: [{ title: "עורך פרופיל מטפל | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
   }),
@@ -52,7 +61,21 @@ export const Route = createFileRoute("/_authenticated/new-profile")({
 
 function NewProfileRoutePage() {
   const { user } = Route.useRouteContext();
-  return <EditorPage defaultEmail={user.email ?? ""} />;
+  const { therapistId } = Route.useSearch();
+  const navigate = useNavigate();
+  return (
+    <EditorPage
+      defaultEmail={user.email ?? ""}
+      adminTherapistId={therapistId ?? null}
+      onAdminTherapistIdChange={(nextTherapistId) =>
+        void navigate({
+          to: "/new-profile",
+          search: { therapistId: nextTherapistId },
+          replace: true,
+        })
+      }
+    />
+  );
 }
 
 type ProductRegion = EditorOptions["localities"][number]["region"];
@@ -383,18 +406,47 @@ function resolveEditorContactPreferences(form: FormState, defaultEmail: string) 
 export function EditorPage({
   embedded = false,
   defaultEmail = "",
+  adminTherapistId = null,
+  onAdminTherapistIdChange,
 }: {
   embedded?: boolean;
   defaultEmail?: string;
+  adminTherapistId?: string | null;
+  onAdminTherapistIdChange?: (therapistId: string) => void;
 } = {}) {
   const queryClient = useQueryClient();
+  const getActorModeFn = useServerFn(getProfileEditorActorMode);
   const getProfileFn = useServerFn(getMyProfile);
+  const getAdminProfileFn = useServerFn(getAdminManagedProfile);
   const getOptionsFn = useServerFn(getEditorOptions);
   const saveFn = useServerFn(saveMyProfile);
+  const saveAdminFn = useServerFn(saveAdminManagedProfile);
   const setVisibilityFn = useServerFn(setMyProfileVisibility);
 
-  const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
+  const actorMode = useQuery({
+    queryKey: ["profile-editor-actor-mode"],
+    queryFn: () => getActorModeFn(),
+    staleTime: 5 * 60_000,
+  });
+  const isAdmin = actorMode.data?.is_admin === true;
+  const [activeAdminTherapistId, setActiveAdminTherapistId] = useState<string | null>(adminTherapistId);
+
+  useEffect(() => {
+    setActiveAdminTherapistId(adminTherapistId);
+  }, [adminTherapistId]);
+
+  const profile = useQuery({
+    queryKey: isAdmin ? ["admin-managed-profile", activeAdminTherapistId ?? "new"] : ["my-profile"],
+    queryFn: () =>
+      isAdmin
+        ? activeAdminTherapistId
+          ? getAdminProfileFn({ data: { therapist_id: activeAdminTherapistId } })
+          : Promise.resolve(null)
+        : getProfileFn(),
+    enabled: actorMode.isSuccess,
+  });
   const options = useQuery({ queryKey: ["editor-options"], queryFn: () => getOptionsFn() });
+  const editorDefaultEmail = isAdmin ? "" : defaultEmail;
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [initialized, setInitialized] = useState(false);
@@ -402,84 +454,105 @@ export function EditorPage({
   const [showPublishMissing, setShowPublishMissing] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  const editorProfileIdentity = isAdmin ? `admin:${activeAdminTherapistId ?? "new"}` : "self";
+
   useEffect(() => {
-    if (initialized || !profile.isSuccess || !options.isSuccess) return;
+    setInitialized(false);
+    setMissing(null);
+    setShowPublishMissing(false);
+  }, [editorProfileIdentity]);
+
+  useEffect(() => {
+    if (initialized || !actorMode.isSuccess || !profile.isSuccess || !options.isSuccess) return;
     if (profile.data) {
-      setForm(fromProfile(profile.data, options.data, defaultEmail));
+      setForm(fromProfile(profile.data, options.data, editorDefaultEmail));
     } else {
       setForm({
         ...emptyForm,
-        email: defaultEmail,
-        contact_methods: ["email"],
-        preferred_contact_method: "email",
+        email: editorDefaultEmail,
+        contact_methods: editorDefaultEmail ? ["email"] : [],
+        preferred_contact_method: editorDefaultEmail ? "email" : "",
       });
     }
     setInitialized(true);
-  }, [profile.data, profile.isSuccess, options.data, options.isSuccess, initialized, defaultEmail]);
+  }, [
+    actorMode.isSuccess,
+    profile.data,
+    profile.isSuccess,
+    options.data,
+    options.isSuccess,
+    initialized,
+    editorDefaultEmail,
+  ]);
 
   const mutation = useMutation({
     mutationFn: (publish: boolean) => {
-      const contactPreferences = resolveEditorContactPreferences(form, defaultEmail);
-      return saveFn({
-        data: {
-          full_name: form.full_name,
-          gender: form.gender || null,
-          professional_title: form.professional_title || null,
-          full_description: form.full_description || null,
-          short_intro: form.short_intro || null,
-          education_training: form.education_training || null,
-          professional_experience: form.professional_experience || null,
-          years_experience: form.years_experience ? Number(form.years_experience) : null,
-          email: contactPreferences.email,
-          phone: contactPreferences.phone,
-          contact_methods: contactPreferences.contact_methods,
-          preferred_contact_method: contactPreferences.preferred_contact_method,
-          image_url: form.image_url || null,
-          profession_ids: form.profession_ids,
-          modality_ids: form.modality_ids,
-          language_ids: form.language_ids,
-          population_ids: form.population_ids,
-          locations: form.locations
-            .filter((location) => location.city.trim().length > 0)
-            .map((location) => ({
-              city: location.city,
-              region: location.region as ProductRegion,
-              address: location.address || null,
-              accessibility_status: location.accessibility_status,
-              accessibility_features: location.accessibility_features,
-              accessibility_note: location.accessibility_note || null,
-            })),
-          online_available: form.online_available,
-          home_visit_available: form.home_visit_available,
-          home_visit_regions: form.home_visit_regions,
-          therapy_format_ids: form.therapy_format_ids,
-          lgbtq_affirming: form.lgbtq_affirming,
-          offers_free_intro: form.offers_free_intro,
-          free_intro_types: form.offers_free_intro ? form.free_intro_types : [],
-          free_intro_duration_minutes:
-            form.offers_free_intro && form.free_intro_duration_minutes
-              ? Number(form.free_intro_duration_minutes)
-              : null,
-          professional_memberships: form.professional_memberships
-            .filter((item) => item.organization_name.trim())
-            .map((item) => ({
-              organization_name: item.organization_name,
-              membership_start_date: item.membership_start_date || null,
-              member_since: item.membership_start_date
-                ? Number(item.membership_start_date.slice(0, 4))
-                : item.member_since
-                  ? Number(item.member_since)
-                  : null,
-            })),
-          service_arrangements: form.service_arrangements
-            .filter((item) => item.organization_name.trim())
-            .map((item) => ({
-              organization_name: item.organization_name,
-              note: item.note || null,
-            })),
-          publish,
-        },
-      });
+      const contactPreferences = resolveEditorContactPreferences(form, editorDefaultEmail);
+      const profilePayload = {
+        full_name: form.full_name,
+        gender: form.gender || null,
+        professional_title: form.professional_title || null,
+        full_description: form.full_description || null,
+        short_intro: form.short_intro || null,
+        education_training: form.education_training || null,
+        professional_experience: form.professional_experience || null,
+        years_experience: form.years_experience ? Number(form.years_experience) : null,
+        email: contactPreferences.email,
+        phone: contactPreferences.phone,
+        contact_methods: contactPreferences.contact_methods,
+        preferred_contact_method: contactPreferences.preferred_contact_method,
+        image_url: form.image_url || null,
+        profession_ids: form.profession_ids,
+        modality_ids: form.modality_ids,
+        language_ids: form.language_ids,
+        population_ids: form.population_ids,
+        locations: form.locations
+          .filter((location) => location.city.trim().length > 0)
+          .map((location) => ({
+            city: location.city,
+            region: location.region as ProductRegion,
+            address: location.address || null,
+            accessibility_status: location.accessibility_status,
+            accessibility_features: location.accessibility_features,
+            accessibility_note: location.accessibility_note || null,
+          })),
+        online_available: form.online_available,
+        home_visit_available: form.home_visit_available,
+        home_visit_regions: form.home_visit_regions,
+        therapy_format_ids: form.therapy_format_ids,
+        lgbtq_affirming: form.lgbtq_affirming,
+        offers_free_intro: form.offers_free_intro,
+        free_intro_types: form.offers_free_intro ? form.free_intro_types : [],
+        free_intro_duration_minutes:
+          form.offers_free_intro && form.free_intro_duration_minutes ? Number(form.free_intro_duration_minutes) : null,
+        professional_memberships: form.professional_memberships
+          .filter((item) => item.organization_name.trim())
+          .map((item) => ({
+            organization_name: item.organization_name,
+            membership_start_date: item.membership_start_date || null,
+            member_since: item.membership_start_date
+              ? Number(item.membership_start_date.slice(0, 4))
+              : item.member_since
+                ? Number(item.member_since)
+                : null,
+          })),
+        service_arrangements: form.service_arrangements
+          .filter((item) => item.organization_name.trim())
+          .map((item) => ({
+            organization_name: item.organization_name,
+            note: item.note || null,
+          })),
+        publish,
+      };
+
+      return isAdmin
+        ? saveAdminFn({
+            data: {
+              therapist_id: activeAdminTherapistId,
+              profile: profilePayload,
+            },
+          })
+        : saveFn({ data: profilePayload });
     },
     onSuccess: (res, publish) => {
       if (res.missing && res.missing.length > 0) {
@@ -488,9 +561,15 @@ export function EditorPage({
         return;
       }
       setMissing(null);
+      if (isAdmin && res.therapist_id) {
+        setActiveAdminTherapistId(res.therapist_id);
+        onAdminTherapistIdChange?.(res.therapist_id);
+        queryClient.invalidateQueries({ queryKey: ["admin-managed-profile", res.therapist_id] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+        queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
+      }
       toast.success(publish ? "הפרופיל פורסם בהצלחה" : "הפרופיל נשמר.");
-      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
     },
     onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
   });
@@ -505,7 +584,7 @@ export function EditorPage({
     onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
 
-  if (profile.isError || options.isError) {
+  if (actorMode.isError || profile.isError || options.isError) {
     return (
       <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
         <div className={embedded ? "w-full" : "mx-auto max-w-4xl px-4 py-10"}>
@@ -514,13 +593,14 @@ export function EditorPage({
             <button
               type="button"
               onClick={() => {
+                if (actorMode.isError) void actorMode.refetch();
                 if (profile.isError) void profile.refetch();
                 if (options.isError) void options.refetch();
               }}
-              disabled={profile.isFetching || options.isFetching}
+              disabled={actorMode.isFetching || profile.isFetching || options.isFetching}
               className="mt-2 text-sm font-medium text-primary underline disabled:opacity-60"
             >
-              {profile.isFetching || options.isFetching ? "מנסה שוב…" : "ניסיון חוזר"}
+              {actorMode.isFetching || profile.isFetching || options.isFetching ? "מנסה שוב…" : "ניסיון חוזר"}
             </button>
           </div>
         </div>
@@ -528,7 +608,7 @@ export function EditorPage({
     );
   }
 
-  if (profile.isLoading || options.isLoading || !initialized) {
+  if (actorMode.isLoading || profile.isLoading || options.isLoading || !initialized) {
     return (
       <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
         <div
@@ -561,6 +641,7 @@ export function EditorPage({
     ...(form.full_description.trim().length < DESCRIPTION_MIN ? [`קצת עליי (לפחות ${DESCRIPTION_MIN} תווים)`] : []),
     ...(form.language_ids.length === 0 ? ["שפת טיפול"] : []),
     ...(form.population_ids.length === 0 ? ["אוכלוסיית טיפול"] : []),
+    ...(isAdmin && !form.email.trim() ? ["אימייל מקצועי"] : []),
     ...(form.home_visit_available && form.home_visit_regions.length === 0 ? ["אזורי ביקורי בית"] : []),
     ...(!hasPhysicalLocation && !form.online_available && !form.home_visit_available
       ? ["מיקום פיזי, טיפול אונליין או ביקורי בית"]
@@ -569,7 +650,7 @@ export function EditorPage({
   const publishMissing = publishMissingFields.length > 0;
 
   const previewData = buildPreviewViewData(form, options.data, profile.data);
-  const contactPreferencesSummary = resolveEditorContactPreferences(form, defaultEmail);
+  const contactPreferencesSummary = resolveEditorContactPreferences(form, editorDefaultEmail);
 
   return (
     <div className={embedded ? "" : "min-h-screen bg-brand-soft/50"}>
@@ -578,10 +659,18 @@ export function EditorPage({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
-                {isEdit ? "עריכת פרופיל מטפל" : "יצירת פרופיל מטפל חדש"}
+                {isAdmin
+                  ? isEdit
+                    ? "עריכת פרופיל מטעם Tipulinks"
+                    : "יצירת פרופיל מטעם Tipulinks"
+                  : isEdit
+                    ? "עריכת פרופיל מטפל"
+                    : "יצירת פרופיל מטפל חדש"}
               </h1>
               <p className="mt-1 text-base text-muted-foreground">
-                ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום.
+                {isAdmin
+                  ? "הפרופיל יישמר ללא בעלים וימתין ללקיחת בעלות על ידי המטפל/ת. עריכה שלך אינה משייכת את הפרופיל לחשבון האדמין."
+                  : "ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום."}
               </p>
             </div>
             <StatusBadge status={status} />
@@ -743,11 +832,17 @@ export function EditorPage({
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב והכשרה בטיפול דינמי."
                 />
-                <TherapistCredentialPanel
-                  therapistId={profile.data?.id ?? null}
-                  professions={options.data?.professions ?? []}
-                  credentials={profile.data?.credentials ?? []}
-                />
+                {isAdmin ? (
+                  <div className="rounded-xl border border-brand/20 bg-brand-soft/25 p-4 text-sm leading-6 text-muted-foreground">
+                    אימות הסמכות מקצועיות יתבצע על ידי המטפל/ת לאחר לקיחת הבעלות על הפרופיל.
+                  </div>
+                ) : (
+                  <TherapistCredentialPanel
+                    therapistId={profile.data?.id ?? null}
+                    professions={options.data?.professions ?? []}
+                    credentials={profile.data?.credentials ?? []}
+                  />
+                )}
               </Section>
 
               <Section title="ניסיון מקצועי">
@@ -1114,10 +1209,34 @@ export function EditorPage({
               </Section>
             </FormArea>
 
+            {isAdmin && (
+              <section className="rounded-2xl border border-brand/20 bg-brand-soft/30 p-4 shadow-sm sm:p-5">
+                <h2 className="text-lg font-semibold text-foreground">פרטי קשר מקצועיים</h2>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  הזינו כתובת אימייל מקצועית של המטפל/ת. הכתובת תשמש בהמשך גם לשליחת ההזמנה ללקיחת בעלות. כתובת האימייל
+                  של חשבון האדמין אינה מועתקת לפרופיל.
+                </p>
+                <div className="mt-4 max-w-xl">
+                  <Field label="אימייל מקצועי">
+                    <Input
+                      dir="ltr"
+                      type="email"
+                      value={form.email}
+                      maxLength={160}
+                      onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="therapist@example.com"
+                      className="bg-white text-left"
+                    />
+                  </Field>
+                </div>
+              </section>
+            )}
+
             <ContactPreferencesSummary
               contactMethods={contactPreferencesSummary.contact_methods}
               preferredContactMethod={contactPreferencesSummary.preferred_contact_method}
               hasSavedProfile={isEdit}
+              adminMode={isAdmin}
             />
 
             <div className="lg:hidden">
@@ -1134,6 +1253,7 @@ export function EditorPage({
                 }}
                 onPublish={() => mutation.mutate(true)}
                 visibility={profile.data?.visibility ?? "hidden"}
+                allowVisibilityManagement={!isAdmin}
                 visibilityPending={visibilityMutation.isPending}
                 onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
               />
@@ -1154,6 +1274,7 @@ export function EditorPage({
               }}
               onPublish={() => mutation.mutate(true)}
               visibility={profile.data?.visibility ?? "hidden"}
+              allowVisibilityManagement={!isAdmin}
               visibilityPending={visibilityMutation.isPending}
               onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
             />
@@ -1382,17 +1503,21 @@ function ContactPreferencesSummary({
   contactMethods,
   preferredContactMethod,
   hasSavedProfile,
+  adminMode = false,
 }: {
   contactMethods: ContactMethod[];
   preferredContactMethod: ContactMethod | null;
   hasSavedProfile: boolean;
+  adminMode?: boolean;
 }) {
   return (
     <section className="rounded-2xl border border-brand/20 bg-brand-soft/30 p-4 shadow-sm sm:p-5">
       <div>
         <h2 className="text-lg font-semibold text-foreground">קבלת פניות</h2>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          ניתן להוסיף, להסיר או לשנות את דרכי קבלת הפניות בהגדרות החשבון. בפרופיל חדש אימייל מוגדר כברירת המחדל.
+          {adminMode
+            ? "בפרופיל שנוצר מטעם Tipulinks, אימייל מקצועי שהוזן לעיל מוגדר כערוץ הפעיל הראשוני."
+            : "ניתן להוסיף, להסיר או לשנות את דרכי קבלת הפניות בהגדרות החשבון. בפרופיל חדש אימייל מוגדר כברירת המחדל."}
         </p>
       </div>
 
@@ -1425,13 +1550,17 @@ function ContactPreferencesSummary({
 
       <div className="mt-4 flex flex-col gap-3 border-t border-brand/15 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-6 text-muted-foreground">
-          {hasSavedProfile
-            ? "רוצים לקבל פניות גם בערוץ נוסף או לשנות את הערוץ המועדף?"
-            : "לאחר שמירת הפרופיל ניתן להוסיף WhatsApp או שיחת טלפון ולבחור ערוץ מועדף."}
+          {adminMode
+            ? "לאחר לקיחת הבעלות המטפל/ת יוכל/תוכל להוסיף WhatsApp או שיחת טלפון ולבחור ערוץ מועדף."
+            : hasSavedProfile
+              ? "רוצים לקבל פניות גם בערוץ נוסף או לשנות את הערוץ המועדף?"
+              : "לאחר שמירת הפרופיל ניתן להוסיף WhatsApp או שיחת טלפון ולבחור ערוץ מועדף."}
         </p>
-        <Button asChild variant="outline" className="shrink-0">
-          <Link to="/account/settings">ניהול דרכי התקשרות</Link>
-        </Button>
+        {!adminMode && (
+          <Button asChild variant="outline" className="shrink-0">
+            <Link to="/account/settings">ניהול דרכי התקשרות</Link>
+          </Button>
+        )}
       </div>
     </section>
   );
@@ -1447,6 +1576,7 @@ function ProfileActions({
   onSaveDraft,
   onPublish,
   visibility,
+  allowVisibilityManagement,
   visibilityPending,
   onVisibilityChange,
 }: {
@@ -1459,6 +1589,7 @@ function ProfileActions({
   onSaveDraft: () => void;
   onPublish: () => void;
   visibility: "visible" | "hidden";
+  allowVisibilityManagement: boolean;
   visibilityPending: boolean;
   onVisibilityChange: (visible: boolean) => void;
 }) {
@@ -1469,7 +1600,7 @@ function ProfileActions({
         <StatusBadge status={status} />
       </div>
 
-      {status === "published" && (
+      {status === "published" && allowVisibilityManagement && (
         <div className="mt-4 border-t border-border pt-4">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
             <span
