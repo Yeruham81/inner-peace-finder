@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CreditCard, Receipt, TrendingUp, Wallet } from "lucide-react";
 
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
+import { formatAdminDate } from "@/components/admin/admin-formatters";
 import {
   MOCK_CREDITS,
   MOCK_INVOICES,
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/admin/billing")({
 });
 
 const transactionColumns: AdminColumn<MockTransaction>[] = [
-  { key: "date", header: "תאריך", render: (row) => row.date },
+  { key: "date", header: "תאריך", render: (row) => <span dir="ltr">{formatAdminDate(row.date)}</span> },
   { key: "therapistName", header: "מטפל/ת", render: (row) => <span className="font-medium">{row.therapistName}</span> },
   { key: "kind", header: "סוג חיוב", render: (row) => row.kind },
   { key: "amount", header: "סכום", render: (row) => <span dir="ltr">{row.amount}</span> },
@@ -80,7 +81,7 @@ function BillingPage() {
                   <AdminStatusBadge status={row.status} />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {row.kind} · <span dir="ltr">{row.amount}</span> · {row.date}
+                  {row.kind} · <span dir="ltr">{row.amount}</span> · <span dir="ltr">{formatAdminDate(row.date)}</span>
                 </p>
               </div>
             )}
@@ -111,9 +112,18 @@ function BillingPage() {
         <TabsContent value="credits">
           <AdminDataTable
             columns={[
-              { key: "therapistName", header: "מטפל/ת", render: (row) => <span className="font-medium">{row.therapistName}</span> },
+              {
+                key: "therapistName",
+                header: "מטפל/ת",
+                render: (row) => <span className="font-medium">{row.therapistName}</span>,
+              },
               { key: "balance", header: "יתרה", render: (row) => <span dir="ltr">{row.balance}</span> },
-              { key: "updatedAt", header: "עדכון אחרון", hideOnNarrow: true, render: (row) => row.updatedAt },
+              {
+                key: "updatedAt",
+                header: "עדכון אחרון",
+                hideOnNarrow: true,
+                render: (row) => <span dir="ltr">{formatAdminDate(row.updatedAt)}</span>,
+              },
             ]}
             rows={MOCK_CREDITS}
             getRowId={(row) => row.therapistName}
@@ -123,8 +133,16 @@ function BillingPage() {
         <TabsContent value="invoices">
           <AdminDataTable
             columns={[
-              { key: "id", header: "מזהה", render: (row) => <span dir="ltr" className="font-medium">{row.id}</span> },
-              { key: "date", header: "תאריך", render: (row) => row.date },
+              {
+                key: "id",
+                header: "מזהה",
+                render: (row) => (
+                  <span dir="ltr" className="font-medium">
+                    {row.id}
+                  </span>
+                ),
+              },
+              { key: "date", header: "תאריך", render: (row) => <span dir="ltr">{formatAdminDate(row.date)}</span> },
               { key: "therapistName", header: "מטפל/ת", render: (row) => row.therapistName },
               { key: "amount", header: "סכום", render: (row) => <span dir="ltr">{row.amount}</span> },
               { key: "status", header: "סטטוס", render: (row) => <AdminStatusBadge status={row.status} /> },
