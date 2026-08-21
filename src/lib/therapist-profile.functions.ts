@@ -555,8 +555,11 @@ export const getAdminManagedProfile = createServerFn({ method: "POST" })
 /* Validation for publish                                             */
 /* ------------------------------------------------------------------ */
 
-function validateForPublish(input: SaveInput): string[] {
+function validateForPublish(input: SaveInput, saveMode: "self" | "admin_public_info" = "self"): string[] {
   const missing: string[] = [];
+  if (saveMode === "admin_public_info" && !input.email?.trim()) {
+    missing.push("אימייל מקצועי");
+  }
   if (!input.full_name || input.full_name.trim().length < 2) missing.push("שם מלא");
   if (!input.gender) missing.push("מין");
   if (!input.professional_title || input.professional_title.trim().length === 0) missing.push("כותרת מקצועית");
@@ -634,7 +637,7 @@ async function saveProfileForActor(args: {
   if (saveMode === "self") await resolveAccount(supabase, userId);
   const resolvedLocations = await resolvePhysicalLocations(data.locations);
 
-  const missing = data.publish ? validateForPublish(data) : [];
+  const missing = data.publish ? validateForPublish(data, saveMode) : [];
   if (data.publish && missing.length > 0) {
     return { therapist_id: "", profile_status: "draft", missing };
   }
@@ -646,7 +649,7 @@ async function saveProfileForActor(args: {
 
   const nextStatus: ProfileStatus = data.publish
     ? "published"
-    : validateForPublish(data).length === 0
+    : validateForPublish(data, saveMode).length === 0
       ? "completed"
       : "draft";
 
