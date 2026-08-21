@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
+import { formatAdminDate } from "@/components/admin/admin-formatters";
 import { MOCK_CATALOGS, type MockCatalogItem } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
@@ -39,7 +40,15 @@ function CatalogsPage() {
 
   const columns = (catalogKey: string): AdminColumn<MockCatalogItem>[] => [
     { key: "name", header: "שם", render: (row) => <span className="font-medium">{row.name}</span> },
-    { key: "slug", header: "slug", render: (row) => <span dir="ltr" className="text-xs text-muted-foreground">{row.slug}</span> },
+    {
+      key: "slug",
+      header: "slug",
+      render: (row) => (
+        <span dir="ltr" className="text-xs text-muted-foreground">
+          {row.slug}
+        </span>
+      ),
+    },
     { key: "status", header: "סטטוס", render: (row) => <AdminStatusBadge status={row.active ? "פעיל" : "לא פעיל"} /> },
     { key: "order", header: "סדר תצוגה", hideOnNarrow: true, render: (row) => row.order },
     {
@@ -64,11 +73,6 @@ function CatalogsPage() {
         title="קטלוגים"
         subtitle="מבנה ניהול הקטלוגים (נתוני הדגמה — הקטלוגים האמיתיים אינם משתנים)"
         breadcrumb="קטלוגים"
-        actions={
-          <Button size="sm" disabled>
-            הוספת פריט
-          </Button>
-        }
       />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -81,20 +85,27 @@ function CatalogsPage() {
                 <Stat label="פעילים" value={catalog.active} />
                 <Stat label="לא פעילים" value={catalog.inactive} />
               </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">עדכון אחרון: {catalog.updatedAt}</p>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                עדכון אחרון: <span dir="ltr">{formatAdminDate(catalog.updatedAt)}</span>
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Tabs defaultValue={MOCK_CATALOGS[0]!.key} dir="rtl">
-        <TabsList className="mb-3 flex h-auto flex-wrap justify-start gap-1">
-          {MOCK_CATALOGS.map((catalog) => (
-            <TabsTrigger key={catalog.key} value={catalog.key} className="text-xs">
-              {catalog.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
+            {MOCK_CATALOGS.map((catalog) => (
+              <TabsTrigger key={catalog.key} value={catalog.key} className="text-xs">
+                {catalog.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <Button size="sm" disabled>
+            הוספת פריט
+          </Button>
+        </div>
 
         {MOCK_CATALOGS.map((catalog) => (
           <TabsContent key={catalog.key} value={catalog.key}>
