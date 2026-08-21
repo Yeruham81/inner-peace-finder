@@ -644,6 +644,7 @@ export function EditorPage({
 
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
   const publishMissingFields = [
+    ...(isAdmin && !form.email.trim() ? ["אימייל מקצועי"] : []),
     ...(form.full_name.trim().length < 2 ? ["שם מלא"] : []),
     ...(!form.gender ? ["מין"] : []),
     ...(!form.professional_title.trim() ? ["כותרת מקצועית"] : []),
@@ -658,6 +659,8 @@ export function EditorPage({
       : []),
   ];
   const publishMissing = publishMissingFields.length > 0;
+  const displayStatus: "draft" | "completed" | "published" =
+    status === "published" ? "published" : publishMissing ? "draft" : "completed";
 
   const previewData = buildPreviewViewData(form, options.data, profile.data);
   const contactPreferencesSummary = resolveEditorContactPreferences(form, editorDefaultEmail);
@@ -683,7 +686,7 @@ export function EditorPage({
                   : "ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום."}
               </p>
             </div>
-            <StatusBadge status={status} />
+            <StatusBadge status={displayStatus} />
           </div>
         </div>
 
@@ -1223,11 +1226,11 @@ export function EditorPage({
               <section className="rounded-2xl border border-brand/20 bg-brand-soft/30 p-4 shadow-sm sm:p-5">
                 <h2 className="text-lg font-semibold text-foreground">פרטי קשר מקצועיים</h2>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  הזינו כתובת אימייל מקצועית של המטפל/ת. הכתובת תשמש בהמשך גם לשליחת ההזמנה ללקיחת בעלות. כתובת האימייל
-                  של חשבון האדמין אינה מועתקת לפרופיל.
+                  הזינו כתובת אימייל מקצועית של המטפל/ת. זהו שדה חובה לפרסום, והכתובת תשמש בהמשך גם לשליחת הפנייה
+                  הראשונית וההזמנה ללקיחת בעלות. כתובת האימייל של חשבון האדמין אינה מועתקת לפרופיל.
                 </p>
                 <div className="mt-4 max-w-xl">
-                  <Field label="אימייל מקצועי">
+                  <Field label="אימייל מקצועי *">
                     <Input
                       dir="ltr"
                       type="email"
@@ -1251,7 +1254,7 @@ export function EditorPage({
 
             <div className="lg:hidden">
               <ProfileActions
-                status={status}
+                status={displayStatus}
                 pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
                 publishMissing={publishMissing}
                 publishMissingFields={publishMissingFields}
@@ -1272,7 +1275,7 @@ export function EditorPage({
 
           <aside className="sticky top-24 hidden h-fit self-start lg:block">
             <ProfileActions
-              status={status}
+              status={displayStatus}
               pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
               publishMissing={publishMissing}
               publishMissingFields={publishMissingFields}
@@ -1526,7 +1529,7 @@ function ContactPreferencesSummary({
         <h2 className="text-lg font-semibold text-foreground">קבלת פניות</h2>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
           {adminMode
-            ? "בפרופיל שנוצר מטעם Tipulinks, אימייל מקצועי שיוזן לעיל יוכל לשמש כערוץ הקשר הראשוני."
+            ? "בפרופיל שנוצר מטעם Tipulinks, האימייל המקצועי שהוגדר לעיל משמש כערוץ הקשר הראשוני."
             : "ניתן להוסיף, להסיר או לשנות את דרכי קבלת הפניות בהגדרות החשבון. בפרופיל חדש אימייל מוגדר כברירת המחדל."}
         </p>
       </div>
