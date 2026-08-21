@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AdminDataTable, AdminPagination, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
+import { formatAdminDateTime } from "@/components/admin/admin-formatters";
 import { MOCK_LEADS, type MockLead } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
@@ -52,8 +53,16 @@ function LeadsPage() {
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const columns: AdminColumn<MockLead>[] = [
-    { key: "id", header: "מזהה", render: (row) => <span dir="ltr" className="font-medium">{row.id}</span> },
-    { key: "createdAt", header: "תאריך", render: (row) => <span dir="ltr">{row.createdAt}</span> },
+    {
+      key: "id",
+      header: "מזהה",
+      render: (row) => (
+        <span dir="ltr" className="font-medium">
+          {row.id}
+        </span>
+      ),
+    },
+    { key: "createdAt", header: "תאריך", render: (row) => <span dir="ltr">{formatAdminDateTime(row.createdAt)}</span> },
     { key: "therapistName", header: "מטפל/ת", render: (row) => row.therapistName },
     { key: "channel", header: "ערוץ", render: (row) => row.channel },
     { key: "source", header: "מקור", hideOnNarrow: true, render: (row) => row.source },
@@ -97,7 +106,13 @@ function LeadsPage() {
           onChange={setStatus}
           options={["נוצרה", "נמסרה", "נענתה", "נכשלה"]}
         />
-        <AdminSelectFilter id="lead-therapist" label="מטפל/ת" value={therapist} onChange={setTherapist} options={therapists} />
+        <AdminSelectFilter
+          id="lead-therapist"
+          label="מטפל/ת"
+          value={therapist}
+          onChange={setTherapist}
+          options={therapists}
+        />
       </AdminFilterBar>
 
       <AdminDataTable
@@ -117,12 +132,14 @@ function LeadsPage() {
               {row.therapistName} · {row.channel}
             </p>
             <p className="text-[11px] text-muted-foreground" dir="ltr">
-              {row.createdAt}
+              {formatAdminDateTime(row.createdAt)}
             </p>
           </div>
         )}
         emptyTitle="אין פניות מתאימות"
-        footer={<AdminPagination page={currentPage} pageCount={pageCount} total={filtered.length} onPageChange={setPage} />}
+        footer={
+          <AdminPagination page={currentPage} pageCount={pageCount} total={filtered.length} onPageChange={setPage} />
+        }
       />
 
       <AdminDetailDrawer
@@ -137,7 +154,10 @@ function LeadsPage() {
           <>
             <AdminDetailSection title="פרטי פנייה">
               <AdminDetailRow label="מזהה" value={<span dir="ltr">{selected.id}</span>} />
-              <AdminDetailRow label="מועד יצירה" value={<span dir="ltr">{selected.createdAt}</span>} />
+              <AdminDetailRow
+                label="מועד יצירה"
+                value={<span dir="ltr">{formatAdminDateTime(selected.createdAt)}</span>}
+              />
               <AdminDetailRow label="מטפל/ת" value={selected.therapistName} />
               <AdminDetailRow label="ערוץ פנייה" value={selected.channel} />
               <AdminDetailRow label="מקור" value={selected.source} />
