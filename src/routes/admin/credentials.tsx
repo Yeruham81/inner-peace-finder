@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
+import { formatAdminDate } from "@/components/admin/admin-formatters";
 import { MOCK_CREDENTIAL_REQUESTS, type MockCredentialRequest } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
@@ -39,7 +40,12 @@ function CredentialsPage() {
   const filtered = useMemo(() => {
     const term = search.trim();
     const rows = requests.filter((row) => {
-      if (term && !row.therapistName.includes(term) && !row.credentialType.includes(term) && !row.licenseNumber.includes(term))
+      if (
+        term &&
+        !row.therapistName.includes(term) &&
+        !row.credentialType.includes(term) &&
+        !row.licenseNumber.includes(term)
+      )
         return false;
       if (status !== "all" && row.status !== status) return false;
       if (profession !== "all" && row.profession !== profession) return false;
@@ -76,7 +82,11 @@ function CredentialsPage() {
   }
 
   const columns: AdminColumn<MockCredentialRequest>[] = [
-    { key: "therapistName", header: "שם המטפל/ת", render: (row) => <span className="font-medium">{row.therapistName}</span> },
+    {
+      key: "therapistName",
+      header: "שם המטפל/ת",
+      render: (row) => <span className="font-medium">{row.therapistName}</span>,
+    },
     { key: "credentialType", header: "סוג ההסמכה", render: (row) => row.credentialType },
     { key: "profession", header: "מקצוע", hideOnNarrow: true, render: (row) => row.profession },
     { key: "authority", header: "גוף מעניק", hideOnNarrow: true, render: (row) => row.authority },
@@ -85,9 +95,25 @@ function CredentialsPage() {
       key: "submittedAt",
       header: "תאריך הגשה",
       sortable: true,
-      render: (row) => row.submittedAt,
+      render: (row) => <span dir="ltr">{formatAdminDate(row.submittedAt)}</span>,
     },
     { key: "status", header: "סטטוס", render: (row) => <AdminStatusBadge status={row.status} /> },
+    {
+      key: "actions",
+      header: "פעולות",
+      render: (row) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            setSelectedId(row.id);
+          }}
+        >
+          בדיקה
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -150,9 +176,22 @@ function CredentialsPage() {
             <p className="text-xs text-muted-foreground">
               {row.credentialType} · {row.profession}
             </p>
-            <p className="text-[11px] text-muted-foreground">
-              {row.authority} · הוגש {row.submittedAt}
-            </p>
+            <div className="flex items-end justify-between gap-2">
+              <p className="text-[11px] text-muted-foreground">
+                {row.authority} · הוגש <span dir="ltr">{formatAdminDate(row.submittedAt)}</span>
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedId(row.id);
+                }}
+              >
+                בדיקה
+              </Button>
+            </div>
           </div>
         )}
         emptyTitle="אין בקשות מתאימות"
@@ -172,7 +211,12 @@ function CredentialsPage() {
                 אישור
               </Button>
               {rejecting ? (
-                <Button size="sm" variant="destructive" onClick={() => rejectMock(selected.id)} disabled={!rejectionReason.trim()}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => rejectMock(selected.id)}
+                  disabled={!rejectionReason.trim()}
+                >
                   אישור דחייה
                 </Button>
               ) : (
@@ -192,7 +236,10 @@ function CredentialsPage() {
               <AdminDetailRow label="מקצוע" value={selected.profession} />
               <AdminDetailRow label="גוף מעניק" value={selected.authority} />
               <AdminDetailRow label="מספר רישיון" value={<span dir="ltr">{selected.licenseNumber}</span>} />
-              <AdminDetailRow label="תאריך הגשה" value={selected.submittedAt} />
+              <AdminDetailRow
+                label="תאריך הגשה"
+                value={<span dir="ltr">{formatAdminDate(selected.submittedAt)}</span>}
+              />
               <AdminDetailRow label="סטטוס" value={<AdminStatusBadge status={selected.status} />} />
               {selected.rejectionReason ? (
                 <AdminDetailRow label="סיבת הדחייה" value={selected.rejectionReason} />
