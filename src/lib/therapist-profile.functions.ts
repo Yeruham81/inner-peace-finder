@@ -721,6 +721,8 @@ async function saveProfileForActor(args: {
     professional_memberships: data.professional_memberships,
     service_arrangements: data.service_arrangements,
     locations: locationRows,
+    save_mode: saveMode,
+    target_therapist_id: saveMode === "admin_public_info" ? targetTherapistId : null,
   };
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -728,11 +730,7 @@ async function saveProfileForActor(args: {
     // Ownership is resolved inside the transaction from the verified auth
     // user id — never from anything the browser supplied.
     _actor: userId,
-    _payload: {
-      ...payload,
-      save_mode: saveMode,
-      target_therapist_id: saveMode === "admin_public_info" ? targetTherapistId : null,
-    } as never,
+    _payload: payload as never,
   });
   if (error) throw new Error(error.message);
   const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
