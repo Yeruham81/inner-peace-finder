@@ -53,12 +53,16 @@ export function AdminDataTable<T>({
       {/* Desktop / tablet table */}
       <div className="hidden md:block">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-secondary/30 [&_tr]:border-border/90">
             <TableRow>
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
-                  className={cn("text-end text-xs", column.hideOnNarrow && "hidden lg:table-cell", column.className)}
+                  className={cn(
+                    "text-end text-xs font-semibold text-foreground/80",
+                    column.hideOnNarrow && "hidden lg:table-cell",
+                    column.className,
+                  )}
                 >
                   {column.sortable && onSortChange ? (
                     <button
@@ -67,7 +71,9 @@ export function AdminDataTable<T>({
                       className="font-medium underline-offset-4 hover:underline"
                     >
                       {column.header}
-                      {sortKey === column.key ? <span aria-hidden="true">{sortDirection === "asc" ? " ↑" : " ↓"}</span> : null}
+                      {sortKey === column.key ? (
+                        <span aria-hidden="true">{sortDirection === "asc" ? " ↑" : " ↓"}</span>
+                      ) : null}
                     </button>
                   ) : (
                     column.header
@@ -81,12 +87,16 @@ export function AdminDataTable<T>({
               <TableRow
                 key={getRowId(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn(onRowClick && "cursor-pointer")}
+                className={cn("border-border/80", onRowClick && "cursor-pointer")}
               >
                 {columns.map((column) => (
                   <TableCell
                     key={column.key}
-                    className={cn("text-end align-middle text-sm", column.hideOnNarrow && "hidden lg:table-cell", column.className)}
+                    className={cn(
+                      "text-end align-middle text-sm",
+                      column.hideOnNarrow && "hidden lg:table-cell",
+                      column.className,
+                    )}
                   >
                     {column.render(row)}
                   </TableCell>
