@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
@@ -136,6 +136,19 @@ function publicClient() {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
 }
+
+function hasTipulinksAdminClaim(claims: unknown): boolean {
+  if (!claims || typeof claims !== "object") return false;
+  const appMetadata = (claims as { app_metadata?: unknown }).app_metadata;
+  if (!appMetadata || typeof appMetadata !== "object") return false;
+  return (appMetadata as { tipulinks_role?: unknown }).tipulinks_role === "admin";
+}
+
+export const getProfileEditorActorMode = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => ({
+    is_admin: hasTipulinksAdminClaim(context.claims),
+  }));
 
 /* ------------------------------------------------------------------ */
 /* Schema                                                             */
@@ -375,128 +388,167 @@ export const getEditorOptions = createServerFn({ method: "GET" }).handler(async 
 /* Get my profile                                                     */
 /* ------------------------------------------------------------------ */
 
+async function loadProfileEditorData(
+  supabase: SupabaseClient<Database>,
+  therapistId: string,
+): Promise<ProfileEditorData | null> {
+  const { data: t, error: profileError } = await supabase
+    .from("therapists")
+    .select("*")
+    .eq("id", therapistId)
+    .maybeSingle();
+  if (profileError) throw new Error(`therapists: ${profileError.message}`);
+  if (!t) return null;
+
+  const [profs, mods, langs, pops, locs, formats, memberships, arrangements, credentials] = await Promise.all([
+    supabase.from("therapist_professions").select("profession_id").eq("therapist_id", t.id),
+    supabase.from("therapist_modalities").select("modality_id").eq("therapist_id", t.id),
+    supabase.from("therapist_languages").select("language_id").eq("therapist_id", t.id),
+    supabase.from("therapist_populations").select("population_id").eq("therapist_id", t.id),
+    supabase.from("therapist_locations").select("*").eq("therapist_id", t.id).eq("is_active", true),
+    supabase.from("therapist_therapy_formats").select("therapy_format_id").eq("therapist_id", t.id),
+    supabase
+      .from("therapist_professional_memberships")
+      .select("organization_name, member_since, membership_start_date")
+      .eq("therapist_id", t.id)
+      .order("sort_order"),
+    supabase
+      .from("therapist_service_arrangements")
+      .select("organization_name, note")
+      .eq("therapist_id", t.id)
+      .order("sort_order"),
+    supabase
+      .from("therapist_credentials")
+      .select(
+        "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason, submitted_at, updated_at",
+      )
+      .eq("therapist_id", t.id)
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: true }),
+  ]);
+
+  // A failed relation query must never be flattened into an empty editor
+  // field. That would let a temporary read failure look like saved data was
+  // deleted and could cause the next save to overwrite valid relations.
+  for (const [relation, result] of [
+    ["therapist_professions", profs],
+    ["therapist_modalities", mods],
+    ["therapist_languages", langs],
+    ["therapist_populations", pops],
+    ["therapist_locations", locs],
+    ["therapist_therapy_formats", formats],
+    ["therapist_professional_memberships", memberships],
+    ["therapist_service_arrangements", arrangements],
+    ["therapist_credentials", credentials],
+  ] as const) {
+    if (result.error) throw new Error(`${relation}: ${result.error.message}`);
+  }
+
+  const physicalLocations = (locs.data ?? [])
+    .filter((location) => location.location_type === "clinic")
+    .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)));
+  const online = (locs.data ?? []).some((l) => l.location_type === "online");
+  const homeVisitLocations = (locs.data ?? []).filter((location) => location.location_type === "home_visit");
+  const homeVisitRegions = [
+    ...new Set(
+      homeVisitLocations
+        .map((location) => location.region)
+        .filter((region): region is ProductRegion => PRODUCT_REGIONS.includes(region as ProductRegion)),
+    ),
+  ];
+
+  return {
+    id: t.id,
+    full_name: t.full_name,
+    gender: (t.gender as Gender | null) ?? null,
+    professional_title: t.professional_title,
+    full_description: t.full_description,
+    short_intro: t.short_intro,
+    education_training: t.education_training ?? null,
+    professional_experience: t.professional_experience ?? null,
+    years_experience: t.years_experience ?? null,
+    email: (t as { email?: string | null }).email ?? null,
+    phone: t.phone,
+    contact_methods: ((t.contact_methods ?? []) as string[]).filter(
+      (method): method is ContactMethod => method === "whatsapp" || method === "email" || method === "phone",
+    ),
+    preferred_contact_method:
+      t.preferred_contact_method === "whatsapp" ||
+      t.preferred_contact_method === "email" ||
+      t.preferred_contact_method === "phone"
+        ? t.preferred_contact_method
+        : null,
+    image_url: t.image_url,
+    slug: t.slug,
+    profile_status: (t as { profile_status: ProfileStatus }).profile_status,
+    is_active: t.is_active,
+    visibility: t.visibility === "visible" ? "visible" : "hidden",
+    verified: Boolean(t.verified),
+    profession_ids: (profs.data ?? []).map((r) => r.profession_id),
+    modality_ids: (mods.data ?? []).map((r) => r.modality_id),
+    language_ids: (langs.data ?? []).map((r) => r.language_id),
+    population_ids: (pops.data ?? []).map((r) => r.population_id),
+    locations: physicalLocations.map((location) => ({
+      city: location.city ?? "",
+      region: PRODUCT_REGIONS.includes(location.region as ProductRegion) ? (location.region as ProductRegion) : null,
+      address: location.address ?? null,
+      is_primary: Boolean(location.is_primary),
+      accessibility_status: location.accessibility_status,
+      accessibility_features: location.accessibility_features,
+      accessibility_note: location.accessibility_note,
+    })),
+    online_available: online,
+    home_visit_available: homeVisitLocations.length > 0,
+    home_visit_regions: homeVisitRegions,
+    therapy_format_ids: (formats.data ?? []).map((row) => row.therapy_format_id),
+    lgbtq_affirming: Boolean(t.lgbtq_affirming),
+    offers_free_intro: Boolean(t.offers_free_intro),
+    free_intro_types: t.free_intro_types ?? [],
+    free_intro_duration_minutes: t.free_intro_duration_minutes,
+    professional_memberships: memberships.data ?? [],
+    service_arrangements: arrangements.data ?? [],
+    credentials: (credentials.data ?? []) as CredentialEditorData[],
+  };
+}
+
 export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ProfileEditorData | null> => {
     const { supabase, userId } = context;
     const accountId = await resolveAccount(supabase, userId);
-    const { data: t, error: profileError } = await supabase
+    const { data: owned, error } = await supabase
       .from("therapists")
-      .select("*")
+      .select("id")
       .eq("owner_account_id", accountId)
       .maybeSingle();
-    if (profileError) throw new Error(`therapists: ${profileError.message}`);
-    if (!t) return null;
+    if (error) throw new Error(`therapists: ${error.message}`);
+    if (!owned) return null;
+    return loadProfileEditorData(supabase, owned.id);
+  });
 
-    const [profs, mods, langs, pops, locs, formats, memberships, arrangements, credentials] = await Promise.all([
-      supabase.from("therapist_professions").select("profession_id").eq("therapist_id", t.id),
-      supabase.from("therapist_modalities").select("modality_id").eq("therapist_id", t.id),
-      supabase.from("therapist_languages").select("language_id").eq("therapist_id", t.id),
-      supabase.from("therapist_populations").select("population_id").eq("therapist_id", t.id),
-      supabase.from("therapist_locations").select("*").eq("therapist_id", t.id).eq("is_active", true),
-      supabase.from("therapist_therapy_formats").select("therapy_format_id").eq("therapist_id", t.id),
-      supabase
-        .from("therapist_professional_memberships")
-        .select("organization_name, member_since, membership_start_date")
-        .eq("therapist_id", t.id)
-        .order("sort_order"),
-      supabase
-        .from("therapist_service_arrangements")
-        .select("organization_name, note")
-        .eq("therapist_id", t.id)
-        .order("sort_order"),
-      supabase
-        .from("therapist_credentials")
-        .select(
-          "id, profession_id, credential_type, institution, license_number, document_url, issuing_authority, issue_date, expires_at, verification_status, rejection_reason, submitted_at, updated_at",
-        )
-        .eq("therapist_id", t.id)
-        .order("updated_at", { ascending: false })
-        .order("id", { ascending: true }),
-    ]);
+const AdminManagedProfileSchema = z.object({ therapist_id: z.string().uuid() });
 
-    // A failed relation query must never be flattened into an empty editor
-    // field. That would let a temporary read failure look like saved data was
-    // deleted and could cause the next save to overwrite valid relations.
-    for (const [relation, result] of [
-      ["therapist_professions", profs],
-      ["therapist_modalities", mods],
-      ["therapist_languages", langs],
-      ["therapist_populations", pops],
-      ["therapist_locations", locs],
-      ["therapist_therapy_formats", formats],
-      ["therapist_professional_memberships", memberships],
-      ["therapist_service_arrangements", arrangements],
-      ["therapist_credentials", credentials],
-    ] as const) {
-      if (result.error) throw new Error(`${relation}: ${result.error.message}`);
+export const getAdminManagedProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AdminManagedProfileSchema.parse(input))
+  .handler(async ({ data, context }): Promise<ProfileEditorData | null> => {
+    if (!hasTipulinksAdminClaim(context.claims)) {
+      throw new Error("אין הרשאת מנהל לעריכת פרופיל זה.");
     }
 
-    const physicalLocations = (locs.data ?? [])
-      .filter((location) => location.location_type === "clinic")
-      .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)));
-    const online = (locs.data ?? []).some((l) => l.location_type === "online");
-    const homeVisitLocations = (locs.data ?? []).filter((location) => location.location_type === "home_visit");
-    const homeVisitRegions = [
-      ...new Set(
-        homeVisitLocations
-          .map((location) => location.region)
-          .filter((region): region is ProductRegion => PRODUCT_REGIONS.includes(region as ProductRegion)),
-      ),
-    ];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: target, error } = await supabaseAdmin
+      .from("therapists")
+      .select("id")
+      .eq("id", data.therapist_id)
+      .eq("profile_origin", "admin_public_info")
+      .is("owner_account_id", null)
+      .eq("do_not_republish", false)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!target) return null;
 
-    return {
-      id: t.id,
-      full_name: t.full_name,
-      gender: (t.gender as Gender | null) ?? null,
-      professional_title: t.professional_title,
-      full_description: t.full_description,
-      short_intro: t.short_intro,
-      education_training: t.education_training ?? null,
-      professional_experience: t.professional_experience ?? null,
-      years_experience: t.years_experience ?? null,
-      email: (t as { email?: string | null }).email ?? null,
-      phone: t.phone,
-      contact_methods: ((t.contact_methods ?? []) as string[]).filter(
-        (method): method is ContactMethod => method === "whatsapp" || method === "email" || method === "phone",
-      ),
-      preferred_contact_method:
-        t.preferred_contact_method === "whatsapp" ||
-        t.preferred_contact_method === "email" ||
-        t.preferred_contact_method === "phone"
-          ? t.preferred_contact_method
-          : null,
-      image_url: t.image_url,
-      slug: t.slug,
-      profile_status: (t as { profile_status: ProfileStatus }).profile_status,
-      is_active: t.is_active,
-      visibility: t.visibility === "visible" ? "visible" : "hidden",
-      verified: Boolean(t.verified),
-      profession_ids: (profs.data ?? []).map((r) => r.profession_id),
-      modality_ids: (mods.data ?? []).map((r) => r.modality_id),
-      language_ids: (langs.data ?? []).map((r) => r.language_id),
-      population_ids: (pops.data ?? []).map((r) => r.population_id),
-      locations: physicalLocations.map((location) => ({
-        city: location.city ?? "",
-        region: PRODUCT_REGIONS.includes(location.region as ProductRegion) ? (location.region as ProductRegion) : null,
-        address: location.address ?? null,
-        is_primary: Boolean(location.is_primary),
-        accessibility_status: location.accessibility_status,
-        accessibility_features: location.accessibility_features,
-        accessibility_note: location.accessibility_note,
-      })),
-      online_available: online,
-      home_visit_available: homeVisitLocations.length > 0,
-      home_visit_regions: homeVisitRegions,
-      therapy_format_ids: (formats.data ?? []).map((row) => row.therapy_format_id),
-      lgbtq_affirming: Boolean(t.lgbtq_affirming),
-      offers_free_intro: Boolean(t.offers_free_intro),
-      free_intro_types: t.free_intro_types ?? [],
-      free_intro_duration_minutes: t.free_intro_duration_minutes,
-      professional_memberships: memberships.data ?? [],
-      service_arrangements: arrangements.data ?? [],
-      credentials: (credentials.data ?? []) as CredentialEditorData[],
-    };
+    return loadProfileEditorData(supabaseAdmin, target.id);
   });
 
 /* ------------------------------------------------------------------ */
@@ -571,6 +623,127 @@ async function resolvePhysicalLocations(
 /* Save (draft or publish)                                            */
 /* ------------------------------------------------------------------ */
 
+async function saveProfileForActor(args: {
+  data: SaveInput;
+  supabase: SupabaseClient<Database>;
+  userId: string;
+  saveMode: "self" | "admin_public_info";
+  targetTherapistId?: string | null;
+}): Promise<SaveResult> {
+  const { data, supabase, userId, saveMode, targetTherapistId = null } = args;
+  if (saveMode === "self") await resolveAccount(supabase, userId);
+  const resolvedLocations = await resolvePhysicalLocations(data.locations);
+
+  const missing = data.publish ? validateForPublish(data) : [];
+  if (data.publish && missing.length > 0) {
+    return { therapist_id: "", profile_status: "draft", missing };
+  }
+
+  // Recompute the semantic source of truth BEFORE any write. A catalog or
+  // extraction failure must abort the save/publish instead of persisting an
+  // outdated (or silently emptied) semantic_profile.
+  const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
+
+  const nextStatus: ProfileStatus = data.publish
+    ? "published"
+    : validateForPublish(data).length === 0
+      ? "completed"
+      : "draft";
+
+  // Location rows managed by this editor. Any other location type is left
+  // untouched by the database operation below.
+  const locationRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
+    location_type: "clinic",
+    city: location.city,
+    region: location.region,
+    address: location.address,
+    accessibility_status: data.locations[index]?.accessibility_status ?? "unknown",
+    accessibility_features: data.locations[index]?.accessibility_features ?? [],
+    accessibility_note: data.locations[index]?.accessibility_note ?? null,
+    is_primary: index === 0,
+  }));
+
+  if (data.online_available) {
+    locationRows.push({
+      location_type: "online",
+      is_primary: resolvedLocations.length === 0,
+    });
+  }
+
+  if (data.home_visit_available) {
+    if (data.home_visit_regions.length > 0) {
+      for (const region of data.home_visit_regions) {
+        locationRows.push({ location_type: "home_visit", region, is_primary: false });
+      }
+    } else {
+      // Preserve the checkbox state in drafts. Publishing requires at least
+      // one service region, so a region-less home_visit row is never a
+      // complete public configuration.
+      locationRows.push({ location_type: "home_visit", is_primary: false });
+    }
+  }
+
+  // Visibility / status / verification columns are decided here and applied by
+  // the database operation; the browser cannot write them at all. A single
+  // transactional call replaces the previous multi-statement sequence, so a
+  // failure anywhere leaves the previously saved profile fully intact.
+  const payload = {
+    profile: {
+      slug: slugify(data.full_name),
+      full_name: data.full_name.trim(),
+      gender: data.gender ?? null,
+      professional_title: data.professional_title?.trim() || null,
+      full_description: data.full_description?.trim() || null,
+      short_intro: data.short_intro?.trim() || null,
+      education_training: data.education_training?.trim() || null,
+      professional_experience: data.professional_experience?.trim() || null,
+      years_experience: data.years_experience ?? null,
+      email: data.email ? data.email.trim() : null,
+      phone: data.phone ? data.phone.trim() : null,
+      contact_methods: data.contact_methods,
+      preferred_contact_method: data.preferred_contact_method ?? null,
+      image_url: data.image_url ? data.image_url.trim() : null,
+      lgbtq_affirming: data.lgbtq_affirming,
+      offers_free_intro: data.offers_free_intro,
+      free_intro_types: data.offers_free_intro ? data.free_intro_types : [],
+      free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
+      city: resolvedLocations[0]?.city ?? null,
+      region: resolvedLocations[0]?.region ?? null,
+      profile_status: nextStatus,
+      publish: data.publish,
+    },
+    semantic_profile: semanticProfile,
+    profession_ids: data.profession_ids,
+    modality_ids: data.modality_ids,
+    language_ids: data.language_ids,
+    population_ids: data.population_ids,
+    therapy_format_ids: data.therapy_format_ids,
+    professional_memberships: data.professional_memberships,
+    service_arrangements: data.service_arrangements,
+    locations: locationRows,
+  };
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: saved, error } = await supabaseAdmin.rpc("save_therapist_profile_with_contacts", {
+    // Ownership is resolved inside the transaction from the verified auth
+    // user id — never from anything the browser supplied.
+    _actor: userId,
+    _payload: {
+      ...payload,
+      save_mode: saveMode,
+      target_therapist_id: saveMode === "admin_public_info" ? targetTherapistId : null,
+    } as never,
+  });
+  if (error) throw new Error(error.message);
+  const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
+  if (!result.therapist_id) throw new Error("שמירת הפרופיל נכשלה. נסו שוב.");
+
+  return {
+    therapist_id: result.therapist_id,
+    profile_status: result.profile_status ?? nextStatus,
+  };
+}
+
 export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => {
@@ -578,115 +751,41 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     if (!parsed.success) throw new Error(friendlyZodMessage(parsed.error));
     return parsed.data;
   })
+  .handler(
+    async ({ data, context }): Promise<SaveResult> =>
+      saveProfileForActor({
+        data,
+        supabase: context.supabase,
+        userId: context.userId,
+        saveMode: "self",
+      }),
+  );
+
+const AdminSaveInputSchema = z.object({
+  therapist_id: z.string().uuid().nullable().optional(),
+  profile: z.unknown(),
+});
+
+export const saveAdminManagedProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => {
+    const outer = AdminSaveInputSchema.parse(input);
+    const profile = SaveSchema.safeParse(outer.profile);
+    if (!profile.success) throw new Error(friendlyZodMessage(profile.error));
+    return { therapist_id: outer.therapist_id ?? null, profile: profile.data };
+  })
   .handler(async ({ data, context }): Promise<SaveResult> => {
-    const { supabase, userId } = context;
-    const accountId = await resolveAccount(supabase, userId);
-    const resolvedLocations = await resolvePhysicalLocations(data.locations);
-
-    const missing = data.publish ? validateForPublish(data) : [];
-    if (data.publish && missing.length > 0) {
-      return { therapist_id: "", profile_status: "draft", missing };
+    if (!hasTipulinksAdminClaim(context.claims)) {
+      throw new Error("אין הרשאת מנהל ליצירת פרופיל מטעם Tipulinks.");
     }
 
-    // Recompute the semantic source of truth BEFORE any write. A catalog or
-    // extraction failure must abort the save/publish instead of persisting an
-    // outdated (or silently emptied) semantic_profile.
-    const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
-
-    const nextStatus: ProfileStatus = data.publish
-      ? "published"
-      : validateForPublish(data).length === 0
-        ? "completed"
-        : "draft";
-
-    // Location rows managed by this editor. Any other location type is left
-    // untouched by the database operation below.
-    const locationRows: Array<Record<string, unknown>> = resolvedLocations.map((location, index) => ({
-      location_type: "clinic",
-      city: location.city,
-      region: location.region,
-      address: location.address,
-      accessibility_status: data.locations[index]?.accessibility_status ?? "unknown",
-      accessibility_features: data.locations[index]?.accessibility_features ?? [],
-      accessibility_note: data.locations[index]?.accessibility_note ?? null,
-      is_primary: index === 0,
-    }));
-
-    if (data.online_available) {
-      locationRows.push({
-        location_type: "online",
-        is_primary: resolvedLocations.length === 0,
-      });
-    }
-
-    if (data.home_visit_available) {
-      if (data.home_visit_regions.length > 0) {
-        for (const region of data.home_visit_regions) {
-          locationRows.push({ location_type: "home_visit", region, is_primary: false });
-        }
-      } else {
-        // Preserve the checkbox state in drafts. Publishing requires at least
-        // one service region, so a region-less home_visit row is never a
-        // complete public configuration.
-        locationRows.push({ location_type: "home_visit", is_primary: false });
-      }
-    }
-
-    // Visibility / status / verification columns are decided here and applied by
-    // the database operation; the browser cannot write them at all. A single
-    // transactional call replaces the previous multi-statement sequence, so a
-    // failure anywhere leaves the previously saved profile fully intact.
-    const payload = {
-      profile: {
-        slug: slugify(data.full_name),
-        full_name: data.full_name.trim(),
-        gender: data.gender ?? null,
-        professional_title: data.professional_title?.trim() || null,
-        full_description: data.full_description?.trim() || null,
-        short_intro: data.short_intro?.trim() || null,
-        education_training: data.education_training?.trim() || null,
-        professional_experience: data.professional_experience?.trim() || null,
-        years_experience: data.years_experience ?? null,
-        email: data.email ? data.email.trim() : null,
-        phone: data.phone ? data.phone.trim() : null,
-        contact_methods: data.contact_methods,
-        preferred_contact_method: data.preferred_contact_method ?? null,
-        image_url: data.image_url ? data.image_url.trim() : null,
-        lgbtq_affirming: data.lgbtq_affirming,
-        offers_free_intro: data.offers_free_intro,
-        free_intro_types: data.offers_free_intro ? data.free_intro_types : [],
-        free_intro_duration_minutes: data.offers_free_intro ? (data.free_intro_duration_minutes ?? null) : null,
-        city: resolvedLocations[0]?.city ?? null,
-        region: resolvedLocations[0]?.region ?? null,
-        profile_status: nextStatus,
-        publish: data.publish,
-      },
-      semantic_profile: semanticProfile,
-      profession_ids: data.profession_ids,
-      modality_ids: data.modality_ids,
-      language_ids: data.language_ids,
-      population_ids: data.population_ids,
-      therapy_format_ids: data.therapy_format_ids,
-      professional_memberships: data.professional_memberships,
-      service_arrangements: data.service_arrangements,
-      locations: locationRows,
-    };
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: saved, error } = await supabaseAdmin.rpc("save_therapist_profile_with_contacts", {
-      // Ownership is resolved inside the transaction from the verified auth
-      // user id — never from anything the browser supplied.
-      _actor: userId,
-      _payload: payload as never,
+    return saveProfileForActor({
+      data: data.profile,
+      supabase: context.supabase,
+      userId: context.userId,
+      saveMode: "admin_public_info",
+      targetTherapistId: data.therapist_id,
     });
-    if (error) throw new Error(error.message);
-    const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
-    if (!result.therapist_id) throw new Error("שמירת הפרופיל נכשלה. נסו שוב.");
-
-    return {
-      therapist_id: result.therapist_id,
-      profile_status: result.profile_status ?? nextStatus,
-    };
   });
 
 const ContactPreferencesSchema = z
