@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { BadgeCheck, CircleAlert, Clock, MessageSquare, UserRoundCheck, UsersRound } from "lucide-react";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
-import { Badge } from "@/components/ui/badge";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/admin/")({
@@ -33,17 +34,49 @@ const MOCK_ACTIVITY = [
   { text: "בקשת שיוך חדשה", meta: "לפני 3 שעות" },
 ];
 
-const MOCK_TASKS: Array<{ text: string; status: string; tone: "warn" | "info" | "alert" }> = [
-  { text: "אימות הסמכה ממתין", status: "ממתין", tone: "warn" },
-  { text: "פרופיל שדורש בדיקה", status: "לבדיקה", tone: "info" },
-  { text: "בקשת שיוך שטרם טופלה", status: "דחוף", tone: "alert" },
-];
-
-const TONE_CLASS: Record<"warn" | "info" | "alert", string> = {
-  warn: "bg-accent/25 text-accent-foreground",
-  info: "bg-secondary text-secondary-foreground",
-  alert: "bg-destructive/10 text-destructive",
+type MockTask = {
+  id: string;
+  type: string;
+  entity: string;
+  waiting: string;
+  urgency: "דחוף" | "ממתין" | "לבדיקה";
+  action: { label: string; to: "/admin/credentials" | "/admin/claims" | "/admin/therapists" | "/admin/leads" };
 };
+
+const MOCK_TASKS: MockTask[] = [
+  {
+    id: "t1",
+    type: "אימות הסמכה",
+    entity: "יובל אשכנזי",
+    waiting: "ממתין 5 ימים",
+    urgency: "ממתין",
+    action: { label: "בדיקה", to: "/admin/credentials" },
+  },
+  {
+    id: "t2",
+    type: "בקשת שיוך",
+    entity: "דנה מזרחי",
+    waiting: "ממתינה 3 ימים",
+    urgency: "דחוף",
+    action: { label: "בדיקה", to: "/admin/claims" },
+  },
+  {
+    id: "t3",
+    type: "פרופיל לבדיקה",
+    entity: "רותם אלמוג",
+    waiting: "ממתין יום",
+    urgency: "לבדיקה",
+    action: { label: "צפייה", to: "/admin/therapists" },
+  },
+  {
+    id: "t4",
+    type: "פניה חדשה",
+    entity: "נועה בר-אילן",
+    waiting: "ממתינה 4 שעות",
+    urgency: "ממתין",
+    action: { label: "צפייה", to: "/admin/leads" },
+  },
+];
 
 function AdminDashboardPage() {
   return (
@@ -80,11 +113,26 @@ function AdminDashboardPage() {
           <CardContent className="pt-0">
             <ul className="divide-y divide-border">
               {MOCK_TASKS.map((task) => (
-                <li key={task.text} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <span className="text-foreground">{task.text}</span>
-                  <Badge variant="secondary" className={TONE_CLASS[task.tone]}>
-                    {task.status}
-                  </Badge>
+                <li
+                  key={task.id}
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-medium text-foreground">{task.type}</span>
+                      <span className="text-muted-foreground" aria-hidden="true">
+                        —
+                      </span>
+                      <span className="text-foreground">{task.entity}</span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{task.waiting}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:shrink-0">
+                    <AdminStatusBadge status={task.urgency} />
+                    <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                      <Link to={task.action.to}>{task.action.label}</Link>
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
