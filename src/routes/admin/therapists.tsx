@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AdminDataTable, AdminPagination, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
+import { formatAdminDate } from "@/components/admin/admin-formatters";
 import { MOCK_THERAPISTS, type MockTherapist } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
@@ -64,7 +65,12 @@ function TherapistsPage() {
   }
 
   const columns: AdminColumn<MockTherapist>[] = [
-    { key: "name", header: "שם המטפל/ת", sortable: true, render: (row) => <span className="font-medium">{row.name}</span> },
+    {
+      key: "name",
+      header: "שם המטפל/ת",
+      sortable: true,
+      render: (row) => <span className="font-medium">{row.name}</span>,
+    },
     { key: "title", header: "כותרת מקצועית", render: (row) => row.title },
     { key: "profileStatus", header: "סטטוס פרופיל", render: (row) => <AdminStatusBadge status={row.profileStatus} /> },
     { key: "accountStatus", header: "סטטוס חשבון", render: (row) => <AdminStatusBadge status={row.accountStatus} /> },
@@ -73,8 +79,20 @@ function TherapistsPage() {
       header: "סטטוס אימות",
       render: (row) => <AdminStatusBadge status={row.verificationStatus} />,
     },
-    { key: "joinedAt", header: "הצטרפות", sortable: true, hideOnNarrow: true, render: (row) => row.joinedAt },
-    { key: "lastActiveAt", header: "פעילות אחרונה", sortable: true, hideOnNarrow: true, render: (row) => row.lastActiveAt },
+    {
+      key: "joinedAt",
+      header: "הצטרפות",
+      sortable: true,
+      hideOnNarrow: true,
+      render: (row) => <span dir="ltr">{formatAdminDate(row.joinedAt)}</span>,
+    },
+    {
+      key: "lastActiveAt",
+      header: "פעילות אחרונה",
+      sortable: true,
+      hideOnNarrow: true,
+      render: (row) => <span dir="ltr">{formatAdminDate(row.lastActiveAt)}</span>,
+    },
     {
       key: "actions",
       header: "פעולות",
@@ -95,7 +113,11 @@ function TherapistsPage() {
 
   return (
     <div>
-      <AdminPageHeader title="מטפלים" subtitle="ניהול וצפייה בפרופילי המטפלים במערכת (נתוני הדגמה)" breadcrumb="מטפלים" />
+      <AdminPageHeader
+        title="מטפלים"
+        subtitle="ניהול וצפייה בפרופילי המטפלים במערכת (נתוני הדגמה)"
+        breadcrumb="מטפלים"
+      />
 
       <AdminFilterBar>
         <AdminSearchField
@@ -160,7 +182,8 @@ function TherapistsPage() {
               <AdminStatusBadge status={row.verificationStatus} />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              הצטרפות {row.joinedAt} · פעילות אחרונה {row.lastActiveAt}
+              הצטרפות <span dir="ltr">{formatAdminDate(row.joinedAt)}</span> · פעילות אחרונה{" "}
+              <span dir="ltr">{formatAdminDate(row.lastActiveAt)}</span>
             </p>
           </div>
         )}
@@ -182,8 +205,14 @@ function TherapistsPage() {
             <AdminDetailSection title="פרטים כלליים">
               <AdminDetailRow label="שם" value={selected.name} />
               <AdminDetailRow label="כותרת מקצועית" value={selected.title} />
-              <AdminDetailRow label="תאריך הצטרפות" value={selected.joinedAt} />
-              <AdminDetailRow label="פעילות אחרונה" value={selected.lastActiveAt} />
+              <AdminDetailRow
+                label="תאריך הצטרפות"
+                value={<span dir="ltr">{formatAdminDate(selected.joinedAt)}</span>}
+              />
+              <AdminDetailRow
+                label="פעילות אחרונה"
+                value={<span dir="ltr">{formatAdminDate(selected.lastActiveAt)}</span>}
+              />
             </AdminDetailSection>
 
             <AdminDetailSection title="סטטוס">
@@ -199,8 +228,8 @@ function TherapistsPage() {
             </AdminDetailSection>
 
             <AdminDetailSection title="פרטי קשר">
-              <AdminDetailRow label="אימייל" value={selected.email} />
-              <AdminDetailRow label="טלפון" value={selected.phone} />
+              <AdminDetailRow label="אימייל" value={<span dir="ltr">{selected.email}</span>} />
+              <AdminDetailRow label="טלפון" value={<span dir="ltr">{selected.phone}</span>} />
             </AdminDetailSection>
 
             <AdminDetailSection title="אימותים">
