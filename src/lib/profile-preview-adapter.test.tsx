@@ -255,24 +255,38 @@ describe("editor preview wiring", () => {
 
 describe("profile visibility actions", () => {
   it("shows freeze and reactivation controls only for an already-published profile", () => {
-    expect(editorSource).toContain('{status === "published" && (');
-    expect(editorSource).toContain("disabled={visibilityPending}");
-    expect(editorSource).not.toContain("canReactivate");
-    expect(editorSource).not.toContain("ניתן להפעיל מחדש לאחר פרסום הפרופיל.");
+    const actionsStart = editorSource.indexOf("function ProfileActions(");
+    const actionsEnd = editorSource.indexOf("function Section(", actionsStart);
+    const actionsSource = editorSource.slice(actionsStart, actionsEnd);
+
+    // Do not couple the test to whether the admin-only guard is combined on the
+    // same JSX line or nested inside the published-status guard.
+    expect(actionsSource).toContain('status === "published"');
+    expect(actionsSource).toContain("allowVisibilityManagement");
+    expect(actionsSource).toContain("disabled={visibilityPending}");
+    expect(actionsSource).not.toContain("canReactivate");
+    expect(actionsSource).not.toContain("ניתן להפעיל מחדש לאחר פרסום הפרופיל.");
   });
 
   it("keeps the draft readiness message and the three standard actions outside the visibility guard", () => {
-    const visibilityGuard = editorSource.indexOf('{status === "published" && (');
-    const draftMessage = editorSource.indexOf(
+    const actionsStart = editorSource.indexOf("function ProfileActions(");
+    const actionsEnd = editorSource.indexOf("function Section(", actionsStart);
+    const actionsSource = editorSource.slice(actionsStart, actionsEnd);
+    const visibilityGuard = actionsSource.indexOf('status === "published"');
+    const visibilityControl = actionsSource.indexOf("disabled={visibilityPending}", visibilityGuard);
+    const draftMessage = actionsSource.indexOf(
       "ניתן לשמור את הפרופיל ולהמשיך לערוך אותו. לאחר השמירה יוצג כאן מידע שחסר לפרסום, אם יש.",
-      visibilityGuard,
+      visibilityControl,
     );
-    const previewButton = editorSource.indexOf("תצוגה מקדימה", draftMessage);
-    const saveButton = editorSource.indexOf("שמירת פרופיל", previewButton);
-    const publishButton = editorSource.indexOf("פרסום פרופיל", saveButton);
+    const guardClose = actionsSource.lastIndexOf(")}", draftMessage);
+    const previewButton = actionsSource.indexOf("תצוגה מקדימה", draftMessage);
+    const saveButton = actionsSource.indexOf("שמירת פרופיל", previewButton);
+    const publishButton = actionsSource.indexOf("פרסום פרופיל", saveButton);
 
     expect(visibilityGuard).toBeGreaterThan(-1);
-    expect(draftMessage).toBeGreaterThan(visibilityGuard);
+    expect(visibilityControl).toBeGreaterThan(visibilityGuard);
+    expect(guardClose).toBeGreaterThan(visibilityControl);
+    expect(draftMessage).toBeGreaterThan(guardClose);
     expect(previewButton).toBeGreaterThan(draftMessage);
     expect(saveButton).toBeGreaterThan(previewButton);
     expect(publishButton).toBeGreaterThan(saveButton);
