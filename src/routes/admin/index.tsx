@@ -113,11 +113,26 @@ function AdminDashboardPage() {
           <CardContent className="pt-0">
             <ul className="divide-y divide-border">
               {MOCK_TASKS.map((task) => (
-                <li key={task.text} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <span className="text-foreground">{task.text}</span>
-                  <Badge variant="secondary" className={TONE_CLASS[task.tone]}>
-                    {task.status}
-                  </Badge>
+                <li
+                  key={task.id}
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-medium text-foreground">{task.type}</span>
+                      <span className="text-muted-foreground" aria-hidden="true">
+                        —
+                      </span>
+                      <span className="text-foreground">{task.entity}</span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{task.waiting}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:shrink-0">
+                    <AdminStatusBadge status={task.urgency} />
+                    <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                      <Link to={task.action.to}>{task.action.label}</Link>
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
