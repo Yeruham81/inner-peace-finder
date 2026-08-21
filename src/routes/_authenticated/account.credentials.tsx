@@ -30,7 +30,9 @@ function AccountCredentialsPage() {
       />
 
       {(profile.isLoading || options.isLoading) && (
-        <div className="rounded-2xl border border-border bg-surface-elevated p-6 text-sm text-muted-foreground shadow-card">טוען…</div>
+        <div className="rounded-2xl border border-border bg-surface-elevated p-6 text-sm text-muted-foreground shadow-card">
+          טוען…
+        </div>
       )}
 
       {(profile.isError || options.isError) && (
@@ -58,7 +60,11 @@ function AccountCredentialsPage() {
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
             ההסמכות מקושרות לפרופיל המטפל, ולכן ניתן להגיש מסמכים לאחר יצירת הפרופיל.
           </p>
-          <Button className="mt-5" asChild><Link to="/new-profile">יצירת פרופיל</Link></Button>
+          <Button className="mt-5" asChild>
+            <Link to="/new-profile" search={{}}>
+              יצירת פרופיל
+            </Link>
+          </Button>
         </div>
       )}
 
