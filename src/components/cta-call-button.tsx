@@ -127,7 +127,12 @@ function ContactButtons({
  * server action re-checks public eligibility and method availability.
  */
 export function ContactActions(props: ContactActionsProps) {
-  const methods = orderedContactMethods(props.contactMethods, props.preferredContactMethod);
+  // An unclaimed admin-created profile may accept only the single held form
+  // inquiry. Never render phone/WhatsApp actions that cannot be released until
+  // ownership is accepted; the server function enforces the same boundary.
+  const methods: PublicContactMethod[] = props.unclaimedProfile
+    ? ["email"]
+    : orderedContactMethods(props.contactMethods, props.preferredContactMethod);
 
   if (props.interactive === false) {
     return (
