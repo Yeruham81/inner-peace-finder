@@ -20,6 +20,7 @@ import {
   clinicAccessibilityLabel,
   freeIntroTypeLabels,
 } from "@/lib/profile-display-options";
+import { defaultTherapistAvatar } from "@/lib/therapist-default-avatar";
 
 type ProfileLocationType = "clinic" | "home_visit" | "online" | "hospital" | "other";
 
@@ -34,6 +35,7 @@ export type TherapistProfileViewData = {
   years_experience: number | null;
   city: string | null;
   image_url: string | null;
+  gender: "male" | "female" | null;
   verified: boolean;
   lgbtq_affirming: boolean;
   offers_free_intro: boolean;
@@ -292,15 +294,24 @@ export function ClinicLocationsCard({ locations }: { locations: TherapistProfile
 function ProfileImage({
   imageUrl,
   name,
+  gender,
   compact = false,
 }: {
   imageUrl: string | null;
   name: string;
+  gender: "male" | "female" | null;
   compact?: boolean;
 }) {
   const size = compact ? "h-14 w-14 rounded-2xl text-lg" : "h-28 w-28 rounded-3xl text-3xl sm:h-36 sm:w-36";
-  if (imageUrl) {
-    return <img src={imageUrl} alt={name || "תמונת פרופיל"} className={`${size} shrink-0 object-cover shadow-card`} />;
+  const displayImageUrl = imageUrl || defaultTherapistAvatar(gender);
+  if (displayImageUrl) {
+    return (
+      <img
+        src={displayImageUrl}
+        alt={imageUrl ? name || "תמונת פרופיל" : `איור ברירת מחדל עבור ${name || "המטפל/ת"}`}
+        className={`${size} shrink-0 object-cover shadow-card`}
+      />
+    );
   }
   return (
     <div
@@ -370,7 +381,7 @@ export function TherapistProfileView({
       <header className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated shadow-card">
         <div className="bg-gradient-to-br from-brand-soft via-surface-elevated to-surface px-5 py-7 sm:px-9 sm:py-9">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <ProfileImage imageUrl={t.image_url} name={t.full_name} />
+            <ProfileImage imageUrl={t.image_url} name={t.full_name} gender={t.gender} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="min-w-0 break-words text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -608,7 +619,7 @@ export function TherapistProfileView({
         <aside className="box-border mt-6 min-w-0 max-w-full lg:sticky lg:top-24 lg:mt-0 lg:self-start">
           <div className="box-border min-w-0 max-w-full overflow-hidden rounded-3xl border border-border bg-surface-elevated p-5 shadow-card">
             <div className="flex min-w-0 max-w-full items-center gap-3 border-b border-border pb-4">
-              <ProfileImage imageUrl={t.image_url} name={t.full_name} compact />
+              <ProfileImage imageUrl={t.image_url} name={t.full_name} gender={t.gender} compact />
               <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="truncate font-bold text-foreground">{t.full_name || "שם המטפל/ת"}</p>
                 {t.professional_title && (
