@@ -16,7 +16,7 @@ describe("profile claim stage 3", () => {
     expect(inviteServer).toContain("https://api.brevo.com/v3/smtp/email");
     expect(inviteServer).toContain('inviteSource: "first_lead"');
     expect(migration).toContain("first-lead invite requires the held lead");
-    expect(migration).toContain("source_lead_id uuid REFERENCES public.lead_events(id)");
+    expect(migration).toContain("source_lead_id uid REFERENCES public.lead_events(id)");
   });
 
   it("never includes held-lead PII in the invitation payload", () => {
