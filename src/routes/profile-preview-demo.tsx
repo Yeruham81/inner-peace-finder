@@ -1,16 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import {
-  TherapistProfileView,
-  type TherapistProfileViewData,
-} from "@/components/therapist-profile-view";
+import { TherapistProfileView, type TherapistProfileViewData } from "@/components/therapist-profile-view";
 
 export const Route = createFileRoute("/profile-preview-demo")({
   head: () => ({
-    meta: [
-      { title: "מוק פרופיל מטפל ציבורי | Tipulinks" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "מוק פרופיל מטפל ציבורי | Tipulinks" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: ProfilePreviewDemoPage,
 });
@@ -19,8 +13,7 @@ const MOCK_THERAPIST: TherapistProfileViewData = {
   id: "public-profile-demo",
   full_name: "דניאל לביא",
   professional_title: "פסיכולוג קליני מומחה ומטפל זוגי ומשפחתי",
-  short_intro:
-    "אני מלווה מבוגרים, זוגות והורים בתהליכי שינוי ממוקדים, בגישה רגישה, מעשית ומותאמת לקצב האישי.",
+  short_intro: "אני מלווה מבוגרים, זוגות והורים בתהליכי שינוי ממוקדים, בגישה רגישה, מעשית ומותאמת לקצב האישי.",
   full_description:
     "אני מאמין שטיפול טוב מתחיל במפגש אנושי בטוח, מכבד ולא שיפוטי. לאורך השנים ליוויתי אנשים שהתמודדו עם חרדה, דיכאון, משברי חיים, קשיים ביחסים ותחושת תקיעות.\n\nבטיפול אנחנו מבררים יחד מה מעסיק אתכם, מגדירים מטרות אפשריות ובוחרים את דרך העבודה המתאימה. אני משלב בין הקשבה מעמיקה לבין כלים מעשיים שאפשר לקחת גם אל מחוץ לחדר הטיפול. התהליך מותאם לצרכים, להעדפות ולקצב של כל אדם, זוג או משפחה, ויכול להיות קצר וממוקד או ממושך ומעמיק יותר.",
   education_training:
@@ -30,6 +23,7 @@ const MOCK_THERAPIST: TherapistProfileViewData = {
   years_experience: 16,
   city: "תל אביב-יפו",
   image_url: null,
+  gender: "male",
   verified: true,
   lgbtq_affirming: true,
   offers_free_intro: true,
@@ -167,8 +161,7 @@ function ProfilePreviewDemoPage() {
       <div className="mx-auto w-full min-w-0 max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <p>
-            <strong>עמוד הדגמה בלבד:</strong> כל האפשרויות הופעלו כדי לבדוק את תצוגת הפרופיל
-            הציבורי.
+            <strong>עמוד הדגמה בלבד:</strong> כל האפשרויות הופעלו כדי לבדוק את תצוגת הפרופיל הציבורי.
           </p>
           <Link to="/" className="font-semibold underline underline-offset-4">
             חזרה לעמוד הבית
