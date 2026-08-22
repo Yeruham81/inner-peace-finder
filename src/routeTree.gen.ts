@@ -9,69 +9,44 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TherapyInformationRouteImport } from './routes/therapy-information'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ProfilePreviewDemoRouteImport } from './routes/profile-preview-demo'
-import { Route as ForTherapistsRouteImport } from './routes/for-therapists'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
-import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
-import { Route as AdminTherapistsRouteImport } from './routes/admin/therapists'
-import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
-import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
-import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
-import { Route as AdminCredentialsRouteImport } from './routes/admin/credentials'
-import { Route as AdminClaimsRouteImport } from './routes/admin/claims'
-import { Route as AdminCatalogsRouteImport } from './routes/admin/catalogs'
-import { Route as AdminBillingRouteImport } from './routes/admin/billing'
-import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ForTherapistsRouteImport } from './routes/for-therapists'
+import { Route as ProfilePreviewDemoRouteImport } from './routes/profile-preview-demo'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TherapyInformationRouteImport } from './routes/therapy-information'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
+import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
+import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminBillingRouteImport } from './routes/admin/billing'
+import { Route as AdminCatalogsRouteImport } from './routes/admin/catalogs'
+import { Route as AdminClaimsRouteImport } from './routes/admin/claims'
+import { Route as AdminCredentialsRouteImport } from './routes/admin/credentials'
+import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
+import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminTherapistsRouteImport } from './routes/admin/therapists'
+import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
+import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
 import { Route as AuthenticatedAccountIndexRouteImport } from './routes/_authenticated/account.index'
-import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account.settings'
-import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authenticated/account.profile'
-import { Route as AuthenticatedAccountLeadsRouteImport } from './routes/_authenticated/account.leads'
-import { Route as AuthenticatedAccountCredentialsRouteImport } from './routes/_authenticated/account.credentials'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated/account.billing'
+import { Route as AuthenticatedAccountCredentialsRouteImport } from './routes/_authenticated/account.credentials'
+import { Route as AuthenticatedAccountLeadsRouteImport } from './routes/_authenticated/account.leads'
+import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authenticated/account.profile'
+import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account.settings'
 
-const TherapyInformationRoute = TherapyInformationRouteImport.update({
-  id: '/therapy-information',
-  path: '/therapy-information',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfilePreviewDemoRoute = ProfilePreviewDemoRouteImport.update({
-  id: '/profile-preview-demo',
-  path: '/profile-preview-demo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForTherapistsRoute = ForTherapistsRouteImport.update({
-  id: '/for-therapists',
-  path: '/for-therapists',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
@@ -79,63 +54,59 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ForTherapistsRoute = ForTherapistsRouteImport.update({
+  id: '/for-therapists',
+  path: '/for-therapists',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilePreviewDemoRoute = ProfilePreviewDemoRouteImport.update({
+  id: '/profile-preview-demo',
+  path: '/profile-preview-demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TherapyInformationRoute = TherapyInformationRouteImport.update({
+  id: '/therapy-information',
+  path: '/therapy-information',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedClaimRoute = AuthenticatedClaimRouteImport.update({
+  id: '/claim',
+  path: '/claim',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedNewProfileRoute = AuthenticatedNewProfileRouteImport.update({
+  id: '/new-profile',
+  path: '/new-profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const TherapistsSlugRoute = TherapistsSlugRouteImport.update({
-  id: '/therapists/$slug',
-  path: '/therapists/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
-  id: '/problems/$slug',
-  path: '/problems/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminTherapistsRoute = AdminTherapistsRouteImport.update({
-  id: '/therapists',
-  path: '/therapists',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminLeadsRoute = AdminLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminIntegrationsRoute = AdminIntegrationsRouteImport.update({
-  id: '/integrations',
-  path: '/integrations',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminCredentialsRoute = AdminCredentialsRouteImport.update({
-  id: '/credentials',
-  path: '/credentials',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminClaimsRoute = AdminClaimsRouteImport.update({
-  id: '/claims',
-  path: '/claims',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminCatalogsRoute = AdminCatalogsRouteImport.update({
-  id: '/catalogs',
-  path: '/catalogs',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminBillingRoute = AdminBillingRouteImport.update({
@@ -143,15 +114,50 @@ const AdminBillingRoute = AdminBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AuthenticatedClaimRoute = AuthenticatedClaimRouteImport.update({
-  id: '/claim',
-  path: '/claim',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const AdminCatalogsRoute = AdminCatalogsRouteImport.update({
+  id: '/catalogs',
+  path: '/catalogs',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
-const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const AdminClaimsRoute = AdminClaimsRouteImport.update({
+  id: '/claims',
+  path: '/claims',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCredentialsRoute = AdminCredentialsRouteImport.update({
+  id: '/credentials',
+  path: '/credentials',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminIntegrationsRoute = AdminIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminTherapistsRoute = AdminTherapistsRouteImport.update({
+  id: '/therapists',
+  path: '/therapists',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
+  id: '/problems/$slug',
+  path: '/problems/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TherapistsSlugRoute = TherapistsSlugRouteImport.update({
+  id: '/therapists/$slug',
+  path: '/therapists/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAccountIndexRoute =
   AuthenticatedAccountIndexRouteImport.update({
@@ -159,22 +165,10 @@ const AuthenticatedAccountIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAccountRoute,
   } as any)
-const AuthenticatedAccountSettingsRoute =
-  AuthenticatedAccountSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => AuthenticatedAccountRoute,
-  } as any)
-const AuthenticatedAccountProfileRoute =
-  AuthenticatedAccountProfileRouteImport.update({
-    id: '/profile',
-    path: '/profile',
-    getParentRoute: () => AuthenticatedAccountRoute,
-  } as any)
-const AuthenticatedAccountLeadsRoute =
-  AuthenticatedAccountLeadsRouteImport.update({
-    id: '/leads',
-    path: '/leads',
+const AuthenticatedAccountBillingRoute =
+  AuthenticatedAccountBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
     getParentRoute: () => AuthenticatedAccountRoute,
   } as any)
 const AuthenticatedAccountCredentialsRoute =
@@ -183,10 +177,22 @@ const AuthenticatedAccountCredentialsRoute =
     path: '/credentials',
     getParentRoute: () => AuthenticatedAccountRoute,
   } as any)
-const AuthenticatedAccountBillingRoute =
-  AuthenticatedAccountBillingRouteImport.update({
-    id: '/billing',
-    path: '/billing',
+const AuthenticatedAccountLeadsRoute =
+  AuthenticatedAccountLeadsRouteImport.update({
+    id: '/leads',
+    path: '/leads',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountProfileRoute =
+  AuthenticatedAccountProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountSettingsRoute =
+  AuthenticatedAccountSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
     getParentRoute: () => AuthenticatedAccountRoute,
   } as any)
 
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/therapy-information': typeof TherapyInformationRoute
   '/account': typeof AuthenticatedAccountRouteWithChildren
   '/claim': typeof AuthenticatedClaimRoute
+  '/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/therapy-information': typeof TherapyInformationRoute
   '/claim': typeof AuthenticatedClaimRoute
+  '/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/therapy-information': typeof TherapyInformationRoute
   '/_authenticated/account': typeof AuthenticatedAccountRouteWithChildren
   '/_authenticated/claim': typeof AuthenticatedClaimRoute
+  '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/account'
     | '/claim'
+    | '/new-profile'
     | '/admin/billing'
     | '/admin/catalogs'
     | '/admin/claims'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/therapy-information'
     | '/claim'
+    | '/new-profile'
     | '/admin/billing'
     | '/admin/catalogs'
     | '/admin/claims'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/_authenticated/account'
     | '/_authenticated/claim'
+    | '/_authenticated/new-profile'
     | '/admin/billing'
     | '/admin/catalogs'
     | '/admin/claims'
@@ -389,60 +401,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/therapy-information': {
-      id: '/therapy-information'
-      path: '/therapy-information'
-      fullPath: '/therapy-information'
-      preLoaderRoute: typeof TherapyInformationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile-preview-demo': {
-      id: '/profile-preview-demo'
-      path: '/profile-preview-demo'
-      fullPath: '/profile-preview-demo'
-      preLoaderRoute: typeof ProfilePreviewDemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/for-therapists': {
-      id: '/for-therapists'
-      path: '/for-therapists'
-      fullPath: '/for-therapists'
-      preLoaderRoute: typeof ForTherapistsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -452,81 +415,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/for-therapists': {
+      id: '/for-therapists'
+      path: '/for-therapists'
+      fullPath: '/for-therapists'
+      preLoaderRoute: typeof ForTherapistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile-preview-demo': {
+      id: '/profile-preview-demo'
+      path: '/profile-preview-demo'
+      fullPath: '/profile-preview-demo'
+      preLoaderRoute: typeof ProfilePreviewDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/therapy-information': {
+      id: '/therapy-information'
+      path: '/therapy-information'
+      fullPath: '/therapy-information'
+      preLoaderRoute: typeof TherapyInformationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/claim': {
+      id: '/_authenticated/claim'
+      path: '/claim'
+      fullPath: '/claim'
+      preLoaderRoute: typeof AuthenticatedClaimRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/new-profile': {
+      id: '/_authenticated/new-profile'
+      path: '/new-profile'
+      fullPath: '/new-profile'
+      preLoaderRoute: typeof AuthenticatedNewProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/therapists/$slug': {
-      id: '/therapists/$slug'
-      path: '/therapists/$slug'
-      fullPath: '/therapists/$slug'
-      preLoaderRoute: typeof TherapistsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/problems/$slug': {
-      id: '/problems/$slug'
-      path: '/problems/$slug'
-      fullPath: '/problems/$slug'
-      preLoaderRoute: typeof ProblemsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/therapists': {
-      id: '/admin/therapists'
-      path: '/therapists'
-      fullPath: '/admin/therapists'
-      preLoaderRoute: typeof AdminTherapistsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/leads': {
-      id: '/admin/leads'
-      path: '/leads'
-      fullPath: '/admin/leads'
-      preLoaderRoute: typeof AdminLeadsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/integrations': {
-      id: '/admin/integrations'
-      path: '/integrations'
-      fullPath: '/admin/integrations'
-      preLoaderRoute: typeof AdminIntegrationsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/credentials': {
-      id: '/admin/credentials'
-      path: '/credentials'
-      fullPath: '/admin/credentials'
-      preLoaderRoute: typeof AdminCredentialsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/claims': {
-      id: '/admin/claims'
-      path: '/claims'
-      fullPath: '/admin/claims'
-      preLoaderRoute: typeof AdminClaimsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/catalogs': {
-      id: '/admin/catalogs'
-      path: '/catalogs'
-      fullPath: '/admin/catalogs'
-      preLoaderRoute: typeof AdminCatalogsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/billing': {
@@ -536,19 +506,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBillingRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/_authenticated/claim': {
-      id: '/_authenticated/claim'
-      path: '/claim'
-      fullPath: '/claim'
-      preLoaderRoute: typeof AuthenticatedClaimRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/admin/catalogs': {
+      id: '/admin/catalogs'
+      path: '/catalogs'
+      fullPath: '/admin/catalogs'
+      preLoaderRoute: typeof AdminCatalogsRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
-    '/_authenticated/account': {
-      id: '/_authenticated/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AuthenticatedAccountRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/admin/claims': {
+      id: '/admin/claims'
+      path: '/claims'
+      fullPath: '/admin/claims'
+      preLoaderRoute: typeof AdminClaimsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/credentials': {
+      id: '/admin/credentials'
+      path: '/credentials'
+      fullPath: '/admin/credentials'
+      preLoaderRoute: typeof AdminCredentialsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/integrations': {
+      id: '/admin/integrations'
+      path: '/integrations'
+      fullPath: '/admin/integrations'
+      preLoaderRoute: typeof AdminIntegrationsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/therapists': {
+      id: '/admin/therapists'
+      path: '/therapists'
+      fullPath: '/admin/therapists'
+      preLoaderRoute: typeof AdminTherapistsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/problems/$slug': {
+      id: '/problems/$slug'
+      path: '/problems/$slug'
+      fullPath: '/problems/$slug'
+      preLoaderRoute: typeof ProblemsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/therapists/$slug': {
+      id: '/therapists/$slug'
+      path: '/therapists/$slug'
+      fullPath: '/therapists/$slug'
+      preLoaderRoute: typeof TherapistsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/account/': {
       id: '/_authenticated/account/'
@@ -557,25 +576,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountIndexRouteImport
       parentRoute: typeof AuthenticatedAccountRoute
     }
-    '/_authenticated/account/settings': {
-      id: '/_authenticated/account/settings'
-      path: '/settings'
-      fullPath: '/account/settings'
-      preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
-      parentRoute: typeof AuthenticatedAccountRoute
-    }
-    '/_authenticated/account/profile': {
-      id: '/_authenticated/account/profile'
-      path: '/profile'
-      fullPath: '/account/profile'
-      preLoaderRoute: typeof AuthenticatedAccountProfileRouteImport
-      parentRoute: typeof AuthenticatedAccountRoute
-    }
-    '/_authenticated/account/leads': {
-      id: '/_authenticated/account/leads'
-      path: '/leads'
-      fullPath: '/account/leads'
-      preLoaderRoute: typeof AuthenticatedAccountLeadsRouteImport
+    '/_authenticated/account/billing': {
+      id: '/_authenticated/account/billing'
+      path: '/billing'
+      fullPath: '/account/billing'
+      preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport
       parentRoute: typeof AuthenticatedAccountRoute
     }
     '/_authenticated/account/credentials': {
@@ -585,11 +590,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountCredentialsRouteImport
       parentRoute: typeof AuthenticatedAccountRoute
     }
-    '/_authenticated/account/billing': {
-      id: '/_authenticated/account/billing'
-      path: '/billing'
-      fullPath: '/account/billing'
-      preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport
+    '/_authenticated/account/leads': {
+      id: '/_authenticated/account/leads'
+      path: '/leads'
+      fullPath: '/account/leads'
+      preLoaderRoute: typeof AuthenticatedAccountLeadsRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/profile': {
+      id: '/_authenticated/account/profile'
+      path: '/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AuthenticatedAccountProfileRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/settings': {
+      id: '/_authenticated/account/settings'
+      path: '/settings'
+      fullPath: '/account/settings'
+      preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
       parentRoute: typeof AuthenticatedAccountRoute
     }
   }
@@ -619,11 +638,13 @@ const AuthenticatedAccountRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRouteWithChildren
   AuthenticatedClaimRoute: typeof AuthenticatedClaimRoute
+  AuthenticatedNewProfileRoute: typeof AuthenticatedNewProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRouteWithChildren,
   AuthenticatedClaimRoute: AuthenticatedClaimRoute,
+  AuthenticatedNewProfileRoute: AuthenticatedNewProfileRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
