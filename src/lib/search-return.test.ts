@@ -35,7 +35,7 @@ describe("back-to-search button", () => {
   });
 
   it("keeps backwards-compatible ret parsing while new profile links stay clean", () => {
-    expect(profileRoute).toContain('ret: fallback(z.string(), "").default("")');
+    expect(profileRoute).toContain("ret: z.string().optional()");
     const opts = resultsReturnLinkOptions("/search?q=abc");
     if (opts.to !== "/search") throw new Error("expected search return options");
     expect(opts.search).toEqual({ q: "abc" });
@@ -210,7 +210,7 @@ describe("contact-flow wiring", () => {
     expect(card).toContain("search={{}}");
     expect(card).not.toContain("search={returnTo ? { ret: returnTo } : {}}");
     expect(profileRoute).toContain("readRememberedResultsReturn()");
-    expect(profileRoute).toContain('ret: fallback(z.string(), "").default("")');
+    expect(profileRoute).toContain("ret: z.string().optional()");
   });
 
   it("does not rely on history.back()", () => {

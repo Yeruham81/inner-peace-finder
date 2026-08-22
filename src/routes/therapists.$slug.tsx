@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { PublicRouteError } from "@/components/public-route-error";
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/therapists/$slug")({
   validateSearch: zodValidator(
     z.object({
       /** Allowlisted internal results URL to return to after a successful lead. */
-      ret: fallback(z.string(), "").default(""),
+      ret: z.string().optional(),
     }),
   ),
   loader: async ({ context, params }) => {
