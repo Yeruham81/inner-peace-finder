@@ -1,8 +1,11 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 
 import { ACCOUNT_NAV_ITEMS } from "./account-nav";
 
 export function AccountSidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isProfileEditor = pathname === "/account/profile";
+
   return (
     <div className="flex h-full flex-col gap-6 bg-surface-elevated p-4">
       <Link to="/" onClick={onNavigate} className="flex items-center gap-3 px-1">
@@ -37,17 +40,19 @@ export function AccountSidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="rounded-xl border border-brand/20 bg-brand-soft/35 p-3">
-        <p className="text-xs font-semibold text-foreground">צריכים לעדכן משהו בפרופיל?</p>
-        <Link
-          to="/account/profile"
-          search={{ therapistId: undefined }}
-          onClick={onNavigate}
-          className="mt-1 inline-block text-xs font-medium text-brand underline-offset-4 hover:underline"
-        >
-          מעבר לעריכת הפרופיל
-        </Link>
-      </div>
+      {!isProfileEditor && (
+        <div className="rounded-xl border border-brand/20 bg-brand-soft/35 p-3">
+          <p className="text-xs font-semibold text-foreground">צריכים לעדכן משהו בפרופיל?</p>
+          <Link
+            to="/account/profile"
+            search={{ therapistId: undefined }}
+            onClick={onNavigate}
+            className="mt-1 inline-block text-xs font-medium text-brand underline-offset-4 hover:underline"
+          >
+            מעבר לעריכת הפרופיל
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
