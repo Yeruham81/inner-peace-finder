@@ -13,7 +13,7 @@ import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { PublicRouteError } from "@/components/public-route-error";
 import { track } from "@/lib/analytics";
-import { buildSearchReturn } from "@/lib/search-return";
+import { buildSearchReturn, rememberResultsReturn } from "@/lib/search-return";
 
 /**
  * Search-flow switch.
@@ -501,7 +501,8 @@ function LegacySearchResults({ search }: { search: SearchParams }) {
                 <Link
                   to="/therapists/$slug"
                   params={{ slug: m.slug }}
-                  search={returnTo ? { ret: returnTo } : {}}
+                  search={{}}
+                  onClick={() => rememberResultsReturn(returnTo)}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground hover:border-brand hover:bg-brand/5"
                 >
                   <span className="font-medium">{m.full_name}</span>
