@@ -151,8 +151,8 @@ describe("canonical problem-page search", () => {
 });
 
 describe("contact-flow wiring", () => {
-  it("redirects only after a confirmed success, once, with replace navigation", () => {
-    expect(modal).toContain("if (!done || redirectedRef.current) return;");
+  it("returns only after confirmed success is explicitly closed, once, with replace navigation", () => {
+    expect(modal).toContain("if (redirectedRef.current) return;");
     expect(modal).toContain("redirectedRef.current = true;");
     expect(modal).toContain("navigate({ href: returnTo, replace: true })");
     // done is only set after the server confirms ok
@@ -169,10 +169,11 @@ describe("contact-flow wiring", () => {
     expect(redirect).toContain("onClose();");
   });
 
-  it("shows the final success confirmation copy for 1.5 seconds before redirecting", () => {
+  it("keeps the final success confirmation visible until explicit close", () => {
     expect(modal).toContain("הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות.");
-    expect(modal).toContain("LEAD_SUCCESS_REDIRECT_MS = 1500");
-    expect(modal).toContain("setTimeout(returnToResults, LEAD_SUCCESS_REDIRECT_MS)");
+    expect(modal).toContain("סגירה וחזרה לתוצאות");
+    expect(modal).not.toContain("LEAD_SUCCESS_REDIRECT_MS");
+    expect(modal).not.toContain("setTimeout(returnToResults");
   });
 
   it("blocks every dialog-close path while the submission is in progress", () => {
@@ -194,16 +195,13 @@ describe("contact-flow wiring", () => {
     expect(closeHandler).toContain("if (done) {");
     expect(closeHandler).toContain("returnToResults();");
     const successUi = modal.slice(modal.indexOf("{done ? ("), modal.indexOf(") : (", modal.indexOf("{done ? (")));
-    expect(successUi).not.toContain("סגירה");
+    expect(successUi).toContain("סגירה וחזרה לתוצאות");
+    expect(successUi).toContain("onClick={returnToResults}");
   });
 
-  it("keeps the confirmed-success timer independent of the modal open state", () => {
-    const successEffect = modal.slice(
-      modal.indexOf("// Redirect back to the search results"),
-      modal.indexOf("const challengeAnswerNum"),
-    );
-    expect(successEffect).toContain("if (!done || redirectedRef.current) return;");
-    expect(successEffect).not.toContain("!open");
+  it("does not schedule automatic navigation after success", () => {
+    expect(modal).not.toContain("setTimeout(returnToResults");
+    expect(modal).not.toContain("LEAD_SUCCESS_REDIRECT_MS");
   });
 
   it("keeps therapist URLs clean and stores the return destination outside the URL", () => {
