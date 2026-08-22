@@ -162,6 +162,7 @@ export async function fetchPublicTherapistBySlug(
     years_experience: t.years_experience ?? null,
     city: t.city ?? null,
     image_url: t.image_url ?? null,
+    gender: t.gender === "male" || t.gender === "female" ? t.gender : null,
     // Database triggers keep this projection synchronized with manual
     // verification and verified credentials for every public surface.
     verified: !!t.verified,
