@@ -49,16 +49,18 @@ function inviteEmailHtml(invite: ClaimInvite): string {
   const claimUrl = escapeHtml(invite.claimUrl);
   const profileUrl = escapeHtml(invite.profileUrl);
   return `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#18302b;line-height:1.75">
-    <h1 style="font-size:24px;margin:0 0 16px">התקבלה פנייה חדשה עבורך ב־Tipulinks</h1>
+    <h1 style="font-size:24px;margin:0 0 16px">התקבלה פנייה חדשה עבורך בטיפולינקס</h1>
     <p>שלום ${name},</p>
-    <p>יצרנו עבורך פרופיל מקצועי על בסיס מידע פומבי, וכעת התקבלה פנייה ראשונית ממשתמש/ת המעוניינים ליצור איתך קשר.</p>
-    <p>כדי לקבל בעלות על הפרופיל, לבדוק ולעדכן את פרטיו ולקבל את הפנייה כל עוד היא עדיין עדכנית, יש לאמת את כתובת האימייל ולקבל בעלות:</p>
+    <p>יש לך פנייה ממשתמש/ת שראה את הפרופיל שלך באתר טיפולינקס ומעוניין/ת ליצור איתך קשר לגבי טיפול.</p>
+    <p>הפרופיל המקצועי שיצרנו עבורך באתר מבוסס כרגע על מידע פומבי בלבד.</p>
+    <p>אנחנו מזמינים אותך לקחת בעלות על הפרופיל שלך, לעדכן את פרטיו ולקבל את הפנייה שמחכה לך.</p>
+    <p>כדי להשלים את התהליך עליך לאמת את כתובת האימייל:</p>
     <p style="margin:28px 0;text-align:center">
       <a href="${claimUrl}" style="display:inline-block;background:#2d8074;color:#fff;text-decoration:none;padding:13px 24px;border-radius:10px;font-weight:700">קבלת בעלות על הפרופיל</a>
     </p>
-    <p style="font-size:14px;color:#52645f">הקישור אישי, תקף לזמן מוגבל ונועד לכתובת שאליה נשלחה הודעה זו. פרטי הפונה אינם נכללים באימייל ויימסרו רק לאחר קבלת הבעלות.</p>
+    <p style="font-size:14px;color:#52645f">הקישור הינו אישי, תקף לזמן מוגבל וניתן לפתיחה רק מהכתובת שאליה נשלחה הודעה זו.</p>
     <hr style="border:0;border-top:1px solid #dce8e4;margin:28px 0" />
-    <p style="font-size:13px;color:#687873">אינך מעוניין/ת להופיע באתר? ניתן להיכנס <a href="${profileUrl}" style="color:#2d8074">לעמוד הפרופיל</a> ולהגיש בקשת הסרה ללא הרשמה.</p>
+    <p style="font-size:13px;color:#687873">אינך מעוניין/ת להופיע באתר? ניתן להיכנס <a href="${profileUrl}" style="color:#2d8074">לעמוד הפרופיל</a> ולבקש להסיר אותו.</p>
   </div>`;
 }
 
@@ -89,7 +91,7 @@ async function deliverClaimInvite(invite: ClaimInvite): Promise<{ providerMessag
     : {
         sender: { name: senderName, email: senderEmail },
         to: [{ email: invite.email, name: invite.therapistName }],
-        subject: "התקבלה פנייה חדשה עבורך ב־Tipulinks",
+        subject: "התקבלה פנייה חדשה עבורך בטיפולינקס",
         htmlContent: inviteEmailHtml(invite),
       };
 
