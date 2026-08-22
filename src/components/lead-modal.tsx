@@ -276,7 +276,7 @@ export function LeadModal({
               ✓
             </div>
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
-              הפנייה נשלחה
+              {unclaimedProfile ? "הפנייה נשמרה" : "הפנייה נשלחה"}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {unclaimedProfile
