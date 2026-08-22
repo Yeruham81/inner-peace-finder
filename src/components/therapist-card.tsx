@@ -4,6 +4,7 @@ import type { SearchResultCard } from "@/lib/search-result-card";
 import { track } from "@/lib/analytics";
 import { buildResultsReturn, rememberResultsReturn } from "@/lib/search-return";
 import { visibleItemCountForRows } from "@/lib/tag-overflow";
+import { defaultTherapistAvatar } from "@/lib/therapist-default-avatar";
 
 const COMPACT_TAG_CLASS =
   "inline-flex max-w-full shrink-0 items-center truncate whitespace-nowrap rounded-full border border-border px-2.5 py-1 text-xs leading-4";
@@ -131,6 +132,7 @@ export function TherapistCard({
 
   const clinicLabel = [...new Set(t.clinic_locations.map((location) => location.city).filter(Boolean))].join(", ");
   const fallbackInitial = t.full_name.trim().charAt(0) || "ט";
+  const displayImageUrl = t.image_url || defaultTherapistAvatar(t.gender);
 
   return (
     <Link
@@ -142,10 +144,10 @@ export function TherapistCard({
       className="group flex h-full flex-col rounded-2xl border border-border bg-surface-elevated p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-brand/40 focus:ring-offset-2 sm:p-5"
     >
       <div className="flex items-start gap-4">
-        {t.image_url ? (
+        {displayImageUrl ? (
           <img
-            src={t.image_url}
-            alt={`תמונה של ${t.full_name}`}
+            src={displayImageUrl}
+            alt={t.image_url ? `תמונה של ${t.full_name}` : `איור ברירת מחדל עבור ${t.full_name}`}
             className="h-20 w-20 shrink-0 rounded-2xl object-cover ring-1 ring-border sm:h-24 sm:w-24"
             loading="lazy"
           />
