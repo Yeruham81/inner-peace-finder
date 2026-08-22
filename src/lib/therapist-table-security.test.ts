@@ -40,9 +40,7 @@ describe("therapists table lockdown — migration", () => {
 
   it("narrows authenticated privileges to the owner-editor flow (no DELETE)", () => {
     expect(sql).toMatch(/REVOKE ALL PRIVILEGES ON TABLE public\.therapists FROM authenticated/i);
-    expect(sql).toMatch(
-      /GRANT SELECT, INSERT, UPDATE ON TABLE public\.therapists TO authenticated/i,
-    );
+    expect(sql).toMatch(/GRANT SELECT, INSERT, UPDATE ON TABLE public\.therapists TO authenticated/i);
     expect(/GRANT[^;]*DELETE[^;]*public\.therapists[^;]*TO authenticated/i.test(sql)).toBe(false);
   });
 
@@ -88,7 +86,7 @@ describe("therapists table lockdown — server/client boundary", () => {
       "lib/structured-search.functions.ts",
       "lib/query-interpreter.functions.ts",
       "lib/query-catalog.ts",
-      "lib/therapist-claims.functions.ts",
+      "lib/profile-claim-v2.functions.ts",
     ]) {
       const src = read(f);
       if (!src.includes("trusted-read-client")) continue;
