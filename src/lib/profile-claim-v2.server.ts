@@ -236,7 +236,7 @@ export async function sendClaimInvitation(input: {
 }
 
 export async function sendInitialClaimInvitationForLead(input: {
-  therapistId: string;
+  therapistId: strng;
   leadId: string;
 }): Promise<ClaimInviteDeliveryResult> {
   return sendClaimInvitation({
