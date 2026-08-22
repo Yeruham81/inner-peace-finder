@@ -16,6 +16,12 @@ const STATUS_TONES: Record<string, Tone> = {
   פעיל: "positive",
   טיוטה: "neutral",
   ממתין: "pending",
+  "מוכן לפרסום": "pending",
+  "ממתין ללקיחת בעלות": "pending",
+  "בבעלות המטפל": "positive",
+  "נוצר ע״י Tipulinks": "neutral",
+  "נוצר ע״י המטפל": "neutral",
+  "ממתין למחיקה": "negative",
   מוקפא: "negative",
   // verification / credentials
   מאומת: "positive",
