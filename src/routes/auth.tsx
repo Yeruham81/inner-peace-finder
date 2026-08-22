@@ -89,7 +89,9 @@ function AuthPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth`,
+        // Preserve invitation and other protected return targets across the
+        // email-confirmation round trip. `dest` has already passed safeNext().
+        emailRedirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(dest)}`,
         data: { full_name: fullName },
       },
     });
@@ -154,9 +156,7 @@ function AuthPage() {
     <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-md flex-col justify-center px-4 py-10">
       <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-foreground">
-            {tab === "forgot" ? "שחזור סיסמה" : "כניסת מטפלים"}
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground">{tab === "forgot" ? "שחזור סיסמה" : "כניסת מטפלים"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             הצטרפו לפלטפורמה, נהלו את הפרופיל שלכם וקבלו פניות ממטופלים.
           </p>
@@ -189,20 +189,10 @@ function AuthPage() {
 
         {tab !== "forgot" && (
           <div className="mb-4 grid gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOAuth("google")}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={() => handleOAuth("google")} disabled={loading}>
               המשך עם Google
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOAuth("apple")}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={() => handleOAuth("apple")} disabled={loading}>
               המשך עם Apple
             </Button>
             <div className="relative py-2 text-center text-xs text-muted-foreground">
@@ -256,12 +246,7 @@ function AuthPage() {
           <form onSubmit={handleSignUp} className="grid gap-3">
             <div>
               <Label htmlFor="full_name">שם מלא</Label>
-              <Input
-                id="full_name"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
+              <Input id="full_name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
             </div>
             <div>
               <Label htmlFor="email">אימייל</Label>
