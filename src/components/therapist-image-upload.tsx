@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { defaultTherapistAvatar } from "@/lib/therapist-default-avatar";
 
 const BUCKET = "therapist-images";
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -27,6 +28,7 @@ export function TherapistImageUpload({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const fallbackAvatar = defaultTherapistAvatar(gender);
 
   async function handleFile(file: File) {
     if (!therapistId) {
@@ -50,8 +52,7 @@ export function TherapistImageUpload({
       });
       if (up.error) throw up.error;
       const signed = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_TTL_SECONDS);
-      if (signed.error || !signed.data?.signedUrl)
-        throw signed.error ?? new Error("signed url failed");
+      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("signed url failed");
       onChange(signed.data.signedUrl);
       toast.success("התמונה הועלתה — לחצו על שמירה כדי לעדכן את הפרופיל");
     } catch (e) {
@@ -68,8 +69,12 @@ export function TherapistImageUpload({
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface">
-          {value ? (
-            <img src={value} alt="תמונת פרופיל" className="h-full w-full object-cover" />
+          {value || fallbackAvatar ? (
+            <img
+              src={value || fallbackAvatar || undefined}
+              alt={value ? "תמונת פרופיל" : "איור ברירת מחדל לפי המין שסומן"}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
               אין תמונה
@@ -97,13 +102,7 @@ export function TherapistImageUpload({
             {uploading ? "מעלה…" : value ? "החלפת תמונה" : "העלאת תמונה"}
           </Button>
           {value && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={uploading}
-              onClick={() => onChange(null)}
-            >
+            <Button type="button" variant="ghost" size="sm" disabled={uploading} onClick={() => onChange(null)}>
               הסרה
             </Button>
           )}
@@ -114,9 +113,7 @@ export function TherapistImageUpload({
         {!therapistId && " · יש לשמור טיוטה תחילה כדי להעלות תמונה"}
       </p>
       {showFallbackHint && (
-        <p className="text-xs text-muted-foreground">
-          אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.
-        </p>
+        <p className="text-xs text-muted-foreground">אם לא תעלו תמונה, יוצג איור מקצועי לפי המין שסומן.</p>
       )}
     </div>
   );
