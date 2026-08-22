@@ -18,6 +18,7 @@ type ClaimInvite = {
   expiresAt: string;
   claimUrl: string;
   profileUrl: string;
+  forTherapistsUrl: string;
 };
 
 async function hashToken(token: string): Promise<string> {
@@ -52,12 +53,21 @@ function inviteEmailHtml(invite: ClaimInvite): string {
   const name = escapeHtml(invite.therapistName);
   const claimUrl = escapeHtml(invite.claimUrl);
   const profileUrl = escapeHtml(invite.profileUrl);
+  const forTherapistsUrl = escapeHtml(invite.forTherapistsUrl);
   return `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#18302b;line-height:1.75">
     <h1 style="font-size:24px;margin:0 0 16px">התקבלה פנייה חדשה עבורך בטיפולינקס</h1>
     <p>שלום ${name},</p>
     <p>יש לך פנייה ממשתמש/ת שראה את הפרופיל שלך באתר טיפולינקס ומעוניין/ת ליצור איתך קשר לגבי טיפול.</p>
+    <p>נעים להכיר — טיפולינקס היא פלטפורמה שמסייעת לאנשים למצוא את המטפל המתאים להם לפי הקושי והצרכים שלהם, גם כאשר הם אינם יודעים מראש איזה מקצוע טיפולי או איזו שיטת טיפול לחפש.</p>
+    <p>עבור מטפלים, טיפולינקס מציעה:</p>
+    <ul style="padding-right:22px;margin:0 0 18px">
+      <li>פרופיל מקצועי שניתן לעדכן ולנהל באופן עצמאי.</li>
+      <li>פניות ממוקדות ממשתמשים שמעוניינים לתאם טיפול.</li>
+      <li>הופעה במאגר ללא דמי מנוי חודשיים וללא התחייבות.</li>
+    </ul>
+    <p><a href="${forTherapistsUrl}" style="color:#2d8074;font-weight:700">מידע נוסף על טיפולינקס למטפלים</a></p>
     <p>הפרופיל המקצועי שיצרנו עבורך באתר מבוסס כרגע על מידע פומבי בלבד.</p>
-    <p>אנחנו מזמינים אותך לקחת בעלות על הפרופיל שלך, לעדכן את פרטיו ולקבל את הפנייה שמחכה לך.</p>
+    <p>אנחנו מזמינים אותך לקחת בעלות על הפרופיל, לבדוק ולעדכן את פרטיו ולקבל את הפנייה שמחכה לך.</p>
     <p>כדי להשלים את התהליך עליך לאמת את כתובת האימייל:</p>
     <p style="margin:28px 0;text-align:center">
       <a href="${claimUrl}" style="display:inline-block;background:#2d8074;color:#fff;text-decoration:none;padding:13px 24px;border-radius:10px;font-weight:700">קבלת בעלות על הפרופיל</a>
@@ -91,6 +101,7 @@ async function deliverClaimInvite(
           therapist_name: invite.therapistName,
           claim_url: invite.claimUrl,
           profile_url: invite.profileUrl,
+          for_therapists_url: invite.forTherapistsUrl,
           expires_at: invite.expiresAt,
         },
       }
@@ -167,6 +178,7 @@ export async function createClaimInviteForTherapist(input: {
     expiresAt,
     claimUrl: `${origin}/claim?token=${encodeURIComponent(token)}`,
     profileUrl: `${origin}/therapists/${encodeURIComponent(therapist.slug)}`,
+    forTherapistsUrl: `${origin}/for-therapists`,
   };
 }
 
