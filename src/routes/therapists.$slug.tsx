@@ -1,11 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { PublicRouteError } from "@/components/public-route-error";
-import { resultsReturnLinkOptions } from "@/lib/search-return";
+import { readRememberedResultsReturn, resultsReturnLinkOptions } from "@/lib/search-return";
 
 function therapistQuery(slug: string) {
   return queryOptions({
@@ -67,12 +68,15 @@ export const Route = createFileRoute("/therapists/$slug")({
 function TherapistPage() {
   const { slug } = Route.useParams();
   const { ret } = Route.useSearch();
-  const backToResults = resultsReturnLinkOptions(ret);
+  const [rememberedReturn, setRememberedReturn] = useState("");
+  useEffect(() => {
+    if (!ret) setRememberedReturn(readRememberedResultsReturn());
+  }, [ret]);
+  const backToResults = resultsReturnLinkOptions(ret || rememberedReturn);
   const { data: t } = useSuspenseQuery(therapistQuery(slug));
   if (!t) return null;
 
-  const backLinkClass =
-    "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
+  const backLinkClass = "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
 
   return (
     <div className="min-h-screen overflow-x-clip bg-brand-soft/30">
