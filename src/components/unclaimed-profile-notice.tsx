@@ -13,9 +13,7 @@ export function UnclaimedProfileNotice({ therapistId, therapistName }: { therapi
         <div className="flex items-start gap-3">
           <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="font-medium leading-6">
-              פרופיל זה נוצר על בסיס מידע פומבי וטרם עודכן על ידי המטפל/ת.
-            </p>
+            <p className="font-medium leading-6">פרופיל זה נוצר על בסיס מידע פומבי וטרם עודכן על ידי המטפל/ת.</p>
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -29,11 +27,7 @@ export function UnclaimedProfileNotice({ therapistId, therapistName }: { therapi
       </div>
 
       {open && (
-        <ProfileRequestDialog
-          therapistId={therapistId}
-          therapistName={therapistName}
-          onClose={() => setOpen(false)}
-        />
+        <ProfileRequestDialog therapistId={therapistId} therapistName={therapistName} onClose={() => setOpen(false)} />
       )}
     </>
   );
@@ -105,69 +99,106 @@ function ProfileRequestDialog({
 
         {done ? (
           <div className="py-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-xl text-primary">✓</div>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-xl text-primary">
+              ✓
+            </div>
             <h2 className="mt-4 text-xl font-bold">הבקשה התקבלה</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               נבדוק את הבקשה וניצור קשר לפי הצורך. הפרטים שמילאת אינם משמשים כשלעצמם לאימות זהות.
             </p>
-            <button type="button" onClick={onClose} className="mt-5 rounded-xl bg-brand px-5 py-2.5 font-semibold text-brand-foreground">
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-5 rounded-xl bg-brand px-5 py-2.5 font-semibold text-brand-foreground"
+            >
               סגירה
             </button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <div className="pr-1">
-              <h2 className="text-xl font-bold">בקשה בנוגע לפרופיל של {therapistName}</h2>
+              <h2 className="text-xl font-bold">
+                {requestType === "claim_profile"
+                  ? `קבלת בעלות על הפרופיל של ${therapistName}`
+                  : `בקשת הסרת הפרופיל של ${therapistName}`}
+              </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                בחרו אם ברצונכם לקבל בעלות על הפרופיל ולעדכן אותו, או לבקש להסיר אותו מהאתר.
+                {requestType === "claim_profile"
+                  ? "לאחר בדיקת הבקשה נשלח קישור אישי לכתובת האימייל המקצועית שכבר מקושרת לפרופיל."
+                  : "אין צורך להירשם. ההסרה תתבצע לאחר שנאמת שהבקשה אכן נשלחה על ידי המטפל/ת."}
               </p>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            {requestType === "remove_profile" && (
               <button
                 type="button"
                 onClick={() => setRequestType("claim_profile")}
-                className={`rounded-2xl border p-3 text-right text-sm transition-colors ${
-                  requestType === "claim_profile" ? "border-brand bg-brand-soft/60" : "border-border bg-background"
-                }`}
+                className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
               >
-                <span className="font-semibold">קבלת בעלות ועדכון הפרופיל</span>
-                <span className="mt-1 block text-xs text-muted-foreground">לאחר אימות נוכל לשייך אותו לחשבון שלך.</span>
+                חזרה לקבלת בעלות על הפרופיל
               </button>
-              <button
-                type="button"
-                onClick={() => setRequestType("remove_profile")}
-                className={`rounded-2xl border p-3 text-right text-sm transition-colors ${
-                  requestType === "remove_profile" ? "border-brand bg-brand-soft/60" : "border-border bg-background"
-                }`}
-              >
-                <span className="font-semibold">בקשת הסרת הפרופיל</span>
-                <span className="mt-1 block text-xs text-muted-foreground">ההסרה תתבצע רק לאחר אימות שזה אכן הפרופיל שלך.</span>
-              </button>
-            </div>
+            )}
 
             <Field label="שם מלא">
-              <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} className="w-full rounded-xl border border-border bg-background px-3 py-2.5" />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                minLength={2}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5"
+              />
             </Field>
             <Field label="אימייל לחזרה">
-              <input value={email} onChange={(e) => setEmail(e.target.value)} required type="email" dir="ltr" className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-left" />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                type="email"
+                dir="ltr"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-left"
+              />
             </Field>
             <Field label="טלפון (אופציונלי)">
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" dir="ltr" className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-left" />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                type="tel"
+                dir="ltr"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-left"
+              />
             </Field>
             <Field label="הערה (אופציונלי)">
-              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5" />
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5"
+              />
             </Field>
 
             <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs leading-5 text-muted-foreground">
-              לצורך קבלת בעלות, האימות יבוצע מול פרט קשר שהיה מקושר למטפל/ת לפני הגשת הבקשה — ולא מול כתובת חדשה שהוזנה בטופס זה.
+              לצורך קבלת בעלות, האימות יבוצע מול פרט קשר שהיה מקושר למטפל/ת לפני הגשת הבקשה — ולא מול כתובת חדשה שהוזנה
+              בטופס זה.
             </p>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <button disabled={pending} className="w-full rounded-xl bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:opacity-60">
+            <button
+              disabled={pending}
+              className="w-full rounded-xl bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:opacity-60"
+            >
               {pending ? "שולח…" : requestType === "remove_profile" ? "שליחת בקשת הסרה" : "שליחת בקשת בעלות"}
             </button>
+
+            {requestType === "claim_profile" && (
+              <button
+                type="button"
+                onClick={() => setRequestType("remove_profile")}
+                className="mx-auto block text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                אינך מעוניין/ת שהפרופיל יופיע באתר? בקשת הסרה
+              </button>
+            )}
           </form>
         )}
       </div>
