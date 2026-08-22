@@ -38,7 +38,7 @@ export const Route = createFileRoute("/admin/therapists")({
   component: TherapistsPage,
 });
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 function publicationStatus(row: AdminTherapistRow): string {
   if (row.doNotRepublish) return "ממתין למחיקה";
@@ -81,6 +81,7 @@ function TherapistsPage() {
   const [sortKey, setSortKey] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [selected, setSelected] = useState<AdminTherapistRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminTherapistRow | null>(null);
 
@@ -123,9 +124,9 @@ function TherapistsPage() {
     });
   }, [therapists.data, search, profileStatus, ownership, origin, sortKey, sortDirection]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function handleSort(key: string) {
     if (key === sortKey) {
@@ -287,7 +288,17 @@ function TherapistsPage() {
           </div>
         )}
         footer={
-          <AdminPagination page={currentPage} pageCount={pageCount} total={filtered.length} onPageChange={setPage} />
+          <AdminPagination
+            page={currentPage}
+            pageCount={pageCount}
+            pageSize={pageSize}
+            total={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+          />
         }
       />
 
