@@ -1423,6 +1423,115 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_call_sessions: {
+        Row: {
+          billable_eligible: boolean
+          billable_event_at: string | null
+          caller_amd_result: string | null
+          caller_answered_at: string | null
+          caller_hash: string
+          caller_leg_status: string
+          child_call_sid: string | null
+          completed_at: string | null
+          connected_at: string | null
+          connected_duration_seconds: number | null
+          created_at: string
+          cta_event_id: string | null
+          id: string
+          ip_hash: string
+          last_caller_sequence: number | null
+          last_therapist_sequence: number | null
+          lead_id: string | null
+          outcome: string | null
+          parent_call_sid: string | null
+          provider_error_code: string | null
+          requested_at: string
+          session_id: string
+          therapist_answered_at: string | null
+          therapist_id: string
+          therapist_leg_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          billable_eligible?: boolean
+          billable_event_at?: string | null
+          caller_amd_result?: string | null
+          caller_answered_at?: string | null
+          caller_hash: string
+          caller_leg_status?: string
+          child_call_sid?: string | null
+          completed_at?: string | null
+          connected_at?: string | null
+          connected_duration_seconds?: number | null
+          created_at?: string
+          cta_event_id?: string | null
+          id?: string
+          ip_hash: string
+          last_caller_sequence?: number | null
+          last_therapist_sequence?: number | null
+          lead_id?: string | null
+          outcome?: string | null
+          parent_call_sid?: string | null
+          provider_error_code?: string | null
+          requested_at?: string
+          session_id: string
+          therapist_answered_at?: string | null
+          therapist_id: string
+          therapist_leg_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billable_eligible?: boolean
+          billable_event_at?: string | null
+          caller_amd_result?: string | null
+          caller_answered_at?: string | null
+          caller_hash?: string
+          caller_leg_status?: string
+          child_call_sid?: string | null
+          completed_at?: string | null
+          connected_at?: string | null
+          connected_duration_seconds?: number | null
+          created_at?: string
+          cta_event_id?: string | null
+          id?: string
+          ip_hash?: string
+          last_caller_sequence?: number | null
+          last_therapist_sequence?: number | null
+          lead_id?: string | null
+          outcome?: string | null
+          parent_call_sid?: string | null
+          provider_error_code?: string | null
+          requested_at?: string
+          session_id?: string
+          therapist_answered_at?: string | null
+          therapist_id?: string
+          therapist_leg_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_call_sessions_cta_event_id_fkey"
+            columns: ["cta_event_id"]
+            isOneToOne: false
+            referencedRelation: "cta_clicks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_call_sessions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lead_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_call_sessions_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1435,6 +1544,10 @@ export type Database = {
           _verification_method: string
         }
         Returns: string
+      }
+      attach_voice_call_provider: {
+        Args: { _attempt_id: string; _parent_call_sid: string }
+        Returns: undefined
       }
       begin_admin_public_profile_deletion: {
         Args: { _actor: string; _therapist_id: string }
@@ -1487,6 +1600,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      fail_voice_call_attempt: {
+        Args: { _attempt_id: string; _error_code: string }
+        Returns: undefined
       }
       finalize_admin_public_profile_deletion: {
         Args: { _actor: string; _therapist_id: string }
@@ -1549,6 +1666,21 @@ export type Database = {
           click_id: string
         }[]
       }
+      record_voice_call_leg_event: {
+        Args: {
+          _child_call_sid: string
+          _duration: number
+          _leg: string
+          _parent_call_sid: string
+          _sequence: number
+          _status: string
+        }
+        Returns: {
+          attempt_id: string
+          billable_created: boolean
+          handled: boolean
+        }[]
+      }
       save_therapist_profile: {
         Args: { _actor: string; _payload: Json }
         Returns: Json
@@ -1556,6 +1688,24 @@ export type Database = {
       save_therapist_profile_with_contacts: {
         Args: { _actor: string; _payload: Json }
         Returns: Json
+      }
+      start_voice_call_attempt: {
+        Args: {
+          _answer: number
+          _caller_hash: string
+          _challenge_id: string
+          _ip_hash: string
+          _session_hash: string
+          _session_id: string
+          _therapist_id: string
+        }
+        Returns: {
+          allowed: boolean
+          attempt_id: string
+          reason: string
+          therapist_name: string
+          therapist_phone: string
+        }[]
       }
       submit_lead: {
         Args: {
@@ -1582,6 +1732,15 @@ export type Database = {
           lead_id: string
           reason: string
           therapist_name: string
+        }[]
+      }
+      voice_call_caller_answered: {
+        Args: { _amd_result: string; _parent_call_sid: string }
+        Returns: {
+          allowed: boolean
+          attempt_id: string
+          reason: string
+          therapist_phone: string
         }[]
       }
     }
