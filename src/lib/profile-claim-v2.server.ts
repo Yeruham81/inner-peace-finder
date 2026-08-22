@@ -29,7 +29,11 @@ async function hashToken(token: string): Promise<string> {
 function publicOrigin(): string {
   const configured = process.env.TIPULINKS_PUBLIC_ORIGIN || "https://tipulinks.co.il";
   const parsed = new URL(configured);
-  if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+  if (
+    parsed.protocol !== "https:" &&
+    parsed.hostname !== "localhost" &&
+    parsed.hostname !== "127.0.0.1"
+  ) {
     throw new Error("TIPULINKS_PUBLIC_ORIGIN must use https");
   }
   return parsed.origin;
@@ -64,7 +68,9 @@ function inviteEmailHtml(invite: ClaimInvite): string {
   </div>`;
 }
 
-async function deliverClaimInvite(invite: ClaimInvite): Promise<{ providerMessageId: string | null }> {
+async function deliverClaimInvite(
+  invite: ClaimInvite,
+): Promise<{ providerMessageId: string | null }> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) throw new Error("brevo_not_configured");
 
@@ -127,7 +133,11 @@ export async function createClaimInviteForTherapist(input: {
     .eq("id", input.therapistId)
     .single();
   if (therapistError) throw new Error(therapistError.message);
-  if (therapist.owner_account_id || therapist.profile_origin !== "admin_public_info" || therapist.do_not_republish) {
+  if (
+    therapist.owner_account_id ||
+    therapist.profile_origin !== "admin_public_info" ||
+    therapist.do_not_republish
+  ) {
     throw new Error("Profile is not claimable");
   }
   if (!therapist.email) throw new Error("Profile has no professional email");
