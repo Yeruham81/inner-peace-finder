@@ -28,6 +28,7 @@ export type PreviewFormState = {
   professional_experience: string;
   years_experience: string;
   image_url: string;
+  gender: "male" | "female" | "unspecified" | "";
   contact_methods?: PublicContactMethod[];
   preferred_contact_method?: PublicContactMethod | "";
   profession_ids: string[];
@@ -109,6 +110,7 @@ export function buildPreviewViewData(
     years_experience: form.years_experience.trim() === "" ? null : Number(form.years_experience),
     city: form.locations.find((location) => location.city.trim())?.city.trim() || null,
     image_url: form.image_url.trim() || null,
+    gender: form.gender === "male" || form.gender === "female" ? form.gender : null,
     verified: saved?.verified ?? false,
     lgbtq_affirming: form.lgbtq_affirming,
     offers_free_intro: form.offers_free_intro,
