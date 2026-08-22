@@ -5,6 +5,7 @@ import { therapistSlugBase } from "./therapist-slug";
 const adminFunctions = readFileSync("src/lib/admin-therapists.functions.ts", "utf8");
 const adminRoute = readFileSync("src/routes/admin/therapists.tsx", "utf8");
 const profileFunctions = readFileSync("src/lib/therapist-profile.functions.ts", "utf8");
+const slugModule = readFileSync("src/lib/therapist-slug.ts", "utf8");
 const migration = readFileSync("supabase/migrations/20260822031500_admin_profile_management.sql", "utf8");
 
 describe("admin therapist management", () => {
@@ -33,7 +34,8 @@ describe("admin therapist management", () => {
 
 describe("clean therapist slugs", () => {
   it("uses a human-readable base and numeric collision suffixes without random text", () => {
-    expect(profileFunctions).toContain("export function therapistSlugBase");
+    expect(slugModule).toContain("export function therapistSlugBase");
+    expect(profileFunctions).toContain('import { therapistSlugBase } from "./therapist-slug"');
     expect(therapistSlugBase("שמשון שושני")).toBe("שמשון-שושני");
     expect(therapistSlugBase("  דנה   לוי  ")).toBe("דנה-לוי");
     expect(profileFunctions).not.toContain("Math.random()");
@@ -44,7 +46,10 @@ describe("clean therapist slugs", () => {
 
   it("keeps the slug stable on profile updates", () => {
     const migrationEditor = readFileSync("supabase/migrations/20260821170000_admin_public_profile_editor.sql", "utf8");
-    const updateBlock = migrationEditor.slice(migrationEditor.indexOf("UPDATE public.therapists SET"), migrationEditor.indexOf("DELETE FROM public.therapist_professions"));
+    const updateBlock = migrationEditor.slice(
+      migrationEditor.indexOf("UPDATE public.therapists SET"),
+      migrationEditor.indexOf("DELETE FROM public.therapist_professions"),
+    );
     expect(updateBlock).not.toContain("slug =");
   });
 });
