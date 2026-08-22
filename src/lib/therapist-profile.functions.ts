@@ -8,6 +8,7 @@ import { combineFeedbackDomains, loadFeedbackCatalog } from "./profile-domain-fe
 import { computeSemanticProfile } from "./profile-semantic-sync";
 import type { CredentialStatus } from "./credential-workflow";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
+import { therapistSlugBase } from "./therapist-slug";
 import {
   PRODUCT_REGIONS,
   loadLocalityOptions,
@@ -118,18 +119,6 @@ export type SemanticFeedback = {
 
 export const DESCRIPTION_MIN = 60;
 export const DESCRIPTION_MAX = 4000;
-
-function slugify(input: string): string {
-  const base = input
-    .normalize("NFKD")
-    .replace(/[\u0591-\u05C7]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\u0590-\u05FF]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-  const suffix = Math.random().toString(36).slice(2, 8);
-  return base ? `${base}-${suffix}` : `therapist-${suffix}`;
-}
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -686,13 +675,18 @@ async function saveProfileForActor(args: {
     }
   }
 
+  // Slugs are human-readable and stable. A BEFORE INSERT database trigger
+  // serializes same-name creations and turns this base into name, name-2,
+  // name-3, ... . Updates never rewrite the slug.
+  const requestedSlug = therapistSlugBase(data.full_name);
+
   // Visibility / status / verification columns are decided here and applied by
   // the database operation; the browser cannot write them at all. A single
   // transactional call replaces the previous multi-statement sequence, so a
   // failure anywhere leaves the previously saved profile fully intact.
   const payload = {
     profile: {
-      slug: slugify(data.full_name),
+      slug: requestedSlug,
       full_name: data.full_name.trim(),
       gender: data.gender ?? null,
       professional_title: data.professional_title?.trim() || null,
