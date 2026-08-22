@@ -23,6 +23,7 @@ export type ClaimInvitePreview = {
   therapistName: string | null;
   professionalTitle: string | null;
   expiresAt: string | null;
+  signedInEmailVerified: boolean;
   emailMatchesSignedInUser: boolean;
   maskedEmail: string | null;
 };
@@ -44,10 +45,15 @@ function maskEmail(email: string): string {
   return `${visible}${"*".repeat(Math.max(3, local.length - visible.length))}@${domain}`;
 }
 
-async function signedInEmail(supabase: import("@supabase/supabase-js").SupabaseClient): Promise<string | null> {
+async function signedInEmail(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+): Promise<{ email: string | null; verified: boolean }> {
   const { data, error } = await supabase.auth.getUser();
   if (error) throw new Error(error.message);
-  return data.user?.email ? normalizeEmail(data.user.email) : null;
+  return {
+    email: data.user?.email ? normalizeEmail(data.user.email) : null,
+    verified: Boolean(data.user?.email_confirmed_at),
+  };
 }
 
 async function ensureAccount(
@@ -139,17 +145,22 @@ export const getClaimInvitePreview = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => TokenSchema.parse(input))
   .handler(async ({ data, context }): Promise<ClaimInvitePreview> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const email = await signedInEmail(context.supabase);
+    const signedIn = await signedInEmail(context.supabase);
     const tokenHash = await hashToken(data.token);
 
     const { data: invite, error } = await supabaseAdmin
       .from("therapist_claim_invites")
-      .select("therapist_id, email, status, expires_at")
+      .select("therapist_id, email, status, expires_at, delivery_status, sent_at")
       .eq("token_hash", tokenHash)
       .maybeSingle();
     if (error) throw new Error(error.message);
 
-    const expired = !invite || invite.status !== "pending" || new Date(invite.expires_at).getTime() <= Date.now();
+    const expired =
+      !invite ||
+      invite.status !== "pending" ||
+      invite.delivery_status !== "sent" ||
+      !invite.sent_at ||
+      new Date(invite.expires_at).getTime() <= Date.now();
     if (expired || !invite) {
       return {
         valid: false,
@@ -157,6 +168,7 @@ export const getClaimInvitePreview = createServerFn({ method: "POST" })
         therapistName: null,
         professionalTitle: null,
         expiresAt: null,
+        signedInEmailVerified: signedIn.verified,
         emailMatchesSignedInUser: false,
         maskedEmail: null,
       };
@@ -164,18 +176,28 @@ export const getClaimInvitePreview = createServerFn({ method: "POST" })
 
     const { data: therapist, error: therapistError } = await supabaseAdmin
       .from("therapists")
-      .select("full_name, professional_title")
+      .select("full_name, professional_title, email, owner_account_id, profile_origin, do_not_republish")
       .eq("id", invite.therapist_id)
       .maybeSingle();
     if (therapistError) throw new Error(therapistError.message);
 
+    const currentEmail = therapist?.email ? normalizeEmail(therapist.email) : null;
+    const inviteEmail = normalizeEmail(invite.email);
+    const profileStillClaimable =
+      !!therapist &&
+      !therapist.owner_account_id &&
+      therapist.profile_origin === "admin_public_info" &&
+      !therapist.do_not_republish &&
+      currentEmail === inviteEmail;
+
     return {
-      valid: true,
+      valid: profileStillClaimable,
       therapistId: invite.therapist_id,
       therapistName: therapist?.full_name ?? null,
       professionalTitle: therapist?.professional_title ?? null,
       expiresAt: invite.expires_at,
-      emailMatchesSignedInUser: !!email && email === normalizeEmail(invite.email),
+      signedInEmailVerified: signedIn.verified,
+      emailMatchesSignedInUser: signedIn.verified && !!signedIn.email && signedIn.email === inviteEmail,
       maskedEmail: maskEmail(invite.email),
     };
   });
@@ -186,80 +208,91 @@ export const acceptClaimInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => TokenSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const email = await signedInEmail(context.supabase);
-    if (!email) throw new Error("לא נמצאה כתובת אימייל מאומתת בחשבון.");
+    const signedIn = await signedInEmail(context.supabase);
+    if (!signedIn.email || !signedIn.verified) {
+      throw new Error("יש לאמת את כתובת האימייל של החשבון לפני קבלת בעלות.");
+    }
     await ensureAccount(context.supabase, context.userId);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: therapistId, error } = await supabaseAdmin.rpc("claim_therapist_by_invite", {
       _token_hash: await hashToken(data.token),
       _auth_user_id: context.userId,
-      _verified_email: email,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.includes("account already owns another profile")) {
+        throw new Error("לחשבון זה כבר משויך פרופיל אחר. יש לפנות לצוות Tipulinks כדי למזג את הפרופילים.");
+      }
+      if (error.message.includes("profile email changed after invitation")) {
+        throw new Error("כתובת האימייל המקצועית בפרופיל השתנתה. יש לבקש הזמנה חדשה.");
+      }
+      throw new Error(error.message);
+    }
     if (!therapistId) throw new Error("לא ניתן לשייך את הפרופיל לחשבון.");
 
     // If a visitor used the single initial-contact allowance before the
     // therapist claimed the profile, release that held inquiry only now.
     // Claiming the profile is the therapist's explicit participation signal.
-    const { data: therapist, error: therapistError } = await supabaseAdmin
-      .from("therapists")
-      .select("full_name, email")
-      .eq("id", therapistId)
-      .single();
-    if (therapistError) throw new Error(therapistError.message);
-
-    const { data: heldLeads, error: leadError } = await supabaseAdmin
-      .from("lead_events")
-      .select("id, visitor_name, visitor_phone, message, created_at")
-      .eq("therapist_id", therapistId)
-      .eq("delivery_status", "awaiting_consent")
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (leadError) throw new Error(leadError.message);
-
     let releasedLead = false;
     let expiredHeldLead = false;
-    const heldLead = heldLeads?.[0];
-    if (heldLead) {
-      const createdAtMs = new Date(heldLead.created_at).getTime();
-      const maxAgeMs = HELD_LEAD_RELEASE_WINDOW_HOURS * 60 * 60 * 1000;
-      const isFresh = Number.isFinite(createdAtMs) && Date.now() - createdAtMs <= maxAgeMs;
+    try {
+      const { data: therapist, error: therapistError } = await supabaseAdmin
+        .from("therapists")
+        .select("full_name, email")
+        .eq("id", therapistId)
+        .single();
+      if (therapistError) throw new Error(therapistError.message);
 
-      if (!isFresh) {
-        const { error: expiryError } = await supabaseAdmin
-          .from("lead_events")
-          .update({ delivery_status: "expired_before_consent" })
-          .eq("id", heldLead.id)
-          .eq("delivery_status", "awaiting_consent");
-        if (expiryError) {
-          console.error("[claim] held lead expiry status update failed", {
-            leadId: heldLead.id,
-            code: expiryError.code,
+      const { data: heldLeads, error: leadError } = await supabaseAdmin
+        .from("lead_events")
+        .select("id, visitor_name, visitor_phone, message, created_at")
+        .eq("therapist_id", therapistId)
+        .eq("delivery_status", "awaiting_consent")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      if (leadError) throw new Error(leadError.message);
+
+      const heldLead = heldLeads?.[0];
+      if (heldLead) {
+        const createdAtMs = new Date(heldLead.created_at).getTime();
+        const maxAgeMs = HELD_LEAD_RELEASE_WINDOW_HOURS * 60 * 60 * 1000;
+        const isFresh = Number.isFinite(createdAtMs) && Date.now() - createdAtMs <= maxAgeMs;
+
+        if (!isFresh) {
+          const { error: expiryError } = await supabaseAdmin
+            .from("lead_events")
+            .update({ delivery_status: "expired_before_consent" })
+            .eq("id", heldLead.id)
+            .eq("delivery_status", "awaiting_consent");
+          if (expiryError) throw new Error(expiryError.message);
+          expiredHeldLead = true;
+        } else if (therapist.email) {
+          const { dispatchLead } = await import("./lead-delivery.server");
+          const delivery = await dispatchLead("email", therapist.email, {
+            visitorName: heldLead.visitor_name,
+            visitorPhone: heldLead.visitor_phone,
+            message: heldLead.message,
+            therapistName: therapist.full_name,
           });
+          const { error: statusError } = await supabaseAdmin
+            .from("lead_events")
+            .update({
+              delivery_status: delivery.status,
+              provider_message_id: delivery.providerMessageId ?? null,
+            })
+            .eq("id", heldLead.id)
+            .eq("delivery_status", "awaiting_consent");
+          if (statusError) throw new Error(statusError.message);
+          releasedLead = delivery.status === "sent";
         }
-        expiredHeldLead = true;
-      } else if (therapist.email) {
-        const { dispatchLead } = await import("./lead-delivery.server");
-        const delivery = await dispatchLead("email", therapist.email, {
-          visitorName: heldLead.visitor_name,
-          visitorPhone: heldLead.visitor_phone,
-          message: heldLead.message,
-          therapistName: therapist.full_name,
-        });
-        const { error: statusError } = await supabaseAdmin
-          .from("lead_events")
-          .update({
-            delivery_status: delivery.status,
-            provider_message_id: delivery.providerMessageId ?? null,
-          })
-          .eq("id", heldLead.id)
-          .eq("delivery_status", "awaiting_consent");
-        if (statusError) {
-          console.error("[claim] held lead status update failed", { leadId: heldLead.id, code: statusError.code });
-        }
-        releasedLead = delivery.status === "sent";
       }
+    } catch (releaseError) {
+      // Ownership transfer has already committed. Never tell the therapist the
+      // Claim failed merely because the held-lead delivery needs an admin retry.
+      console.error("[claim] post-claim held lead release failed", {
+        therapistId,
+        error: releaseError instanceof Error ? releaseError.message : "unknown_error",
+      });
     }
 
     return { ok: true as const, therapistId, releasedLead, expiredHeldLead };
