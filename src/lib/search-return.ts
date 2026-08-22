@@ -1,9 +1,9 @@
 /**
  * Return-destination handling for the therapist contact flow.
  *
- * The therapist profile route carries an optional `ret` search param holding
- * the results URL the visitor came from. It is stored in the URL (not in
- * memory) so the destination survives refreshes and other navigation.
+ * New therapist links keep the public profile URL clean and store the previous
+ * results URL in sessionStorage. The legacy `ret` search param remains accepted
+ * for backwards-compatible links that may already exist.
  *
  * Only the application's own results surfaces are accepted: `/search` and a
  * canonical `/problems/<slug>` page. Arbitrary internal paths remain invalid.
@@ -25,12 +25,7 @@ function problemSlugFromPath(pathname: string): string | null {
  */
 export function buildResultsReturn(pathname: string, searchStr: string): string | undefined {
   if (pathname === SEARCH_PATH) {
-    const query =
-      searchStr && searchStr !== "?"
-        ? searchStr.startsWith("?")
-          ? searchStr
-          : `?${searchStr}`
-        : "";
+    const query = searchStr && searchStr !== "?" ? (searchStr.startsWith("?") ? searchStr : `?${searchStr}`) : "";
     return `${SEARCH_PATH}${query}`;
   }
   if (problemSlugFromPath(pathname)) return pathname;
@@ -69,6 +64,30 @@ export function sanitizeResultsReturn(raw: unknown): string {
 
   if (query === "" && problemSlugFromPath(pathname)) return pathname;
   return DEFAULT_SEARCH_RETURN;
+}
+
+export const RESULTS_RETURN_STORAGE_KEY = "tipulinks.results-return";
+
+/** Store the last supported results URL without exposing it in the therapist URL. */
+export function rememberResultsReturn(raw: unknown): void {
+  if (typeof window === "undefined" || typeof raw !== "string" || !raw.trim()) return;
+  const value = sanitizeResultsReturn(raw);
+  try {
+    window.sessionStorage.setItem(RESULTS_RETURN_STORAGE_KEY, value);
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers; the profile
+    // page will simply fall back to /search.
+  }
+}
+
+/** Read the last supported results URL saved in this browser tab. */
+export function readRememberedResultsReturn(): string {
+  if (typeof window === "undefined") return DEFAULT_SEARCH_RETURN;
+  try {
+    return sanitizeResultsReturn(window.sessionStorage.getItem(RESULTS_RETURN_STORAGE_KEY));
+  } catch {
+    return DEFAULT_SEARCH_RETURN;
+  }
 }
 
 export type ResultsReturnLinkOptions =
