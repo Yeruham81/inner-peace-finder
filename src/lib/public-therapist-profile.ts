@@ -19,6 +19,7 @@ export const PUBLIC_THERAPIST_COLUMNS = [
   "years_experience",
   "city",
   "image_url",
+  "gender",
   "verified",
   "lgbtq_affirming",
   "offers_free_intro",
@@ -58,7 +59,6 @@ export const PRIVATE_THERAPIST_COLUMNS = [
   "profile_status",
   "visibility",
   "is_active",
-  "gender",
   "region",
   "country",
   "latitude",
@@ -78,6 +78,7 @@ export type PublicTherapistProfile = {
   years_experience: number | null;
   city: string | null;
   image_url: string | null;
+  gender: "male" | "female" | null;
   verified: boolean;
   lgbtq_affirming: boolean;
   offers_free_intro: boolean;
