@@ -124,3 +124,48 @@ export async function permanentlyDeleteOwnedProfile(authUserId: string) {
 
   return { deleted: true as const };
 }
+
+/**
+ * Records only the email addresses required to honour the no-contact request,
+ * removes the user's professional profile, and deletes the Auth user last. If
+ * the suppression migration is missing or unavailable, deletion fails before
+ * any user data is removed. Other partial failures leave the account available
+ * so the user can safely try again.
+ */
+export async function permanentlyDeleteOwnedAccount(authUserId: string) {
+  const [{ data: authData, error: authError }, { data: account, error: accountError }] = await Promise.all([
+    supabaseAdmin.auth.admin.getUserById(authUserId),
+    supabaseAdmin.from("therapist_accounts").select("id").eq("auth_user_id", authUserId).maybeSingle(),
+  ]);
+  if (authError) throw new Error(`לא ניתן לקרוא את חשבון ההתחברות: ${authError.message}`);
+  if (accountError) throw new Error(accountError.message);
+  if (!account) throw new Error("לא נמצא חשבון למחיקה.");
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("therapists")
+    .select("email")
+    .eq("owner_account_id", account.id)
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message);
+
+  const suppressionEmails = [...new Set([authData.user?.email, profile?.email].filter(Boolean) as string[])];
+
+  if (suppressionEmails.length > 0) {
+    await withRetry("לא ניתן לשמור את בקשת אי־הפנייה", async () => {
+      const { error } = await supabaseAdmin.rpc("record_contact_email_suppressions", {
+        _emails: suppressionEmails,
+        _source: "account_self_deletion",
+      });
+      if (error) throw new Error(error.message);
+    });
+  }
+
+  await permanentlyDeleteOwnedProfile(authUserId);
+
+  await withRetry("לא ניתן למחוק את חשבון ההתחברות", async () => {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+    if (error) throw new Error(error.message);
+  });
+
+  return { deleted: true as const };
+}
