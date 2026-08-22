@@ -24,7 +24,15 @@ describe("profile claim stage 3", () => {
     expect(inviteServer).not.toContain("visitorPhone");
     expect(inviteServer).not.toContain("visitor_name");
     expect(inviteServer).not.toContain("visitor_phone");
-    expect(inviteServer).toContain("פרטי הפונה אינם נכללים באימייל");
+    expect(inviteServer).toContain("יש לך פנייה ממשתמש/ת שראה את הפרופיל שלך באתר טיפולינקס");
+    expect(inviteServer).toContain("נעים להכיר — טיפולינקס היא פלטפורמה");
+    expect(inviteServer).toContain("פניות ממוקדות ממשתמשים שמעוניינים לתאם טיפול");
+    expect(inviteServer).toContain("forTherapistsUrl: `${origin}/for-therapists`");
+    expect(inviteServer).toContain("for_therapists_url: invite.forTherapistsUrl");
+    expect(inviteServer).toContain("כדי להשלים את התהליך עליך לאמת את כתובת האימייל");
+    expect(inviteServer).toContain("הקישור הינו אישי, תקף לזמן מוגבל");
+    expect(inviteServer).not.toContain("פרטי הפונה אינם נכללים באימייל");
+    expect(inviteServer).toContain("ולבקש להסיר אותו");
   });
 
   it("keeps the saved lead successful even when invitation delivery fails", () => {
@@ -79,9 +87,7 @@ describe("profile claim stage 3", () => {
   });
 
   it("retires the legacy self-service claim path and exposes real admin operations", () => {
-    expect(migration).toContain(
-      "REVOKE ALL ON TABLE public.therapist_claim_requests FROM authenticated",
-    );
+    expect(migration).toContain("REVOKE ALL ON TABLE public.therapist_claim_requests FROM authenticated");
     expect(migration).toContain("DROP FUNCTION IF EXISTS public.approve_therapist_claim");
     expect(existsSync(resolve(root, "src/lib/therapist-claims.functions.ts"))).toBe(false);
     const adminRoute = read("src/routes/admin/claims.tsx");
