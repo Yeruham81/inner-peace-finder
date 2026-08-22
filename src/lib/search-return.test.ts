@@ -56,7 +56,8 @@ describe("back-to-search button", () => {
 
   it("never routes the visible button to the homepage", () => {
     const page = profileRoute.slice(profileRoute.indexOf("function TherapistPage"));
-    expect(page).toContain("resultsReturnLinkOptions(ret)");
+    expect(page).toContain("resultsReturnLinkOptions(ret || rememberedReturn)");
+    expect(page).toContain("readRememberedResultsReturn()");
     expect(page).toContain('backToResults.to === "/problems/$slug"');
     expect(page).toContain('to="/problems/$slug"');
     expect(page).toContain('to="/search"');
