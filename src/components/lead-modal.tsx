@@ -4,7 +4,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { createLead } from "@/lib/lead.functions";
 import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
 import { track } from "@/lib/analytics";
-import { sanitizeSearchReturn } from "@/lib/search-return";
+import { readRememberedResultsReturn, sanitizeSearchReturn } from "@/lib/search-return";
 
 /** Time the success confirmation stays visible before returning to results. */
 export const LEAD_SUCCESS_REDIRECT_MS = 1500;
@@ -68,7 +68,10 @@ export function LeadModal({
   const redirectedRef = useRef(false);
   const navigate = useNavigate();
   const returnTo = useRouterState({
-    select: (s) => sanitizeSearchReturn((s.location.search as { ret?: unknown } | undefined)?.ret),
+    select: (s) => {
+      const ret = (s.location.search as { ret?: unknown } | undefined)?.ret;
+      return typeof ret === "string" && ret.trim() ? sanitizeSearchReturn(ret) : readRememberedResultsReturn();
+    },
   });
 
   const returnToResults = useCallback(() => {
