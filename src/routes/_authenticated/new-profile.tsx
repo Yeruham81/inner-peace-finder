@@ -685,6 +685,14 @@ export function EditorPage({
                   ? "הפרופיל יישמר ללא בעלים וימתין ללקיחת בעלות על ידי המטפל/ת. עריכה שלך אינה משייכת את הפרופיל לחשבון האדמין."
                   : "ניתן לשמור את הפרופיל כטיוטה ולהמשיך לערוך אותו בהמשך. הפרופיל יופיע בחיפוש הציבורי רק לאחר פרסום."}
               </p>
+              {isAdmin ? (
+                <Link
+                  to="/admin/therapists"
+                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                >
+                  ← חזרה לניהול המטפלים
+                </Link>
+              ) : null}
             </div>
             <StatusBadge status={displayStatus} />
           </div>
