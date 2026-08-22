@@ -17,8 +17,8 @@ describe("admin-created profile publish readiness", () => {
   });
 
   it("keeps the live readiness badge aligned with the publish button", () => {
-    expect(editorSource).toContain('const displayStatus: "draft" | "completed" | "published"');
-    expect(editorSource).toContain('status === "published" ? "published" : publishMissing ? "draft" : "completed"');
+    expect(editorSource).toContain('const displayStatus: "draft" | "completed" | "published" | "frozen"');
+    expect(editorSource).toContain('profile.data?.visibility === "visible"');
     expect(editorSource).toContain("<StatusBadge status={displayStatus} />");
     expect(editorSource).toContain("disabled={pendingAction !== null || publishMissing}");
   });
