@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { AdminDataTable, AdminPagination, type AdminColumn } from "@/components/admin/admin-data-table";
+import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
 import { formatAdminDateTime } from "@/components/admin/admin-formatters";
@@ -21,7 +21,6 @@ export const Route = createFileRoute("/admin/leads")({
   component: LeadsPage,
 });
 
-const PAGE_SIZE = 4;
 const PERIODS = ["7 ימים אחרונים", "30 ימים אחרונים", "כל התקופה"];
 
 function LeadsPage() {
@@ -30,7 +29,6 @@ function LeadsPage() {
   const [channel, setChannel] = useState("all");
   const [status, setStatus] = useState("all");
   const [therapist, setTherapist] = useState("all");
-  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<MockLead | null>(null);
 
   const therapists = useMemo(() => Array.from(new Set(MOCK_LEADS.map((row) => row.therapistName))), []);
@@ -48,10 +46,6 @@ function LeadsPage() {
     });
   }, [search, channel, status, therapist, period]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
   const columns: AdminColumn<MockLead>[] = [
     {
       key: "id",
@@ -62,7 +56,11 @@ function LeadsPage() {
         </span>
       ),
     },
-    { key: "createdAt", header: "תאריך", render: (row) => <span dir="ltr">{formatAdminDateTime(row.createdAt)}</span> },
+    {
+      key: "createdAt",
+      header: "תאריך",
+      render: (row) => <span dir="ltr">{formatAdminDateTime(row.createdAt)}</span>,
+    },
     { key: "therapistName", header: "מטפל/ת", render: (row) => row.therapistName },
     { key: "channel", header: "ערוץ", render: (row) => row.channel },
     { key: "source", header: "מקור", hideOnNarrow: true, render: (row) => row.source },
@@ -86,10 +84,7 @@ function LeadsPage() {
           label="חיפוש"
           placeholder="מזהה פנייה או שם מטפל/ת"
           value={search}
-          onChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
+          onChange={setSearch}
         />
         <AdminSelectFilter id="lead-period" label="תקופה" value={period} onChange={setPeriod} options={PERIODS} />
         <AdminSelectFilter
@@ -117,7 +112,7 @@ function LeadsPage() {
 
       <AdminDataTable
         columns={columns}
-        rows={paged}
+        rows={filtered}
         getRowId={(row) => row.id}
         onRowClick={(row) => setSelected(row)}
         mobileRow={(row) => (
@@ -137,9 +132,6 @@ function LeadsPage() {
           </div>
         )}
         emptyTitle="אין פניות מתאימות"
-        footer={
-          <AdminPagination page={currentPage} pageCount={pageCount} total={filtered.length} onPageChange={setPage} />
-        }
       />
 
       <AdminDetailDrawer
