@@ -6,9 +6,6 @@ import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
 import { track } from "@/lib/analytics";
 import { readRememberedResultsReturn, sanitizeSearchReturn } from "@/lib/search-return";
 
-/** Time the success confirmation stays visible before returning to results. */
-export const LEAD_SUCCESS_REDIRECT_MS = 1500;
-
 const PHONE_RE = /^(\+?972|0)(5\d|[23489])\d{7,8}$/;
 
 /** Server-issued challenge. The expected answer never reaches the browser. */
@@ -29,6 +26,16 @@ function defaultMessage(problemName?: string | null, populationName?: string | n
     return `${base}\nאני מחפש/ת עזרה בנושא ${problemName} ואשמח לשוחח.`;
   }
   return `${base}\nאשמח לשוחח על האפשרות לטיפול.`;
+}
+
+function isChallengeAnswerCorrect(prompt: string, answer: number): boolean {
+  const match = /^(\d+)\s*([+-])\s*(\d+)$/.exec(prompt.trim());
+  if (!match) return false;
+
+  const left = Number(match[1]);
+  const right = Number(match[3]);
+  const solution = match[2] === "+" ? left + right : left - right;
+  return answer === solution;
 }
 
 export function LeadModal({
@@ -159,18 +166,13 @@ export function LeadModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [handleCloseRequest, open]);
 
-  // Redirect back to the search results only after a confirmed success. The
-  // timer deliberately does not depend on `open`, so an external close request
-  // cannot cancel the required return navigation.
-  useEffect(() => {
-    if (!done || redirectedRef.current) return;
-    const timer = setTimeout(returnToResults, LEAD_SUCCESS_REDIRECT_MS);
-    return () => clearTimeout(timer);
-  }, [done, returnToResults]);
-
   const challengeAnswerNum = Number(challengeAnswer);
   const challengeOk =
-    challenge !== null && !challengeLoading && challengeAnswer.trim() !== "" && Number.isFinite(challengeAnswerNum);
+    challenge !== null &&
+    !challengeLoading &&
+    challengeAnswer.trim() !== "" &&
+    Number.isFinite(challengeAnswerNum) &&
+    isChallengeAnswerCorrect(challenge.prompt, challengeAnswerNum);
 
   const phoneOk = PHONE_RE.test(phone.trim());
   const nameOk = name.trim().length >= 2;
@@ -283,6 +285,13 @@ export function LeadModal({
                 ? "הפנייה הראשונית נשמרה. היא תימסר בהתאם לאישור המטפל/ת להשתתף בטיפולינקס."
                 : "הפנייה נשלחה בהצלחה. ניתן להמשיך לעיין בתוצאות החיפוש ולשלוח פניות נוספות."}
             </p>
+            <button
+              type="button"
+              onClick={returnToResults}
+              className="mt-5 w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              סגירה וחזרה לתוצאות
+            </button>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
