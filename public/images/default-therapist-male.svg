@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">אוואטר ברירת מחדל של מטפל</title>
+  <desc id="desc">צללית מופשטת ונייטרלית של מטפל בגווני כחול וירוק</desc>
+  <defs>
+    <linearGradient id="bg" x1="32" y1="20" x2="292" y2="304" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E7F5F1"/>
+      <stop offset="1" stop-color="#E8F0F8"/>
+    </linearGradient>
+    <linearGradient id="figure" x1="91" y1="198" x2="231" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78AAA2"/>
+      <stop offset="1" stop-color="#6F91AE"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="54" fill="url(#bg)"/>
+  <circle cx="160" cy="133" r="91" fill="#FFFFFF" opacity=".42"/>
+  <path d="M111 132c0-43 20-70 49-70s49 27 49 70c0 44-20 71-49 71s-49-27-49-71Z" fill="#A8C7C8"/>
+  <path d="M111 126c2-40 21-64 49-64 27 0 47 23 49 61-16-6-30-17-41-33-14 18-33 30-57 36Z" fill="#78969D"/>
+  <path d="M57 320c3-72 44-113 103-113s100 41 103 113H57Z" fill="url(#figure)"/>
+  <path d="M122 215c10 17 22 26 38 26s28-9 38-26" fill="none" stroke="#EAF5F4" stroke-width="7" stroke-linecap="round" opacity=".82"/>
+</svg>
