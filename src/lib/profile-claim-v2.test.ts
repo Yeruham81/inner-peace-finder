@@ -62,7 +62,7 @@ describe("profile claim v2", () => {
   it("records explicit participation consent and releases only a fresh held inquiry after acceptance", () => {
     expect(migration).toContain("participation_consent_at=pg_catalog.now()");
     expect(migration).toContain("participation_consent_source='claim_invite'");
-    expect(read("src/routes/_authenticated/claim.tsx")).toContain("קבלת בעלות והפעלת הפרופיל");
+    expect(read("src/routes/_authenticated/claim.tsx")).toContain("קבלת בעלות וניהול הפרופיל");
     const source = read("src/lib/profile-claim-v2.functions.ts");
     expect(source).toContain("HELD_LEAD_RELEASE_WINDOW_HOURS = 72");
     expect(source).toContain('.eq("delivery_status", "awaiting_consent")');
