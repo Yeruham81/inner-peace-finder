@@ -115,14 +115,19 @@ function ClaimInvitePage() {
         </div>
       </div>
 
-      {!preview.emailMatchesSignedInUser ? (
+      {!preview.signedInEmailVerified ? (
+        <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm leading-6 text-destructive">
+          יש לאמת את כתובת האימייל של החשבון לפני קבלת הבעלות. לאחר האימות יש לפתוח שוב את קישור ההזמנה.
+        </p>
+      ) : !preview.emailMatchesSignedInUser ? (
         <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm leading-6 text-destructive">
           כתובת האימייל של החשבון המחובר אינה תואמת לכתובת שאליה נשלחה ההזמנה. יש להתחבר באמצעות אותה כתובת אימייל.
         </p>
       ) : (
         <p className="mt-4 text-sm leading-6 text-muted-foreground">
           בלחיצה על הכפתור מטה הפרופיל ישויך לחשבון שלך, ותינתן הסכמה מפורשת להמשך הצגתו בטיפולינקס ולקבלת פניות דרך
-          המערכת. מומלץ לעבור על המידע שנאסף ממקורות פומביים ולעדכן אותו מיד לאחר מכן.
+          המערכת. אימות הבעלות אינו מעניק תג אימות מקצועי. מומלץ לעבור על המידע שנאסף ממקורות פומביים ולעדכן אותו מיד
+          לאחר מכן.
         </p>
       )}
 
@@ -132,7 +137,7 @@ function ClaimInvitePage() {
         disabled={!preview.emailMatchesSignedInUser || accepting}
         className="mt-5 w-full rounded-xl bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {accepting ? "מפעיל את הפרופיל…" : "קבלת בעלות והפעלת הפרופיל"}
+        {accepting ? "משייך את הפרופיל…" : "קבלת בעלות וניהול הפרופיל"}
       </button>
     </ClaimCard>
   );
