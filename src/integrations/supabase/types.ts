@@ -545,11 +545,18 @@ export type Database = {
           accepted_by_account_id: string | null;
           created_at: string;
           created_by: string | null;
+          delivery_attempts: number;
+          delivery_status: string;
           email: string;
           expires_at: string;
           id: string;
+          invite_source: string;
+          last_delivery_attempt_at: string | null;
+          last_delivery_error: string | null;
+          provider_message_id: string | null;
           revoked_at: string | null;
           sent_at: string | null;
+          source_lead_id: string | null;
           status: string;
           therapist_id: string;
           token_hash: string;
@@ -560,11 +567,18 @@ export type Database = {
           accepted_by_account_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          delivery_attempts?: number;
+          delivery_status?: string;
           email: string;
           expires_at: string;
           id?: string;
+          invite_source?: string;
+          last_delivery_attempt_at?: string | null;
+          last_delivery_error?: string | null;
+          provider_message_id?: string | null;
           revoked_at?: string | null;
           sent_at?: string | null;
+          source_lead_id?: string | null;
           status?: string;
           therapist_id: string;
           token_hash: string;
@@ -575,11 +589,18 @@ export type Database = {
           accepted_by_account_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          delivery_attempts?: number;
+          delivery_status?: string;
           email?: string;
           expires_at?: string;
           id?: string;
+          invite_source?: string;
+          last_delivery_attempt_at?: string | null;
+          last_delivery_error?: string | null;
+          provider_message_id?: string | null;
           revoked_at?: string | null;
           sent_at?: string | null;
+          source_lead_id?: string | null;
           status?: string;
           therapist_id?: string;
           token_hash?: string;
@@ -591,6 +612,13 @@ export type Database = {
             columns: ["accepted_by_account_id"];
             isOneToOne: false;
             referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "therapist_claim_invites_source_lead_id_fkey";
+            columns: ["source_lead_id"];
+            isOneToOne: false;
+            referencedRelation: "lead_events";
             referencedColumns: ["id"];
           },
           {
@@ -1030,6 +1058,7 @@ export type Database = {
           requester_email: string;
           requester_name: string;
           requester_phone: string | null;
+          review_note: string | null;
           reviewed_at: string | null;
           reviewed_by: string | null;
           status: string;
@@ -1046,6 +1075,7 @@ export type Database = {
           requester_email: string;
           requester_name: string;
           requester_phone?: string | null;
+          review_note?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
           status?: string;
@@ -1062,6 +1092,7 @@ export type Database = {
           requester_email?: string;
           requester_name?: string;
           requester_phone?: string | null;
+          review_note?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
           status?: string;
@@ -1177,6 +1208,8 @@ export type Database = {
           offers_free_intro: boolean;
           owner_account_id: string | null;
           owner_reviewed_at: string | null;
+          ownership_verification_method: string | null;
+          ownership_verified_at: string | null;
           participation_consent_at: string | null;
           participation_consent_source: string | null;
           phone: string | null;
@@ -1224,6 +1257,8 @@ export type Database = {
           offers_free_intro?: boolean;
           owner_account_id?: string | null;
           owner_reviewed_at?: string | null;
+          ownership_verification_method?: string | null;
+          ownership_verified_at?: string | null;
           participation_consent_at?: string | null;
           participation_consent_source?: string | null;
           phone?: string | null;
@@ -1271,6 +1306,8 @@ export type Database = {
           offers_free_intro?: boolean;
           owner_account_id?: string | null;
           owner_reviewed_at?: string | null;
+          ownership_verification_method?: string | null;
+          ownership_verified_at?: string | null;
           participation_consent_at?: string | null;
           participation_consent_source?: string | null;
           phone?: string | null;
@@ -1364,29 +1401,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      approve_therapist_claim: {
-        Args: { _claim_id: string; _reviewer: string };
-        Returns: {
-          created_at: string;
-          id: string;
-          note: string | null;
-          request_type: Database["public"]["Enums"]["claim_request_type"];
-          requester_account_id: string;
-          reviewed_at: string | null;
-          reviewed_by: string | null;
-          status: Database["public"]["Enums"]["claim_request_status"];
-          therapist_id: string;
-          updated_at: string;
-          verification_data: Json;
-          verification_method: string | null;
-        };
-        SetofOptions: {
-          from: "*";
-          to: "therapist_claim_requests";
-          isOneToOne: true;
-          isSetofReturn: false;
-        };
-      };
       approve_therapist_profile_removal: {
         Args: {
           _request_id: string;
@@ -1407,7 +1421,6 @@ export type Database = {
         Args: {
           _auth_user_id: string;
           _token_hash: string;
-          _verified_email: string;
         };
         Returns: string;
       };
@@ -1416,6 +1429,9 @@ export type Database = {
           _created_by: string;
           _email: string;
           _expires_at: string;
+          _invite_source?: string;
+          _replace_existing?: boolean;
+          _source_lead_id?: string;
           _therapist_id: string;
           _token_hash: string;
         };
@@ -1424,11 +1440,18 @@ export type Database = {
           accepted_by_account_id: string | null;
           created_at: string;
           created_by: string | null;
+          delivery_attempts: number;
+          delivery_status: string;
           email: string;
           expires_at: string;
           id: string;
+          invite_source: string;
+          last_delivery_attempt_at: string | null;
+          last_delivery_error: string | null;
+          provider_message_id: string | null;
           revoked_at: string | null;
           sent_at: string | null;
+          source_lead_id: string | null;
           status: string;
           therapist_id: string;
           token_hash: string;
@@ -1470,8 +1493,12 @@ export type Database = {
         Args: { _therapist_id: string };
         Returns: undefined;
       };
+      mark_therapist_claim_invite_failed: {
+        Args: { _error: string; _invite_id: string };
+        Returns: undefined;
+      };
       mark_therapist_claim_invite_sent: {
-        Args: { _invite_id: string };
+        Args: { _invite_id: string; _provider_message_id: string };
         Returns: undefined;
       };
       purge_expired_lead_challenges: { Args: never; Returns: number };
@@ -1497,33 +1524,6 @@ export type Database = {
       save_therapist_profile_with_contacts: {
         Args: { _actor: string; _payload: Json };
         Returns: Json;
-      };
-      set_claim_request_status: {
-        Args: {
-          _claim_id: string;
-          _new_status: Database["public"]["Enums"]["claim_request_status"];
-          _reviewer: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          note: string | null;
-          request_type: Database["public"]["Enums"]["claim_request_type"];
-          requester_account_id: string;
-          reviewed_at: string | null;
-          reviewed_by: string | null;
-          status: Database["public"]["Enums"]["claim_request_status"];
-          therapist_id: string;
-          updated_at: string;
-          verification_data: Json;
-          verification_method: string | null;
-        };
-        SetofOptions: {
-          from: "*";
-          to: "therapist_claim_requests";
-          isOneToOne: true;
-          isSetofReturn: false;
-        };
       };
       submit_lead: {
         Args: {
