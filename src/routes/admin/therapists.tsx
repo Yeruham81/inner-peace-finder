@@ -38,7 +38,7 @@ export const Route = createFileRoute("/admin/therapists")({
   component: TherapistsPage,
 });
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 function publicationStatus(row: AdminTherapistRow): string {
   if (row.doNotRepublish) return "ממתין למחיקה";
@@ -81,6 +81,7 @@ function TherapistsPage() {
   const [sortKey, setSortKey] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [selected, setSelected] = useState<AdminTherapistRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminTherapistRow | null>(null);
 
