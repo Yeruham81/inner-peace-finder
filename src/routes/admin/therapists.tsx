@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { AdminDataTable, AdminPagination, type AdminColumn } from "@/components/admin/admin-data-table";
+import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
 import { formatAdminDateTime } from "@/components/admin/admin-formatters";
@@ -37,8 +37,6 @@ export const Route = createFileRoute("/admin/therapists")({
   }),
   component: TherapistsPage,
 });
-
-const PAGE_SIZE = 10;
 
 function publicationStatus(row: AdminTherapistRow): string {
   if (row.doNotRepublish) return "ממתין למחיקה";
@@ -80,7 +78,6 @@ function TherapistsPage() {
   const [origin, setOrigin] = useState("all");
   const [sortKey, setSortKey] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<AdminTherapistRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminTherapistRow | null>(null);
 
@@ -88,6 +85,7 @@ function TherapistsPage() {
     queryKey: ["admin-therapists"],
     queryFn: () => listFn(),
   });
+  const publishedCount = (therapists.data ?? []).filter((row) => publicationStatus(row) === "פורסם").length;
 
   const deleteMutation = useMutation({
     mutationFn: (therapistId: string) => deleteFn({ data: { therapist_id: therapistId } }),
@@ -122,10 +120,6 @@ function TherapistsPage() {
       return sortDirection === "asc" ? compare : -compare;
     });
   }, [therapists.data, search, profileStatus, ownership, origin, sortKey, sortDirection]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   function handleSort(key: string) {
     if (key === sortKey) {
@@ -203,7 +197,11 @@ function TherapistsPage() {
     <div>
       <AdminPageHeader
         title="מטפלים"
-        subtitle={therapists.isLoading ? "טוען פרופילים…" : `${therapists.data?.length ?? 0} פרופילים במערכת`}
+        subtitle={
+          therapists.isLoading
+            ? "טוען פרופילים…"
+            : `${therapists.data?.length ?? 0} רשומות פרופיל במערכת · ${publishedCount} מפורסמים ופעילים`
+        }
         breadcrumb="מטפלים"
         actions={
           <Button asChild>
@@ -226,46 +224,34 @@ function TherapistsPage() {
           label="חיפוש"
           placeholder="שם, אימייל, כותרת או יישוב"
           value={search}
-          onChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
+          onChange={setSearch}
         />
         <AdminSelectFilter
           id="filter-profile"
           label="סטטוס פרופיל"
           value={profileStatus}
-          onChange={(value) => {
-            setProfileStatus(value);
-            setPage(1);
-          }}
+          onChange={setProfileStatus}
           options={["פורסם", "מוכן לפרסום", "טיוטה", "מוקפא", "ממתין למחיקה"]}
         />
         <AdminSelectFilter
           id="filter-ownership"
           label="בעלות"
           value={ownership}
-          onChange={(value) => {
-            setOwnership(value);
-            setPage(1);
-          }}
+          onChange={setOwnership}
           options={["ממתין ללקיחת בעלות", "בבעלות המטפל"]}
         />
         <AdminSelectFilter
           id="filter-origin"
           label="מקור"
           value={origin}
-          onChange={(value) => {
-            setOrigin(value);
-            setPage(1);
-          }}
+          onChange={setOrigin}
           options={["נוצר ע״י Tipulinks", "נוצר ע״י המטפל"]}
         />
       </AdminFilterBar>
 
       <AdminDataTable
         columns={columns}
-        rows={paged}
+        rows={filtered}
         getRowId={(row) => row.id}
         onRowClick={(row) => setSelected(row)}
         sortKey={sortKey}
@@ -286,9 +272,6 @@ function TherapistsPage() {
             </div>
           </div>
         )}
-        footer={
-          <AdminPagination page={currentPage} pageCount={pageCount} total={filtered.length} onPageChange={setPage} />
-        }
       />
 
       <AdminDetailDrawer
