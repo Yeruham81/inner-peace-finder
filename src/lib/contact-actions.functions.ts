@@ -28,12 +28,16 @@ export const getDirectContactTarget = createServerFn({ method: "POST" })
     const { data: therapist, error } = await applyEligibility(
       supabaseAdmin
         .from("therapists")
-        .select("phone, contact_methods")
+        .select("phone, contact_methods, profile_origin, owner_account_id, do_not_republish")
         .eq("id", data.therapistId),
     ).maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!therapist) {
+    if (
+      !therapist ||
+      therapist.do_not_republish ||
+      (therapist.profile_origin === "admin_public_info" && !therapist.owner_account_id)
+    ) {
       return {
         ok: false,
         reason: "therapist_unavailable",
@@ -41,9 +45,7 @@ export const getDirectContactTarget = createServerFn({ method: "POST" })
       };
     }
 
-    const contactMethods = Array.isArray(therapist.contact_methods)
-      ? therapist.contact_methods
-      : [];
+    const contactMethods = Array.isArray(therapist.contact_methods) ? therapist.contact_methods : [];
     if (!contactMethods.includes(data.method)) {
       return {
         ok: false,
