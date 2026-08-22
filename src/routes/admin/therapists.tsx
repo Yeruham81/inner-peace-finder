@@ -124,9 +124,9 @@ function TherapistsPage() {
     });
   }, [therapists.data, search, profileStatus, ownership, origin, sortKey, sortDirection]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function handleSort(key: string) {
     if (key === sortKey) {
@@ -288,7 +288,17 @@ function TherapistsPage() {
           </div>
         )}
         footer={
-          <AdminPagination page={currentPage} pageCount={pageCount} total={filtered.length} onPageChange={setPage} />
+          <AdminPagination
+            page={currentPage}
+            pageCount={pageCount}
+            pageSize={pageSize}
+            total={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+          />
         }
       />
 
