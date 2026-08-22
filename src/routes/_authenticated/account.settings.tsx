@@ -12,8 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  deleteMyProfilePermanently,
+  deleteMyAccountPermanently,
   getMyProfile,
   updateMyContactPreferences,
   type ContactMethod,
@@ -49,7 +50,7 @@ function AccountSettingsPage() {
   const queryClient = useQueryClient();
   const getProfileFn = useServerFn(getMyProfile);
   const updateContactFn = useServerFn(updateMyContactPreferences);
-  const deleteProfileFn = useServerFn(deleteMyProfilePermanently);
+  const deleteAccountFn = useServerFn(deleteMyAccountPermanently);
 
   const profile = useQuery({
     queryKey: ["my-profile"],
@@ -63,6 +64,8 @@ function AccountSettingsPage() {
     preferred_contact_method: "email",
   });
   const [contactInitialized, setContactInitialized] = useState(false);
+  const [loginEmail, setLoginEmail] = useState(user.email ?? "");
+  const [loginEmailRequestSent, setLoginEmailRequestSent] = useState(false);
 
   useEffect(() => {
     if (contactInitialized || !profile.isSuccess) return;
@@ -100,13 +103,26 @@ function AccountSettingsPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן לשמור את העדפות ההתקשרות."),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteProfileFn({ data: { confirmation: "מחיקת הפרופיל לצמיתות" } }),
-    onSuccess: () => {
-      queryClient.clear();
-      window.location.assign("/account");
+  const loginEmailMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.auth.updateUser({ email: loginEmail.trim() });
+      if (error) throw error;
     },
-    onError: (error: Error) => toast.error(error.message || "לא ניתן למחוק את הפרופיל."),
+    onSuccess: () => {
+      setLoginEmailRequestSent(true);
+      toast.success("בקשת שינוי האימייל נשלחה. השלימו את האימות לפי ההודעות שיישלחו אליכם.");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את אימייל ההתחברות."),
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => deleteAccountFn({ data: { confirmation: "מחיקת החשבון לצמיתות" } }),
+    onSuccess: async () => {
+      queryClient.clear();
+      await supabase.auth.signOut({ scope: "local" });
+      window.location.assign("/");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן למחוק את החשבון."),
   });
 
   const needsEmail = contactPreferences.contact_methods.includes("email");
@@ -118,13 +134,19 @@ function AccountSettingsPage() {
     contactPreferences.contact_methods.includes(contactPreferences.preferred_contact_method) &&
     (!needsEmail || contactPreferences.email.trim().length > 0) &&
     (!needsPhone || contactPreferences.phone.trim().length > 0);
+  const normalizedLoginEmail = loginEmail.trim().toLowerCase();
+  const currentLoginEmail = (user.email ?? "").trim().toLowerCase();
+  const canUpdateLoginEmail =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedLoginEmail) &&
+    normalizedLoginEmail !== currentLoginEmail &&
+    !loginEmailMutation.isPending;
 
   return (
     <>
       <AccountPageHeader
         eyebrow="העדפות חשבון"
         title="הגדרות"
-        description="ניהול דרכי קבלת הפניות, העדפות החשבון ופעולות הקשורות לפרופיל."
+        description="ניהול דרכי קבלת הפניות, פרטי ההתחברות, העדפות החשבון ומחיקת החשבון."
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -252,7 +274,10 @@ function AccountSettingsPage() {
                     value={contactPreferences.email}
                     disabled={!profile.data || contactMutation.isPending}
                     onChange={(event) =>
-                      setContactPreferences((current) => ({ ...current, email: event.target.value }))
+                      setContactPreferences((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
                     }
                     maxLength={160}
                     className="bg-white text-left"
@@ -275,7 +300,10 @@ function AccountSettingsPage() {
                     value={contactPreferences.phone}
                     disabled={!profile.data || contactMutation.isPending}
                     onChange={(event) =>
-                      setContactPreferences((current) => ({ ...current, phone: event.target.value }))
+                      setContactPreferences((current) => ({
+                        ...current,
+                        phone: event.target.value,
+                      }))
                     }
                     maxLength={40}
                     className="bg-white text-left"
@@ -301,8 +329,35 @@ function AccountSettingsPage() {
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-foreground">כתובת אימייל של החשבון</span>
-              <Input value={user.email ?? ""} readOnly dir="ltr" className="bg-muted/40 text-left" />
+              <Input
+                value={loginEmail}
+                onChange={(event) => {
+                  setLoginEmail(event.target.value);
+                  setLoginEmailRequestSent(false);
+                }}
+                type="email"
+                autoComplete="email"
+                dir="ltr"
+                className="bg-white text-left"
+                disabled={loginEmailMutation.isPending}
+              />
+              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                כתובת זו משמשת להתחברות בלבד. שינויה אינו משנה את האימייל המקצועי לקבלת פניות.
+              </p>
             </label>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canUpdateLoginEmail}
+              onClick={() => loginEmailMutation.mutate()}
+            >
+              {loginEmailMutation.isPending ? "שולח בקשת אימות…" : "החלפת אימייל ההתחברות"}
+            </Button>
+            {loginEmailRequestSent && (
+              <p className="rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-xs leading-5 text-muted-foreground">
+                שינוי האימייל יושלם רק לאחר ביצוע האימות הנדרש. עד אז, המשיכו להשתמש בכתובת הקיימת להתחברות.
+              </p>
+            )}
             <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
               <div>
@@ -331,9 +386,10 @@ function AccountSettingsPage() {
           <p className="mt-4 text-xs text-muted-foreground">המתגים מוצגים לצורך תכנון הממשק בלבד ואינם נשמרים עדיין.</p>
         </AccountSectionCard>
 
-        {profile.data && (
-          <DeleteProfilePanel pending={deleteMutation.isPending} onConfirm={() => deleteMutation.mutate()} />
-        )}
+        <DeleteAccountPanel
+          pending={deleteAccountMutation.isPending}
+          onConfirm={() => deleteAccountMutation.mutate()}
+        />
       </div>
     </>
   );
@@ -354,11 +410,11 @@ function PreviewSetting({ icon: Icon, title, description }: { icon: typeof Mail;
   );
 }
 
-function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
+function DeleteAccountPanel({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
   const [open, setOpen] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirmation, setConfirmation] = useState("");
-  const phrase = "מחיקת הפרופיל לצמיתות";
+  const phrase = "מחיקת החשבון לצמיתות";
 
   function close(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -374,20 +430,24 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-sm font-medium text-muted-foreground marker:content-none sm:px-5">
           <span className="flex items-center gap-2">
             <Trash2 className="h-4 w-4 text-destructive" />
-            <span>אפשרויות מחיקת הפרופיל</span>
+            <span>אפשרויות מחיקת החשבון</span>
           </span>
           <span className="text-xs group-open:hidden">הצגה</span>
           <span className="hidden text-xs group-open:inline">הסתרה</span>
         </summary>
 
         <div className="border-t border-destructive/20 px-4 py-4 sm:px-5 sm:py-5">
-          <h2 className="text-lg font-semibold text-destructive">מחיקת הפרופיל לצמיתות</h2>
+          <h2 className="text-lg font-semibold text-destructive">מחיקת החשבון לצמיתות</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            המחיקה תסיר לצמיתות את הפרופיל, המסמכים, המיקומים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה או
-            לשחזר את הפרופיל לאחר מכן.
+            המחיקה תסיר לצמיתות את חשבון ההתחברות, הפרופיל, המסמכים וכל המידע המקצועי שנשמר בו. לא ניתן לבטל את הפעולה
+            או לשחזר את החשבון לאחר מכן.
+          </p>
+          <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">
+            כדי לכבד את בקשת אי־הפנייה ולמנוע יצירת פרופיל חדש בטעות, כתובות האימייל של החשבון והפרופיל יישמרו בלבד
+            ברשימת אי־פנייה מוגנת. לא יישמרו בה שם, טלפון או תוכן הפרופיל.
           </p>
           <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
-            מחיקת הפרופיל
+            מחיקת החשבון
           </Button>
         </div>
       </details>
@@ -395,13 +455,17 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
       <Dialog open={open} onOpenChange={close}>
         <DialogContent dir="rtl" className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>אישור מחיקה לצמיתות</DialogTitle>
-            <DialogDescription>זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות שחזור.</DialogDescription>
+            <DialogTitle>אישור מחיקת החשבון</DialogTitle>
+            <DialogDescription>
+              זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות לשחזר את החשבון או את הפרופיל.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
               <Checkbox checked={acknowledged} onCheckedChange={(value) => setAcknowledged(value === true)} />
-              <span className="text-sm text-foreground">ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את הפרופיל.</span>
+              <span className="text-sm text-foreground">
+                ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את החשבון או את הפרופיל.
+              </span>
             </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-foreground">כדי לאשר, הקלידו: {phrase}</span>
@@ -421,7 +485,7 @@ function DeleteProfilePanel({ pending, onConfirm }: { pending: boolean; onConfir
                 disabled={pending || !acknowledged || confirmation !== phrase}
                 onClick={onConfirm}
               >
-                {pending ? "הפרופיל נמחק…" : "כן, מחיקת הפרופיל לצמיתות"}
+                {pending ? "החשבון נמחק…" : "כן, מחיקת החשבון לצמיתות"}
               </Button>
             </div>
           </div>

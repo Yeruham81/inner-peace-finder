@@ -30,7 +30,6 @@ import { Route as AdminCredentialsRouteImport } from './routes/admin/credentials
 import { Route as AdminClaimsRouteImport } from './routes/admin/claims'
 import { Route as AdminCatalogsRouteImport } from './routes/admin/catalogs'
 import { Route as AdminBillingRouteImport } from './routes/admin/billing'
-import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
 import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedAccountIndexRouteImport } from './routes/_authenticated/account.index'
@@ -144,11 +143,6 @@ const AdminBillingRoute = AdminBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AuthenticatedNewProfileRoute = AuthenticatedNewProfileRouteImport.update({
-  id: '/new-profile',
-  path: '/new-profile',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedClaimRoute = AuthenticatedClaimRouteImport.update({
   id: '/claim',
   path: '/claim',
@@ -208,7 +202,6 @@ export interface FileRoutesByFullPath {
   '/therapy-information': typeof TherapyInformationRoute
   '/account': typeof AuthenticatedAccountRouteWithChildren
   '/claim': typeof AuthenticatedClaimRoute
-  '/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
@@ -237,7 +230,6 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/therapy-information': typeof TherapyInformationRoute
   '/claim': typeof AuthenticatedClaimRoute
-  '/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
@@ -270,7 +262,6 @@ export interface FileRoutesById {
   '/therapy-information': typeof TherapyInformationRoute
   '/_authenticated/account': typeof AuthenticatedAccountRouteWithChildren
   '/_authenticated/claim': typeof AuthenticatedClaimRoute
-  '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
@@ -303,7 +294,6 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/account'
     | '/claim'
-    | '/new-profile'
     | '/admin/billing'
     | '/admin/catalogs'
     | '/admin/claims'
@@ -332,7 +322,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/therapy-information'
     | '/claim'
-    | '/new-profile'
     | '/admin/billing'
     | '/admin/catalogs'
     | '/admin/claims'
@@ -364,7 +353,6 @@ export interface FileRouteTypes {
     | '/therapy-information'
     | '/_authenticated/account'
     | '/_authenticated/claim'
-    | '/_authenticated/new-profile'
     | '/admin/billing'
     | '/admin/catalogs'
     | '/admin/claims'
@@ -548,13 +536,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBillingRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/_authenticated/new-profile': {
-      id: '/_authenticated/new-profile'
-      path: '/new-profile'
-      fullPath: '/new-profile'
-      preLoaderRoute: typeof AuthenticatedNewProfileRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/claim': {
       id: '/_authenticated/claim'
       path: '/claim'
@@ -638,13 +619,11 @@ const AuthenticatedAccountRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRouteWithChildren
   AuthenticatedClaimRoute: typeof AuthenticatedClaimRoute
-  AuthenticatedNewProfileRoute: typeof AuthenticatedNewProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRouteWithChildren,
   AuthenticatedClaimRoute: AuthenticatedClaimRoute,
-  AuthenticatedNewProfileRoute: AuthenticatedNewProfileRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
