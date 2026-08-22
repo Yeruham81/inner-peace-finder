@@ -625,6 +625,17 @@ async function saveProfileForActor(args: {
   const { data, supabase, userId, saveMode, targetTherapistId = null } = args;
   if (saveMode === "self") await resolveAccount(supabase, userId);
   const resolvedLocations = await resolvePhysicalLocations(data.locations);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  if (saveMode === "admin_public_info" && data.email?.trim()) {
+    const { data: suppressed, error: suppressionError } = await supabaseAdmin.rpc("is_contact_email_suppressed", {
+      _email: data.email.trim(),
+    });
+    if (suppressionError) throw new Error(suppressionError.message);
+    if (suppressed) {
+      throw new Error("כתובת האימייל נמצאת ברשימת אי־פנייה. אין ליצור עבורה פרופיל או לשלוח אליה הזמנה.");
+    }
+  }
 
   const missing = data.publish ? validateForPublish(data, saveMode) : [];
   if (data.publish && missing.length > 0) {
@@ -722,14 +733,18 @@ async function saveProfileForActor(args: {
     target_therapist_id: saveMode === "admin_public_info" ? targetTherapistId : null,
   };
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: saved, error } = await supabaseAdmin.rpc("save_therapist_profile_with_contacts", {
     // Ownership is resolved inside the transaction from the verified auth
     // user id — never from anything the browser supplied.
     _actor: userId,
     _payload: payload as never,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message.includes("contact_email_suppressed")) {
+      throw new Error("כתובת האימייל נמצאת ברשימת אי־פנייה. אין ליצור עבורה פרופיל או לשלוח אליה הזמנה.");
+    }
+    throw new Error(error.message);
+  }
   const result = (saved ?? {}) as { therapist_id?: string; profile_status?: ProfileStatus };
   if (!result.therapist_id) throw new Error("שמירת הפרופיל נכשלה. נסו שוב.");
 
@@ -879,6 +894,15 @@ export const deleteMyProfilePermanently = createServerFn({ method: "POST" })
     await resolveAccount(context.supabase, context.userId);
     const { permanentlyDeleteOwnedProfile } = await import("./profile-management.server");
     return permanentlyDeleteOwnedProfile(context.userId);
+  });
+
+export const deleteMyAccountPermanently = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת החשבון לצמיתות") }).parse(input))
+  .handler(async ({ context }) => {
+    await resolveAccount(context.supabase, context.userId);
+    const { permanentlyDeleteOwnedAccount } = await import("./profile-management.server");
+    return permanentlyDeleteOwnedAccount(context.userId);
   });
 
 const CredentialSubmissionSchema = z.object({
