@@ -366,9 +366,14 @@ describe("public eligibility — centralization", () => {
     expect(ctaSection.includes("publicClient()")).toBe(false);
 
     const directSrc = read("lib/contact-actions.functions.ts");
-    expect(directSrc.includes('select("phone, contact_methods")')).toBe(true);
+    expect(
+      directSrc.includes('select("phone, contact_methods, profile_origin, owner_account_id, do_not_republish")'),
+    ).toBe(true);
     expect(directSrc.includes("applyEligibility")).toBe(true);
     expect(directSrc.includes("supabaseAdmin")).toBe(true);
+    expect(directSrc.includes('therapist.profile_origin === "admin_public_info"')).toBe(true);
+    expect(directSrc.includes("!therapist.owner_account_id")).toBe(true);
+    expect(directSrc.includes("therapist.do_not_republish")).toBe(true);
     expect(directSrc.includes("record_cta_click")).toBe(false);
   });
 
