@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { AdminEmptyState } from "./admin-empty-state";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ export type AdminColumn<T> = {
   sortable?: boolean;
   className?: string;
 };
+
+export const ADMIN_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 250, 500, 1000] as const;
 
 export function AdminDataTable<T>({
   columns,
@@ -40,6 +42,18 @@ export function AdminDataTable<T>({
   emptyDescription?: string;
   footer?: ReactNode;
 }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(ADMIN_PAGE_SIZE_OPTIONS[0]);
+  const rowIdentity = rows.map((row) => getRowId(row)).join("\u0000");
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const showPagination = rows.length > 0;
+
+  useEffect(() => {
+    setPage(1);
+  }, [rowIdentity]);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-surface-elevated">
@@ -83,7 +97,7 @@ export function AdminDataTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <TableRow
                 key={getRowId(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -109,7 +123,7 @@ export function AdminDataTable<T>({
 
       {/* Mobile stacked cards */}
       <div className="divide-y divide-border md:hidden">
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <div
             key={getRowId(row)}
             role={onRowClick ? "button" : undefined}
@@ -139,7 +153,24 @@ export function AdminDataTable<T>({
         ))}
       </div>
 
-      {footer ? <div className="border-t border-border p-2">{footer}</div> : null}
+      {showPagination || footer ? (
+        <div className="space-y-2 border-t border-border p-2">
+          {showPagination ? (
+            <AdminPagination
+              page={currentPage}
+              pageCount={pageCount}
+              pageSize={pageSize}
+              total={rows.length}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          ) : null}
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -147,26 +178,47 @@ export function AdminDataTable<T>({
 export function AdminPagination({
   page,
   pageCount,
+  pageSize,
   total,
   onPageChange,
+  onPageSizeChange,
 }: {
   page: number;
   pageCount: number;
+  pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
       <span>
         עמוד {page} מתוך {pageCount} · {total} רשומות
       </span>
-      <div className="flex gap-1">
-        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          הקודם
-        </Button>
-        <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
-          הבא
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5">
+          <span>שורות בעמוד</span>
+          <select
+            aria-label="מספר שורות בעמוד"
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+          >
+            {ADMIN_PAGE_SIZE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+            הקודם
+          </Button>
+          <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
+            הבא
+          </Button>
+        </div>
       </div>
     </div>
   );
