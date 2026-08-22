@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { AdminDataTable, AdminPagination, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
-import { formatAdminDate } from "@/components/admin/admin-formatters";
+import { formatAdminDateTime } from "@/components/admin/admin-formatters";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
@@ -148,20 +148,29 @@ function TherapistsPage() {
       header: "סטטוס פרופיל",
       render: (row) => <AdminStatusBadge status={publicationStatus(row)} />,
     },
-    { key: "ownership", header: "בעלות", render: (row) => <AdminStatusBadge status={ownershipStatus(row)} /> },
+    {
+      key: "ownership",
+      header: "בעלות",
+      render: (row) => <AdminStatusBadge status={ownershipStatus(row)} />,
+    },
     {
       key: "origin",
       header: "מקור",
       hideOnNarrow: true,
       render: (row) => <AdminStatusBadge status={originStatus(row)} />,
     },
-    { key: "email", header: "אימייל", hideOnNarrow: true, render: (row) => <span dir="ltr">{row.email || "—"}</span> },
+    {
+      key: "email",
+      header: "אימייל",
+      hideOnNarrow: true,
+      render: (row) => <span dir="ltr">{row.email || "—"}</span>,
+    },
     {
       key: "createdAt",
       header: "נוצר",
       sortable: true,
       hideOnNarrow: true,
-      render: (row) => <span dir="ltr">{formatAdminDate(row.createdAt)}</span>,
+      render: (row) => <span dir="ltr">{formatAdminDateTime(row.createdAt)}</span>,
     },
     {
       key: "actions",
@@ -329,7 +338,7 @@ function TherapistsPage() {
             <AdminDetailSection title="פרטים">
               <AdminDetailRow label="כותרת מקצועית" value={selected.professionalTitle || "—"} />
               <AdminDetailRow label="יישוב" value={selected.city || "—"} />
-              <AdminDetailRow label="נוצר" value={<span dir="ltr">{formatAdminDate(selected.createdAt)}</span>} />
+              <AdminDetailRow label="נוצר" value={<span dir="ltr">{formatAdminDateTime(selected.createdAt)}</span>} />
             </AdminDetailSection>
             <AdminDetailSection title="פרטי קשר">
               <AdminDetailRow label="אימייל" value={<span dir="ltr">{selected.email || "—"}</span>} />
