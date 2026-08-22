@@ -6,7 +6,7 @@ const SRC = join(import.meta.dir, "..");
 const read = (path: string) => readFileSync(join(SRC, path), "utf8");
 
 const accountsSource = read("lib/therapist-accounts.functions.ts");
-const claimsSource = read("lib/therapist-claims.functions.ts");
+const claimsSource = read("lib/profile-claim-v2.functions.ts");
 const accountRouteSource = read("routes/_authenticated/account.tsx");
 const claimRouteSource = read("routes/_authenticated/claim.tsx");
 
@@ -20,12 +20,11 @@ describe("therapist account and claim read failures", () => {
     expect(accountsSource).toContain("if (ownedErr) throw new Error(ownedErr.message)");
   });
 
-  it("does not turn claim account/profession read failures into empty data", () => {
-    expect(claimsSource).toContain("error: readErr");
-    expect(claimsSource).toContain("if (readErr) throw new Error(readErr.message)");
-    expect(claimsSource).toContain("if (accountErr) throw new Error(accountErr.message)");
-    expect(claimsSource).toContain("const { data, error } = await sb");
+  it("does not turn invite, account or held-lead read failures into empty data", () => {
     expect(claimsSource).toContain("if (error) throw new Error(error.message)");
+    expect(claimsSource).toContain("if (readError) throw new Error(readError.message)");
+    expect(claimsSource).toContain("if (therapistError) throw new Error(therapistError.message)");
+    expect(claimsSource).toContain("if (leadError) throw new Error(leadError.message)");
   });
 
   it("uses the idempotent ensure call as the account query and exposes retry UI", () => {
