@@ -28,6 +28,12 @@ const STATUS_TONES: Record<string, Tone> = {
   "ממתין לאימות": "pending",
   "ללא אימות": "neutral",
   "ממתין לבדיקה": "pending",
+  "ממתין לשליחה": "pending",
+  "הזמנה נשלחה": "pending",
+  "בעלות התקבלה": "positive",
+  "שליחה נכשלה": "negative",
+  "הזמנה פגה": "neutral",
+  "הזמנה בוטלה": "neutral",
   נדחה: "negative",
   // leads
   נוצרה: "neutral",
