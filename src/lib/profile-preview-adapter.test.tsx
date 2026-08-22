@@ -17,6 +17,10 @@ const settingsSource = readFileSync(
   join(import.meta.dir, "..", "routes", "_authenticated", "account.settings.tsx"),
   "utf8",
 );
+const deleteProfilePanelSource = readFileSync(
+  join(import.meta.dir, "..", "components", "account", "delete-profile-panel.tsx"),
+  "utf8",
+);
 
 const options = {
   professions: [{ id: "p1", name_he: "פסיכולוגית", slug: "psychologist" }],
@@ -41,6 +45,7 @@ function form(overrides: Partial<PreviewFormState> = {}): PreviewFormState {
     professional_experience: "12 שנות ניסיון במרפאה ציבורית ובקליניקה פרטית",
     years_experience: "12",
     image_url: "https://example.com/a.jpg",
+    gender: "female",
     contact_methods: ["whatsapp", "email", "phone"],
     preferred_contact_method: "whatsapp",
     profession_ids: ["p1"],
@@ -294,27 +299,25 @@ describe("profile visibility actions", () => {
 });
 
 describe("account settings ownership of contact preferences and deletion", () => {
-  it("moves permanent profile deletion out of the editor and keeps it behind a preliminary native disclosure", () => {
-    expect(editorSource).not.toContain("function DeleteProfilePanel");
+  it("keeps permanent profile deletion at the bottom of the editor behind a preliminary native disclosure", () => {
+    expect(editorSource).toContain("<DeleteProfilePanel");
+    expect(settingsSource).not.toContain("deleteMyProfilePermanently");
 
-    const panelStart = settingsSource.indexOf("function DeleteProfilePanel");
-    const panelSource = settingsSource.slice(panelStart);
-    const detailsOpen = panelSource.indexOf('<details className="group">');
-    const summary = panelSource.indexOf("אפשרויות מחיקת הפרופיל", detailsOpen);
-    const destructiveButton = panelSource.indexOf('variant="destructive"', summary);
-    const detailsClose = panelSource.indexOf("</details>", destructiveButton);
+    const detailsOpen = deleteProfilePanelSource.indexOf('<details className="group">');
+    const summary = deleteProfilePanelSource.indexOf("אפשרויות מחיקת הפרופיל", detailsOpen);
+    const destructiveButton = deleteProfilePanelSource.indexOf('variant="destructive"', summary);
+    const detailsClose = deleteProfilePanelSource.indexOf("</details>", destructiveButton);
 
-    expect(panelStart).toBeGreaterThan(-1);
     expect(detailsOpen).toBeGreaterThan(-1);
     expect(summary).toBeGreaterThan(detailsOpen);
     expect(destructiveButton).toBeGreaterThan(summary);
     expect(detailsClose).toBeGreaterThan(destructiveButton);
   });
 
-  it("retains the existing final deletion safeguards in account settings", () => {
-    expect(settingsSource).toContain("ברור לי שהמחיקה היא לצמיתות");
-    expect(settingsSource).toContain("confirmation !== phrase");
-    expect(settingsSource).toContain("כן, מחיקת הפרופיל לצמיתות");
+  it("retains the final profile-deletion safeguards in the editor", () => {
+    expect(deleteProfilePanelSource).toContain("ברור לי שהמחיקה היא לצמיתות");
+    expect(deleteProfilePanelSource).toContain("confirmation !== phrase");
+    expect(deleteProfilePanelSource).toContain("כן, מחיקת הפרופיל לצמיתות");
   });
 
   it("defaults new profiles to email and manages channel choices only from account settings", () => {
