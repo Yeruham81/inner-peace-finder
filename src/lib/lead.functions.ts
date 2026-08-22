@@ -99,8 +99,30 @@ export const createLead = createServerFn({ method: "POST" })
     // An admin-created, unclaimed profile gets at most one initial inquiry.
     // The visitor's personal details are held in the database and are NOT
     // dispatched to the therapist until the participation/claim flow is
-    // completed. This also keeps the first inquiry non-billable.
+    // completed. This also keeps the first inquiry non-billable. The committed
+    // lead now triggers a separate ownership invitation; provider failure must
+    // never roll back or misreport the already-saved inquiry.
     if (awaitingTherapistConsent) {
+      try {
+        const { sendInitialClaimInvitationForLead } = await import("./profile-claim-v2.server");
+        const invitation = await sendInitialClaimInvitationForLead({
+          therapistId: data.therapistId,
+          leadId,
+        });
+        if (invitation.status === "failed") {
+          console.error("[claim-invite] initial delivery failed", {
+            leadId,
+            therapistId: data.therapistId,
+            error: invitation.error,
+          });
+        }
+      } catch (error) {
+        console.error("[claim-invite] initial delivery crashed", {
+          leadId,
+          therapistId: data.therapistId,
+          error: error instanceof Error ? error.message : "unknown_error",
+        });
+      }
       return {
         ok: true as const,
         leadId,
