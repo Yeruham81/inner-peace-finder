@@ -32,18 +32,11 @@ describe("profile onboarding state", () => {
   });
 
   it("keeps the public-verification distinction and reopens rejected submissions", () => {
-    expect(deriveCredentialOnboardingState([{ verification_status: "verified" }], null)).toBe(
-      "verified",
-    );
-    expect(deriveCredentialOnboardingState([{ verification_status: "rejected" }], null)).toBe(
+    expect(deriveCredentialOnboardingState([{ verification_status: "verified" }], null)).toBe("verified");
+    expect(deriveCredentialOnboardingState([{ verification_status: "rejected" }], null)).toBe("action_required");
+    expect(deriveCredentialOnboardingState([{ verification_status: "rejected" }], "2026-08-23T00:00:00Z")).toBe(
       "action_required",
     );
-    expect(
-      deriveCredentialOnboardingState(
-        [{ verification_status: "rejected" }],
-        "2026-08-23T00:00:00Z",
-      ),
-    ).toBe("action_required");
   });
 
   it("allows an explicit skip only when no submitted credential needs action", () => {
@@ -69,22 +62,21 @@ describe("profile onboarding state", () => {
       credentialVerificationSkippedAt: null,
       paymentMethodStatus: "active",
       profile: completeProfile,
-      credentials: [
-        { verification_status: "pending_review", document_url: "private/document.pdf" },
-      ],
+      credentials: [{ verification_status: "pending_review", document_url: "private/document.pdf" }],
     });
     expect(active.completedCount).toBe(5);
     expect(active.allStepsComplete).toBe(true);
     expect(active.isPublic).toBe(true);
+    expect(active.isPublished).toBe(true);
+    expect(active.isActive).toBe(true);
+    expect(active.visibility).toBe("visible");
 
     const notConfigured = buildProfileOnboardingStatus({
       accountStatus: "active",
       credentialVerificationSkippedAt: null,
       paymentMethodStatus: "not_configured",
       profile: completeProfile,
-      credentials: [
-        { verification_status: "pending_review", document_url: "private/document.pdf" },
-      ],
+      credentials: [{ verification_status: "pending_review", document_url: "private/document.pdf" }],
     });
     expect(notConfigured.completedCount).toBe(4);
     expect(notConfigured.steps.payment).toBe("incomplete");
@@ -101,6 +93,7 @@ describe("profile onboarding state", () => {
     expect(status.steps.payment).toBe("action_required");
     expect(status.isBillingPaused).toBe(true);
     expect(status.isPublic).toBe(false);
+    expect(status.isActive).toBe(false);
   });
 });
 
@@ -124,5 +117,57 @@ describe("profile onboarding migration", () => {
     expect(migration).toContain("trg_sync_account_payment_hold");
     expect(migration).not.toMatch(/SET\s+profile_status\s*=/i);
     expect(migration).not.toMatch(/SET\s+visibility\s*=/i);
+  });
+});
+
+describe("completed profile publication controls", () => {
+  const publicationMigration = readFileSync(
+    join(import.meta.dir, "../../supabase/migrations/20260823110000_profile_publication_controls.sql"),
+    "utf8",
+  );
+  const onboardingCard = readFileSync(
+    join(import.meta.dir, "../components/account/profile-onboarding-card.tsx"),
+    "utf8",
+  );
+  const overview = readFileSync(join(import.meta.dir, "../routes/_authenticated/account.index.tsx"), "utf8");
+  const editor = readFileSync(join(import.meta.dir, "../routes/_authenticated/new-profile.tsx"), "utf8");
+
+  it("rechecks every onboarding requirement at the database boundary before publishing", () => {
+    expect(publicationMigration).toContain("auth.uid()");
+    expect(publicationMigration).toContain("account_row.payment_method_status <> 'active'");
+    expect(publicationMigration).toContain("credential_verification_skipped_at is not null");
+    expect(publicationMigration).toContain("credential.verification_status in ('rejected', 'expired')");
+    expect(publicationMigration).toContain("credential.verification_status in ('pending_review', 'verified')");
+    expect(publicationMigration).toContain("profile_row.profile_status <> 'completed'");
+    expect(publicationMigration).toContain("from public.therapist_professions");
+    expect(publicationMigration).toContain("from public.therapist_languages");
+    expect(publicationMigration).toContain("from public.therapist_populations");
+    expect(publicationMigration).toContain("profile_row.preferred_contact_method = any");
+    expect(publicationMigration).toContain("profile_status = 'published'");
+    expect(publicationMigration).toContain(
+      "grant execute on function public.publish_my_completed_profile() to authenticated",
+    );
+  });
+
+  it("uses a compact green management panel and reopens the steps only for billing repair", () => {
+    expect(onboardingCard).toContain(
+      "const compact = !billingNeedsAction && (status.allStepsComplete || status.isPublished)",
+    );
+    expect(onboardingCard).toContain("כל חמשת השלבים הושלמו");
+    expect(onboardingCard).toContain("bg-emerald-50/85");
+    expect(onboardingCard).toContain('<X className="h-4 w-4" />');
+    expect(onboardingCard).toContain("פרסום הפרופיל");
+    expect(onboardingCard).toContain("הקפאת הפרופיל");
+    expect(onboardingCard).toContain("הפעלת הפרופיל מחדש");
+    expect(onboardingCard).toContain("פתיחת הפרופיל");
+  });
+
+  it("keeps public-state actions in overview while the therapist editor only saves and previews", () => {
+    expect(overview).toContain("publishMyProfile");
+    expect(overview).toContain("setMyProfileVisibility");
+    expect(editor).toContain("שמירת הפרופיל");
+    expect(editor).toContain("תצוגה מקדימה");
+    expect(editor).toContain("חזרה למסך הסקירה");
+    expect(editor).not.toContain("setMyProfileVisibility");
   });
 });
