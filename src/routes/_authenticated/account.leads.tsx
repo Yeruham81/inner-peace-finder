@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { AccountPageHeader } from "@/components/account/account-page-header";
 import { ACCOUNT_MOCK_LEADS } from "@/components/account/account-mock-data";
+import { ContactPreferencesPanel } from "@/components/account/contact-preferences-panel";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authenticated/account/leads")({
 });
 
 function AccountLeadsPage() {
+  const { user } = Route.useRouteContext();
   const [channel, setChannel] = useState("all");
   const [query, setQuery] = useState("");
 
@@ -33,7 +35,7 @@ function AccountLeadsPage() {
       <AccountPageHeader
         eyebrow="ניהול פניות"
         title="פניות"
-        description="כאן יוצגו כל הפניות שהתקבלו דרך טיפולינקס, אמצעי התקשורת, סטטוס המסירה והחיוב. כרגע מוצגים נתוני הדגמה."
+        description="הגדירו כיצד לקבל פניות וצפו בפניות שהתקבלו דרך טיפולינקס, בסטטוס המסירה ובחיוב."
         action={
           <Badge variant="secondary" className="bg-brand-soft text-brand hover:bg-brand-soft">
             נתוני הדגמה
@@ -41,7 +43,9 @@ function AccountLeadsPage() {
         }
       />
 
-      <div className="rounded-2xl border border-border bg-surface-elevated shadow-card">
+      <ContactPreferencesPanel defaultEmail={user.email ?? ""} />
+
+      <div className="mt-6 rounded-2xl border border-border bg-surface-elevated shadow-card">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -83,10 +87,18 @@ function AccountLeadsPage() {
               {leads.map((lead) => (
                 <tr key={lead.id} className="transition-colors hover:bg-muted/20">
                   <td className="px-4 py-4 font-medium text-foreground ltr-num">{lead.id}</td>
-                  <td className="px-4 py-4 text-muted-foreground">{lead.date} · {lead.time}</td>
-                  <td className="px-4 py-4"><ChannelLabel channel={lead.channel} /></td>
-                  <td className="px-4 py-4"><StatusBadge status={lead.status} /></td>
-                  <td className="px-4 py-4 font-semibold text-foreground ltr-num">{lead.charge ? `₪${lead.charge}` : "—"}</td>
+                  <td className="px-4 py-4 text-muted-foreground">
+                    {lead.date} · {lead.time}
+                  </td>
+                  <td className="px-4 py-4">
+                    <ChannelLabel channel={lead.channel} />
+                  </td>
+                  <td className="px-4 py-4">
+                    <StatusBadge status={lead.status} />
+                  </td>
+                  <td className="px-4 py-4 font-semibold text-foreground ltr-num">
+                    {lead.charge ? `₪${lead.charge}` : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -99,9 +111,13 @@ function AccountLeadsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground ltr-num">{lead.id}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{lead.date} · {lead.time}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {lead.date} · {lead.time}
+                  </p>
                 </div>
-                <span className="text-sm font-semibold text-foreground ltr-num">{lead.charge ? `₪${lead.charge}` : "—"}</span>
+                <span className="text-sm font-semibold text-foreground ltr-num">
+                  {lead.charge ? `₪${lead.charge}` : "—"}
+                </span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <ChannelLabel channel={lead.channel} />
