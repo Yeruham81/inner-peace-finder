@@ -25,7 +25,8 @@ function getPath(row: FakeRow, path: string): unknown {
 
 type Filter =
   | { kind: "eq"; column: string; value: unknown }
-  | { kind: "in"; column: string; values: unknown[] };
+  | { kind: "in"; column: string; values: unknown[] }
+  | { kind: "budget_hold_elapsed"; column: string; cutoff: number };
 
 class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknown }> {
   private filters: Filter[] = [];
@@ -46,6 +47,16 @@ class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknow
   }
   in(column: string, values: unknown[]): this {
     this.filters.push({ kind: "in", column, values });
+    return this;
+  }
+  or(expression: string, options?: { referencedTable?: string }): this {
+    const match = expression.match(/^budget_hold_until\.is\.null,budget_hold_until\.lte\.(.+)$/);
+    if (!match) throw new Error(`Unsupported fake OR filter: ${expression}`);
+    this.filters.push({
+      kind: "budget_hold_elapsed",
+      column: options?.referencedTable ? `${options.referencedTable}.budget_hold_until` : "budget_hold_until",
+      cutoff: new Date(match[1]).getTime(),
+    });
     return this;
   }
   order(): this {
@@ -70,9 +81,9 @@ class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknow
     const data = this.rows.filter((row) =>
       this.filters.every((f) => {
         const actual = getPath(row, f.column);
-        return f.kind === "eq"
-          ? actual === f.value
-          : (f.values as unknown[]).includes(actual as never);
+        if (f.kind === "eq") return actual === f.value;
+        if (f.kind === "in") return (f.values as unknown[]).includes(actual as never);
+        return actual === null || actual === undefined || new Date(String(actual)).getTime() <= f.cutoff;
       }),
     );
     return { data, error: null };
@@ -92,10 +103,7 @@ export type FakeSupabase = {
   reads: string[];
 };
 
-export function createFakeSupabase(
-  tables: FakeTables,
-  errors: Record<string, unknown> = {},
-): FakeSupabase {
+export function createFakeSupabase(tables: FakeTables, errors: Record<string, unknown> = {}): FakeSupabase {
   const reads: string[] = [];
   return {
     reads,
