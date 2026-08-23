@@ -588,6 +588,7 @@ export function EditorPage({
       } else {
         queryClient.invalidateQueries({ queryKey: ["my-profile"] });
         queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
+        queryClient.invalidateQueries({ queryKey: ["profile-onboarding"] });
       }
       toast.success(publish ? "הפרופיל פורסם בהצלחה" : "הפרופיל נשמר.");
     },
@@ -603,6 +604,7 @@ export function EditorPage({
       );
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-onboarding"] });
     },
     onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
