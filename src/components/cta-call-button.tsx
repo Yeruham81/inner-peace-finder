@@ -7,6 +7,7 @@ import { track } from "@/lib/analytics";
 import { getDirectContactTarget } from "@/lib/contact-actions.functions";
 import type { PublicContactMethod } from "@/lib/public-therapist-profile";
 import { LeadModal } from "@/components/lead-modal";
+import { VoiceCallModal } from "@/components/voice-call-modal";
 
 type SharedContactProps = {
   therapistId: string;
@@ -164,6 +165,7 @@ function InteractiveContactActions({
 }: ContactActionsProps) {
   const getContactTarget = useServerFn(getDirectContactTarget);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
   const [pendingMethod, setPendingMethod] = useState<PublicContactMethod | null>(null);
   const shownFiredRef = useRef(false);
   const methods = orderedContactMethods(contactMethods, preferredContactMethod);
@@ -191,6 +193,13 @@ function InteractiveContactActions({
 
     if (method === "email") {
       setEmailOpen(true);
+      return;
+    }
+
+    // A phone request never exposes a number to the browser: the platform calls
+    // the visitor first and bridges the therapist leg server-side.
+    if (method === "phone") {
+      setCallOpen(true);
       return;
     }
 
@@ -232,6 +241,16 @@ function InteractiveContactActions({
         onSelect={(method) => void handleSelect(method)}
         unclaimedProfile={unclaimedProfile}
       />
+
+      {contactMethods.includes("phone") && (
+        <VoiceCallModal
+          open={callOpen}
+          onClose={() => setCallOpen(false)}
+          therapistId={therapistId}
+          therapistName={therapistName}
+          pageSource={pageSource ?? null}
+        />
+      )}
 
       {contactMethods.includes("email") && (
         <LeadModal
