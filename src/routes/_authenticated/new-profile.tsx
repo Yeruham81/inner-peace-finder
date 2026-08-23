@@ -41,7 +41,6 @@ import {
   getSemanticFeedback,
   saveAdminManagedProfile,
   saveMyProfile,
-  setMyProfileVisibility,
   type ContactMethod,
   type EditorOptions,
   type Gender,
@@ -423,7 +422,6 @@ export function EditorPage({
   const getOptionsFn = useServerFn(getEditorOptions);
   const saveFn = useServerFn(saveMyProfile);
   const saveAdminFn = useServerFn(saveAdminManagedProfile);
-  const setVisibilityFn = useServerFn(setMyProfileVisibility);
   const deleteProfileFn = useServerFn(deleteMyProfilePermanently);
 
   const actorMode = useQuery({
@@ -593,20 +591,6 @@ export function EditorPage({
       toast.success(publish ? "הפרופיל פורסם בהצלחה" : "הפרופיל נשמר.");
     },
     onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
-  });
-
-  const visibilityMutation = useMutation({
-    mutationFn: (visible: boolean) => setVisibilityFn({ data: { visible } }),
-    onSuccess: (result) => {
-      toast.success(result.visibility === "visible" ? "הפרופיל הופעל מחדש." : "הפרופיל הוקפא ואינו גלוי כעת.");
-      queryClient.setQueryData<ProfileEditorData | null>(["my-profile"], (current) =>
-        current ? { ...current, visibility: result.visibility } : current,
-      );
-      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-onboarding"] });
-    },
-    onError: (error: Error) => toast.error(friendlyErrorMessage(error)),
   });
 
   const deleteProfileMutation = useMutation({
@@ -1296,16 +1280,13 @@ export function EditorPage({
                 publishMissing={publishMissing}
                 publishMissingFields={publishMissingFields}
                 showPublishMissing={showPublishMissing}
+                allowPublishing={isAdmin}
                 onPreview={() => setPreviewOpen(true)}
                 onSaveDraft={() => {
                   setShowPublishMissing(true);
                   mutation.mutate(false);
                 }}
                 onPublish={() => mutation.mutate(true)}
-                visibility={profile.data?.visibility ?? "hidden"}
-                allowVisibilityManagement={!isAdmin}
-                visibilityPending={visibilityMutation.isPending}
-                onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
               />
             </div>
           </main>
@@ -1317,16 +1298,13 @@ export function EditorPage({
               publishMissing={publishMissing}
               publishMissingFields={publishMissingFields}
               showPublishMissing={showPublishMissing}
+              allowPublishing={isAdmin}
               onPreview={() => setPreviewOpen(true)}
               onSaveDraft={() => {
                 setShowPublishMissing(true);
                 mutation.mutate(false);
               }}
               onPublish={() => mutation.mutate(true)}
-              visibility={profile.data?.visibility ?? "hidden"}
-              allowVisibilityManagement={!isAdmin}
-              visibilityPending={visibilityMutation.isPending}
-              onVisibilityChange={(visible) => visibilityMutation.mutate(visible)}
             />
           </aside>
         </div>
@@ -1615,7 +1593,7 @@ function ContactPreferencesSummary({
         </p>
         {!adminMode && (
           <Button asChild variant="outline" className="shrink-0">
-            <Link to="/account/settings">ניהול דרכי התקשרות</Link>
+            <Link to="/account/leads">ניהול דרכי התקשרות</Link>
           </Button>
         )}
       </div>
@@ -1629,56 +1607,29 @@ function ProfileActions({
   publishMissing,
   publishMissingFields,
   showPublishMissing,
+  allowPublishing,
   onPreview,
   onSaveDraft,
   onPublish,
-  visibility,
-  allowVisibilityManagement,
-  visibilityPending,
-  onVisibilityChange,
 }: {
   status: "draft" | "completed" | "published" | "frozen";
   pendingAction: "save" | "publish" | null;
   publishMissing: boolean;
   publishMissingFields: string[];
   showPublishMissing: boolean;
+  allowPublishing: boolean;
   onPreview: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
-  visibility: "visible" | "hidden";
-  allowVisibilityManagement: boolean;
-  visibilityPending: boolean;
-  onVisibilityChange: (visible: boolean) => void;
 }) {
   const isPublished = status === "published" || status === "frozen";
 
   return (
     <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">שמירה ופרסום</h2>
+        <h2 className="text-lg font-semibold text-foreground">{allowPublishing ? "שמירה ופרסום" : "שמירת הפרופיל"}</h2>
         <StatusBadge status={status} />
       </div>
-
-      {isPublished &&
-        (allowVisibilityManagement ? (
-          <div className="mt-4 border-t border-border pt-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${visibility === "visible" ? "bg-emerald-500" : "bg-slate-400"}`}
-              />
-              {visibility === "visible" ? "הפרופיל פעיל וגלוי" : "הפרופיל מוקפא ואינו גלוי"}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={visibilityPending}
-              onClick={() => onVisibilityChange(visibility !== "visible")}
-              className="mt-3 w-full"
-            >
-              {visibilityPending ? "מעדכן…" : visibility === "visible" ? "הקפאת הפרופיל" : "הפעלת הפרופיל מחדש"}
-            </Button>
-          </div>
-        ) : null)}
 
       <div
         className={`mt-4 rounded-xl border p-3 text-sm leading-relaxed ${
@@ -1690,7 +1641,7 @@ function ProfileActions({
         {publishMissing ? (
           showPublishMissing ? (
             <div>
-              <p className="font-medium">כדי לפרסם את הפרופיל יש להשלים:</p>
+              <p className="font-medium">כדי להשלים את פרטי הפרופיל יש למלא:</p>
               <ul className="mt-1.5 list-disc space-y-0.5 pr-5">
                 {publishMissingFields.map((field) => (
                   <li key={field}>{field}</li>
@@ -1698,10 +1649,12 @@ function ProfileActions({
               </ul>
             </div>
           ) : (
-            "ניתן לשמור את הפרופיל ולהמשיך לערוך אותו. לאחר השמירה יוצג כאן מידע שחסר לפרסום, אם יש."
+            "ניתן לשמור את הפרופיל ולהמשיך לערוך אותו. לאחר השמירה יוצג כאן מידע שחסר להשלמת הפרופיל, אם יש."
           )
+        ) : isPublished ? (
+          "כל שדות החובה בפרופיל המקצועי הושלמו. שמירת השינויים תעדכן את הפרופיל הקיים."
         ) : (
-          "כל שדות החובה הושלמו. ניתן לפרסם את הפרופיל."
+          "כל שדות החובה בפרופיל המקצועי הושלמו. שמרו את הפרופיל וחזרו למסך הסקירה להמשך התהליך."
         )}
       </div>
 
@@ -1712,18 +1665,20 @@ function ProfileActions({
         <Button variant="outline" disabled={pendingAction !== null} onClick={onSaveDraft} className="w-full">
           {pendingAction === "save" ? "מתבצעת שמירה…" : "שמירת פרופיל"}
         </Button>
-        <Button
-          disabled={pendingAction !== null || publishMissing}
-          title={publishMissing ? "יש להשלים את כל שדות החובה כדי לפרסם" : undefined}
-          onClick={onPublish}
-          className="w-full"
-        >
-          {pendingAction === "publish" ? "מתבצע פרסום…" : "פרסום פרופיל"}
-        </Button>
+        {allowPublishing && (
+          <Button
+            disabled={pendingAction !== null || publishMissing}
+            title={publishMissing ? "יש להשלים את כל שדות החובה כדי לפרסם" : undefined}
+            onClick={onPublish}
+            className="w-full"
+          >
+            {pendingAction === "publish" ? "מתבצע פרסום…" : "פרסום פרופיל"}
+          </Button>
+        )}
       </div>
 
       <Link to="/account" className="mt-4 block text-center text-xs text-muted-foreground underline">
-        חזרה לחשבון
+        חזרה למסך הסקירה
       </Link>
     </div>
   );
