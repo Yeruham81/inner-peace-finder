@@ -28,16 +28,33 @@ async function removeStorageFolder(bucket: ProfileStorageBucket, folder: string)
 }
 
 export async function setOwnedProfileVisibility(accountId: string, visible: boolean) {
-  const { data: profile, error } = await supabaseAdmin
-    .from("therapists")
-    .select("id, profile_status")
-    .eq("owner_account_id", accountId)
-    .maybeSingle();
+  const [{ data: profile, error }, { data: account, error: accountError }] = await Promise.all([
+    supabaseAdmin
+      .from("therapists")
+      .select("id, profile_status, billing_hold, is_active")
+      .eq("owner_account_id", accountId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("therapist_accounts")
+      .select("account_status, payment_method_status")
+      .eq("id", accountId)
+      .maybeSingle(),
+  ]);
   if (error) throw new Error(error.message);
+  if (accountError) throw new Error(accountError.message);
   if (!profile) throw new Error("לא נמצא פרופיל לניהול.");
   if (visible && profile.profile_status !== "published") throw new Error("ניתן להפעיל מחדש רק פרופיל שפורסם.");
+  if (visible && account?.account_status === "suspended") {
+    throw new Error("החשבון מושהה. יש לפנות לצוות טיפולינקס לפני הפעלת הפרופיל מחדש.");
+  }
+  if (visible && (profile.billing_hold || account?.payment_method_status !== "active")) {
+    throw new Error("יש לעדכן אמצעי תשלום פעיל לפני הפעלת הפרופיל מחדש.");
+  }
   const visibility = visible ? ("visible" as const) : ("hidden" as const);
-  const updated = await supabaseAdmin.from("therapists").update({ visibility }).eq("id", profile.id);
+  const updated = await supabaseAdmin
+    .from("therapists")
+    .update({ visibility, is_active: visible ? true : profile.is_active })
+    .eq("id", profile.id);
   if (updated.error) throw new Error(updated.error.message);
   return { visibility };
 }
