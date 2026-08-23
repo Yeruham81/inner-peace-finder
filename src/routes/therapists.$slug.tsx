@@ -6,6 +6,7 @@ import { zodValidator } from "@tanstack/zod-adapter";
 import { getTherapistBySlug } from "@/lib/therapists.functions";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { PublicRouteError } from "@/components/public-route-error";
+import { track } from "@/lib/analytics";
 import { readRememberedResultsReturn, resultsReturnLinkOptions } from "@/lib/search-return";
 
 function therapistQuery(slug: string) {
@@ -74,6 +75,14 @@ function TherapistPage() {
   }, [ret]);
   const backToResults = resultsReturnLinkOptions(ret || rememberedReturn);
   const { data: t } = useSuspenseQuery(therapistQuery(slug));
+  useEffect(() => {
+    if (!t) return;
+    track("therapist_profile_viewed", {
+      therapist_id: t.id,
+      page_source: "therapist_profile",
+      origin: "TherapistPage",
+    });
+  }, [t]);
   if (!t) return null;
 
   const backLinkClass = "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
