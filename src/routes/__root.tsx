@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { initializeDisplayPreferences } from "../lib/display-preferences";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -137,6 +138,8 @@ function RootComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAccount = pathname === "/account" || pathname.startsWith("/account/");
+
+  useEffect(() => initializeDisplayPreferences(), []);
 
   if (isAdmin || isAccount) {
     return (
