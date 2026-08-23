@@ -9,6 +9,7 @@ export type AccountLeadActivity = {
   created_at: string;
   channel: AccountActivityChannel;
   delivery_status: string;
+  workflow_status: "new" | "in_progress" | "handled" | "archived";
   charge_agorot: number;
 };
 
@@ -74,11 +75,16 @@ function asChannel(value: unknown): AccountActivityChannel {
 
 function parseLead(value: unknown): AccountLeadActivity {
   const row = asObject(value);
+  const workflowStatus =
+    row.workflow_status === "in_progress" || row.workflow_status === "handled" || row.workflow_status === "archived"
+      ? row.workflow_status
+      : "new";
   return {
     id: String(row.id ?? ""),
     created_at: String(row.created_at ?? ""),
     channel: asChannel(row.channel),
     delivery_status: String(row.delivery_status ?? "pending"),
+    workflow_status: workflowStatus,
     charge_agorot: asNumber(row.charge_agorot),
   };
 }
