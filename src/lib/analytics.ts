@@ -4,6 +4,7 @@ export type AnalyticsEventName =
   | "search_executed"
   | "therapist_results_rendered"
   | "therapist_card_viewed"
+  | "therapist_profile_viewed"
   | "cta_shown"
   | "cta_clicked"
   | "no_results_returned"
@@ -36,6 +37,7 @@ let sessionIdSource: "cookie" | "localStorage" | "fallback-memory" | "ssr" = "ss
 const lastFiredAt = new Map<string, number>();
 const DEDUPE_WINDOWS_MS: Partial<Record<AnalyticsEventName, number>> = {
   therapist_card_viewed: 5_000,
+  therapist_profile_viewed: 5 * 60_000,
 };
 
 function isDebug(): boolean {
