@@ -30,7 +30,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
-        אזור ניהול פנימי. הרשאות ונתונים אמיתיים ייחוברו בשלב הבא.
+        אזור ניהול פנימי למשתמשים בעלי הרשאת מנהל בלבד.
       </p>
     </div>
   );
