@@ -8,6 +8,9 @@ export type TherapistAccount = {
   account_status: "pending" | "active" | "claimed" | "suspended";
   credential_verification_skipped_at: string | null;
   payment_method_status: "not_configured" | "active" | "action_required" | "expired";
+  payment_method_kind: "none" | "real" | "test";
+  notify_new_leads: boolean;
+  notify_account_updates: boolean;
   created_at: string;
   updated_at: string;
   owned_therapist_id: string | null;
@@ -50,5 +53,10 @@ export const ensureTherapistAccount = createServerFn({ method: "POST" })
       .maybeSingle();
     if (ownedErr) throw new Error(ownedErr.message);
 
-    return { ...(account as TherapistAccount), owned_therapist_id: owned?.id ?? null };
+    return {
+      ...account,
+      payment_method_status: account.payment_method_status as TherapistAccount["payment_method_status"],
+      payment_method_kind: account.payment_method_kind as TherapistAccount["payment_method_kind"],
+      owned_therapist_id: owned?.id ?? null,
+    };
   });
