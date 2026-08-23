@@ -63,6 +63,7 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
   ["hidden", { visibility: "hidden" }],
   ["hidden_by_owner", { visibility: "hidden_by_owner" }],
   ["archived", { visibility: "archived" }],
+  ["monthly budget hold", { budget_hold_until: "2999-01-01T00:00:00.000Z" }],
 ];
 
 function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}, errors: Record<string, unknown> = {}) {
@@ -143,6 +144,7 @@ describe("public eligibility — shared predicate", () => {
       expect(isEligibleRow(therapistRow(over) as never)).toBe(false);
     }
     expect(isEligibleRow(therapistRow({ visibility: "visible" }) as never)).toBe(true);
+    expect(isEligibleRow(therapistRow({ budget_hold_until: "2020-01-01T00:00:00.000Z" }) as never)).toBe(true);
   });
 
   it("getTherapistBySlug's query returns null for every ineligible state", async () => {
