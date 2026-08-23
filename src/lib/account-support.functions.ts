@@ -6,12 +6,19 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const SupportRequestSchema = z.object({
   category: z.enum(["bug", "complaint", "suggestion", "other"]),
   subject: z.string().trim().min(3, "נא להזין נושא בן 3 תווים לפחות.").max(120, "הנושא ארוך מדי."),
-  message: z
-    .string()
-    .trim()
-    .min(10, "נא להזין פירוט בן 10 תווים לפחות.")
-    .max(4000, "הפירוט ארוך מדי."),
+  message: z.string().trim().min(10, "נא להזין פירוט בן 10 תווים לפחות.").max(4000, "הפירוט ארוך מדי."),
 });
+
+export type MySupportRequest = {
+  id: string;
+  category: "bug" | "complaint" | "suggestion" | "other";
+  subject: string;
+  message: string;
+  status: "new" | "in_review" | "resolved" | "closed";
+  staff_response: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export const submitMySupportRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -24,4 +31,31 @@ export const submitMySupportRequest = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { request_id: requestId };
+  });
+
+export const getMySupportRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<MySupportRequest[]> => {
+    const { data, error } = await context.supabase.rpc("get_my_support_requests");
+    if (error) throw new Error(error.message);
+    if (!Array.isArray(data)) return [];
+    return data.map((value) => {
+      const row = value as Record<string, unknown>;
+      const category: MySupportRequest["category"] =
+        row.category === "complaint" || row.category === "suggestion" || row.category === "other"
+          ? row.category
+          : "bug";
+      const status: MySupportRequest["status"] =
+        row.status === "in_review" || row.status === "resolved" || row.status === "closed" ? row.status : "new";
+      return {
+        id: String(row.id ?? ""),
+        category,
+        subject: String(row.subject ?? ""),
+        message: String(row.message ?? ""),
+        status,
+        staff_response: typeof row.staff_response === "string" ? row.staff_response : null,
+        created_at: String(row.created_at ?? ""),
+        updated_at: String(row.updated_at ?? ""),
+      };
+    });
   });
