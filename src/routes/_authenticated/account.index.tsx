@@ -16,6 +16,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { AccountPageHeader } from "@/components/account/account-page-header";
 import { AccountSectionCard } from "@/components/account/account-section-card";
 import { AccountStatCard } from "@/components/account/account-stat-card";
+import { ProfileOnboardingCard } from "@/components/account/profile-onboarding-card";
 import {
   ACCOUNT_MOCK_CHANNELS,
   ACCOUNT_MOCK_DAILY,
@@ -23,6 +24,7 @@ import {
   ACCOUNT_MOCK_SUMMARY,
 } from "@/components/account/account-mock-data";
 import { Button } from "@/components/ui/button";
+import { getMyProfileOnboarding } from "@/lib/profile-onboarding.functions";
 import { ensureTherapistAccount } from "@/lib/therapist-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/account/")({
@@ -35,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/account/")({
 function AccountOverviewPage() {
   const { user } = Route.useRouteContext();
   const ensureFn = useServerFn(ensureTherapistAccount);
+  const getOnboardingFn = useServerFn(getMyProfileOnboarding);
 
   // Use the idempotent ensure call as the account query itself. This avoids a
   // first-visit race where a separate read can finish before account creation.
@@ -43,6 +46,11 @@ function AccountOverviewPage() {
     queryFn: () => ensureFn(),
   });
   const { data: account, isLoading, isError } = accountQuery;
+  const onboardingQuery = useQuery({
+    queryKey: ["profile-onboarding", user.id],
+    queryFn: () => getOnboardingFn(),
+    enabled: Boolean(account),
+  });
 
   return (
     <>
@@ -56,6 +64,31 @@ function AccountOverviewPage() {
           </span>
         }
       />
+
+      {!isLoading && !isError && account && (
+        <div className="mb-6">
+          {onboardingQuery.isLoading ? (
+            <div className="rounded-2xl border border-border bg-surface-elevated p-6 text-sm text-muted-foreground shadow-card">
+              טוען את שלבי ההצטרפות…
+            </div>
+          ) : onboardingQuery.isError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 shadow-card">
+              <p className="text-sm font-medium text-destructive">לא הצלחנו לטעון את שלבי ההצטרפות.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => void onboardingQuery.refetch()}
+              >
+                ניסיון חוזר
+              </Button>
+            </div>
+          ) : onboardingQuery.data ? (
+            <ProfileOnboardingCard status={onboardingQuery.data} />
+          ) : null}
+        </div>
+      )}
 
       {!isLoading && !isError && account && !account.owned_therapist_id && (
         <NoProfileState email={user.email ?? ""} accountStatus={statusLabel(account.account_status)} />
