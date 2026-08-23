@@ -40,6 +40,7 @@ import { Route as AuthenticatedAccountLeadsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAccountCredentialsRouteImport } from './routes/_authenticated/account.credentials'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated/account.billing'
 import { Route as ApiPublicVoiceTherapistStatusRouteImport } from './routes/api/public/voice/therapist-status'
+import { Route as ApiPublicVoiceParentStatusRouteImport } from './routes/api/public/voice/parent-status'
 import { Route as ApiPublicVoiceAnswerRouteImport } from './routes/api/public/voice/answer'
 
 const TherapyInformationRoute = TherapyInformationRouteImport.update({
@@ -203,6 +204,12 @@ const ApiPublicVoiceTherapistStatusRoute =
     path: '/api/public/voice/therapist-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicVoiceParentStatusRoute =
+  ApiPublicVoiceParentStatusRouteImport.update({
+    id: '/api/public/voice/parent-status',
+    path: '/api/public/voice/parent-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicVoiceAnswerRoute = ApiPublicVoiceAnswerRouteImport.update({
   id: '/api/public/voice/answer',
   path: '/api/public/voice/answer',
@@ -240,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/account/': typeof AuthenticatedAccountIndexRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
   '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
 }
 export interface FileRoutesByTo {
@@ -271,6 +279,7 @@ export interface FileRoutesByTo {
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/account': typeof AuthenticatedAccountIndexRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
   '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
 }
 export interface FileRoutesById {
@@ -306,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/account/': typeof AuthenticatedAccountIndexRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
   '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
 }
 export interface FileRouteTypes {
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/account/settings'
     | '/account/'
     | '/api/public/voice/answer'
+    | '/api/public/voice/parent-status'
     | '/api/public/voice/therapist-status'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/account/settings'
     | '/account'
     | '/api/public/voice/answer'
+    | '/api/public/voice/parent-status'
     | '/api/public/voice/therapist-status'
   id:
     | '__root__'
@@ -406,6 +418,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/settings'
     | '/_authenticated/account/'
     | '/api/public/voice/answer'
+    | '/api/public/voice/parent-status'
     | '/api/public/voice/therapist-status'
   fileRoutesById: FileRoutesById
 }
@@ -423,6 +436,7 @@ export interface RootRouteChildren {
   ProblemsSlugRoute: typeof ProblemsSlugRoute
   TherapistsSlugRoute: typeof TherapistsSlugRoute
   ApiPublicVoiceAnswerRoute: typeof ApiPublicVoiceAnswerRoute
+  ApiPublicVoiceParentStatusRoute: typeof ApiPublicVoiceParentStatusRoute
   ApiPublicVoiceTherapistStatusRoute: typeof ApiPublicVoiceTherapistStatusRoute
 }
 
@@ -645,6 +659,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicVoiceTherapistStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/voice/parent-status': {
+      id: '/api/public/voice/parent-status'
+      path: '/api/public/voice/parent-status'
+      fullPath: '/api/public/voice/parent-status'
+      preLoaderRoute: typeof ApiPublicVoiceParentStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/voice/answer': {
       id: '/api/public/voice/answer'
       path: '/api/public/voice/answer'
@@ -733,6 +754,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProblemsSlugRoute: ProblemsSlugRoute,
   TherapistsSlugRoute: TherapistsSlugRoute,
   ApiPublicVoiceAnswerRoute: ApiPublicVoiceAnswerRoute,
+  ApiPublicVoiceParentStatusRoute: ApiPublicVoiceParentStatusRoute,
   ApiPublicVoiceTherapistStatusRoute: ApiPublicVoiceTherapistStatusRoute,
 }
 export const routeTree = rootRouteImport
