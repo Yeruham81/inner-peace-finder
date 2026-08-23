@@ -9,16 +9,15 @@ const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
 const sidebarSource = read("src", "components", "account", "account-sidebar.tsx");
 const editorSource = read("src", "routes", "_authenticated", "new-profile.tsx");
+const overviewSource = read("src", "routes", "_authenticated", "account.index.tsx");
+const onboardingCardSource = read("src", "components", "account", "profile-onboarding-card.tsx");
 const settingsSource = read("src", "routes", "_authenticated", "account.settings.tsx");
+const leadsSource = read("src", "routes", "_authenticated", "account.leads.tsx");
 const managementSource = read("src", "lib", "profile-management.server.ts");
 const profileFunctionsSource = read("src", "lib", "therapist-profile.functions.ts");
 const claimDeliverySource = read("src", "lib", "profile-claim-v2.server.ts");
 const publicContractSource = read("src", "lib", "public-therapist-profile.ts");
-const migrationSource = read(
-  "supabase",
-  "migrations",
-  "20260822130000_account_privacy_and_suppression.sql",
-);
+const migrationSource = read("supabase", "migrations", "20260822130000_account_privacy_and_suppression.sql");
 
 describe("account/profile UX follow-up", () => {
   it("hides the redundant edit-profile shortcut while the editor is already open", () => {
@@ -29,17 +28,16 @@ describe("account/profile UX follow-up", () => {
   it("shows frozen as a distinct status and preserves reactivation controls", () => {
     expect(editorSource).toContain('"published" | "frozen"');
     expect(editorSource).toContain('frozen: { l: "מוקפא"');
-    expect(editorSource).toContain(
-      'const isPublished = status === "published" || status === "frozen"',
-    );
-    expect(editorSource).toContain("queryClient.setQueryData<ProfileEditorData | null>");
+    expect(editorSource).toContain('const isPublished = status === "published" || status === "frozen"');
+    expect(editorSource).not.toContain("setMyProfileVisibility");
+    expect(overviewSource).toContain("setMyProfileVisibility");
+    expect(onboardingCardSource).toContain("הפעלת הפרופיל מחדש");
+    expect(onboardingCardSource).toContain("הקפאת הפרופיל");
   });
 
   it("keeps the first-save missing-fields feedback across the new admin profile identity transition", () => {
     expect(editorSource).toContain("const preserveNextIdentityTransition = useRef(false)");
-    expect(editorSource).toContain(
-      "const preserveSaveFeedback = preserveNextIdentityTransition.current",
-    );
+    expect(editorSource).toContain("const preserveSaveFeedback = preserveNextIdentityTransition.current");
     expect(editorSource).toContain("if (!preserveSaveFeedback)");
     expect(editorSource).toContain("preserveNextIdentityTransition.current = true");
   });
@@ -53,28 +51,23 @@ describe("account/profile UX follow-up", () => {
 
   it("updates the login email independently of the professional contact email", () => {
     expect(settingsSource).toContain("supabase.auth.updateUser({ email: loginEmail.trim() })");
-    expect(settingsSource).toContain("שינויה אינו משנה את האימייל המקצועי לקבלת פניות");
-    expect(settingsSource).toContain("contactPreferences.email");
+    expect(settingsSource).toContain("ואינו משנה את האימייל המקצועי לקבלת פניות");
+    expect(settingsSource).not.toContain("contactPreferences.email");
+    expect(leadsSource).toContain("<ContactPreferencesPanel");
   });
 });
 
 describe("account deletion and no-contact suppression", () => {
   it("stores only a protected minimal email registry", () => {
-    expect(migrationSource).toContain(
-      "CREATE TABLE IF NOT EXISTS public.contact_email_suppressions",
-    );
+    expect(migrationSource).toContain("CREATE TABLE IF NOT EXISTS public.contact_email_suppressions");
     expect(migrationSource).toContain("email_normalized text PRIMARY KEY");
     expect(migrationSource).toContain(
       "REVOKE ALL ON TABLE public.contact_email_suppressions FROM PUBLIC, anon, authenticated",
     );
-    const tableStart = migrationSource.indexOf(
-      "CREATE TABLE IF NOT EXISTS public.contact_email_suppressions",
-    );
+    const tableStart = migrationSource.indexOf("CREATE TABLE IF NOT EXISTS public.contact_email_suppressions");
     const tableEnd = migrationSource.indexOf("\n);", tableStart);
     const tableDefinition = migrationSource.slice(tableStart, tableEnd);
-    expect(tableDefinition).not.toMatch(
-      /\b(full_name|phone|profile_content|account_id|therapist_id)\b/,
-    );
+    expect(tableDefinition).not.toMatch(/\b(full_name|phone|profile_content|account_id|therapist_id)\b/);
   });
 
   it("records opt-outs atomically and blocks future admin profiles and claim invitations", () => {
@@ -82,20 +75,14 @@ describe("account deletion and no-contact suppression", () => {
     expect(migrationSource).toContain("trg_enforce_admin_profile_email_suppression");
     expect(migrationSource).toContain("trg_enforce_claim_invite_email_suppression");
     expect(profileFunctionsSource).toContain('saveMode === "admin_public_info"');
-    expect(profileFunctionsSource).toContain('supabaseAdmin.rpc("is_contact_email_suppressed"');
-    expect(claimDeliverySource).toContain('supabaseAdmin.rpc("is_contact_email_suppressed"');
+    expect(profileFunctionsSource).toContain('"is_contact_email_suppressed"');
+    expect(claimDeliverySource).toContain('"is_contact_email_suppressed"');
   });
 
   it("records suppression before deleting the profile and deletes the auth user last", () => {
-    const deleteProfile = managementSource.indexOf(
-      "await permanentlyDeleteOwnedProfile(authUserId)",
-    );
-    const recordSuppression = managementSource.indexOf(
-      'supabaseAdmin.rpc("record_contact_email_suppressions"',
-    );
-    const deleteAuthUser = managementSource.indexOf(
-      "supabaseAdmin.auth.admin.deleteUser(authUserId)",
-    );
+    const deleteProfile = managementSource.indexOf("await permanentlyDeleteOwnedProfile(authUserId)");
+    const recordSuppression = managementSource.indexOf('supabaseAdmin.rpc("record_contact_email_suppressions"');
+    const deleteAuthUser = managementSource.indexOf("supabaseAdmin.auth.admin.deleteUser(authUserId)");
 
     expect(deleteProfile).toBeGreaterThan(-1);
     expect(recordSuppression).toBeGreaterThan(-1);
