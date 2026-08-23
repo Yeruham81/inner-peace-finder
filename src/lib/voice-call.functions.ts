@@ -60,6 +60,9 @@ export const startVoiceCall = createServerFn({ method: "POST" })
       _therapist_id: data.therapistId,
     });
     if (error) {
+      if (error.message.includes("monthly_budget_exhausted")) {
+        return { ok: false, reason: "channel_unavailable" };
+      }
       console.error("[voice] attempt authorization failed", { code: error.code });
       return { ok: false, reason: "provider_error" };
     }
@@ -91,9 +94,8 @@ export const startVoiceCall = createServerFn({ method: "POST" })
       return { ok: false, reason: "channel_unavailable" };
     }
 
-    const { createVisitorCall, externalWebhookUrl, getTwilioConfig, sanitizedBase } = await import(
-      "./twilio-voice.server"
-    );
+    const { createVisitorCall, externalWebhookUrl, getTwilioConfig, sanitizedBase } =
+      await import("./twilio-voice.server");
 
     let base: string;
     try {
