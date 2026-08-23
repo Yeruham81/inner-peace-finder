@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   UserRoundPen,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { toast } from "sonner";
 
 import { AccountPageHeader } from "@/components/account/account-page-header";
 import { AccountSectionCard } from "@/components/account/account-section-card";
@@ -24,7 +25,8 @@ import {
   ACCOUNT_MOCK_SUMMARY,
 } from "@/components/account/account-mock-data";
 import { Button } from "@/components/ui/button";
-import { getMyProfileOnboarding } from "@/lib/profile-onboarding.functions";
+import { getMyProfileOnboarding, publishMyProfile } from "@/lib/profile-onboarding.functions";
+import { setMyProfileVisibility } from "@/lib/therapist-profile.functions";
 import { ensureTherapistAccount } from "@/lib/therapist-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/account/")({
@@ -36,8 +38,11 @@ export const Route = createFileRoute("/_authenticated/account/")({
 
 function AccountOverviewPage() {
   const { user } = Route.useRouteContext();
+  const queryClient = useQueryClient();
   const ensureFn = useServerFn(ensureTherapistAccount);
   const getOnboardingFn = useServerFn(getMyProfileOnboarding);
+  const publishProfileFn = useServerFn(publishMyProfile);
+  const setVisibilityFn = useServerFn(setMyProfileVisibility);
 
   // Use the idempotent ensure call as the account query itself. This avoids a
   // first-visit race where a separate read can finish before account creation.
@@ -50,6 +55,31 @@ function AccountOverviewPage() {
     queryKey: ["profile-onboarding", user.id],
     queryFn: () => getOnboardingFn(),
     enabled: Boolean(account),
+  });
+
+  const refreshProfileState = () => {
+    queryClient.invalidateQueries({ queryKey: ["profile-onboarding"] });
+    queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+    queryClient.invalidateQueries({ queryKey: ["therapist-account"] });
+    queryClient.invalidateQueries({ queryKey: ["therapist"] });
+  };
+
+  const publishMutation = useMutation({
+    mutationFn: () => publishProfileFn(),
+    onSuccess: () => {
+      toast.success("הפרופיל פורסם בהצלחה.");
+      refreshProfileState();
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לפרסם את הפרופיל."),
+  });
+
+  const visibilityMutation = useMutation({
+    mutationFn: (visible: boolean) => setVisibilityFn({ data: { visible } }),
+    onSuccess: (result) => {
+      toast.success(result.visibility === "visible" ? "הפרופיל הופעל מחדש." : "הפרופיל הוקפא.");
+      refreshProfileState();
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את מצב הפרופיל."),
   });
 
   return (
@@ -85,7 +115,12 @@ function AccountOverviewPage() {
               </Button>
             </div>
           ) : onboardingQuery.data ? (
-            <ProfileOnboardingCard status={onboardingQuery.data} />
+            <ProfileOnboardingCard
+              status={onboardingQuery.data}
+              actionPending={publishMutation.isPending || visibilityMutation.isPending}
+              onPublish={() => publishMutation.mutateAsync()}
+              onVisibilityChange={(visible) => visibilityMutation.mutateAsync(visible)}
+            />
           ) : null}
         </div>
       )}
@@ -173,7 +208,11 @@ function AccountOverviewPage() {
                     <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={11} />
                     <YAxis tickLine={false} axisLine={false} fontSize={11} />
                     <Tooltip
-                      contentStyle={{ borderRadius: 12, borderColor: "var(--border)", direction: "rtl" }}
+                      contentStyle={{
+                        borderRadius: 12,
+                        borderColor: "var(--border)",
+                        direction: "rtl",
+                      }}
                       formatter={(value, name) => [value, name === "impressions" ? "הופעות" : "צפיות"]}
                       labelFormatter={(label) => `יום ${label}`}
                     />
@@ -259,7 +298,7 @@ function AccountOverviewPage() {
                 />
                 <QuickStatusRow
                   icon={BadgeCheck}
-                  title="אימות והסמכות"
+                  title="אימות הסמכות"
                   description="נהלו מסמכים מקצועיים ובדקו את סטטוס האימות."
                   actionLabel="ניהול הסמכות"
                   to="/account/credentials"
