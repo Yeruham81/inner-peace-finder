@@ -35,11 +35,18 @@ const STATUS_TONES: Record<string, Tone> = {
   "הזמנה פגה": "neutral",
   "הזמנה בוטלה": "neutral",
   נדחה: "negative",
+  "פג תוקף": "neutral",
   // leads
   נוצרה: "neutral",
   נמסרה: "pending",
   נענתה: "positive",
   נכשלה: "negative",
+  חדשה: "pending",
+  בטיפול: "pending",
+  נפתרה: "positive",
+  נסגרה: "neutral",
+  טופלה: "positive",
+  בארכיון: "neutral",
   // claims / billing
   אושר: "positive",
   שולם: "positive",
