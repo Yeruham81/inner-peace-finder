@@ -208,7 +208,7 @@ function InteractiveContactActions({
       const result = await getContactTarget({
         data: {
           therapistId,
-          method,
+          method: "whatsapp",
         },
       });
 
@@ -217,7 +217,7 @@ function InteractiveContactActions({
         return;
       }
 
-      const href = method === "phone" ? dialHref(result.phone) : whatsappHref(result.phone);
+      const href = whatsappHref(result.phone);
       if (!href) {
         toast.error("פרטי ההתקשרות אינם זמינים כרגע.");
         return;
