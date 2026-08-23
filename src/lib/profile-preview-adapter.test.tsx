@@ -13,6 +13,14 @@ import { buildPreviewViewData, type PreviewFormState } from "./profile-preview-a
 import type { EditorOptions } from "./therapist-profile.functions";
 
 const editorSource = readFileSync(join(import.meta.dir, "..", "routes", "_authenticated", "new-profile.tsx"), "utf8");
+const overviewSource = readFileSync(
+  join(import.meta.dir, "..", "routes", "_authenticated", "account.index.tsx"),
+  "utf8",
+);
+const onboardingCardSource = readFileSync(
+  join(import.meta.dir, "..", "components", "account", "profile-onboarding-card.tsx"),
+  "utf8",
+);
 const settingsSource = readFileSync(
   join(import.meta.dir, "..", "routes", "_authenticated", "account.settings.tsx"),
   "utf8",
@@ -262,43 +270,34 @@ describe("editor preview wiring", () => {
   });
 });
 
-describe("profile visibility actions", () => {
-  it("shows freeze and reactivation controls only for an already-published profile", () => {
+describe("profile management action placement", () => {
+  it("keeps publishing, freezing and reactivation in the overview rather than the therapist editor", () => {
     const actionsStart = editorSource.indexOf("function ProfileActions(");
     const actionsEnd = editorSource.indexOf("function Section(", actionsStart);
     const actionsSource = editorSource.slice(actionsStart, actionsEnd);
 
-    // Do not couple the test to whether the admin-only guard is combined on the
-    // same JSX line or nested inside the published-status guard.
-    expect(actionsSource).toContain('status === "published"');
-    expect(actionsSource).toContain("allowVisibilityManagement");
-    expect(actionsSource).toContain("disabled={visibilityPending}");
-    expect(actionsSource).not.toContain("canReactivate");
-    expect(actionsSource).not.toContain("ניתן להפעיל מחדש לאחר פרסום הפרופיל.");
+    expect(editorSource).not.toContain("setMyProfileVisibility");
+    expect(actionsSource).not.toContain("הקפאת הפרופיל");
+    expect(actionsSource).not.toContain("הפעלת הפרופיל מחדש");
+    expect(overviewSource).toContain("setMyProfileVisibility");
+    expect(overviewSource).toContain("publishMyProfile");
+    expect(onboardingCardSource).toContain("פרסום הפרופיל");
+    expect(onboardingCardSource).toContain("הקפאת הפרופיל");
+    expect(onboardingCardSource).toContain("הפעלת הפרופיל מחדש");
   });
 
-  it("keeps the draft readiness message and the three standard actions outside the visibility guard", () => {
+  it("keeps the therapist editor focused on previewing and saving professional details", () => {
     const actionsStart = editorSource.indexOf("function ProfileActions(");
     const actionsEnd = editorSource.indexOf("function Section(", actionsStart);
     const actionsSource = editorSource.slice(actionsStart, actionsEnd);
-    const visibilityGuard = actionsSource.indexOf('status === "published"');
-    const visibilityControl = actionsSource.indexOf("disabled={visibilityPending}", visibilityGuard);
-    const draftMessage = actionsSource.indexOf(
-      "ניתן לשמור את הפרופיל ולהמשיך לערוך אותו. לאחר השמירה יוצג כאן מידע שחסר לפרסום, אם יש.",
-      visibilityControl,
-    );
-    const guardClose = actionsSource.lastIndexOf(")}", draftMessage);
-    const previewButton = actionsSource.indexOf("תצוגה מקדימה", draftMessage);
-    const saveButton = actionsSource.indexOf("שמירת פרופיל", previewButton);
-    const publishButton = actionsSource.indexOf("פרסום פרופיל", saveButton);
 
-    expect(visibilityGuard).toBeGreaterThan(-1);
-    expect(visibilityControl).toBeGreaterThan(visibilityGuard);
-    expect(guardClose).toBeGreaterThan(visibilityControl);
-    expect(draftMessage).toBeGreaterThan(guardClose);
-    expect(previewButton).toBeGreaterThan(draftMessage);
-    expect(saveButton).toBeGreaterThan(previewButton);
-    expect(publishButton).toBeGreaterThan(saveButton);
+    expect(editorSource).toContain("allowPublishing={isAdmin}");
+    expect(actionsSource).toContain('allowPublishing ? "שמירה ופרסום" : "שמירת הפרופיל"');
+    expect(actionsSource).toContain("תצוגה מקדימה");
+    expect(actionsSource).toContain("שמירת פרופיל");
+    expect(actionsSource).toContain("כל שדות החובה בפרופיל המקצועי הושלמו.");
+    expect(actionsSource).toContain("חזרה למסך הסקירה");
+    expect(actionsSource).toContain("{allowPublishing && (");
   });
 });
 
@@ -381,7 +380,8 @@ describe("account ownership of contact preferences and deletion", () => {
     expect(editorSource).toContain("setShowPublishMissing(true)");
     expect(editorSource).toContain("publishMissingFields={publishMissingFields}");
     expect(editorSource).toContain("showPublishMissing={showPublishMissing}");
-    expect(editorSource).toContain("כדי לפרסם את הפרופיל יש להשלים:");
+    expect(editorSource).toContain("כדי להשלים את פרטי הפרופיל יש למלא:");
+    expect(editorSource).not.toContain("כדי לפרסם את הפרופיל יש להשלים:");
     expect(editorSource).not.toContain("מומלץ לפחות ${DESCRIPTION_MIN} תווים לתיאור מובן");
   });
 });
