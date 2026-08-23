@@ -115,20 +115,39 @@ export function TherapistCard({
   pageSource?: string;
 }) {
   const viewedRef = useRef(false);
+  const cardRef = useRef<HTMLAnchorElement>(null);
   const returnTo = useRouterState({
     select: (s) => buildResultsReturn(s.location.pathname, s.location.searchStr),
   });
   useEffect(() => {
-    if (viewedRef.current) return;
-    viewedRef.current = true;
-    track("therapist_card_viewed", {
-      therapist_id: t.id,
-      rank_position: rankPosition ?? null,
-      page_source: pageSource ?? null,
-      origin: "TherapistCard",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t.id]);
+    const card = cardRef.current;
+    if (!card || viewedRef.current) return;
+    const recordView = () => {
+      if (viewedRef.current) return;
+      viewedRef.current = true;
+      track("therapist_card_viewed", {
+        therapist_id: t.id,
+        rank_position: rankPosition ?? null,
+        page_source: pageSource ?? null,
+        origin: "TherapistCard",
+      });
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      recordView();
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) {
+          recordView();
+          observer.disconnect();
+        }
+      },
+      { threshold: [0.5] },
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [pageSource, rankPosition, t.id]);
 
   const clinicLabel = [...new Set(t.clinic_locations.map((location) => location.city).filter(Boolean))].join(", ");
   const fallbackInitial = t.full_name.trim().charAt(0) || "ט";
@@ -136,6 +155,7 @@ export function TherapistCard({
 
   return (
     <Link
+      ref={cardRef}
       to="/therapists/$slug"
       params={{ slug: t.slug }}
       search={{}}
