@@ -20,9 +20,7 @@ export const THERAPIST_ELIGIBILITY = {
    * archived, hidden) is not. Matching only one of them silently emptied
    * search results even though the profiles were live.
    */
-  visibilities: ["published", "visible"] as Array<
-    Database["public"]["Enums"]["therapist_visibility"]
-  >,
+  visibilities: ["published", "visible"] as Array<Database["public"]["Enums"]["therapist_visibility"]>,
 };
 
 /**
@@ -35,20 +33,28 @@ export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapist
   const prefix = path === "therapists" ? "" : "therapists.";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const b = builder as any;
-  return b
+  const filtered = b
     .eq(`${prefix}is_active`, THERAPIST_ELIGIBILITY.isActive)
     .eq(`${prefix}profile_status`, THERAPIST_ELIGIBILITY.profileStatus)
-    .in(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibilities) as Q;
+    .in(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibilities);
+  const automaticBudgetReset = `budget_hold_until.is.null,budget_hold_until.lte.${new Date().toISOString()}`;
+  return (
+    path === "therapists"
+      ? filtered.or(automaticBudgetReset)
+      : filtered.or(automaticBudgetReset, { referencedTable: "therapists" })
+  ) as Q;
 }
 
 export function isEligibleRow(row: {
   is_active?: boolean | null;
   profile_status?: string | null;
   visibility?: string | null;
+  budget_hold_until?: string | null;
 }): boolean {
   return (
     row.is_active === true &&
     row.profile_status === THERAPIST_ELIGIBILITY.profileStatus &&
-    (THERAPIST_ELIGIBILITY.visibilities as string[]).includes(row.visibility ?? "")
+    (THERAPIST_ELIGIBILITY.visibilities as string[]).includes(row.visibility ?? "") &&
+    (!row.budget_hold_until || new Date(row.budget_hold_until).getTime() <= Date.now())
   );
 }
