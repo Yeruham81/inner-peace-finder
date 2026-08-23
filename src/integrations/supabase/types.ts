@@ -1690,6 +1690,15 @@ export type Database = {
         Returns: undefined;
       };
       get_my_monthly_budget: { Args: never; Returns: Json };
+      get_my_account_dashboard: { Args: never; Returns: Json };
+      get_my_account_leads: {
+        Args: { _limit?: number };
+        Returns: Json;
+      };
+      get_my_billing_transactions: {
+        Args: { _limit?: number };
+        Returns: Json;
+      };
       is_contact_email_suppressed: {
         Args: { _email: string };
         Returns: boolean;
