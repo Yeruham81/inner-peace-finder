@@ -86,13 +86,10 @@ export function ProfileOnboardingCard({ status }: { status: ProfileOnboardingSta
       <div className="border-b border-border/70 bg-brand-soft/35 px-4 py-5 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">
-              השלמת ההצטרפות
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">השלמת ההצטרפות</p>
             <h2 className="mt-1 text-xl font-bold text-foreground">הכנת הפרופיל לפרסום</h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              כל שלב שהושלם מסומן בירוק. אפשר ללחוץ על שלב שעדיין דורש פעולה ולעבור ישירות למסך
-              המתאים.
+              כל שלב שהושלם מסומן בירוק. אפשר ללחוץ על שלב שעדיין דורש פעולה ולעבור ישירות למסך המתאים.
             </p>
           </div>
           <span className="rounded-full border border-brand/20 bg-white px-3 py-1.5 text-sm font-bold text-brand ltr-num">
@@ -104,12 +101,7 @@ export function ProfileOnboardingCard({ status }: { status: ProfileOnboardingSta
 
       <ol className="divide-y divide-border/70 px-4 sm:px-6">
         {steps.map((step, index) => (
-          <OnboardingStep
-            key={step.id}
-            number={index + 1}
-            step={step}
-            state={status.steps[step.id]}
-          />
+          <OnboardingStep key={step.id} number={index + 1} step={step} state={status.steps[step.id]} />
         ))}
       </ol>
 
@@ -118,9 +110,7 @@ export function ProfileOnboardingCard({ status }: { status: ProfileOnboardingSta
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-foreground">כל שלבי ההצטרפות הושלמו</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                נשאר לאשר את פרסום הפרופיל במסך העריכה.
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">נשאר לאשר את פרסום הפרופיל במסך העריכה.</p>
             </div>
             <Button asChild>
               <Link to="/account/profile" search={{ therapistId: undefined }}>
@@ -155,15 +145,7 @@ export function ProfileOnboardingCard({ status }: { status: ProfileOnboardingSta
   );
 }
 
-function OnboardingStep({
-  number,
-  step,
-  state,
-}: {
-  number: number;
-  step: Step;
-  state: OnboardingStepState;
-}) {
+function OnboardingStep({ number, step, state }: { number: number; step: Step; state: OnboardingStepState }) {
   const Icon = step.icon;
   const content = (
     <div className="flex items-start gap-3 py-4">
@@ -199,21 +181,11 @@ function OnboardingStep({
                   : "bg-muted text-muted-foreground"
             }`}
           >
-            {state === "complete" ? (
-              <Check className="h-3 w-3" />
-            ) : (
-              <Circle className="h-2.5 w-2.5" />
-            )}
-            {state === "complete"
-              ? "הושלם"
-              : state === "action_required"
-                ? "נדרשת פעולה"
-                : "טרם הושלם"}
+            {state === "complete" ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
+            {state === "complete" ? "הושלם" : state === "action_required" ? "נדרשת פעולה" : "טרם הושלם"}
           </span>
         </span>
-        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-          {step.description}
-        </span>
+        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{step.description}</span>
         {step.action && step.route && state !== "complete" && (
           <span className="mt-2 inline-block text-xs font-semibold text-brand underline-offset-4 group-hover:underline">
             {step.action}
@@ -231,13 +203,7 @@ function OnboardingStep({
   );
 }
 
-function StepLink({
-  route,
-  children,
-}: {
-  route: Exclude<StepRoute, null>;
-  children: React.ReactNode;
-}) {
+function StepLink({ route, children }: { route: Exclude<StepRoute, null>; children: React.ReactNode }) {
   const className =
     "group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40";
   if (route === "profile") {
@@ -267,8 +233,7 @@ function StepLink({
 }
 
 function buildSteps(status: ProfileOnboardingStatus): Step[] {
-  const accountTitle =
-    status.ownershipMode === "claimed" ? "קבלת הבעלות על הפרופיל" : "פתיחת החשבון ושיוך הפרופיל";
+  const accountTitle = status.ownershipMode === "claimed" ? "קבלת הבעלות על הפרופיל" : "פתיחת החשבון ושיוך הפרופיל";
   const accountDescription =
     status.accountStatus === "suspended"
       ? "החשבון מושהה ונדרשת בדיקה מול צוות טיפולינקס."
@@ -280,15 +245,9 @@ function buildSteps(status: ProfileOnboardingStatus): Step[] {
 
   const credentialCopy: Record<ProfileOnboardingStatus["credentialState"], [string, string]> = {
     not_started: ["אימות הסמכות ותארים", "יש להעלות מסמך לאימות או לבחור להמשיך ללא אימות מקצועי."],
-    submitted: [
-      "אימות הסמכות ותארים",
-      "המסמכים הוגשו וממתינים לבדיקה. תגית אימות תופיע רק לאחר אישור מנהל.",
-    ],
+    submitted: ["אימות הסמכות ותארים", "המסמכים הוגשו וממתינים לבדיקה. תגית אימות תופיע רק לאחר אישור מנהל."],
     verified: ["אימות הסמכות ותארים", "המסמכים אושרו ותגית האימות יכולה להופיע בפרופיל הציבורי."],
-    skipped: [
-      "אימות הסמכות ותארים",
-      "בחרת להמשיך ללא אימות מקצועי, ולכן לא תוצג תגית אימות בפרופיל.",
-    ],
+    skipped: ["אימות הסמכות ותארים", "בחרת להמשיך ללא אימות מקצועי, ולכן לא תוצג תגית אימות בפרופיל."],
     action_required: ["אימות הסמכות ותארים", "נדרש להעלות מסמך מעודכן או לתקן את פרטי ההסמכה."],
   };
 
