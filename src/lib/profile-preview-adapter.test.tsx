@@ -17,6 +17,10 @@ const settingsSource = readFileSync(
   join(import.meta.dir, "..", "routes", "_authenticated", "account.settings.tsx"),
   "utf8",
 );
+const contactPreferencesSource = readFileSync(
+  join(import.meta.dir, "..", "components", "account", "contact-preferences-panel.tsx"),
+  "utf8",
+);
 const deleteProfilePanelSource = readFileSync(
   join(import.meta.dir, "..", "components", "account", "delete-profile-panel.tsx"),
   "utf8",
@@ -298,7 +302,7 @@ describe("profile visibility actions", () => {
   });
 });
 
-describe("account settings ownership of contact preferences and deletion", () => {
+describe("account ownership of contact preferences and deletion", () => {
   it("keeps permanent profile deletion at the bottom of the editor behind a preliminary native disclosure", () => {
     expect(editorSource).toContain("<DeleteProfilePanel");
     expect(settingsSource).not.toContain("deleteMyProfilePermanently");
@@ -320,19 +324,20 @@ describe("account settings ownership of contact preferences and deletion", () =>
     expect(deleteProfilePanelSource).toContain("כן, מחיקת הפרופיל לצמיתות");
   });
 
-  it("defaults new profiles to email and manages channel choices only from account settings", () => {
+  it("defaults new profiles to email and manages channel choices from the leads area", () => {
     expect(editorSource).toContain('contact_methods: ["email"]');
     expect(editorSource).toContain('preferred_contact_method: "email"');
     expect(editorSource).not.toContain("CONTACT_METHOD_OPTIONS");
-    expect(settingsSource).toContain("CONTACT_METHOD_OPTIONS");
-    expect(settingsSource).toContain("updateMyContactPreferences");
+    expect(settingsSource).not.toContain("CONTACT_METHOD_OPTIONS");
+    expect(contactPreferencesSource).toContain("CONTACT_METHOD_OPTIONS");
+    expect(contactPreferencesSource).toContain("updateMyContactPreferences");
   });
 
-  it("shows contact preferences as a read-only summary with a direct settings shortcut", () => {
+  it("shows contact preferences as a read-only summary with a direct leads shortcut", () => {
     expect(editorSource).toContain("function ContactPreferencesSummary");
     expect(editorSource).toContain("ערוצים פעילים");
     expect(editorSource).toContain("ערוץ מועדף");
-    expect(editorSource).toContain('to="/account/settings"');
+    expect(editorSource).toContain('to="/account/leads"');
     expect(editorSource).toContain("ניהול דרכי התקשרות");
 
     const summaryStart = editorSource.indexOf("function ContactPreferencesSummary");
@@ -343,7 +348,7 @@ describe("account settings ownership of contact preferences and deletion", () =>
     expect(summaryEnd).toBeGreaterThan(summaryStart);
     expect(summarySource).not.toContain("CONTACT_METHOD_OPTIONS");
     expect(summarySource).not.toContain("onCheckedChange");
-    expect(settingsSource).toContain("CONTACT_METHOD_OPTIONS");
+    expect(contactPreferencesSource).toContain("CONTACT_METHOD_OPTIONS");
   });
 
   it("does not let hidden contact preferences block profile publishing", () => {
