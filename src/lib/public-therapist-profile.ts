@@ -59,6 +59,8 @@ export const PRIVATE_THERAPIST_COLUMNS = [
   "profile_status",
   "visibility",
   "is_active",
+  "budget_hold_until",
+  "budget_hold_reason",
   "region",
   "country",
   "latitude",
