@@ -533,6 +533,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      account_support_requests: {
+        Row: {
+          account_id: string;
+          category: string;
+          created_at: string;
+          id: string;
+          message: string;
+          status: string;
+          subject: string;
+          updated_at: string;
+        };
+        Insert: {
+          account_id: string;
+          category: string;
+          created_at?: string;
+          id?: string;
+          message: string;
+          status?: string;
+          subject: string;
+          updated_at?: string;
+        };
+        Update: {
+          account_id?: string;
+          category?: string;
+          created_at?: string;
+          id?: string;
+          message?: string;
+          status?: string;
+          subject?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "account_support_requests_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       therapist_accounts: {
         Row: {
           account_status: Database["public"]["Enums"]["therapist_account_status"];
@@ -540,6 +581,8 @@ export type Database = {
           credential_verification_skipped_at: string | null;
           created_at: string;
           id: string;
+          notify_account_updates: boolean;
+          notify_new_leads: boolean;
           onboarding_completed: boolean;
           payment_method_status: string;
           updated_at: string;
@@ -550,6 +593,8 @@ export type Database = {
           credential_verification_skipped_at?: string | null;
           created_at?: string;
           id?: string;
+          notify_account_updates?: boolean;
+          notify_new_leads?: boolean;
           onboarding_completed?: boolean;
           payment_method_status?: string;
           updated_at?: string;
@@ -560,6 +605,8 @@ export type Database = {
           credential_verification_skipped_at?: string | null;
           created_at?: string;
           id?: string;
+          notify_account_updates?: boolean;
+          notify_new_leads?: boolean;
           onboarding_completed?: boolean;
           payment_method_status?: string;
           updated_at?: string;
@@ -1623,6 +1670,13 @@ export type Database = {
         Args: { _email: string };
         Returns: boolean;
       };
+      get_my_notification_preferences: {
+        Args: never;
+        Returns: {
+          notify_account_updates: boolean;
+          notify_new_leads: boolean;
+        }[];
+      };
       issue_lead_challenge: {
         Args: {
           _expected: number;
@@ -1653,6 +1707,21 @@ export type Database = {
         Returns: undefined;
       };
       purge_expired_lead_challenges: { Args: never; Returns: number };
+      publish_my_completed_profile: { Args: never; Returns: Json };
+      submit_my_support_request: {
+        Args: { _category: string; _message: string; _subject: string };
+        Returns: string;
+      };
+      update_my_notification_preferences: {
+        Args: {
+          _notify_account_updates: boolean;
+          _notify_new_leads: boolean;
+        };
+        Returns: {
+          notify_account_updates: boolean;
+          notify_new_leads: boolean;
+        }[];
+      };
       record_contact_email_suppressions: {
         Args: { _emails: string[]; _source: string };
         Returns: number;
