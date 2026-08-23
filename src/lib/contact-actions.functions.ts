@@ -5,7 +5,9 @@ import { applyEligibility } from "./search-eligibility";
 
 const DirectContactInput = z.object({
   therapistId: z.string().uuid(),
-  method: z.enum(["whatsapp", "phone"]),
+  // Phone is deliberately NOT accepted here: the phone channel is served by the
+  // server-bridged callback flow, which never releases a number to the browser.
+  method: z.enum(["whatsapp"]),
 });
 
 export type DirectContactTargetResult =
