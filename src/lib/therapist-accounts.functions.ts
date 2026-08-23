@@ -6,6 +6,8 @@ export type TherapistAccount = {
   auth_user_id: string;
   onboarding_completed: boolean;
   account_status: "pending" | "active" | "claimed" | "suspended";
+  credential_verification_skipped_at: string | null;
+  payment_method_status: "not_configured" | "active" | "action_required" | "expired";
   created_at: string;
   updated_at: string;
   owned_therapist_id: string | null;
@@ -50,4 +52,3 @@ export const ensureTherapistAccount = createServerFn({ method: "POST" })
 
     return { ...(account as TherapistAccount), owned_therapist_id: owned?.id ?? null };
   });
-
