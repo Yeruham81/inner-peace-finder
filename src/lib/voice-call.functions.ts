@@ -91,12 +91,9 @@ export const startVoiceCall = createServerFn({ method: "POST" })
       return { ok: false, reason: "channel_unavailable" };
     }
 
-    const {
-      createVisitorCall,
-      externalWebhookUrl,
-      getTwilioConfig,
-      sanitizedBase,
-    } = await import("./voice-webhook-urls.server");
+    const { createVisitorCall, externalWebhookUrl, getTwilioConfig, sanitizedBase } = await import(
+      "./twilio-voice.server"
+    );
 
     let base: string;
     try {

@@ -190,6 +190,17 @@ export function externalWebhookUrl(request: Request): string {
   return `${proto}://${host}${url.pathname}${url.search}`;
 }
 
+/** Origin of an externally visible URL, used to build webhook callbacks. */
+export function sanitizedBase(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return "";
+    return parsed.origin;
+  } catch {
+    return "";
+  }
+}
+
 export type VerifiedWebhook =
   | { ok: true; params: Record<string, string>; url: string }
   | { ok: false; status: number };
