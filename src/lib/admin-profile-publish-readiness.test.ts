@@ -20,13 +20,14 @@ describe("admin-created profile publish readiness", () => {
     expect(editorSource).toContain('const displayStatus: "draft" | "completed" | "published" | "frozen"');
     expect(editorSource).toContain('profile.data?.visibility === "visible"');
     expect(editorSource).toContain("<StatusBadge status={displayStatus} />");
+    expect(editorSource).toContain("allowPublishing={isAdmin}");
+    expect(editorSource).toContain("{allowPublishing && (");
     expect(editorSource).toContain("disabled={pendingAction !== null || publishMissing}");
   });
 
   it("enforces the professional email again at the server boundary for admin-public profiles", () => {
-    expect(profileFunctions).toContain(
-      'function validateForPublish(input: SaveInput, saveMode: "self" | "admin_public_info" = "self")',
-    );
+    expect(profileFunctions).toContain("function validateForPublish(");
+    expect(profileFunctions).toContain('saveMode: "self" | "admin_public_info" = "self"');
     expect(profileFunctions).toContain('saveMode === "admin_public_info" && !input.email?.trim()');
     expect(profileFunctions).toContain('missing.push("אימייל מקצועי")');
     expect(profileFunctions).toContain("validateForPublish(data, saveMode)");
