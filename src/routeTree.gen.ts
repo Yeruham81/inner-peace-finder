@@ -23,6 +23,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
 import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
 import { Route as AdminTherapistsRouteImport } from './routes/admin/therapists'
+import { Route as AdminSupportRouteImport } from './routes/admin/support'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
@@ -111,6 +112,11 @@ const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
 const AdminTherapistsRoute = AdminTherapistsRouteImport.update({
   id: '/therapists',
   path: '/therapists',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSupportRoute = AdminSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/therapists': typeof AdminTherapistsRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/therapists': typeof AdminTherapistsRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
@@ -313,6 +321,7 @@ export interface FileRoutesById {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/therapists': typeof AdminTherapistsRoute
   '/problems/$slug': typeof ProblemsSlugRoute
   '/therapists/$slug': typeof TherapistsSlugRoute
@@ -350,6 +359,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/leads'
     | '/admin/settings'
+    | '/admin/support'
     | '/admin/therapists'
     | '/problems/$slug'
     | '/therapists/$slug'
@@ -383,6 +393,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/leads'
     | '/admin/settings'
+    | '/admin/support'
     | '/admin/therapists'
     | '/problems/$slug'
     | '/therapists/$slug'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/leads'
     | '/admin/settings'
+    | '/admin/support'
     | '/admin/therapists'
     | '/problems/$slug'
     | '/therapists/$slug'
@@ -552,6 +564,13 @@ declare module '@tanstack/react-router' {
       path: '/therapists'
       fullPath: '/admin/therapists'
       preLoaderRoute: typeof AdminTherapistsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/support': {
+      id: '/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminSupportRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/settings': {
@@ -741,6 +760,7 @@ interface AdminRouteRouteChildren {
   AdminIntegrationsRoute: typeof AdminIntegrationsRoute
   AdminLeadsRoute: typeof AdminLeadsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSupportRoute: typeof AdminSupportRoute
   AdminTherapistsRoute: typeof AdminTherapistsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -753,6 +773,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIntegrationsRoute: AdminIntegrationsRoute,
   AdminLeadsRoute: AdminLeadsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminSupportRoute: AdminSupportRoute,
   AdminTherapistsRoute: AdminTherapistsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
