@@ -13,6 +13,7 @@ export type Database = {
           created_at: string;
           event_name: string;
           id: string;
+          identity_hash: string | null;
           page_source: string | null;
           population_id: string | null;
           problem_id: string | null;
@@ -24,6 +25,7 @@ export type Database = {
           created_at?: string;
           event_name: string;
           id?: string;
+          identity_hash?: string | null;
           page_source?: string | null;
           population_id?: string | null;
           problem_id?: string | null;
@@ -35,6 +37,7 @@ export type Database = {
           created_at?: string;
           event_name?: string;
           id?: string;
+          identity_hash?: string | null;
           page_source?: string | null;
           population_id?: string | null;
           problem_id?: string | null;
@@ -171,6 +174,9 @@ export type Database = {
           problem_id: string | null;
           provider_message_id: string | null;
           session_id: string;
+          therapist_note: string | null;
+          therapist_status: string;
+          therapist_updated_at: string | null;
           therapist_id: string;
           visitor_name: string;
           visitor_phone: string;
@@ -188,6 +194,9 @@ export type Database = {
           problem_id?: string | null;
           provider_message_id?: string | null;
           session_id: string;
+          therapist_note?: string | null;
+          therapist_status?: string;
+          therapist_updated_at?: string | null;
           therapist_id: string;
           visitor_name: string;
           visitor_phone: string;
@@ -205,6 +214,9 @@ export type Database = {
           problem_id?: string | null;
           provider_message_id?: string | null;
           session_id?: string;
+          therapist_note?: string | null;
+          therapist_status?: string;
+          therapist_updated_at?: string | null;
           therapist_id?: string;
           visitor_name?: string;
           visitor_phone?: string;
@@ -533,6 +545,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      account_notification_deliveries: {
+        Row: {
+          account_id: string;
+          attempts: number;
+          created_at: string;
+          entity_key: string;
+          id: string;
+          last_attempt_at: string;
+          last_error: string | null;
+          notification_kind: string;
+          provider_message_id: string | null;
+          sent_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          account_id: string;
+          attempts?: number;
+          created_at?: string;
+          entity_key: string;
+          id?: string;
+          last_attempt_at?: string;
+          last_error?: string | null;
+          notification_kind: string;
+          provider_message_id?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          account_id?: string;
+          attempts?: number;
+          created_at?: string;
+          entity_key?: string;
+          id?: string;
+          last_attempt_at?: string;
+          last_error?: string | null;
+          notification_kind?: string;
+          provider_message_id?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "account_notification_deliveries_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       account_support_requests: {
         Row: {
           account_id: string;
@@ -540,6 +605,9 @@ export type Database = {
           created_at: string;
           id: string;
           message: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          staff_response: string | null;
           status: string;
           subject: string;
           updated_at: string;
@@ -550,6 +618,9 @@ export type Database = {
           created_at?: string;
           id?: string;
           message: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          staff_response?: string | null;
           status?: string;
           subject: string;
           updated_at?: string;
@@ -560,6 +631,9 @@ export type Database = {
           created_at?: string;
           id?: string;
           message?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          staff_response?: string | null;
           status?: string;
           subject?: string;
           updated_at?: string;
@@ -780,6 +854,8 @@ export type Database = {
           license_number: string | null;
           profession_id: string | null;
           rejection_reason: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           submitted_at: string | null;
           therapist_id: string;
           updated_at: string;
@@ -799,6 +875,8 @@ export type Database = {
           license_number?: string | null;
           profession_id?: string | null;
           rejection_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           submitted_at?: string | null;
           therapist_id: string;
           updated_at?: string;
@@ -818,6 +896,8 @@ export type Database = {
           license_number?: string | null;
           profession_id?: string | null;
           rejection_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           submitted_at?: string | null;
           therapist_id?: string;
           updated_at?: string;
@@ -1621,6 +1701,10 @@ export type Database = {
         Args: { _attempt_id: string; _parent_call_sid: string };
         Returns: undefined;
       };
+      claim_account_notification: {
+        Args: { _account_id: string; _entity_key: string; _notification_kind: string };
+        Returns: boolean;
+      };
       begin_admin_public_profile_deletion: {
         Args: { _actor: string; _therapist_id: string };
         Returns: string;
@@ -1685,6 +1769,17 @@ export type Database = {
         Args: { _actor: string };
         Returns: Json;
       };
+      finish_account_notification: {
+        Args: {
+          _account_id: string;
+          _entity_key: string;
+          _error: string;
+          _notification_kind: string;
+          _provider_message_id: string;
+          _success: boolean;
+        };
+        Returns: undefined;
+      };
       finish_monthly_budget_notification: {
         Args: { _error?: string; _notification_id: string; _success: boolean };
         Returns: undefined;
@@ -1693,6 +1788,10 @@ export type Database = {
       get_my_account_dashboard: { Args: never; Returns: Json };
       get_my_account_leads: {
         Args: { _limit?: number };
+        Returns: Json;
+      };
+      get_my_account_lead_detail: {
+        Args: { _lead_id: string };
         Returns: Json;
       };
       get_my_billing_transactions: {
@@ -1710,6 +1809,7 @@ export type Database = {
           notify_new_leads: boolean;
         }[];
       };
+      get_my_support_requests: { Args: never; Returns: Json };
       issue_lead_challenge: {
         Args: {
           _expected: number;
@@ -1749,6 +1849,10 @@ export type Database = {
         Args: { _category: string; _message: string; _subject: string };
         Returns: string;
       };
+      update_my_account_lead: {
+        Args: { _lead_id: string; _private_note: string; _workflow_status: string };
+        Returns: Json;
+      };
       update_my_notification_preferences: {
         Args: {
           _notify_account_updates: boolean;
@@ -1762,6 +1866,19 @@ export type Database = {
       record_contact_email_suppressions: {
         Args: { _emails: string[]; _source: string };
         Returns: number;
+      };
+      record_public_analytics_event: {
+        Args: {
+          _event_name: string;
+          _identity_hash: string;
+          _page_source: string;
+          _population_id: string;
+          _problem_id: string;
+          _rank_position: number;
+          _session_hash: string;
+          _therapist_id: string;
+        };
+        Returns: boolean;
       };
       record_cta_click: {
         Args: {
