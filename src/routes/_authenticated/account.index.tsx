@@ -11,6 +11,7 @@ import {
   Search,
   UserRoundPen,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 
@@ -25,6 +26,15 @@ import {
   ACCOUNT_MOCK_SUMMARY,
 } from "@/components/account/account-mock-data";
 import { Button } from "@/components/ui/button";
+import {
+  accountChannelLabel,
+  accountLeadStatusLabel,
+  formatAccountActivityDate,
+  formatAgorot,
+  formatChartDay,
+  percentageChange,
+} from "@/lib/account-activity";
+import { getMyAccountDashboard } from "@/lib/account-activity.functions";
 import { getMyProfileOnboarding, publishMyProfile } from "@/lib/profile-onboarding.functions";
 import { setMyProfileVisibility } from "@/lib/therapist-profile.functions";
 import { ensureTherapistAccount } from "@/lib/therapist-accounts.functions";
@@ -41,8 +51,10 @@ function AccountOverviewPage() {
   const queryClient = useQueryClient();
   const ensureFn = useServerFn(ensureTherapistAccount);
   const getOnboardingFn = useServerFn(getMyProfileOnboarding);
+  const getDashboardFn = useServerFn(getMyAccountDashboard);
   const publishProfileFn = useServerFn(publishMyProfile);
   const setVisibilityFn = useServerFn(setMyProfileVisibility);
+  const [showExample, setShowExample] = useState(false);
 
   // Use the idempotent ensure call as the account query itself. This avoids a
   // first-visit race where a separate read can finish before account creation.
@@ -55,6 +67,11 @@ function AccountOverviewPage() {
     queryKey: ["profile-onboarding", user.id],
     queryFn: () => getOnboardingFn(),
     enabled: Boolean(account),
+  });
+  const dashboardQuery = useQuery({
+    queryKey: ["my-account-dashboard", user.id],
+    queryFn: () => getDashboardFn(),
+    enabled: Boolean(account?.owned_therapist_id),
   });
 
   const refreshProfileState = () => {
@@ -82,16 +99,87 @@ function AccountOverviewPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את מצב הפרופיל."),
   });
 
+  const realSummary = dashboardQuery.data?.summary;
+  const hasRealActivity = Boolean(
+    realSummary &&
+    (realSummary.impressions || realSummary.profile_views || realSummary.leads || realSummary.charges_agorot),
+  );
+  const summary = showExample
+    ? {
+        impressions: ACCOUNT_MOCK_SUMMARY.impressions,
+        previous_impressions: 1088,
+        profile_views: ACCOUNT_MOCK_SUMMARY.profileViews,
+        previous_profile_views: 157,
+        unique_profile_views: ACCOUNT_MOCK_SUMMARY.uniqueViews,
+        previous_unique_profile_views: 126,
+        leads: ACCOUNT_MOCK_SUMMARY.leads,
+        previous_leads: 19,
+        charges_agorot: ACCOUNT_MOCK_SUMMARY.charges * 100,
+        previous_charges_agorot: 175 * 100,
+      }
+    : (realSummary ?? emptySummary());
+
+  const chartData = useMemo(
+    () =>
+      showExample
+        ? ACCOUNT_MOCK_DAILY.map((day) => ({ ...day, profile_views: day.views }))
+        : (dashboardQuery.data?.daily ?? []).map((day) => ({
+            ...day,
+            day: formatChartDay(day.date),
+            views: day.profile_views,
+          })),
+    [dashboardQuery.data?.daily, showExample],
+  );
+
+  const channelData = useMemo(() => {
+    if (showExample) return ACCOUNT_MOCK_CHANNELS;
+    const raw = dashboardQuery.data?.channels ?? [];
+    const total = raw.reduce((sum, item) => sum + item.count, 0);
+    return raw
+      .filter((item) => item.channel !== "other" || item.count > 0)
+      .map((item) => ({
+        channel: accountChannelLabel(item.channel),
+        count: item.count,
+        share: total ? Math.round((item.count / total) * 100) : 0,
+      }));
+  }, [dashboardQuery.data?.channels, showExample]);
+
+  const recentLeads = useMemo(() => {
+    if (showExample) {
+      return ACCOUNT_MOCK_LEADS.slice(0, 4).map((lead) => ({
+        id: lead.id,
+        channel: lead.channel,
+        date: lead.date,
+        time: lead.time,
+        status: lead.status,
+        chargeAgorot: lead.charge * 100,
+      }));
+    }
+    return (dashboardQuery.data?.recent_leads ?? []).map((lead) => {
+      const timestamp = formatAccountActivityDate(lead.created_at);
+      return {
+        id: lead.id,
+        channel: accountChannelLabel(lead.channel),
+        date: timestamp.date,
+        time: timestamp.time,
+        status: accountLeadStatusLabel(lead.delivery_status, lead.channel),
+        chargeAgorot: lead.charge_agorot,
+      };
+    });
+  }, [dashboardQuery.data?.recent_leads, showExample]);
+
   return (
     <>
       <AccountPageHeader
         eyebrow="מרכז הניהול"
         title="סקירה"
-        description="כל מה שחשוב לדעת על החשיפה, הצפיות והפניות לפרופיל במקום אחד. בשלב זה נתוני הביצועים המוצגים הם נתוני הדגמה בלבד."
+        description="כל מה שחשוב לדעת על החשיפה, הצפיות והפניות לפרופיל במקום אחד. הנתונים מתייחסים ל-30 הימים האחרונים."
         action={
-          <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand-soft/60 px-3 py-1.5 text-xs font-semibold text-brand">
-            נתוני הדגמה
-          </span>
+          showExample ? (
+            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900">
+              תצוגת דוגמה
+            </span>
+          ) : undefined
         }
       />
 
@@ -129,35 +217,79 @@ function AccountOverviewPage() {
         <NoProfileState email={user.email ?? ""} accountStatus={statusLabel(account.account_status)} />
       )}
 
-      {!isLoading && !isError && account?.owned_therapist_id && (
+      {!isLoading && !isError && account?.owned_therapist_id && dashboardQuery.isLoading && (
+        <div className="rounded-2xl border border-border bg-surface-elevated p-6 text-sm text-muted-foreground shadow-card">
+          טוען את נתוני הפעילות…
+        </div>
+      )}
+
+      {!isLoading && !isError && account?.owned_therapist_id && dashboardQuery.isError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 shadow-card">
+          <p className="text-sm font-medium text-destructive">לא הצלחנו לטעון את נתוני הפעילות.</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => void dashboardQuery.refetch()}
+          >
+            ניסיון חוזר
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && account?.owned_therapist_id && dashboardQuery.isSuccess && (
         <div className="space-y-6">
+          {!hasRealActivity && !showExample && (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-brand-soft/40 p-5">
+              <div>
+                <p className="text-sm font-semibold text-foreground">נתוני הפעילות יתחילו להצטבר עם פרסום הפרופיל</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  כרגע יוצגו ערכי אפס. אפשר לפתוח תצוגת דוגמה כדי לראות כיצד הסקירה תיראה לאחר שתצטבר פעילות.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowExample(true)}>
+                הצגת דוגמה
+              </Button>
+            </div>
+          )}
+
+          {showExample && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <span>הנתונים הבאים הם להמחשה בלבד ואינם נשמרים או משויכים לחשבון.</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowExample(false)}>
+                חזרה לנתונים שלי
+              </Button>
+            </div>
+          )}
+
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <AccountStatCard
               label="הופעות בתוצאות"
-              value={ACCOUNT_MOCK_SUMMARY.impressions.toLocaleString("he-IL")}
+              value={summary.impressions.toLocaleString("he-IL")}
               detail="לעומת 30 הימים הקודמים"
-              change={18}
+              change={percentageChange(summary.impressions, summary.previous_impressions)}
               icon={Search}
             />
             <AccountStatCard
               label="צפיות בפרופיל"
-              value={ACCOUNT_MOCK_SUMMARY.profileViews.toLocaleString("he-IL")}
-              detail={`${ACCOUNT_MOCK_SUMMARY.uniqueViews} מבקרים ייחודיים`}
-              change={12}
+              value={summary.profile_views.toLocaleString("he-IL")}
+              detail={`${summary.unique_profile_views.toLocaleString("he-IL")} מבקרים ייחודיים`}
+              change={percentageChange(summary.profile_views, summary.previous_profile_views)}
               icon={Eye}
             />
             <AccountStatCard
               label="פניות"
-              value={ACCOUNT_MOCK_SUMMARY.leads.toLocaleString("he-IL")}
+              value={summary.leads.toLocaleString("he-IL")}
               detail="מכל אמצעי התקשורת"
-              change={8}
+              change={percentageChange(summary.leads, summary.previous_leads)}
               icon={MessageSquareText}
             />
             <AccountStatCard
               label="חיובים"
-              value={`₪${ACCOUNT_MOCK_SUMMARY.charges.toLocaleString("he-IL")}`}
-              detail="בתקופת הדוגמה"
-              change={-4}
+              value={formatAgorot(summary.charges_agorot)}
+              detail="ב-30 הימים האחרונים"
+              change={percentageChange(summary.charges_agorot, summary.previous_charges_agorot)}
               icon={CreditCard}
             />
           </div>
@@ -169,23 +301,23 @@ function AccountOverviewPage() {
             <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
               <FunnelStep
                 icon={Search}
-                value={ACCOUNT_MOCK_SUMMARY.impressions.toLocaleString("he-IL")}
+                value={summary.impressions.toLocaleString("he-IL")}
                 label="הופעות בתוצאות"
-                note="100%"
+                note={summary.impressions ? "100%" : "טרם נצברו נתונים"}
               />
               <ArrowLeft className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" />
               <FunnelStep
                 icon={MousePointerClick}
-                value={ACCOUNT_MOCK_SUMMARY.profileViews.toLocaleString("he-IL")}
+                value={summary.profile_views.toLocaleString("he-IL")}
                 label="צפיות בפרופיל"
-                note={`${((ACCOUNT_MOCK_SUMMARY.profileViews / ACCOUNT_MOCK_SUMMARY.impressions) * 100).toFixed(1)}% מההופעות`}
+                note={conversionNote(summary.profile_views, summary.impressions, "מההופעות")}
               />
               <ArrowLeft className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" />
               <FunnelStep
                 icon={MessageSquareText}
-                value={ACCOUNT_MOCK_SUMMARY.leads.toLocaleString("he-IL")}
+                value={summary.leads.toLocaleString("he-IL")}
                 label="פניות"
-                note={`${((ACCOUNT_MOCK_SUMMARY.leads / ACCOUNT_MOCK_SUMMARY.profileViews) * 100).toFixed(1)}% מהצפיות`}
+                note={conversionNote(summary.leads, summary.profile_views, "מהצפיות")}
               />
             </div>
           </AccountSectionCard>
@@ -197,7 +329,7 @@ function AccountOverviewPage() {
             >
               <div className="h-72" dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={ACCOUNT_MOCK_DAILY} margin={{ top: 8, right: 4, bottom: 0, left: -24 }}>
+                  <AreaChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: -24 }}>
                     <defs>
                       <linearGradient id="accountImpressions" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="var(--brand)" stopOpacity={0.3} />
@@ -206,7 +338,7 @@ function AccountOverviewPage() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                     <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={11} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={11} />
+                    <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
                         borderRadius: 12,
@@ -214,7 +346,7 @@ function AccountOverviewPage() {
                         direction: "rtl",
                       }}
                       formatter={(value, name) => [value, name === "impressions" ? "הופעות" : "צפיות"]}
-                      labelFormatter={(label) => `יום ${label}`}
+                      labelFormatter={(label) => `${label}`}
                     />
                     <Area
                       type="monotone"
@@ -237,23 +369,27 @@ function AccountOverviewPage() {
               </div>
             </AccountSectionCard>
 
-            <AccountSectionCard title="פניות לפי ערוץ" description="חלוקת הפניות בתקופת הדוגמה.">
-              <div className="space-y-5">
-                {ACCOUNT_MOCK_CHANNELS.map((item) => (
-                  <div key={item.channel}>
-                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                      <span className="font-medium text-foreground">{item.channel}</span>
-                      <span className="text-muted-foreground">
-                        <span className="font-semibold text-foreground ltr-num">{item.count}</span> פניות ·{" "}
-                        <span className="ltr-num">{item.share}%</span>
-                      </span>
+            <AccountSectionCard title="פניות לפי ערוץ" description="חלוקת הפניות ב-30 הימים האחרונים.">
+              {summary.leads === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">הפילוח יוצג לאחר קבלת הפנייה הראשונה.</p>
+              ) : (
+                <div className="space-y-5">
+                  {channelData.map((item) => (
+                    <div key={item.channel}>
+                      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium text-foreground">{item.channel}</span>
+                        <span className="text-muted-foreground">
+                          <span className="font-semibold text-foreground ltr-num">{item.count}</span> פניות ·{" "}
+                          <span className="ltr-num">{item.share}%</span>
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-brand" style={{ width: `${item.share}%` }} />
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-brand" style={{ width: `${item.share}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </AccountSectionCard>
           </div>
 
@@ -267,24 +403,25 @@ function AccountOverviewPage() {
                 </Button>
               }
             >
-              <div className="divide-y divide-border/70">
-                {ACCOUNT_MOCK_LEADS.slice(0, 4).map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        פנייה ב{lead.channel === "טלפון" ? "" : "-"}
-                        {lead.channel}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {lead.date} · {lead.time} · {lead.status}
-                      </p>
+              {recentLeads.length ? (
+                <div className="divide-y divide-border/70">
+                  {recentLeads.map((lead) => (
+                    <div key={lead.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">פנייה ב-{lead.channel}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {lead.date} · {lead.time} · {lead.status}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-foreground ltr-num">
+                        {lead.chargeAgorot ? formatAgorot(lead.chargeAgorot) : "—"}
+                      </span>
                     </div>
-                    <span className="shrink-0 text-sm font-semibold text-foreground ltr-num">
-                      {lead.charge ? `₪${lead.charge}` : "—"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-muted-foreground">הפניות האחרונות יופיעו כאן.</p>
+              )}
             </AccountSectionCard>
 
             <AccountSectionCard title="מצב הפרופיל" description="קיצורי דרך לניהול הנראות והאמינות של הפרופיל.">
@@ -310,6 +447,26 @@ function AccountOverviewPage() {
       )}
     </>
   );
+}
+
+function emptySummary() {
+  return {
+    impressions: 0,
+    previous_impressions: 0,
+    profile_views: 0,
+    previous_profile_views: 0,
+    unique_profile_views: 0,
+    previous_unique_profile_views: 0,
+    leads: 0,
+    previous_leads: 0,
+    charges_agorot: 0,
+    previous_charges_agorot: 0,
+  };
+}
+
+function conversionNote(value: number, base: number, suffix: string): string {
+  if (!base) return "טרם נצברו נתונים";
+  return `${((value / base) * 100).toFixed(1)}% ${suffix}`;
 }
 
 function NoProfileState({ email, accountStatus }: { email: string; accountStatus: string }) {
