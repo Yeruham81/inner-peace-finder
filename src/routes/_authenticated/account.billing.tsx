@@ -7,7 +7,6 @@ import {
   CircleDollarSign,
   CreditCard,
   ReceiptText,
-  RotateCcw,
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
@@ -24,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { getMyMonthlyBudget, setMyTestPaymentMethod, updateMyMonthlyBudget } from "@/lib/billing-budget.functions";
+import { accountChannelLabel, formatAccountActivityDate, formatAgorot, shortActivityId } from "@/lib/account-activity";
+import { getMyBillingTransactions } from "@/lib/account-activity.functions";
 import { getMyProfileOnboarding } from "@/lib/profile-onboarding.functions";
 
 export const Route = createFileRoute("/_authenticated/account/billing")({
@@ -38,6 +39,7 @@ function AccountBillingPage() {
   const queryClient = useQueryClient();
   const getOnboardingFn = useServerFn(getMyProfileOnboarding);
   const getMonthlyBudgetFn = useServerFn(getMyMonthlyBudget);
+  const getBillingTransactionsFn = useServerFn(getMyBillingTransactions);
   const updateMonthlyBudgetFn = useServerFn(updateMyMonthlyBudget);
   const setTestPaymentFn = useServerFn(setMyTestPaymentMethod);
   const onboarding = useQuery({
@@ -48,12 +50,17 @@ function AccountBillingPage() {
     queryKey: ["my-monthly-budget"],
     queryFn: () => getMonthlyBudgetFn(),
   });
+  const billingHistory = useQuery({
+    queryKey: ["my-billing-transactions"],
+    queryFn: () => getBillingTransactionsFn(),
+  });
   const paymentMethodStatus = onboarding.data?.paymentMethodStatus ?? "not_configured";
   const paymentMethodKind = onboarding.data?.paymentMethodKind ?? "none";
   const isAdmin = user.app_metadata?.tipulinks_role === "admin";
   const [hasMonthlyLimit, setHasMonthlyLimit] = useState(false);
   const [monthlyLimit, setMonthlyLimit] = useState("");
   const [notifyOnExhaustion, setNotifyOnExhaustion] = useState(true);
+  const [showExampleHistory, setShowExampleHistory] = useState(false);
 
   useEffect(() => {
     if (!budget.data) return;
@@ -94,25 +101,69 @@ function AccountBillingPage() {
   const spent = budget.data?.spent_agorot ?? 0;
   const limit = budget.data?.monthly_limit_agorot ?? null;
   const usagePercent = limit ? Math.min(100, (spent / limit) * 100) : 0;
+  const chargedLeads = billingHistory.data?.charged_leads ?? 0;
+  const averageCharge = chargedLeads ? Math.round(spent / chargedLeads) : 0;
+  const remainingBudget = budget.data?.remaining_agorot ?? null;
+  const transactionRows = showExampleHistory
+    ? ACCOUNT_MOCK_TRANSACTIONS.map((transaction) => ({
+        id: transaction.id,
+        date: transaction.date,
+        description: transaction.description,
+        type: transaction.type,
+        amountAgorot: transaction.amount * 100,
+      }))
+    : (billingHistory.data?.transactions ?? []).map((transaction) => {
+        const timestamp = formatAccountActivityDate(transaction.created_at);
+        const leadId = transaction.lead_id ? shortActivityId(transaction.lead_id, "L") : null;
+        return {
+          id: shortActivityId(transaction.id, "TX"),
+          date: `${timestamp.date} · ${timestamp.time}`,
+          description: `חיוב עבור פנייה ב-${accountChannelLabel(transaction.channel)}${leadId ? ` · ${leadId}` : ""}`,
+          type: "חיוב" as const,
+          amountAgorot: transaction.amount_agorot,
+        };
+      });
 
   return (
     <>
       <AccountPageHeader
         eyebrow="כספים"
         title="חיובים"
-        description="מעקב אחר חיובים עבור פניות, זיכויים ותנועות בחשבון. מנגנון התשלום עצמו יחובר בשלב מאוחר יותר."
+        description="מעקב אחר חיובים עבור פניות, ניצול התקציב ותנועות שנרשמו בחשבון. מנגנון הסליקה עצמו יחובר בשלב מאוחר יותר."
         action={
-          <Badge variant="secondary" className="bg-brand-soft text-brand hover:bg-brand-soft">
-            נתוני הדגמה
-          </Badge>
+          showExampleHistory ? (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-900 hover:bg-amber-100">
+              דוגמת היסטוריה
+            </Badge>
+          ) : undefined
         }
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <AccountStatCard label="חיוב החודש" value="₪168" detail="21 פניות שחויבו" icon={CreditCard} />
-        <AccountStatCard label="זיכויים" value="₪8" detail="זיכוי אחד בתקופה" icon={RotateCcw} />
-        <AccountStatCard label="עלות ממוצעת לפנייה" value="₪8.00" detail="בכל הערוצים" icon={CircleDollarSign} />
-        <AccountStatCard label="יתרה לתשלום" value="₪160" detail="נתון הדגמה בלבד" icon={WalletCards} />
+        <AccountStatCard
+          label="חיוב החודש"
+          value={formatAgorot(spent)}
+          detail={`${chargedLeads.toLocaleString("he-IL")} פניות שחויבו`}
+          icon={CreditCard}
+        />
+        <AccountStatCard
+          label="פניות שחויבו"
+          value={chargedLeads.toLocaleString("he-IL")}
+          detail="בחודש הקלנדרי הנוכחי"
+          icon={ReceiptText}
+        />
+        <AccountStatCard
+          label="עלות ממוצעת לפנייה"
+          value={formatAgorot(averageCharge)}
+          detail="לפי חיובי החודש"
+          icon={CircleDollarSign}
+        />
+        <AccountStatCard
+          label="נותר בתקציב"
+          value={remainingBudget === null ? "ללא הגבלה" : formatAgorot(remainingBudget)}
+          detail={limit === null ? "לא הוגדרה תקרה חודשית" : `מתוך ${formatAgorot(limit)}`}
+          icon={WalletCards}
+        />
       </div>
 
       <div className="mt-6">
@@ -218,27 +269,69 @@ function AccountBillingPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]">
-        <AccountSectionCard title="היסטוריית תנועות" description="חיובים וזיכויים אחרונים בחשבון.">
-          <div className="divide-y divide-border/70">
-            {ACCOUNT_MOCK_TRANSACTIONS.map((transaction) => (
-              <div key={transaction.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{transaction.description}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {transaction.date} · <span className="ltr-num">{transaction.id}</span>
-                  </p>
+        <AccountSectionCard title="היסטוריית תנועות" description="חיובים אחרונים שנרשמו עבור פניות.">
+          {showExampleHistory && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+              <span>זוהי המחשה בלבד. התקציב ואמצעי התשלום המוצגים בעמוד נשארים הנתונים האמיתיים שלך.</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowExampleHistory(false)}>
+                חזרה להיסטוריה שלי
+              </Button>
+            </div>
+          )}
+          {billingHistory.isLoading && !showExampleHistory ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">טוען את היסטוריית התנועות…</p>
+          ) : billingHistory.isError && !showExampleHistory ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-destructive">לא ניתן לטעון את היסטוריית התנועות.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => void billingHistory.refetch()}
+              >
+                ניסיון חוזר
+              </Button>
+            </div>
+          ) : transactionRows.length ? (
+            <div className="divide-y divide-border/70">
+              {transactionRows.map((transaction) => (
+                <div key={transaction.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{transaction.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {transaction.date} · <span className="ltr-num">{transaction.id}</span>
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-left">
+                    <p
+                      className={`text-sm font-bold ltr-num ${transaction.type === "זיכוי" ? "text-emerald-700" : "text-foreground"}`}
+                    >
+                      {formatAgorot(transaction.amountAgorot)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{transaction.type}</p>
+                  </div>
                 </div>
-                <div className="shrink-0 text-left">
-                  <p
-                    className={`text-sm font-bold ltr-num ${transaction.type === "זיכוי" ? "text-emerald-700" : "text-foreground"}`}
-                  >
-                    {transaction.amount < 0 ? `-₪${Math.abs(transaction.amount)}` : `₪${transaction.amount}`}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{transaction.type}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <ReceiptText className="mx-auto h-8 w-8 text-brand" />
+              <p className="mt-3 text-sm font-semibold text-foreground">עדיין לא נרשמו תנועות חיוב</p>
+              <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                לאחר קבלת פנייה מחויבת, פרטי התנועה יופיעו כאן באופן אוטומטי.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setShowExampleHistory(true)}
+              >
+                הצגת דוגמה
+              </Button>
+            </div>
+          )}
         </AccountSectionCard>
 
         <AccountSectionCard title="אמצעי תשלום" description="יחובר יחד עם מערכת החיוב האמיתית.">
@@ -319,12 +412,4 @@ function AccountBillingPage() {
       </div>
     </>
   );
-}
-
-function formatAgorot(agorot: number): string {
-  return new Intl.NumberFormat("he-IL", {
-    style: "currency",
-    currency: "ILS",
-    minimumFractionDigits: agorot % 100 === 0 ? 0 : 2,
-  }).format(agorot / 100);
 }
