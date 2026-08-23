@@ -42,7 +42,7 @@ export const Route = createFileRoute("/api/public/voice/therapist-status")({
         if (row?.billable_created && row.attempt_id) {
           const { data: session } = await supabaseAdmin
             .from("voice_call_sessions")
-            .select("therapist_id")
+            .select("therapist_id, lead_id")
             .eq("id", row.attempt_id)
             .maybeSingle();
           if (session?.therapist_id) {
@@ -54,6 +54,18 @@ export const Route = createFileRoute("/api/public/voice/therapist-status")({
                 therapistId: session.therapist_id,
                 error: notificationError instanceof Error ? notificationError.message : "unknown_error",
               });
+            }
+            if (session.lead_id) {
+              try {
+                const { sendNewLeadAccountNotification } = await import("@/lib/account-notifications.server");
+                await sendNewLeadAccountNotification(session.therapist_id, session.lead_id);
+              } catch (notificationError) {
+                console.error("[account-notification] voice lead failed", {
+                  therapistId: session.therapist_id,
+                  leadId: session.lead_id,
+                  error: notificationError instanceof Error ? notificationError.message : "unknown_error",
+                });
+              }
             }
           }
         }
