@@ -99,6 +99,7 @@ function AccountSettingsPage() {
     onSuccess: () => {
       toast.success("העדפות ההתקשרות נשמרו.");
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-onboarding"] });
     },
     onError: (error: Error) => toast.error(error.message || "לא ניתן לשמור את העדפות ההתקשרות."),
   });
