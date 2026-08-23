@@ -1,8 +1,7 @@
 import type { CredentialStatus } from "./credential-workflow";
 
 export type PaymentMethodStatus = "not_configured" | "active" | "action_required" | "expired";
-export type CredentialOnboardingState =
-  "not_started" | "submitted" | "verified" | "skipped" | "action_required";
+export type CredentialOnboardingState = "not_started" | "submitted" | "verified" | "skipped" | "action_required";
 export type OnboardingStepState = "complete" | "incomplete" | "action_required";
 export type OwnershipMode = "account_only" | "self_created" | "claimed";
 
@@ -24,6 +23,8 @@ export type ProfileOnboardingStatus = {
   isPublished: boolean;
   isPublic: boolean;
   isBillingPaused: boolean;
+  isActive: boolean;
+  visibility: "visible" | "hidden";
   profileSlug: string | null;
 };
 
@@ -57,8 +58,7 @@ export function deriveCredentialOnboardingState(
   credentials: CredentialInput[],
   skippedAt: string | null,
 ): CredentialOnboardingState {
-  if (credentials.some((credential) => credential.verification_status === "verified"))
-    return "verified";
+  if (credentials.some((credential) => credential.verification_status === "verified")) return "verified";
   if (
     credentials.some(
       (credential) =>
@@ -70,9 +70,7 @@ export function deriveCredentialOnboardingState(
   }
   if (
     credentials.some(
-      (credential) =>
-        credential.verification_status === "rejected" ||
-        credential.verification_status === "expired",
+      (credential) => credential.verification_status === "rejected" || credential.verification_status === "expired",
     )
   ) {
     return "action_required";
@@ -89,8 +87,7 @@ export function hasConfiguredContact(profile: ProfileInput): boolean {
   if (methods.length === 0 || !profile.preferred_contact_method) return false;
   if (!methods.some((method) => method === profile.preferred_contact_method)) return false;
   if (methods.includes("email") && !profile.email?.trim()) return false;
-  if ((methods.includes("whatsapp") || methods.includes("phone")) && !profile.phone?.trim())
-    return false;
+  if ((methods.includes("whatsapp") || methods.includes("phone")) && !profile.phone?.trim()) return false;
   return true;
 }
 
@@ -104,13 +101,8 @@ function stepForPayment(status: PaymentMethodStatus): OnboardingStepState {
   return status === "active" ? "complete" : "incomplete";
 }
 
-export function buildProfileOnboardingStatus(
-  input: BuildProfileOnboardingInput,
-): ProfileOnboardingStatus {
-  const credentialState = deriveCredentialOnboardingState(
-    input.credentials,
-    input.credentialVerificationSkippedAt,
-  );
+export function buildProfileOnboardingStatus(input: BuildProfileOnboardingInput): ProfileOnboardingStatus {
+  const credentialState = deriveCredentialOnboardingState(input.credentials, input.credentialVerificationSkippedAt);
   const ownershipMode: OwnershipMode = !input.profile
     ? "account_only"
     : input.profile.profile_origin === "admin_public_info"
@@ -145,6 +137,9 @@ export function buildProfileOnboardingStatus(
     isPublished,
     isPublic,
     isBillingPaused,
+    isActive: Boolean(input.profile?.is_active),
+    visibility:
+      input.profile?.visibility === "visible" || input.profile?.visibility === "published" ? "visible" : "hidden",
     profileSlug: input.profile?.slug ?? null,
   };
 }
