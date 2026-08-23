@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/public/voice/therapist-status")({
         if (!parentSid || !status) return new Response("", { status: 204 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { error } = await supabaseAdmin.rpc("record_voice_call_leg_event", {
+        const { data: rows, error } = await supabaseAdmin.rpc("record_voice_call_leg_event", {
           _parent_call_sid: parentSid,
           _child_call_sid: childSid || (null as unknown as string),
           _leg: "therapist",
@@ -36,6 +36,26 @@ export const Route = createFileRoute("/api/public/voice/therapist-status")({
         if (error) {
           console.error("[voice] therapist-leg bookkeeping failed", { code: error.code });
           return new Response("", { status: 500 });
+        }
+
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        if (row?.billable_created && row.attempt_id) {
+          const { data: session } = await supabaseAdmin
+            .from("voice_call_sessions")
+            .select("therapist_id")
+            .eq("id", row.attempt_id)
+            .maybeSingle();
+          if (session?.therapist_id) {
+            try {
+              const { sendBudgetExhaustedNotification } = await import("@/lib/billing-budget.server");
+              await sendBudgetExhaustedNotification(session.therapist_id);
+            } catch (notificationError) {
+              console.error("[billing-budget] voice notification failed", {
+                therapistId: session.therapist_id,
+                error: notificationError instanceof Error ? notificationError.message : "unknown_error",
+              });
+            }
+          }
         }
 
         return new Response("", { status: 204 });
