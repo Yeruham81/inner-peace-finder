@@ -39,6 +39,7 @@ import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authe
 import { Route as AuthenticatedAccountLeadsRouteImport } from './routes/_authenticated/account.leads'
 import { Route as AuthenticatedAccountCredentialsRouteImport } from './routes/_authenticated/account.credentials'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated/account.billing'
+import { Route as ApiPublicVoiceTherapistStatusRouteImport } from './routes/api/public/voice/therapist-status'
 import { Route as ApiPublicVoiceAnswerRouteImport } from './routes/api/public/voice/answer'
 
 const TherapyInformationRoute = TherapyInformationRouteImport.update({
@@ -196,6 +197,12 @@ const AuthenticatedAccountBillingRoute =
     path: '/billing',
     getParentRoute: () => AuthenticatedAccountRoute,
   } as any)
+const ApiPublicVoiceTherapistStatusRoute =
+  ApiPublicVoiceTherapistStatusRouteImport.update({
+    id: '/api/public/voice/therapist-status',
+    path: '/api/public/voice/therapist-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicVoiceAnswerRoute = ApiPublicVoiceAnswerRouteImport.update({
   id: '/api/public/voice/answer',
   path: '/api/public/voice/answer',
@@ -233,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/account/': typeof AuthenticatedAccountIndexRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/account': typeof AuthenticatedAccountIndexRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/account/': typeof AuthenticatedAccountIndexRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/account/settings'
     | '/account/'
     | '/api/public/voice/answer'
+    | '/api/public/voice/therapist-status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/account/settings'
     | '/account'
     | '/api/public/voice/answer'
+    | '/api/public/voice/therapist-status'
   id:
     | '__root__'
     | '/'
@@ -394,6 +406,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/settings'
     | '/_authenticated/account/'
     | '/api/public/voice/answer'
+    | '/api/public/voice/therapist-status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -410,6 +423,7 @@ export interface RootRouteChildren {
   ProblemsSlugRoute: typeof ProblemsSlugRoute
   TherapistsSlugRoute: typeof TherapistsSlugRoute
   ApiPublicVoiceAnswerRoute: typeof ApiPublicVoiceAnswerRoute
+  ApiPublicVoiceTherapistStatusRoute: typeof ApiPublicVoiceTherapistStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -624,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport
       parentRoute: typeof AuthenticatedAccountRoute
     }
+    '/api/public/voice/therapist-status': {
+      id: '/api/public/voice/therapist-status'
+      path: '/api/public/voice/therapist-status'
+      fullPath: '/api/public/voice/therapist-status'
+      preLoaderRoute: typeof ApiPublicVoiceTherapistStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/voice/answer': {
       id: '/api/public/voice/answer'
       path: '/api/public/voice/answer'
@@ -712,6 +733,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProblemsSlugRoute: ProblemsSlugRoute,
   TherapistsSlugRoute: TherapistsSlugRoute,
   ApiPublicVoiceAnswerRoute: ApiPublicVoiceAnswerRoute,
+  ApiPublicVoiceTherapistStatusRoute: ApiPublicVoiceTherapistStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
