@@ -1,18 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
 import { formatAdminDate } from "@/components/admin/admin-formatters";
-import { MOCK_CREDENTIAL_REQUESTS, type MockCredentialRequest } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  getAdminCredentialDocumentUrl,
+  listAdminCredentials,
+  reviewAdminCredential,
+  type AdminCredentialRow,
+} from "@/lib/admin-credentials.functions";
 
 export const Route = createFileRoute("/admin/credentials")({
   head: () => ({
@@ -25,8 +33,20 @@ export const Route = createFileRoute("/admin/credentials")({
   component: CredentialsPage,
 });
 
+const STATUS_LABELS: Record<AdminCredentialRow["status"], string> = {
+  unverified: "טרם הוגש",
+  pending_review: "ממתין לבדיקה",
+  verified: "מאומת",
+  rejected: "נדחה",
+  expired: "פג תוקף",
+};
+
 function CredentialsPage() {
-  const [requests, setRequests] = useState<MockCredentialRequest[]>(MOCK_CREDENTIAL_REQUESTS);
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listAdminCredentials);
+  const documentFn = useServerFn(getAdminCredentialDocumentUrl);
+  const reviewFn = useServerFn(reviewAdminCredential);
+  const credentials = useQuery({ queryKey: ["admin-credentials"], queryFn: () => listFn() });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ממתין לבדיקה");
   const [profession, setProfession] = useState("all");
@@ -35,31 +55,59 @@ function CredentialsPage() {
   const [rejecting, setRejecting] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const professions = useMemo(() => Array.from(new Set(MOCK_CREDENTIAL_REQUESTS.map((row) => row.profession))), []);
+  const selected = (credentials.data ?? []).find((row) => row.id === selectedId) ?? null;
+  const document = useQuery({
+    queryKey: ["admin-credential-document", selectedId],
+    queryFn: () => documentFn({ data: { credentialId: selectedId! } }),
+    enabled: Boolean(selectedId && selected?.documentAvailable),
+    staleTime: 4 * 60 * 1000,
+  });
+  const professions = useMemo(
+    () => [...new Set((credentials.data ?? []).map((row) => row.professionName).filter(Boolean) as string[])],
+    [credentials.data],
+  );
 
   const filtered = useMemo(() => {
-    const term = search.trim();
-    const rows = requests.filter((row) => {
-      if (
-        term &&
-        !row.therapistName.includes(term) &&
-        !row.credentialType.includes(term) &&
-        !row.licenseNumber.includes(term)
-      )
-        return false;
-      if (status !== "all" && row.status !== status) return false;
-      if (profession !== "all" && row.profession !== profession) return false;
+    const term = search.trim().toLocaleLowerCase("he");
+    const rows = (credentials.data ?? []).filter((row) => {
+      if (term) {
+        const haystack = [
+          row.therapistName,
+          row.credentialType,
+          row.licenseNumber ?? "",
+          row.issuingAuthority ?? "",
+          row.professionName ?? "",
+        ]
+          .join(" ")
+          .toLocaleLowerCase("he");
+        if (!haystack.includes(term)) return false;
+      }
+      if (status !== "all" && STATUS_LABELS[row.status] !== status) return false;
+      if (profession !== "all" && row.professionName !== profession) return false;
       return true;
     });
-    return [...rows].sort((a, b) =>
-      sortDirection === "asc" ? a.submittedAt.localeCompare(b.submittedAt) : b.submittedAt.localeCompare(a.submittedAt),
-    );
-  }, [requests, search, status, profession, sortDirection]);
+    return [...rows].sort((a, b) => {
+      const compare = (a.submittedAt ?? a.id).localeCompare(b.submittedAt ?? b.id);
+      return sortDirection === "asc" ? compare : -compare;
+    });
+  }, [credentials.data, profession, search, sortDirection, status]);
 
-  const selected = requests.find((row) => row.id === selectedId) ?? null;
-  const pendingCount = requests.filter((row) => row.status === "ממתין לבדיקה").length;
-  const approvedCount = requests.filter((row) => row.status === "מאומת").length;
-  const rejectedCount = requests.filter((row) => row.status === "נדחה").length;
+  const reviewMutation = useMutation({
+    mutationFn: (decision: "approve" | "reject") =>
+      reviewFn({
+        data: {
+          credentialId: selected!.id,
+          decision,
+          reason: decision === "reject" ? rejectionReason : null,
+        },
+      }),
+    onSuccess: async (result) => {
+      toast.success(result.status === "verified" ? "ההסמכה אושרה." : "ההסמכה נדחתה.");
+      closeDrawer();
+      await queryClient.invalidateQueries({ queryKey: ["admin-credentials"] });
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את ההסמכה."),
+  });
 
   function closeDrawer() {
     setSelectedId(null);
@@ -67,37 +115,40 @@ function CredentialsPage() {
     setRejectionReason("");
   }
 
-  function approveMock(id: string) {
-    setRequests((rows) =>
-      rows.map((row) => (row.id === id ? { ...row, status: "מאומת", rejectionReason: undefined } : row)),
-    );
-    closeDrawer();
-  }
+  const rows = credentials.data ?? [];
+  const pendingCount = rows.filter((row) => row.status === "pending_review").length;
+  const approvedCount = rows.filter((row) => row.status === "verified").length;
+  const rejectedCount = rows.filter((row) => row.status === "rejected").length;
 
-  function rejectMock(id: string) {
-    setRequests((rows) =>
-      rows.map((row) => (row.id === id ? { ...row, status: "נדחה", rejectionReason: rejectionReason.trim() } : row)),
-    );
-    closeDrawer();
-  }
-
-  const columns: AdminColumn<MockCredentialRequest>[] = [
+  const columns: AdminColumn<AdminCredentialRow>[] = [
     {
       key: "therapistName",
       header: "שם המטפל/ת",
       render: (row) => <span className="font-medium">{row.therapistName}</span>,
     },
     { key: "credentialType", header: "סוג ההסמכה", render: (row) => row.credentialType },
-    { key: "profession", header: "מקצוע", hideOnNarrow: true, render: (row) => row.profession },
-    { key: "authority", header: "גוף מעניק", hideOnNarrow: true, render: (row) => row.authority },
-    { key: "licenseNumber", header: "מספר רישיון", render: (row) => <span dir="ltr">{row.licenseNumber}</span> },
+    {
+      key: "profession",
+      header: "מקצוע",
+      hideOnNarrow: true,
+      render: (row) => row.professionName || "—",
+    },
+    {
+      key: "licenseNumber",
+      header: "מספר רישיון",
+      render: (row) => <span dir="ltr">{row.licenseNumber || "—"}</span>,
+    },
     {
       key: "submittedAt",
       header: "תאריך הגשה",
       sortable: true,
-      render: (row) => <span dir="ltr">{formatAdminDate(row.submittedAt)}</span>,
+      render: (row) => <span dir="ltr">{row.submittedAt ? formatAdminDate(row.submittedAt) : "—"}</span>,
     },
-    { key: "status", header: "סטטוס", render: (row) => <AdminStatusBadge status={row.status} /> },
+    {
+      key: "status",
+      header: "סטטוס",
+      render: (row) => <AdminStatusBadge status={STATUS_LABELS[row.status]} />,
+    },
     {
       key: "actions",
       header: "פעולות",
@@ -110,7 +161,7 @@ function CredentialsPage() {
             setSelectedId(row.id);
           }}
         >
-          בדיקה
+          פרטים
         </Button>
       ),
     },
@@ -120,15 +171,21 @@ function CredentialsPage() {
     <div>
       <AdminPageHeader
         title="אימות הסמכות"
-        subtitle="בדיקת בקשות אימות הסמכות (נתוני הדגמה, ללא כתיבה לשרת)"
+        subtitle={credentials.isLoading ? "טוען בקשות…" : `${rows.length} הסמכות במערכת`}
         breadcrumb="אימות הסמכות"
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <AdminStatCard label="ממתינות לבדיקה" value={pendingCount} hint="נתוני הדגמה" />
-        <AdminStatCard label="אושרו" value={approvedCount} hint="נתוני הדגמה" />
-        <AdminStatCard label="נדחו" value={rejectedCount} hint="נתוני הדגמה" />
+        <AdminStatCard label="ממתינות לבדיקה" value={pendingCount} />
+        <AdminStatCard label="אושרו" value={approvedCount} />
+        <AdminStatCard label="נדחו" value={rejectedCount} />
       </div>
+
+      {credentials.isError ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          לא ניתן לטעון את בקשות האימות.
+        </div>
+      ) : null}
 
       <AdminFilterBar>
         <AdminSearchField
@@ -143,7 +200,7 @@ function CredentialsPage() {
           label="סטטוס"
           value={status}
           onChange={setStatus}
-          options={["ממתין לבדיקה", "מאומת", "נדחה"]}
+          options={Object.values(STATUS_LABELS)}
         />
         <AdminSelectFilter
           id="credential-profession"
@@ -153,7 +210,11 @@ function CredentialsPage() {
           options={professions}
         />
         <div className="pb-0.5">
-          <Button variant="outline" size="sm" onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}
+          >
             תאריך הגשה {sortDirection === "asc" ? "↑" : "↓"}
           </Button>
         </div>
@@ -166,35 +227,22 @@ function CredentialsPage() {
         onRowClick={(row) => setSelectedId(row.id)}
         sortKey="submittedAt"
         sortDirection={sortDirection}
-        onSortChange={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
+        onSortChange={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}
         mobileRow={(row) => (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-foreground">{row.therapistName}</span>
-              <AdminStatusBadge status={row.status} />
+              <AdminStatusBadge status={STATUS_LABELS[row.status]} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {row.credentialType} · {row.profession}
+              {row.credentialType} · {row.professionName || "ללא מקצוע"}
             </p>
-            <div className="flex items-end justify-between gap-2">
-              <p className="text-[11px] text-muted-foreground">
-                {row.authority} · הוגש <span dir="ltr">{formatAdminDate(row.submittedAt)}</span>
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSelectedId(row.id);
-                }}
-              >
-                בדיקה
-              </Button>
-            </div>
+            <p className="text-[11px] text-muted-foreground">
+              הוגש {row.submittedAt ? formatAdminDate(row.submittedAt) : "ללא תאריך"}
+            </p>
           </div>
         )}
-        emptyTitle="אין בקשות מתאימות"
+        emptyTitle={credentials.isLoading ? "טוען…" : "אין בקשות מתאימות"}
       />
 
       <AdminDetailDrawer
@@ -203,27 +251,41 @@ function CredentialsPage() {
           if (!open) closeDrawer();
         }}
         title={selected ? `בדיקת הסמכה — ${selected.therapistName}` : ""}
-        description="מסך הדגמה. אישור או דחייה מעדכנים מצב מקומי בלבד."
+        description={selected ? STATUS_LABELS[selected.status] : undefined}
         footer={
-          selected && selected.status === "ממתין לבדיקה" ? (
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => approveMock(selected.id)}>
-                אישור
-              </Button>
+          selected?.status === "pending_review" ? (
+            <div className="space-y-3">
               {rejecting ? (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => rejectMock(selected.id)}
-                  disabled={!rejectionReason.trim()}
-                >
-                  אישור דחייה
+                <div className="space-y-2">
+                  <Label htmlFor="credential-rejection">סיבת הדחייה שתוצג למטפל/ת</Label>
+                  <Textarea
+                    id="credential-rejection"
+                    value={rejectionReason}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button size="sm" onClick={() => reviewMutation.mutate("approve")} disabled={reviewMutation.isPending}>
+                  אישור ההסמכה
                 </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={() => setRejecting(true)}>
-                  דחייה
-                </Button>
-              )}
+                {rejecting ? (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => reviewMutation.mutate("reject")}
+                    disabled={reviewMutation.isPending || rejectionReason.trim().length < 3}
+                  >
+                    אישור הדחייה
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => setRejecting(true)}>
+                    דחייה
+                  </Button>
+                )}
+              </div>
             </div>
           ) : null
         }
@@ -233,43 +295,46 @@ function CredentialsPage() {
             <AdminDetailSection title="פרטי הבקשה">
               <AdminDetailRow label="שם המטפל/ת" value={selected.therapistName} />
               <AdminDetailRow label="סוג ההסמכה" value={selected.credentialType} />
-              <AdminDetailRow label="מקצוע" value={selected.profession} />
-              <AdminDetailRow label="גוף מעניק" value={selected.authority} />
-              <AdminDetailRow label="מספר רישיון" value={<span dir="ltr">{selected.licenseNumber}</span>} />
+              <AdminDetailRow label="מקצוע" value={selected.professionName || "—"} />
+              <AdminDetailRow label="גוף מעניק" value={selected.issuingAuthority || "—"} />
+              <AdminDetailRow label="מוסד" value={selected.institution || "—"} />
+              <AdminDetailRow label="מספר רישיון" value={<span dir="ltr">{selected.licenseNumber || "—"}</span>} />
+              <AdminDetailRow
+                label="תאריך קבלה"
+                value={selected.issueDate ? formatAdminDate(selected.issueDate) : "—"}
+              />
               <AdminDetailRow
                 label="תאריך הגשה"
-                value={<span dir="ltr">{formatAdminDate(selected.submittedAt)}</span>}
+                value={selected.submittedAt ? formatAdminDate(selected.submittedAt) : "—"}
               />
-              <AdminDetailRow label="סטטוס" value={<AdminStatusBadge status={selected.status} />} />
-              {selected.rejectionReason ? (
-                <AdminDetailRow label="סיבת הדחייה" value={selected.rejectionReason} />
+              <AdminDetailRow label="סטטוס" value={<AdminStatusBadge status={STATUS_LABELS[selected.status]} />} />
+            </AdminDetailSection>
+
+            <AdminDetailSection title="מסמך">
+              {!selected.documentAvailable ? (
+                <p className="text-sm text-muted-foreground">לא צורף מסמך.</p>
+              ) : document.isLoading ? (
+                <p className="text-sm text-muted-foreground">מכין תצוגה מאובטחת…</p>
+              ) : document.isError ? (
+                <div>
+                  <p className="text-sm text-destructive">לא ניתן לפתוח את המסמך.</p>
+                  <Button size="sm" variant="outline" className="mt-2" onClick={() => void document.refetch()}>
+                    ניסיון חוזר
+                  </Button>
+                </div>
+              ) : document.data ? (
+                <Button asChild size="sm" variant="outline">
+                  <a href={document.data.url} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    פתיחת המסמך
+                  </a>
+                </Button>
               ) : null}
             </AdminDetailSection>
 
-            <AdminDetailSection title="מסמך שהועלה">
-              <div className="flex items-center gap-3 rounded-md bg-secondary/60 p-4">
-                <FileText className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground" dir="ltr">
-                    {selected.documentName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">תצוגה מקדימה תתאפשר בשלב הבא (הדגמה בלבד).</p>
-                </div>
-              </div>
-            </AdminDetailSection>
-
-            {rejecting ? (
-              <AdminDetailSection title="דחיית הבקשה">
-                <Label htmlFor="rejection-reason" className="text-xs text-muted-foreground">
-                  סיבת הדחייה
-                </Label>
-                <Textarea
-                  id="rejection-reason"
-                  value={rejectionReason}
-                  onChange={(event) => setRejectionReason(event.target.value)}
-                  rows={3}
-                  placeholder="פירוט הסיבה לדחייה"
-                />
+            {selected.rejectionReason ? (
+              <AdminDetailSection title="סיבת דחייה">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{selected.rejectionReason}</p>
               </AdminDetailSection>
             ) : null}
           </>
