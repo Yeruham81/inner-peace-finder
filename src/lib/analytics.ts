@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { recordPublicAnalyticsEvent } from "./analytics.functions";
 
 export type AnalyticsEventName =
   | "search_executed"
@@ -137,13 +137,12 @@ export function track(event: AnalyticsEventName, payload: AnalyticsPayload = {})
     }
 
     const row = {
-      event_name: event,
-      session_id: sessionId,
-      therapist_id: payload.therapist_id ?? null,
-      problem_id: payload.problem_id ?? null,
-      population_id: payload.population_id ?? null,
-      rank_position: payload.rank_position ?? null,
-      page_source: payload.page_source ?? null,
+      eventName: event,
+      therapistId: payload.therapist_id ?? null,
+      problemId: payload.problem_id ?? null,
+      populationId: payload.population_id ?? null,
+      rankPosition: payload.rank_position ?? null,
+      pageSource: payload.page_source ?? null,
     };
 
     if (isDebug()) {
@@ -154,15 +153,11 @@ export function track(event: AnalyticsEventName, payload: AnalyticsPayload = {})
       });
     }
 
-    // Intentionally not awaited
-    void supabase
-      .from("analytics_events")
-      .insert(row)
-      .then(({ error }) => {
-        if (error) {
-          console.debug("[analytics] insert failed", error.message);
-        }
-      });
+    // Intentionally not awaited. The server derives the analytics identity,
+    // validates the payload and applies database-backed dedupe/rate limits.
+    void recordPublicAnalyticsEvent({ data: row }).catch((error) => {
+      console.debug("[analytics] record failed", error instanceof Error ? error.message : "unknown_error");
+    });
   } catch (err) {
     console.debug("[analytics] threw", err);
   }
