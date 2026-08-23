@@ -17,9 +17,7 @@ const PAYMENT_METHOD_STATUSES = new Set<PaymentMethodStatus>([
 ]);
 
 function paymentMethodStatus(value: unknown): PaymentMethodStatus {
-  return PAYMENT_METHOD_STATUSES.has(value as PaymentMethodStatus)
-    ? (value as PaymentMethodStatus)
-    : "not_configured";
+  return PAYMENT_METHOD_STATUSES.has(value as PaymentMethodStatus) ? (value as PaymentMethodStatus) : "not_configured";
 }
 
 export const getMyProfileOnboarding = createServerFn({ method: "GET" })
@@ -65,10 +63,36 @@ export const setMyCredentialVerificationSkip = createServerFn({ method: "POST" }
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ skip: z.boolean() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: skippedAt, error } = await context.supabase.rpc(
-      "set_my_credential_verification_skip",
-      { _skip: data.skip },
-    );
+    const { data: skippedAt, error } = await context.supabase.rpc("set_my_credential_verification_skip", {
+      _skip: data.skip,
+    });
     if (error) throw new Error(error.message);
     return { skipped_at: skippedAt };
+  });
+
+export const publishMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.rpc("publish_my_completed_profile");
+    if (error) {
+      if (error.message.includes("payment_method_not_active")) {
+        throw new Error("יש לעדכן אמצעי תשלום פעיל לפני פרסום הפרופיל.");
+      }
+      if (error.message.includes("credential_step_incomplete")) {
+        throw new Error("יש להשלים את שלב אימות ההסמכות לפני פרסום הפרופיל.");
+      }
+      if (error.message.includes("contact_step_incomplete")) {
+        throw new Error("יש להשלים את דרכי קבלת הפניות לפני פרסום הפרופיל.");
+      }
+      if (error.message.includes("profile_step_incomplete")) {
+        throw new Error("יש להשלים ולשמור את פרטי הפרופיל המקצועי לפני הפרסום.");
+      }
+      throw new Error(error.message);
+    }
+    return data as {
+      therapist_id: string;
+      profile_status: "published";
+      visibility: "visible" | "hidden";
+      slug: string | null;
+    };
   });
