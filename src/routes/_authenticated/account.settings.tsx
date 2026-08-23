@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Mail, MessageCircle, Phone, ShieldCheck, Trash2 } from "lucide-react";
+import { Bell, Eye, KeyRound, LifeBuoy, Mail, Palette, Send, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,14 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { submitMySupportRequest } from "@/lib/account-support.functions";
 import {
-  deleteMyAccountPermanently,
-  getMyProfile,
-  updateMyContactPreferences,
-  type ContactMethod,
-} from "@/lib/therapist-profile.functions";
+  getMyNotificationPreferences,
+  updateMyNotificationPreferences,
+  type NotificationPreferences,
+} from "@/lib/account-settings.functions";
+import { getDisplayPreferences, saveDisplayPreferences, type DisplayPreferences } from "@/lib/display-preferences";
+import { deleteMyAccountPermanently } from "@/lib/therapist-profile.functions";
 
 export const Route = createFileRoute("/_authenticated/account/settings")({
   head: () => ({
@@ -27,81 +31,52 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
   component: AccountSettingsPage,
 });
 
-const CONTACT_METHOD_OPTIONS: readonly {
-  id: ContactMethod;
-  label: string;
-  description: string;
-  icon: typeof Mail;
-}[] = [
-  { id: "email", label: "אימייל", description: "קבלת פניות כתובות באימייל", icon: Mail },
-  { id: "whatsapp", label: "WhatsApp", description: "קבלת הודעות ב-WhatsApp", icon: MessageCircle },
-  { id: "phone", label: "שיחת טלפון", description: "קבלת שיחה בחיוג טלפוני", icon: Phone },
-];
-
-type ContactPreferencesState = {
-  email: string;
-  phone: string;
-  contact_methods: ContactMethod[];
-  preferred_contact_method: ContactMethod;
-};
+type SupportCategory = "bug" | "complaint" | "suggestion" | "other";
 
 function AccountSettingsPage() {
   const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
-  const getProfileFn = useServerFn(getMyProfile);
-  const updateContactFn = useServerFn(updateMyContactPreferences);
   const deleteAccountFn = useServerFn(deleteMyAccountPermanently);
-
-  const profile = useQuery({
-    queryKey: ["my-profile"],
-    queryFn: () => getProfileFn(),
-  });
-
-  const [contactPreferences, setContactPreferences] = useState<ContactPreferencesState>({
-    email: user.email ?? "",
-    phone: "",
-    contact_methods: ["email"],
-    preferred_contact_method: "email",
-  });
-  const [contactInitialized, setContactInitialized] = useState(false);
+  const submitSupportFn = useServerFn(submitMySupportRequest);
+  const getNotificationPreferencesFn = useServerFn(getMyNotificationPreferences);
+  const updateNotificationPreferencesFn = useServerFn(updateMyNotificationPreferences);
   const [loginEmail, setLoginEmail] = useState(user.email ?? "");
   const [loginEmailRequestSent, setLoginEmailRequestSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [displayPreferences, setDisplayPreferences] = useState<DisplayPreferences>(() => getDisplayPreferences());
+  const [supportCategory, setSupportCategory] = useState<SupportCategory>("bug");
+  const [supportSubject, setSupportSubject] = useState("");
+  const [supportMessage, setSupportMessage] = useState("");
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
+    notify_new_leads: true,
+    notify_account_updates: true,
+  });
+
+  const notificationPreferencesQuery = useQuery({
+    queryKey: ["my-notification-preferences"],
+    queryFn: () => getNotificationPreferencesFn(),
+  });
 
   useEffect(() => {
-    if (contactInitialized || !profile.isSuccess) return;
+    if (notificationPreferencesQuery.data) {
+      setNotificationPreferences(notificationPreferencesQuery.data);
+    }
+  }, [notificationPreferencesQuery.data]);
 
-    const data = profile.data;
-    const methods = data?.contact_methods?.length ? data.contact_methods : (["email"] as ContactMethod[]);
-    const preferred =
-      data?.preferred_contact_method && methods.includes(data.preferred_contact_method)
-        ? data.preferred_contact_method
-        : (methods[0] ?? "email");
-
-    setContactPreferences({
-      email: data?.email?.trim() || user.email || "",
-      phone: data?.phone ?? "",
-      contact_methods: methods,
-      preferred_contact_method: preferred,
-    });
-    setContactInitialized(true);
-  }, [contactInitialized, profile.data, profile.isSuccess, user.email]);
-
-  const contactMutation = useMutation({
-    mutationFn: () =>
-      updateContactFn({
-        data: {
-          email: contactPreferences.email || null,
-          phone: contactPreferences.phone || null,
-          contact_methods: contactPreferences.contact_methods,
-          preferred_contact_method: contactPreferences.preferred_contact_method,
-        },
-      }),
-    onSuccess: () => {
-      toast.success("העדפות ההתקשרות נשמרו.");
-      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-onboarding"] });
+  const notificationPreferencesMutation = useMutation({
+    mutationFn: (preferences: NotificationPreferences) => updateNotificationPreferencesFn({ data: preferences }),
+    onSuccess: (preferences) => {
+      setNotificationPreferences(preferences);
+      queryClient.setQueryData(["my-notification-preferences"], preferences);
+      toast.success("העדפות ההתראות נשמרו.");
     },
-    onError: (error: Error) => toast.error(error.message || "לא ניתן לשמור את העדפות ההתקשרות."),
+    onError: (error: Error) => {
+      if (notificationPreferencesQuery.data) {
+        setNotificationPreferences(notificationPreferencesQuery.data);
+      }
+      toast.error(error.message || "לא ניתן לעדכן את העדפות ההתראות.");
+    },
   });
 
   const loginEmailMutation = useMutation({
@@ -116,6 +91,34 @@ function AccountSettingsPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את אימייל ההתחברות."),
   });
 
+  const passwordMutation = useMutation({
+    mutationFn: async () => {
+      if (password.length < 8) throw new Error("הסיסמה צריכה להכיל לפחות 8 תווים.");
+      if (password !== passwordConfirmation) throw new Error("הסיסמאות אינן זהות.");
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setPassword("");
+      setPasswordConfirmation("");
+      toast.success("הסיסמה עודכנה בהצלחה.");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את הסיסמה."),
+  });
+
+  const supportMutation = useMutation({
+    mutationFn: () =>
+      submitSupportFn({
+        data: { category: supportCategory, subject: supportSubject, message: supportMessage },
+      }),
+    onSuccess: () => {
+      setSupportSubject("");
+      setSupportMessage("");
+      toast.success("הפנייה נשלחה לצוות טיפולינקס.");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לשלוח את הפנייה."),
+  });
+
   const deleteAccountMutation = useMutation({
     mutationFn: () => deleteAccountFn({ data: { confirmation: "מחיקת החשבון לצמיתות" } }),
     onSuccess: async () => {
@@ -126,207 +129,38 @@ function AccountSettingsPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן למחוק את החשבון."),
   });
 
-  const needsEmail = contactPreferences.contact_methods.includes("email");
-  const needsPhone =
-    contactPreferences.contact_methods.includes("whatsapp") || contactPreferences.contact_methods.includes("phone");
-  const canSaveContactPreferences =
-    !!profile.data &&
-    contactPreferences.contact_methods.length > 0 &&
-    contactPreferences.contact_methods.includes(contactPreferences.preferred_contact_method) &&
-    (!needsEmail || contactPreferences.email.trim().length > 0) &&
-    (!needsPhone || contactPreferences.phone.trim().length > 0);
   const normalizedLoginEmail = loginEmail.trim().toLowerCase();
   const currentLoginEmail = (user.email ?? "").trim().toLowerCase();
   const canUpdateLoginEmail =
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedLoginEmail) &&
     normalizedLoginEmail !== currentLoginEmail &&
     !loginEmailMutation.isPending;
+  const canUpdatePassword = password.length >= 8 && password === passwordConfirmation && !passwordMutation.isPending;
+  const canSubmitSupport =
+    supportSubject.trim().length >= 3 && supportMessage.trim().length >= 10 && !supportMutation.isPending;
+
+  function updateDisplayPreference<K extends keyof DisplayPreferences>(key: K, value: DisplayPreferences[K]) {
+    const next = { ...displayPreferences, [key]: value };
+    setDisplayPreferences(next);
+    saveDisplayPreferences(next);
+  }
+
+  function updateNotificationPreference(key: keyof NotificationPreferences, enabled: boolean) {
+    const next = { ...notificationPreferences, [key]: enabled };
+    setNotificationPreferences(next);
+    notificationPreferencesMutation.mutate(next);
+  }
 
   return (
     <>
       <AccountPageHeader
         eyebrow="העדפות חשבון"
         title="הגדרות"
-        description="ניהול דרכי קבלת הפניות, פרטי ההתחברות, העדפות החשבון ומחיקת החשבון."
+        description="ניהול פרטי ההתחברות, אבטחת החשבון, התצוגה והפנייה לצוות טיפולינקס."
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <AccountSectionCard
-          title="דרכי התקשרות"
-          description="אימייל מופעל כברירת מחדל. ניתן להוסיף WhatsApp או שיחת טלפון ולבחור את הערוץ המועדף."
-          className="lg:col-span-2"
-        >
-          {profile.isLoading || !contactInitialized ? (
-            <p className="text-sm text-muted-foreground">טוען את העדפות ההתקשרות…</p>
-          ) : profile.isError ? (
-            <p className="text-sm text-destructive">לא הצלחנו לטעון את העדפות ההתקשרות.</p>
-          ) : (
-            <div className="space-y-5">
-              {!profile.data && (
-                <div className="rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-sm text-muted-foreground">
-                  לאחר שמירת הפרופיל הראשונה, אימייל החשבון יוגדר אוטומטית כברירת המחדל לקבלת פניות. לאחר מכן ניתן לשנות
-                  כאן את ההעדפות.
-                </div>
-              )}
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                {CONTACT_METHOD_OPTIONS.map((option) => {
-                  const selected = contactPreferences.contact_methods.includes(option.id);
-                  const preferred = contactPreferences.preferred_contact_method === option.id;
-                  const Icon = option.icon;
-
-                  return (
-                    <div
-                      key={option.id}
-                      className={`rounded-2xl border p-3 transition-colors ${
-                        selected
-                          ? preferred
-                            ? "border-brand bg-brand-soft/70 shadow-sm"
-                            : "border-brand/50 bg-white"
-                          : "border-border bg-white/70"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        aria-pressed={selected}
-                        disabled={!profile.data || contactMutation.isPending}
-                        onClick={() =>
-                          setContactPreferences((current) => {
-                            const isSelected = current.contact_methods.includes(option.id);
-                            const nextMethods = isSelected
-                              ? current.contact_methods.filter((method) => method !== option.id)
-                              : [...current.contact_methods, option.id].slice(0, 3);
-
-                            // At least one channel must always remain active. Email is the initial default,
-                            // but therapists can later make another active channel their preferred one.
-                            if (nextMethods.length === 0) return current;
-
-                            const nextPreferred = isSelected
-                              ? current.preferred_contact_method === option.id
-                                ? nextMethods[0]
-                                : current.preferred_contact_method
-                              : current.preferred_contact_method;
-
-                            return {
-                              ...current,
-                              contact_methods: nextMethods,
-                              preferred_contact_method: nextPreferred,
-                            };
-                          })
-                        }
-                        className="flex w-full items-start justify-between gap-3 rounded-xl px-1 py-1 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <span className="flex min-w-0 items-start gap-2.5">
-                          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand">
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block font-semibold text-foreground">{option.label}</span>
-                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                              {option.description}
-                            </span>
-                          </span>
-                        </span>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
-                            selected ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {selected ? "✓ פעיל" : "כבוי"}
-                        </span>
-                      </button>
-
-                      {selected && (
-                        <button
-                          type="button"
-                          aria-pressed={preferred}
-                          disabled={!profile.data || contactMutation.isPending}
-                          onClick={() =>
-                            setContactPreferences((current) => ({
-                              ...current,
-                              preferred_contact_method: option.id,
-                            }))
-                          }
-                          className={`mt-3 flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:opacity-60 ${
-                            preferred
-                              ? "border-brand bg-brand text-brand-foreground"
-                              : "border-border bg-background text-foreground hover:border-brand/60"
-                          }`}
-                        >
-                          <span aria-hidden>{preferred ? "★" : "☆"}</span>
-                          <span>{preferred ? "מועדפת" : "הגדרה כמועדפת"}</span>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-foreground">
-                    אימייל לקבלת פניות{needsEmail ? " *" : ""}
-                  </span>
-                  <Input
-                    dir="ltr"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="name@example.com"
-                    value={contactPreferences.email}
-                    disabled={!profile.data || contactMutation.isPending}
-                    onChange={(event) =>
-                      setContactPreferences((current) => ({
-                        ...current,
-                        email: event.target.value,
-                      }))
-                    }
-                    maxLength={160}
-                    className="bg-white text-left"
-                  />
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    זו ברירת המחדל בפרופיל חדש, וניתן לשנות אותה כאן בכל עת.
-                  </p>
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-foreground">
-                    טלפון לקבלת פניות{needsPhone ? " *" : ""}
-                  </span>
-                  <Input
-                    dir="ltr"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="050-1234567"
-                    value={contactPreferences.phone}
-                    disabled={!profile.data || contactMutation.isPending}
-                    onChange={(event) =>
-                      setContactPreferences((current) => ({
-                        ...current,
-                        phone: event.target.value,
-                      }))
-                    }
-                    maxLength={40}
-                    className="bg-white text-left"
-                  />
-                  <p className="mt-1.5 text-xs text-muted-foreground">נדרש רק כאשר WhatsApp או שיחת טלפון פעילים.</p>
-                </label>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  disabled={!canSaveContactPreferences || contactMutation.isPending}
-                  onClick={() => contactMutation.mutate()}
-                >
-                  {contactMutation.isPending ? "שומר…" : "שמירת העדפות התקשרות"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </AccountSectionCard>
-
-        <AccountSectionCard title="פרטי החשבון" description="הפרטים המשמשים להתחברות לטיפולינקס.">
+        <AccountSectionCard title="פרטי החשבון" description="כתובת האימייל המשמשת להתחברות לטיפולינקס.">
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-foreground">כתובת אימייל של החשבון</span>
@@ -343,7 +177,7 @@ function AccountSettingsPage() {
                 disabled={loginEmailMutation.isPending}
               />
               <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                כתובת זו משמשת להתחברות בלבד. שינויה אינו משנה את האימייל המקצועי לקבלת פניות.
+                שינוי הכתובת דורש אימות, ואינו משנה את האימייל המקצועי לקבלת פניות.
               </p>
             </label>
             <Button
@@ -356,35 +190,163 @@ function AccountSettingsPage() {
             </Button>
             {loginEmailRequestSent && (
               <p className="rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-xs leading-5 text-muted-foreground">
-                שינוי האימייל יושלם רק לאחר ביצוע האימות הנדרש. עד אז, המשיכו להשתמש בכתובת הקיימת להתחברות.
+                השינוי יושלם רק לאחר האימות הנדרש. עד אז, המשיכו להשתמש בכתובת הקיימת.
               </p>
             )}
-            <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">אבטחת החשבון</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  שינוי סיסמה וניהול אמצעי אימות יתווספו כאן בהמשך.
-                </p>
-              </div>
-            </div>
           </div>
         </AccountSectionCard>
 
-        <AccountSectionCard title="התראות" description="העדפות לקבלת עדכונים על פעילות בפרופיל.">
-          <div className="space-y-4">
-            <PreviewSetting
-              icon={Mail}
-              title="פנייה חדשה"
-              description="קבלת התראה כאשר נוצרת פנייה חדשה דרך טיפולינקס."
+        <AccountSectionCard title="שינוי סיסמה" description="בחרו סיסמה חדשה בת 8 תווים לפחות.">
+          <div className="space-y-3">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-foreground">סיסמה חדשה</span>
+              <Input
+                dir="ltr"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={passwordMutation.isPending}
+                className="bg-white text-left"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-foreground">אימות סיסמה חדשה</span>
+              <Input
+                dir="ltr"
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirmation}
+                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                disabled={passwordMutation.isPending}
+                className="bg-white text-left"
+              />
+            </label>
+            <Button type="button" disabled={!canUpdatePassword} onClick={() => passwordMutation.mutate()}>
+              <KeyRound className="h-4 w-4" />
+              {passwordMutation.isPending ? "מעדכן…" : "עדכון סיסמה"}
+            </Button>
+          </div>
+        </AccountSectionCard>
+
+        <AccountSectionCard
+          title="תצוגה ונגישות"
+          description="ההתאמות נשמרות במכשיר הזה וחלות מיד על האתר."
+          className="lg:col-span-2"
+        >
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <DisplaySelect
+              icon={Eye}
+              label="מצב תצוגה"
+              value={displayPreferences.theme}
+              onChange={(value) => updateDisplayPreference("theme", value as DisplayPreferences["theme"])}
+              options={[
+                ["system", "לפי המכשיר"],
+                ["light", "בהיר"],
+                ["dark", "כהה"],
+              ]}
             />
-            <PreviewSetting
-              icon={Bell}
-              title="עדכוני חשבון"
-              description="עדכונים על אימות מסמכים, חיובים ושינויים חשובים."
+            <DisplaySelect
+              icon={Palette}
+              label="פלטת צבעים"
+              value={displayPreferences.palette}
+              onChange={(value) => updateDisplayPreference("palette", value as DisplayPreferences["palette"])}
+              options={[
+                ["tipulinks", "טיפולינקס"],
+                ["ocean", "אוקיינוס"],
+                ["sage", "מרווה"],
+              ]}
+            />
+            <DisplaySelect
+              icon={Eye}
+              label="ניגודיות"
+              value={displayPreferences.contrast}
+              onChange={(value) => updateDisplayPreference("contrast", value as DisplayPreferences["contrast"])}
+              options={[
+                ["standard", "רגילה"],
+                ["high", "גבוהה"],
+              ]}
+            />
+            <DisplaySelect
+              icon={Eye}
+              label="גודל טקסט"
+              value={displayPreferences.fontSize}
+              onChange={(value) => updateDisplayPreference("fontSize", value as DisplayPreferences["fontSize"])}
+              options={[
+                ["small", "קטן"],
+                ["medium", "בינוני"],
+                ["large", "גדול"],
+              ]}
             />
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">המתגים מוצגים לצורך תכנון הממשק בלבד ואינם נשמרים עדיין.</p>
+        </AccountSectionCard>
+
+        <AccountSectionCard title="התראות" description="עדכונים על פעילות בפרופיל ובחשבון.">
+          <div className="space-y-3">
+            <NotificationSetting
+              icon={Mail}
+              title="פנייה חדשה"
+              description="התראה כאשר מתקבלת פנייה חדשה."
+              checked={notificationPreferences.notify_new_leads}
+              disabled={notificationPreferencesQuery.isLoading || notificationPreferencesMutation.isPending}
+              onCheckedChange={(checked) => updateNotificationPreference("notify_new_leads", checked)}
+            />
+            <NotificationSetting
+              icon={Bell}
+              title="עדכוני חשבון"
+              description="אימות מסמכים, חיובים ושינויים חשובים."
+              checked={notificationPreferences.notify_account_updates}
+              disabled={notificationPreferencesQuery.isLoading || notificationPreferencesMutation.isPending}
+              onCheckedChange={(checked) => updateNotificationPreference("notify_account_updates", checked)}
+            />
+          </div>
+          {notificationPreferencesQuery.isError && (
+            <p className="mt-3 text-xs leading-5 text-destructive">לא הצלחנו לטעון את העדפות ההתראות.</p>
+          )}
+        </AccountSectionCard>
+
+        <AccountSectionCard title="יצירת קשר עם הצוות" description="דיווח על תקלה, תלונה, הצעה לשיפור או עניין אחר.">
+          <div className="space-y-3">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-foreground">סוג הפנייה</span>
+              <Select value={supportCategory} onValueChange={(value) => setSupportCategory(value as SupportCategory)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bug">דיווח על תקלה</SelectItem>
+                  <SelectItem value="complaint">תלונה</SelectItem>
+                  <SelectItem value="suggestion">הצעה לשיפור</SelectItem>
+                  <SelectItem value="other">עניין אחר</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-foreground">נושא</span>
+              <Input
+                value={supportSubject}
+                onChange={(event) => setSupportSubject(event.target.value)}
+                maxLength={120}
+                disabled={supportMutation.isPending}
+                className="bg-white"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-foreground">פירוט</span>
+              <Textarea
+                value={supportMessage}
+                onChange={(event) => setSupportMessage(event.target.value)}
+                rows={4}
+                maxLength={4000}
+                disabled={supportMutation.isPending}
+                className="resize-y bg-white"
+              />
+            </label>
+            <Button type="button" disabled={!canSubmitSupport} onClick={() => supportMutation.mutate()}>
+              {supportMutation.isPending ? <LifeBuoy className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {supportMutation.isPending ? "שולח…" : "שליחת הפנייה"}
+            </Button>
+          </div>
         </AccountSectionCard>
 
         <DeleteAccountPanel
@@ -396,7 +358,56 @@ function AccountSettingsPage() {
   );
 }
 
-function PreviewSetting({ icon: Icon, title, description }: { icon: typeof Mail; title: string; description: string }) {
+function DisplaySelect({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  icon: typeof Eye;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly (readonly [string, string])[];
+}) {
+  return (
+    <label className="block rounded-xl border border-border bg-surface p-3">
+      <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Icon className="h-4 w-4 text-brand" />
+        {label}
+      </span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="bg-white">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(([optionValue, optionLabel]) => (
+            <SelectItem key={optionValue} value={optionValue}>
+              {optionLabel}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function NotificationSetting({
+  icon: Icon,
+  title,
+  description,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  icon: typeof Mail;
+  title: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
@@ -406,7 +417,7 @@ function PreviewSetting({ icon: Icon, title, description }: { icon: typeof Mail;
         <p className="text-sm font-semibold text-foreground">{title}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
       </div>
-      <Switch checked disabled aria-label={title} />
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={title} />
     </div>
   );
 }
