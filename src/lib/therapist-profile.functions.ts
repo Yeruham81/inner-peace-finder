@@ -623,7 +623,7 @@ async function saveProfileForActor(args: {
   targetTherapistId?: string | null;
 }): Promise<SaveResult> {
   const { data, supabase, userId, saveMode, targetTherapistId = null } = args;
-  if (saveMode === "self") await resolveAccount(supabase, userId);
+  const ownerAccountId = saveMode === "self" ? await resolveAccount(supabase, userId) : null;
   const resolvedLocations = await resolvePhysicalLocations(data.locations);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -647,11 +647,23 @@ async function saveProfileForActor(args: {
   // outdated (or silently emptied) semantic_profile.
   const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
 
+  const existingProfileQuery =
+    saveMode === "self"
+      ? supabaseAdmin.from("therapists").select("profile_status").eq("owner_account_id", ownerAccountId!).maybeSingle()
+      : targetTherapistId
+        ? supabaseAdmin.from("therapists").select("profile_status").eq("id", targetTherapistId).maybeSingle()
+        : Promise.resolve({ data: null, error: null });
+  const { data: existingProfile, error: existingProfileError } = await existingProfileQuery;
+  if (existingProfileError) throw new Error(existingProfileError.message);
+  const preservePublishedStatus = existingProfile?.profile_status === "published";
+
   const nextStatus: ProfileStatus = data.publish
     ? "published"
-    : validateForPublish(data, saveMode).length === 0
-      ? "completed"
-      : "draft";
+    : preservePublishedStatus
+      ? "published"
+      : validateForPublish(data, saveMode).length === 0
+        ? "completed"
+        : "draft";
 
   // Location rows managed by this editor. Any other location type is left
   // untouched by the database operation below.
