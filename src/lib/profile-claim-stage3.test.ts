@@ -26,7 +26,7 @@ describe("profile claim stage 3", () => {
     expect(inviteServer).not.toContain("visitor_phone");
     expect(inviteServer).toContain("יש לך פנייה ממשתמש/ת שראה את הפרופיל שלך באתר טיפולינקס");
     expect(inviteServer).toContain("נעים להכיר — טיפולינקס היא פלטפורמה");
-    expect(inviteServer).toContain("פניות ממוקדות ממשתמשים שמעוניינים לתאם טיפול");
+    expect(inviteServer).toContain("פניות ממוקדות מאנשים שמעוניינים לתאם טיפול");
     expect(inviteServer).toContain("forTherapistsUrl: `${origin}/for-therapists`");
     expect(inviteServer).toContain("for_therapists_url: invite.forTherapistsUrl");
     expect(inviteServer).toContain("כדי להשלים את התהליך עליך לאמת את כתובת האימייל");
