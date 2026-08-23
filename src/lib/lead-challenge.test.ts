@@ -160,7 +160,9 @@ describe("createLead client contract", () => {
   });
 
   it("propagates pre-commit database errors but keeps post-commit enrichment best-effort", () => {
-    expect(src).toContain("if (rpcErr) throw new Error(rpcErr.message)");
+    expect(src).toContain("if (rpcErr)");
+    expect(src).toContain('rpcErr.message.includes("monthly_budget_exhausted")');
+    expect(src).toContain("throw new Error(rpcErr.message)");
     expect(src).toContain('console.error("[lead] problem enrichment failed"');
     expect(src).toContain('console.error("[lead] population enrichment failed"');
     expect(src).not.toContain("if (pErr) throw new Error(pErr.message)");
