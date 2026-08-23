@@ -1,6 +1,7 @@
 import type { CredentialStatus } from "./credential-workflow";
 
 export type PaymentMethodStatus = "not_configured" | "active" | "action_required" | "expired";
+export type PaymentMethodKind = "none" | "real" | "test";
 export type CredentialOnboardingState = "not_started" | "submitted" | "verified" | "skipped" | "action_required";
 export type OnboardingStepState = "complete" | "incomplete" | "action_required";
 export type OwnershipMode = "account_only" | "self_created" | "claimed";
@@ -10,6 +11,7 @@ export type ProfileOnboardingStatus = {
   accountStatus: "pending" | "active" | "claimed" | "suspended";
   credentialState: CredentialOnboardingState;
   paymentMethodStatus: PaymentMethodStatus;
+  paymentMethodKind: PaymentMethodKind;
   steps: {
     account: OnboardingStepState;
     profile: OnboardingStepState;
@@ -23,6 +25,8 @@ export type ProfileOnboardingStatus = {
   isPublished: boolean;
   isPublic: boolean;
   isBillingPaused: boolean;
+  isBudgetPaused: boolean;
+  budgetHoldUntil: string | null;
   isActive: boolean;
   visibility: "visible" | "hidden";
   profileSlug: string | null;
@@ -40,6 +44,7 @@ type ProfileInput = {
   visibility: string;
   profile_origin: string;
   billing_hold?: boolean | null;
+  budget_hold_until?: string | null;
   email: string | null;
   phone: string | null;
   contact_methods: string[] | null;
@@ -50,6 +55,7 @@ export type BuildProfileOnboardingInput = {
   accountStatus: ProfileOnboardingStatus["accountStatus"];
   credentialVerificationSkippedAt: string | null;
   paymentMethodStatus: PaymentMethodStatus;
+  paymentMethodKind?: PaymentMethodKind;
   profile: ProfileInput;
   credentials: CredentialInput[];
 };
@@ -96,7 +102,8 @@ function stepForCredential(state: CredentialOnboardingState): OnboardingStepStat
   return state === "not_started" ? "incomplete" : "complete";
 }
 
-function stepForPayment(status: PaymentMethodStatus): OnboardingStepState {
+function stepForPayment(status: PaymentMethodStatus, published: boolean): OnboardingStepState {
+  if (published && status !== "active") return "action_required";
   if (status === "action_required" || status === "expired") return "action_required";
   return status === "active" ? "complete" : "incomplete";
 }
@@ -109,19 +116,24 @@ export function buildProfileOnboardingStatus(input: BuildProfileOnboardingInput)
       ? "claimed"
       : "self_created";
   const isPublished = input.profile?.profile_status === "published";
-  const isBillingPaused = Boolean(input.profile?.billing_hold);
+  const isBillingPaused = Boolean(
+    input.profile?.billing_hold || (isPublished && input.paymentMethodStatus !== "active"),
+  );
+  const budgetHoldUntil = input.profile?.budget_hold_until ?? null;
+  const isBudgetPaused = Boolean(budgetHoldUntil && new Date(budgetHoldUntil).getTime() > Date.now());
   const isPublic = Boolean(
     isPublished &&
     input.profile?.is_active &&
     (input.profile.visibility === "visible" || input.profile.visibility === "published") &&
-    !isBillingPaused,
+    !isBillingPaused &&
+    !isBudgetPaused,
   );
   const steps: ProfileOnboardingStatus["steps"] = {
     account: input.accountStatus === "suspended" ? "action_required" : "complete",
     profile: input.profile && input.profile.profile_status !== "draft" ? "complete" : "incomplete",
     credentials: stepForCredential(credentialState),
     contact: hasConfiguredContact(input.profile) ? "complete" : "incomplete",
-    payment: stepForPayment(input.paymentMethodStatus),
+    payment: stepForPayment(input.paymentMethodStatus, Boolean(isPublished)),
   };
   const completedCount = Object.values(steps).filter((step) => step === "complete").length;
 
@@ -130,6 +142,7 @@ export function buildProfileOnboardingStatus(input: BuildProfileOnboardingInput)
     accountStatus: input.accountStatus,
     credentialState,
     paymentMethodStatus: input.paymentMethodStatus,
+    paymentMethodKind: input.paymentMethodKind ?? "none",
     steps,
     completedCount,
     totalCount: 5,
@@ -137,6 +150,8 @@ export function buildProfileOnboardingStatus(input: BuildProfileOnboardingInput)
     isPublished,
     isPublic,
     isBillingPaused,
+    isBudgetPaused,
+    budgetHoldUntil,
     isActive: Boolean(input.profile?.is_active),
     visibility:
       input.profile?.visibility === "visible" || input.profile?.visibility === "published" ? "visible" : "hidden",
