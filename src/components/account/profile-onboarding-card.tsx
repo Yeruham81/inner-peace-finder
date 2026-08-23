@@ -48,8 +48,13 @@ export function ProfileOnboardingCard({
   const [managementAction, setManagementAction] = useState<ManagementAction | null>(null);
   const steps = useMemo(() => buildSteps(status), [status]);
   const progress = (status.completedCount / status.totalCount) * 100;
-  const billingNeedsAction =
-    status.paymentMethodStatus === "expired" || status.paymentMethodStatus === "action_required";
+  const billingNeedsAction = status.paymentMethodStatus !== "active";
+  const paymentRepairOnly =
+    billingNeedsAction &&
+    (Object.entries(status.steps) as Array<[keyof ProfileOnboardingStatus["steps"], OnboardingStepState]>).every(
+      ([id, state]) => id === "payment" || state === "complete",
+    );
+  const displayedSteps = paymentRepairOnly ? steps.filter((step) => step.id === "payment") : steps;
   const compact = !billingNeedsAction && (status.allStepsComplete || status.isPublished);
 
   async function confirmManagementAction() {
@@ -66,8 +71,17 @@ export function ProfileOnboardingCard({
   if (compact) {
     const frozen = status.isPublished && status.visibility === "hidden";
     const readyToPublish = !status.isPublished;
-    const paused = status.isPublished && !status.isPublic && !frozen;
-    const profileState = readyToPublish ? "ready" : frozen ? "frozen" : paused ? "paused" : "active";
+    const budgetPaused = status.isPublished && status.isBudgetPaused;
+    const paused = status.isPublished && !status.isPublic && !frozen && !budgetPaused;
+    const profileState = readyToPublish
+      ? "ready"
+      : frozen
+        ? "frozen"
+        : budgetPaused
+          ? "budget"
+          : paused
+            ? "paused"
+            : "active";
     const stateCopy = {
       ready: {
         badge: "מוכן לפרסום",
@@ -83,6 +97,11 @@ export function ProfileOnboardingCard({
         badge: "מוקפא",
         badgeClass: "border-slate-300 bg-white/80 text-slate-700",
         description: "הפרופיל שמור אך אינו מופיע באתר ואינו מקבל פניות חדשות.",
+      },
+      budget: {
+        badge: "התקציב החודשי נוצל",
+        badgeClass: "border-amber-300 bg-amber-50 text-amber-800",
+        description: "הפרופיל אינו מופיע בחיפושים עד תחילת החודש הבא. אפשר להגדיל את התקציב במסך החיובים.",
       },
       paused: {
         badge: "מושהה",
@@ -131,6 +150,13 @@ export function ProfileOnboardingCard({
                   <Rocket className="h-4 w-4" />
                   פרסום הפרופיל
                 </Button>
+              ) : budgetPaused ? (
+                <Button type="button" size="sm" asChild>
+                  <Link to="/account/billing">
+                    <CreditCard className="h-4 w-4" />
+                    עדכון התקציב
+                  </Link>
+                </Button>
               ) : frozen || paused ? (
                 <Button
                   type="button"
@@ -173,9 +199,13 @@ export function ProfileOnboardingCard({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">השלמת ההצטרפות</p>
-            <h2 className="mt-1 text-xl font-bold text-foreground">הכנת הפרופיל לפרסום</h2>
+            <h2 className="mt-1 text-xl font-bold text-foreground">
+              {paymentRepairOnly ? "נדרש להסדיר את אמצעי התשלום" : "הכנת הפרופיל לפרסום"}
+            </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              כל שלב שהושלם מסומן בירוק. אפשר ללחוץ על שלב שעדיין דורש פעולה ולעבור ישירות למסך המתאים.
+              {paymentRepairOnly
+                ? "ארבעת השלבים הראשונים כבר הושלמו. אפשר לעבור ישירות למסך החיובים כדי להשלים מחדש את השלב החמישי."
+                : "כל שלב שהושלם מסומן בירוק. אפשר ללחוץ על שלב שעדיין דורש פעולה ולעבור ישירות למסך המתאים."}
             </p>
           </div>
           <span className="rounded-full border border-brand/20 bg-white px-3 py-1.5 text-sm font-bold text-brand ltr-num">
@@ -186,13 +216,18 @@ export function ProfileOnboardingCard({
       </div>
 
       <ol className="divide-y divide-border/70 px-4 sm:px-6">
-        {steps.map((step, index) => (
-          <OnboardingStep key={step.id} number={index + 1} step={step} state={status.steps[step.id]} />
+        {displayedSteps.map((step, index) => (
+          <OnboardingStep
+            key={step.id}
+            number={step.id === "payment" ? 5 : index + 1}
+            step={step}
+            state={status.steps[step.id]}
+          />
         ))}
       </ol>
 
       <div className="border-t border-border/70 bg-muted/20 px-4 py-4 sm:px-6">
-        {billingNeedsAction ? (
+        {paymentRepairOnly || (status.isPublished && billingNeedsAction) ? (
           <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>הופעת הפרופיל הושהתה עד לעדכון אמצעי התשלום. יתר נתוני הפרופיל נשמרו ללא שינוי.</p>
