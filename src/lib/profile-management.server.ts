@@ -31,7 +31,7 @@ export async function setOwnedProfileVisibility(accountId: string, visible: bool
   const [{ data: profile, error }, { data: account, error: accountError }] = await Promise.all([
     supabaseAdmin
       .from("therapists")
-      .select("id, profile_status, billing_hold, is_active")
+      .select("id, profile_status, billing_hold, budget_hold_until, is_active")
       .eq("owner_account_id", accountId)
       .maybeSingle(),
     supabaseAdmin
@@ -49,6 +49,9 @@ export async function setOwnedProfileVisibility(accountId: string, visible: bool
   }
   if (visible && (profile.billing_hold || account?.payment_method_status !== "active")) {
     throw new Error("יש לעדכן אמצעי תשלום פעיל לפני הפעלת הפרופיל מחדש.");
+  }
+  if (visible && profile.budget_hold_until && new Date(profile.budget_hold_until).getTime() > Date.now()) {
+    throw new Error("התקציב החודשי נוצל. ניתן להגדיל אותו במסך החיובים או להמתין לחודש הבא.");
   }
   const visibility = visible ? ("visible" as const) : ("hidden" as const);
   const updated = await supabaseAdmin
