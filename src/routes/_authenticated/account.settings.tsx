@@ -33,8 +33,34 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
 
 type SupportCategory = "bug" | "complaint" | "suggestion" | "other";
 
+function loginProviders(user: { app_metadata?: Record<string, unknown>; identities?: { provider?: string }[] | null }) {
+  const providers = new Set<string>();
+  const primaryProvider = user.app_metadata?.provider;
+  const metadataProviders = user.app_metadata?.providers;
+  if (typeof primaryProvider === "string") providers.add(primaryProvider);
+  if (Array.isArray(metadataProviders)) {
+    metadataProviders.forEach((provider) => {
+      if (typeof provider === "string") providers.add(provider);
+    });
+  }
+  user.identities?.forEach((identity) => {
+    if (identity.provider) providers.add(identity.provider);
+  });
+  return providers;
+}
+
+function externalProviderLabel(providers: Set<string>) {
+  const labels = [...providers]
+    .filter((provider) => provider !== "email")
+    .map((provider) => (provider === "google" ? "Google" : provider === "apple" ? "Apple" : provider));
+  return labels.length ? labels.join(" או ") : "ספק ההתחברות החיצוני";
+}
+
 function AccountSettingsPage() {
   const { user } = Route.useRouteContext();
+  const providers = loginProviders(user);
+  const hasPasswordLogin = providers.has("email");
+  const socialProvider = externalProviderLabel(providers);
   const queryClient = useQueryClient();
   const deleteAccountFn = useServerFn(deleteMyAccountPermanently);
   const submitSupportFn = useServerFn(submitMySupportRequest);
@@ -42,6 +68,7 @@ function AccountSettingsPage() {
   const updateNotificationPreferencesFn = useServerFn(updateMyNotificationPreferences);
   const [loginEmail, setLoginEmail] = useState(user.email ?? "");
   const [loginEmailRequestSent, setLoginEmailRequestSent] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [displayPreferences, setDisplayPreferences] = useState<DisplayPreferences>(() => getDisplayPreferences());
@@ -93,12 +120,29 @@ function AccountSettingsPage() {
 
   const passwordMutation = useMutation({
     mutationFn: async () => {
+      if (!hasPasswordLogin || !user.email) {
+        throw new Error("שינוי סיסמה זמין רק לחשבון עם התחברות באמצעות אימייל וסיסמה.");
+      }
+      if (!currentPassword) throw new Error("נא להזין את הסיסמה הנוכחית.");
       if (password.length < 8) throw new Error("הסיסמה צריכה להכיל לפחות 8 תווים.");
       if (password !== passwordConfirmation) throw new Error("הסיסמאות אינן זהות.");
+      if (password === currentPassword) throw new Error("הסיסמה החדשה צריכה להיות שונה מהסיסמה הנוכחית.");
+
+      const { data: reauthenticated, error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInError) {
+        if (signInError.code === "invalid_credentials") throw new Error("הסיסמה הנוכחית אינה נכונה.");
+        throw signInError;
+      }
+      if (reauthenticated.user.id !== user.id) throw new Error("לא ניתן לאמת את החשבון הנוכחי.");
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
     },
     onSuccess: () => {
+      setCurrentPassword("");
       setPassword("");
       setPasswordConfirmation("");
       toast.success("הסיסמה עודכנה בהצלחה.");
@@ -135,7 +179,13 @@ function AccountSettingsPage() {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedLoginEmail) &&
     normalizedLoginEmail !== currentLoginEmail &&
     !loginEmailMutation.isPending;
-  const canUpdatePassword = password.length >= 8 && password === passwordConfirmation && !passwordMutation.isPending;
+  const canUpdatePassword =
+    hasPasswordLogin &&
+    currentPassword.length > 0 &&
+    password.length >= 8 &&
+    password === passwordConfirmation &&
+    password !== currentPassword &&
+    !passwordMutation.isPending;
   const canSubmitSupport =
     supportSubject.trim().length >= 3 && supportMessage.trim().length >= 10 && !supportMutation.isPending;
 
@@ -196,38 +246,66 @@ function AccountSettingsPage() {
           </div>
         </AccountSectionCard>
 
-        <AccountSectionCard title="שינוי סיסמה" description="בחרו סיסמה חדשה בת 8 תווים לפחות.">
-          <div className="space-y-3">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-foreground">סיסמה חדשה</span>
-              <Input
-                dir="ltr"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                disabled={passwordMutation.isPending}
-                className="bg-white text-left"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-foreground">אימות סיסמה חדשה</span>
-              <Input
-                dir="ltr"
-                type="password"
-                autoComplete="new-password"
-                value={passwordConfirmation}
-                onChange={(event) => setPasswordConfirmation(event.target.value)}
-                disabled={passwordMutation.isPending}
-                className="bg-white text-left"
-              />
-            </label>
-            <Button type="button" disabled={!canUpdatePassword} onClick={() => passwordMutation.mutate()}>
-              <KeyRound className="h-4 w-4" />
-              {passwordMutation.isPending ? "מעדכן…" : "עדכון סיסמה"}
-            </Button>
-          </div>
-        </AccountSectionCard>
+        {hasPasswordLogin ? (
+          <AccountSectionCard title="שינוי סיסמה" description="לאבטחת החשבון, יש לאמת תחילה את הסיסמה הנוכחית.">
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-foreground">סיסמה נוכחית</span>
+                <Input
+                  dir="ltr"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  disabled={passwordMutation.isPending}
+                  className="bg-white text-left"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-foreground">סיסמה חדשה</span>
+                <Input
+                  dir="ltr"
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  disabled={passwordMutation.isPending}
+                  className="bg-white text-left"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-foreground">אימות סיסמה חדשה</span>
+                <Input
+                  dir="ltr"
+                  type="password"
+                  autoComplete="new-password"
+                  value={passwordConfirmation}
+                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  disabled={passwordMutation.isPending}
+                  className="bg-white text-left"
+                />
+              </label>
+              <Button type="button" disabled={!canUpdatePassword} onClick={() => passwordMutation.mutate()}>
+                <KeyRound className="h-4 w-4" />
+                {passwordMutation.isPending ? "מאמת ומעדכן…" : "אימות ועדכון סיסמה"}
+              </Button>
+            </div>
+          </AccountSectionCard>
+        ) : (
+          <AccountSectionCard title="סיסמה" description={`החשבון מחובר באמצעות ${socialProvider}.`}>
+            <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                <KeyRound className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">הסיסמה מנוהלת אצל ספק ההתחברות</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  לחשבון זה אין סיסמה נפרדת בטיפולינקס. שינוי הסיסמה מתבצע דרך {socialProvider}.
+                </p>
+              </div>
+            </div>
+          </AccountSectionCard>
+        )}
 
         <AccountSectionCard
           title="תצוגה ונגישות"
