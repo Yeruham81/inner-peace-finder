@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   buildProfileOnboardingStatus,
+  type PaymentMethodKind,
   type PaymentMethodStatus,
   type ProfileOnboardingStatus,
 } from "./profile-onboarding";
@@ -20,12 +21,16 @@ function paymentMethodStatus(value: unknown): PaymentMethodStatus {
   return PAYMENT_METHOD_STATUSES.has(value as PaymentMethodStatus) ? (value as PaymentMethodStatus) : "not_configured";
 }
 
+function paymentMethodKind(value: unknown): PaymentMethodKind {
+  return value === "real" || value === "test" ? value : "none";
+}
+
 export const getMyProfileOnboarding = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ProfileOnboardingStatus> => {
     const { data: account, error: accountError } = await context.supabase
       .from("therapist_accounts")
-      .select("id, account_status, credential_verification_skipped_at, payment_method_status")
+      .select("id, account_status, credential_verification_skipped_at, payment_method_status, payment_method_kind")
       .eq("auth_user_id", context.userId)
       .maybeSingle();
     if (accountError) throw new Error(accountError.message);
@@ -34,7 +39,7 @@ export const getMyProfileOnboarding = createServerFn({ method: "GET" })
     const { data: profile, error: profileError } = await context.supabase
       .from("therapists")
       .select(
-        "id, slug, profile_status, is_active, visibility, profile_origin, billing_hold, email, phone, contact_methods, preferred_contact_method",
+        "id, slug, profile_status, is_active, visibility, profile_origin, billing_hold, budget_hold_until, email, phone, contact_methods, preferred_contact_method",
       )
       .eq("owner_account_id", account.id)
       .maybeSingle();
@@ -54,6 +59,7 @@ export const getMyProfileOnboarding = createServerFn({ method: "GET" })
       accountStatus: account.account_status,
       credentialVerificationSkippedAt: account.credential_verification_skipped_at,
       paymentMethodStatus: paymentMethodStatus(account.payment_method_status),
+      paymentMethodKind: paymentMethodKind(account.payment_method_kind),
       profile,
       credentials,
     });
