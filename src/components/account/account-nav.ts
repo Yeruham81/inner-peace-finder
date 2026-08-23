@@ -31,9 +31,15 @@ export const ACCOUNT_NAV_ITEMS: AccountNavItem[] = [
     icon: UserRoundPen,
   },
   {
+    to: "/account/credentials",
+    label: "אימות הסמכות",
+    description: "מסמכים וסטטוס אימות מקצועי",
+    icon: BadgeCheck,
+  },
+  {
     to: "/account/leads",
     label: "פניות",
-    description: "פניות שהתקבלו דרך טיפולינקס",
+    description: "דרכי התקשרות ופניות שהתקבלו",
     icon: MessageSquareText,
   },
   {
@@ -41,12 +47,6 @@ export const ACCOUNT_NAV_ITEMS: AccountNavItem[] = [
     label: "חיובים",
     description: "חיובים, זיכויים והיסטוריה",
     icon: CreditCard,
-  },
-  {
-    to: "/account/credentials",
-    label: "אימות והסמכות",
-    description: "מסמכים וסטטוס אימות מקצועי",
-    icon: BadgeCheck,
   },
   {
     to: "/account/settings",
