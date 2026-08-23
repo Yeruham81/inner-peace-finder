@@ -584,6 +584,7 @@ export type Database = {
           notify_account_updates: boolean;
           notify_new_leads: boolean;
           onboarding_completed: boolean;
+          payment_method_kind: string;
           payment_method_status: string;
           updated_at: string;
         };
@@ -596,6 +597,7 @@ export type Database = {
           notify_account_updates?: boolean;
           notify_new_leads?: boolean;
           onboarding_completed?: boolean;
+          payment_method_kind?: string;
           payment_method_status?: string;
           updated_at?: string;
         };
@@ -608,6 +610,7 @@ export type Database = {
           notify_account_updates?: boolean;
           notify_new_leads?: boolean;
           onboarding_completed?: boolean;
+          payment_method_kind?: string;
           payment_method_status?: string;
           updated_at?: string;
         };
@@ -1256,6 +1259,8 @@ export type Database = {
         Row: {
           background: string | null;
           billing_hold: boolean;
+          budget_hold_reason: string | null;
+          budget_hold_until: string | null;
           bio_raw: string | null;
           city: string | null;
           contact_destination: string | null;
@@ -1307,6 +1312,8 @@ export type Database = {
         Insert: {
           background?: string | null;
           billing_hold?: boolean;
+          budget_hold_reason?: string | null;
+          budget_hold_until?: string | null;
           bio_raw?: string | null;
           city?: string | null;
           contact_destination?: string | null;
@@ -1358,6 +1365,8 @@ export type Database = {
         Update: {
           background?: string | null;
           billing_hold?: boolean;
+          budget_hold_reason?: string | null;
+          budget_hold_until?: string | null;
           bio_raw?: string | null;
           city?: string | null;
           contact_destination?: string | null;
@@ -1480,6 +1489,7 @@ export type Database = {
         Row: {
           billable_eligible: boolean;
           billable_event_at: string | null;
+          budget_reservation_id: string | null;
           caller_amd_result: string | null;
           caller_answered_at: string | null;
           caller_hash: string;
@@ -1508,6 +1518,7 @@ export type Database = {
         Insert: {
           billable_eligible?: boolean;
           billable_event_at?: string | null;
+          budget_reservation_id?: string | null;
           caller_amd_result?: string | null;
           caller_answered_at?: string | null;
           caller_hash: string;
@@ -1536,6 +1547,7 @@ export type Database = {
         Update: {
           billable_eligible?: boolean;
           billable_event_at?: string | null;
+          budget_reservation_id?: string | null;
           caller_amd_result?: string | null;
           caller_answered_at?: string | null;
           caller_hash?: string;
@@ -1562,6 +1574,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "voice_call_sessions_budget_reservation_id_fkey";
+            columns: ["budget_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "monthly_budget_reservations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "voice_call_sessions_cta_event_id_fkey";
             columns: ["cta_event_id"];
@@ -1666,6 +1685,11 @@ export type Database = {
         Args: { _actor: string };
         Returns: Json;
       };
+      finish_monthly_budget_notification: {
+        Args: { _error?: string; _notification_id: string; _success: boolean };
+        Returns: undefined;
+      };
+      get_my_monthly_budget: { Args: never; Returns: Json };
       is_contact_email_suppressed: {
         Args: { _email: string };
         Returns: boolean;
@@ -1708,6 +1732,10 @@ export type Database = {
       };
       purge_expired_lead_challenges: { Args: never; Returns: number };
       publish_my_completed_profile: { Args: never; Returns: Json };
+      claim_monthly_budget_notification: {
+        Args: { _therapist_id: string };
+        Returns: Json;
+      };
       submit_my_support_request: {
         Args: { _category: string; _message: string; _subject: string };
         Returns: string;
@@ -1767,6 +1795,14 @@ export type Database = {
       set_my_credential_verification_skip: {
         Args: { _skip: boolean };
         Returns: string | null;
+      };
+      set_my_monthly_budget: {
+        Args: { _monthly_limit_agorot: number | null; _notify_on_exhaustion: boolean };
+        Returns: Json;
+      };
+      set_my_test_payment_method: {
+        Args: { _enabled: boolean };
+        Returns: Json;
       };
       start_voice_call_attempt: {
         Args: {
