@@ -8,12 +8,7 @@ const leadsSource = read("routes", "_authenticated", "account.leads.tsx");
 const settingsSource = read("routes", "_authenticated", "account.settings.tsx");
 const onboardingSource = read("components", "account", "profile-onboarding-card.tsx");
 const editorSource = read("routes", "_authenticated", "new-profile.tsx");
-const supportMigrationSource = read(
-  "..",
-  "supabase",
-  "migrations",
-  "20260823103000_account_support_requests.sql",
-);
+const supportMigrationSource = read("..", "supabase", "migrations", "20260823103000_account_support_requests.sql");
 const notificationMigrationSource = read(
   "..",
   "supabase",
@@ -42,6 +37,10 @@ describe("therapist account area organization", () => {
   it("keeps settings focused on account, security, display, notifications, support and deletion", () => {
     expect(settingsSource).toContain("supabase.auth.updateUser({ email:");
     expect(settingsSource).toContain("supabase.auth.updateUser({ password }");
+    expect(settingsSource).toContain("supabase.auth.signInWithPassword");
+    expect(settingsSource).toContain("hasPasswordLogin ?");
+    expect(settingsSource).toContain("סיסמה נוכחית");
+    expect(settingsSource).toContain("הסיסמה מנוהלת אצל ספק ההתחברות");
     expect(settingsSource).toContain("saveDisplayPreferences");
     expect(settingsSource).toContain("updateMyNotificationPreferences");
     expect(settingsSource).toContain("submitMySupportRequest");
@@ -56,9 +55,7 @@ describe("therapist account area organization", () => {
   });
 
   it("persists support requests through an authenticated database function", () => {
-    expect(supportMigrationSource).toContain(
-      "create table if not exists public.account_support_requests",
-    );
+    expect(supportMigrationSource).toContain("create table if not exists public.account_support_requests");
     expect(supportMigrationSource).toContain("security definer");
     expect(supportMigrationSource).toContain("auth.uid()");
     expect(supportMigrationSource).toContain("grant execute");
