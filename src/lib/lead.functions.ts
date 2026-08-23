@@ -50,7 +50,16 @@ export const createLead = createServerFn({ method: "POST" })
       _message: data.message,
       _user_agent: userAgent ?? (null as unknown as string),
     });
-    if (rpcErr) throw new Error(rpcErr.message);
+    if (rpcErr) {
+      if (rpcErr.message.includes("monthly_budget_exhausted")) {
+        return {
+          ok: false as const,
+          reason: "therapist_unavailable" as const,
+          message: "לא ניתן לשלוח פנייה לפרופיל זה כרגע.",
+        };
+      }
+      throw new Error(rpcErr.message);
+    }
     const row = Array.isArray(rows) ? rows[0] : rows;
 
     if (!row?.allowed) {
@@ -95,6 +104,19 @@ export const createLead = createServerFn({ method: "POST" })
     const leadId = row.lead_id as string;
     const billable = !!row.billable;
     const awaitingTherapistConsent = row.delivery_channel === "consent_hold";
+
+    if (billable) {
+      try {
+        const { sendBudgetExhaustedNotification } = await import("./billing-budget.server");
+        await sendBudgetExhaustedNotification(data.therapistId);
+      } catch (notificationError) {
+        console.error("[billing-budget] lead notification failed", {
+          leadId,
+          therapistId: data.therapistId,
+          error: notificationError instanceof Error ? notificationError.message : "unknown_error",
+        });
+      }
+    }
 
     // An admin-created, unclaimed profile gets at most one initial inquiry.
     // The visitor's personal details are held in the database and are NOT
