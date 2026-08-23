@@ -1,11 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CircleDollarSign, CreditCard, ReceiptText, RotateCcw, WalletCards } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDollarSign,
+  CreditCard,
+  ReceiptText,
+  RotateCcw,
+  WalletCards,
+} from "lucide-react";
 
 import { AccountPageHeader } from "@/components/account/account-page-header";
 import { AccountSectionCard } from "@/components/account/account-section-card";
 import { AccountStatCard } from "@/components/account/account-stat-card";
 import { ACCOUNT_MOCK_TRANSACTIONS } from "@/components/account/account-mock-data";
 import { Badge } from "@/components/ui/badge";
+import { getMyProfileOnboarding } from "@/lib/profile-onboarding.functions";
 
 export const Route = createFileRoute("/_authenticated/account/billing")({
   head: () => ({
@@ -15,13 +26,24 @@ export const Route = createFileRoute("/_authenticated/account/billing")({
 });
 
 function AccountBillingPage() {
+  const getOnboardingFn = useServerFn(getMyProfileOnboarding);
+  const onboarding = useQuery({
+    queryKey: ["profile-onboarding"],
+    queryFn: () => getOnboardingFn(),
+  });
+  const paymentMethodStatus = onboarding.data?.paymentMethodStatus ?? "not_configured";
+
   return (
     <>
       <AccountPageHeader
         eyebrow="כספים"
         title="חיובים"
         description="מעקב אחר חיובים עבור פניות, זיכויים ותנועות בחשבון. מנגנון התשלום עצמו יחובר בשלב מאוחר יותר."
-        action={<Badge variant="secondary" className="bg-brand-soft text-brand hover:bg-brand-soft">נתוני הדגמה</Badge>}
+        action={
+          <Badge variant="secondary" className="bg-brand-soft text-brand hover:bg-brand-soft">
+            נתוני הדגמה
+          </Badge>
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -38,10 +60,14 @@ function AccountBillingPage() {
               <div key={transaction.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">{transaction.description}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{transaction.date} · <span className="ltr-num">{transaction.id}</span></p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {transaction.date} · <span className="ltr-num">{transaction.id}</span>
+                  </p>
                 </div>
                 <div className="shrink-0 text-left">
-                  <p className={`text-sm font-bold ltr-num ${transaction.type === "זיכוי" ? "text-emerald-700" : "text-foreground"}`}>
+                  <p
+                    className={`text-sm font-bold ltr-num ${transaction.type === "זיכוי" ? "text-emerald-700" : "text-foreground"}`}
+                  >
                     {transaction.amount < 0 ? `-₪${Math.abs(transaction.amount)}` : `₪${transaction.amount}`}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{transaction.type}</p>
@@ -52,13 +78,35 @@ function AccountBillingPage() {
         </AccountSectionCard>
 
         <AccountSectionCard title="אמצעי תשלום" description="יחובר יחד עם מערכת החיוב האמיתית.">
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center">
-            <ReceiptText className="mx-auto h-7 w-7 text-brand" />
-            <p className="mt-3 text-sm font-semibold text-foreground">עדיין לא חובר אמצעי תשלום</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              בשלב החיוב נוסיף כאן אמצעי תשלום, חשבוניות והגדרות חיוב בהתאם לספק שייבחר.
-            </p>
-          </div>
+          {onboarding.isLoading ? (
+            <p className="text-sm text-muted-foreground">טוען את מצב אמצעי התשלום…</p>
+          ) : onboarding.isError ? (
+            <p className="text-sm text-destructive">לא ניתן לטעון את מצב אמצעי התשלום.</p>
+          ) : paymentMethodStatus === "active" ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+              <CheckCircle2 className="mx-auto h-7 w-7 text-emerald-700" />
+              <p className="mt-3 text-sm font-semibold text-emerald-950">אמצעי התשלום פעיל</p>
+              <p className="mt-1 text-xs leading-5 text-emerald-900/80">
+                אמצעי התשלום תקין ושלב החיוב בתהליך ההצטרפות הושלם.
+              </p>
+            </div>
+          ) : paymentMethodStatus === "expired" || paymentMethodStatus === "action_required" ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-center">
+              <AlertTriangle className="mx-auto h-7 w-7 text-amber-700" />
+              <p className="mt-3 text-sm font-semibold text-amber-950">נדרש לעדכן את אמצעי התשלום</p>
+              <p className="mt-1 text-xs leading-5 text-amber-900/80">
+                הופעת הפרופיל מושהית עד לעדכון אמצעי התשלום. אפשרות העדכון תופעל לאחר חיבור ספק החיוב.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center">
+              <ReceiptText className="mx-auto h-7 w-7 text-brand" />
+              <p className="mt-3 text-sm font-semibold text-foreground">עדיין לא חובר אמצעי תשלום</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                בשלב החיוב נוסיף כאן אמצעי תשלום, חשבוניות והגדרות חיוב בהתאם לספק שייבחר. עד אז שלב זה יישאר פתוח.
+              </p>
+            </div>
+          )}
         </AccountSectionCard>
       </div>
     </>
