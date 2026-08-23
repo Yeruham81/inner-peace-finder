@@ -79,7 +79,8 @@ describe("profile onboarding state", () => {
       credentials: [{ verification_status: "pending_review", document_url: "private/document.pdf" }],
     });
     expect(notConfigured.completedCount).toBe(4);
-    expect(notConfigured.steps.payment).toBe("incomplete");
+    expect(notConfigured.steps.payment).toBe("action_required");
+    expect(notConfigured.isBillingPaused).toBe(true);
   });
 
   it("opens the payment step and marks a billing-paused profile as non-public", () => {
@@ -94,6 +95,20 @@ describe("profile onboarding state", () => {
     expect(status.isBillingPaused).toBe(true);
     expect(status.isPublic).toBe(false);
     expect(status.isActive).toBe(false);
+  });
+
+  it("keeps a frozen published profile out of the green state when payment was never configured", () => {
+    const status = buildProfileOnboardingStatus({
+      accountStatus: "active",
+      credentialVerificationSkippedAt: "2026-08-23T00:00:00Z",
+      paymentMethodStatus: "not_configured",
+      profile: { ...completeProfile, visibility: "hidden", is_active: false },
+      credentials: [],
+    });
+    expect(status.steps.payment).toBe("action_required");
+    expect(status.completedCount).toBe(4);
+    expect(status.allStepsComplete).toBe(false);
+    expect(status.isBillingPaused).toBe(true);
   });
 });
 
@@ -160,6 +175,9 @@ describe("completed profile publication controls", () => {
     expect(onboardingCard).toContain("הקפאת הפרופיל");
     expect(onboardingCard).toContain("הפעלת הפרופיל מחדש");
     expect(onboardingCard).toContain("פתיחת הפרופיל");
+    expect(onboardingCard).toContain("const displayedSteps = paymentRepairOnly");
+    expect(onboardingCard).toContain('step.id === "payment" ? 5 : index + 1');
+    expect(onboardingCard).toContain("ארבעת השלבים הראשונים כבר הושלמו");
   });
 
   it("keeps public-state actions in overview while the therapist editor only saves and previews", () => {
