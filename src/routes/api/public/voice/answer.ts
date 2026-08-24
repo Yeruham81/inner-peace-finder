@@ -18,8 +18,9 @@ export const Route = createFileRoute("/api/public/voice/answer")({
           buildHangupTwiml,
           twimlResponse,
           getTwilioConfig,
-          sanitizedBase,
+          voiceCallbackUrl,
         } = await import("@/lib/twilio-voice.server");
+
 
         const verified = await verifyTwilioWebhook(request);
         if (!verified.ok) return new Response("Forbidden", { status: verified.status });
