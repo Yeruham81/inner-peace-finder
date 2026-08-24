@@ -47,13 +47,6 @@ function orderedContactMethods(
   return [preferred, ...unique.filter((method) => method !== preferred)];
 }
 
-function dialHref(phone: string): string | null {
-  const raw = phone.trim();
-  if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return null;
-  return `tel:${raw.startsWith("+") ? `+${digits}` : digits}`;
-}
 
 function whatsappHref(phone: string): string | null {
   const raw = phone.trim();
