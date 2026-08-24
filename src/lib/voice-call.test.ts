@@ -15,11 +15,13 @@ import {
   buildBridgeTwiml,
   buildHangupTwiml,
   computeTwilioSignature,
-  externalWebhookUrl,
   parseTwilioForm,
-  sanitizedBase,
+  signedWebhookUrl,
+  trustedVoiceOrigin,
   validateTwilioSignature,
+  voiceCallbackUrl,
 } from "./twilio-voice.server";
+
 
 const MIGRATIONS_DIR = join(import.meta.dir, "..", "..", "supabase", "migrations");
 
@@ -121,16 +123,109 @@ describe("webhook signature validation", () => {
     });
   });
 
-  it("rebuilds the externally visible https url from proxy headers", () => {
-    const request = new Request("http://localhost:8080/api/public/voice/answer?a=1", {
-      method: "POST",
-      headers: { "x-forwarded-proto": "https", "x-forwarded-host": "tipulinks.co.il" },
-    });
-    expect(externalWebhookUrl(request)).toBe("https://tipulinks.co.il/api/public/voice/answer?a=1");
-    expect(sanitizedBase(externalWebhookUrl(request))).toBe("https://tipulinks.co.il");
-    expect(sanitizedBase("http://tipulinks.co.il/x")).toBe("");
+  it("signs against the trusted origin, ignoring forwarded headers", () => {
+    const previous = process.env["TIPULINKS_PUBLIC_ORIGIN"];
+    process.env["TIPULINKS_PUBLIC_ORIGIN"] = "https://tipulinks.co.il";
+    try {
+      const request = new Request("http://localhost:8080/api/public/voice/answer?b=2&a=%2B1", {
+        method: "POST",
+        headers: { "x-forwarded-proto": "http", "x-forwarded-host": "attacker.example" },
+      });
+      // Origin from env; pathname + raw query preserved verbatim (order + encoding).
+      expect(signedWebhookUrl(request)).toBe("https://tipulinks.co.il/api/public/voice/answer?b=2&a=%2B1");
+    } finally {
+      if (previous === undefined) delete process.env["TIPULINKS_PUBLIC_ORIGIN"];
+      else process.env["TIPULINKS_PUBLIC_ORIGIN"] = previous;
+    }
   });
 });
+
+describe("Twilio Voice URLs never depend on request headers", () => {
+  const CALLBACK_PATHS = [
+    "/api/public/voice/answer",
+    "/api/public/voice/parent-status",
+    "/api/public/voice/therapist-status",
+    "/api/public/voice/dial-action",
+  ];
+
+  function withOrigin<T>(value: string | undefined, run: () => T): T {
+    const previous = process.env["TIPULINKS_PUBLIC_ORIGIN"];
+    if (value === undefined) delete process.env["TIPULINKS_PUBLIC_ORIGIN"];
+    else process.env["TIPULINKS_PUBLIC_ORIGIN"] = value;
+    try {
+      return run();
+    } finally {
+      if (previous === undefined) delete process.env["TIPULINKS_PUBLIC_ORIGIN"];
+      else process.env["TIPULINKS_PUBLIC_ORIGIN"] = previous;
+    }
+  }
+
+  it("builds every outgoing callback URL from TIPULINKS_PUBLIC_ORIGIN", () => {
+    withOrigin("https://tipulinks.co.il", () => {
+      for (const path of CALLBACK_PATHS) {
+        expect(voiceCallbackUrl(path)).toBe(`https://tipulinks.co.il${path}`);
+      }
+      expect(trustedVoiceOrigin()).toBe("https://tipulinks.co.il");
+    });
+  });
+
+  it("cannot be influenced by X-Forwarded-Host or X-Forwarded-Proto", () => {
+    withOrigin("https://tipulinks.co.il", () => {
+      const request = new Request("http://localhost:8080/api/public/voice/answer", {
+        method: "POST",
+        headers: {
+          "x-forwarded-host": "attacker.example",
+          "x-forwarded-proto": "http",
+          host: "attacker.example",
+          origin: "https://attacker.example",
+          referer: "https://attacker.example/x",
+        },
+      });
+      for (const path of CALLBACK_PATHS) {
+        const url = voiceCallbackUrl(path);
+        expect(url.startsWith("https://tipulinks.co.il/")).toBe(true);
+        expect(url).not.toContain("attacker.example");
+      }
+      expect(signedWebhookUrl(request)).toBe("https://tipulinks.co.il/api/public/voice/answer");
+    });
+  });
+
+  it("fails closed on a missing, malformed or non-https origin", () => {
+    for (const bad of [
+      undefined,
+      "",
+      "not a url",
+      "http://tipulinks.co.il",
+      "https://user:pass@tipulinks.co.il",
+      "https://tipulinks.co.il/nested/path",
+      "https://tipulinks.co.il/?a=1",
+      "https://tipulinks.co.il/#frag",
+    ]) {
+      withOrigin(bad, () => {
+        expect(() => trustedVoiceOrigin()).toThrow();
+        expect(() => voiceCallbackUrl("/api/public/voice/answer")).toThrow();
+      });
+    }
+  });
+
+  it("keeps the header-based URL helper out of the voice flow", () => {
+    const files = [
+      "twilio-voice.server.ts",
+      "voice-call.functions.ts",
+      join("..", "routes", "api", "public", "voice", "answer.ts"),
+      join("..", "routes", "api", "public", "voice", "parent-status.ts"),
+      join("..", "routes", "api", "public", "voice", "therapist-status.ts"),
+      join("..", "routes", "api", "public", "voice", "dial-action.ts"),
+    ];
+    for (const file of files) {
+      const source = readFileSync(join(import.meta.dir, file), "utf8");
+      expect(source).not.toContain("externalWebhookUrl");
+      expect(source).not.toContain("x-forwarded-host");
+      expect(source).not.toContain("x-forwarded-proto");
+    }
+  });
+});
+
 
 describe("bridge TwiML", () => {
   const xml = buildBridgeTwiml({

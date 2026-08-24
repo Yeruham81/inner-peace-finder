@@ -178,28 +178,44 @@ export function validateTwilioSignature(input: {
 }
 
 /**
- * Rebuild the exact URL Twilio signed, from the externally visible proxy
- * headers, preserving any query parameters.
+ * The ONLY trusted origin for Twilio Voice URLs: the server-side
+ * `TIPULINKS_PUBLIC_ORIGIN` env var. Request headers (`Host`,
+ * `X-Forwarded-Host`, `X-Forwarded-Proto`, `Origin`, `Referer`, ...) are never
+ * consulted, so a spoofed header cannot redirect a callback. Fails closed.
  */
-export function externalWebhookUrl(request: Request): string {
-  const url = new URL(request.url);
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const host = forwardedHost || request.headers.get("host") || url.host;
-  const proto = forwardedProto || "https";
-  return `${proto}://${host}${url.pathname}${url.search}`;
+export function trustedVoiceOrigin(): string {
+  const configured = process.env["TIPULINKS_PUBLIC_ORIGIN"];
+  if (!configured) throw new Error("TIPULINKS_PUBLIC_ORIGIN is not configured");
+
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    throw new Error("TIPULINKS_PUBLIC_ORIGIN is not a valid absolute URL");
+  }
+  if (parsed.protocol !== "https:") throw new Error("TIPULINKS_PUBLIC_ORIGIN must use https");
+  if (parsed.username || parsed.password) throw new Error("TIPULINKS_PUBLIC_ORIGIN must not contain credentials");
+  if (parsed.search || parsed.hash) throw new Error("TIPULINKS_PUBLIC_ORIGIN must not contain a query or fragment");
+  if (parsed.pathname !== "/" && parsed.pathname !== "") {
+    throw new Error("TIPULINKS_PUBLIC_ORIGIN must not contain a path");
+  }
+  return parsed.origin;
 }
 
-/** Origin of an externally visible URL, used to build webhook callbacks. */
-export function sanitizedBase(url: string): string {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return "";
-    return parsed.origin;
-  } catch {
-    return "";
-  }
+/** Build an outgoing Twilio Voice callback URL from the trusted origin only. */
+export function voiceCallbackUrl(path: string): string {
+  return new URL(path, `${trustedVoiceOrigin()}/`).toString();
 }
+
+/**
+ * Rebuild the exact URL Twilio signed: trusted origin + the incoming request's
+ * pathname and raw query string (order and encoding preserved verbatim).
+ */
+export function signedWebhookUrl(request: Request): string {
+  const incoming = new URL(request.url);
+  return `${trustedVoiceOrigin()}${incoming.pathname}${incoming.search}`;
+}
+
 
 export type VerifiedWebhook =
   | { ok: true; params: Record<string, string>; url: string }
@@ -221,11 +237,14 @@ export async function verifyTwilioWebhook(request: Request): Promise<VerifiedWeb
     return { ok: false, status: 503 };
   }
 
-  const url = externalWebhookUrl(request);
-  if (!url.startsWith("https://")) {
-    console.error("[voice] webhook rejected: insecure transport");
-    return { ok: false, status: 403 };
+  let url: string;
+  try {
+    url = signedWebhookUrl(request);
+  } catch {
+    console.error("[voice] webhook rejected: trusted origin unavailable");
+    return { ok: false, status: 503 };
   }
+
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/x-www-form-urlencoded")) {

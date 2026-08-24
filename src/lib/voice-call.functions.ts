@@ -94,14 +94,15 @@ export const startVoiceCall = createServerFn({ method: "POST" })
       return { ok: false, reason: "channel_unavailable" };
     }
 
-    const { createVisitorCall, externalWebhookUrl, getTwilioConfig, sanitizedBase } =
-      await import("./twilio-voice.server");
+    const { createVisitorCall, getTwilioConfig, voiceCallbackUrl } = await import("./twilio-voice.server");
 
-    let base: string;
+    let answerUrl: string;
+    let statusCallbackUrl: string;
     try {
       getTwilioConfig();
-      base = request ? sanitizedBase(externalWebhookUrl(request)) : "";
-      if (!base) throw new Error("origin_unavailable");
+      // Built exclusively from TIPULINKS_PUBLIC_ORIGIN — never request headers.
+      answerUrl = voiceCallbackUrl("/api/public/voice/answer");
+      statusCallbackUrl = voiceCallbackUrl("/api/public/voice/parent-status");
     } catch {
       await supabaseAdmin.rpc("fail_voice_call_attempt", {
         _attempt_id: attemptId,
@@ -112,9 +113,10 @@ export const startVoiceCall = createServerFn({ method: "POST" })
 
     const created = await createVisitorCall({
       to: visitor.e164,
-      answerUrl: `${base}/api/public/voice/answer`,
-      statusCallbackUrl: `${base}/api/public/voice/parent-status`,
+      answerUrl,
+      statusCallbackUrl,
     });
+
 
     if (!created.ok) {
       const { sanitizeProviderError } = await import("./voice-call-billing");
