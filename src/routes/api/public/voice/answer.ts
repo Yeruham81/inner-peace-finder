@@ -47,15 +47,16 @@ export const Route = createFileRoute("/api/public/voice/answer")({
         }
 
         const config = getTwilioConfig();
-        const base = sanitizedBase(verified.url);
         return twimlResponse(
           buildBridgeTwiml({
             therapistPhone: row.therapist_phone,
             callerId: config.phoneNumber,
-            therapistStatusCallbackUrl: `${base}/api/public/voice/therapist-status`,
-            dialActionUrl: `${base}/api/public/voice/dial-action`,
+            // Trusted-origin URLs only; the incoming request's headers are ignored.
+            therapistStatusCallbackUrl: voiceCallbackUrl("/api/public/voice/therapist-status"),
+            dialActionUrl: voiceCallbackUrl("/api/public/voice/dial-action"),
           }),
         );
+
       },
     },
   },
