@@ -186,7 +186,7 @@ describe("voice migration invariants", () => {
   });
 
   it("hardens every voice RPC with an empty search_path", () => {
-    const definers = sql.match(/SECURITY DEFINER/g) ?? [];
+    const definers = sql.match(/CREATE OR REPLACE FUNCTION/g) ?? [];
     expect(definers.length).toBeGreaterThan(0);
     expect((sql.match(/SET search_path = ''/g) ?? []).length).toBeGreaterThanOrEqual(definers.length);
   });

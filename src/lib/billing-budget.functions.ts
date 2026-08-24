@@ -42,7 +42,8 @@ export const updateMyMonthlyBudget = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => MonthlyBudgetInput.parse(input))
   .handler(async ({ data, context }) => {
     const { data: updated, error } = await context.supabase.rpc("set_my_monthly_budget", {
-      _monthly_limit_agorot: data.monthlyLimitAgorot,
+      // null clears the limit; the generated signature omits the nullable form.
+      _monthly_limit_agorot: data.monthlyLimitAgorot as unknown as number,
       _notify_on_exhaustion: data.notifyOnExhaustion,
     });
     if (error) throw new Error(error.message);
