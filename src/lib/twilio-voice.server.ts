@@ -237,11 +237,14 @@ export async function verifyTwilioWebhook(request: Request): Promise<VerifiedWeb
     return { ok: false, status: 503 };
   }
 
-  const url = externalWebhookUrl(request);
-  if (!url.startsWith("https://")) {
-    console.error("[voice] webhook rejected: insecure transport");
-    return { ok: false, status: 403 };
+  let url: string;
+  try {
+    url = signedWebhookUrl(request);
+  } catch {
+    console.error("[voice] webhook rejected: trusted origin unavailable");
+    return { ok: false, status: 503 };
   }
+
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/x-www-form-urlencoded")) {
