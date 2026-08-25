@@ -11,6 +11,13 @@ export type NormalizedPhone = { ok: true; e164: string } | { ok: false; reason: 
 export type PhoneRejection = "empty" | "malformed" | "not_israeli" | "unsupported_type";
 
 /**
+ * Common separators produced by keyboards, word processors and copied RTL
+ * text. They are presentation only and are removed before parsing.
+ */
+const PHONE_SEPARATOR_PATTERN = /[\s\-‐‑‒–—―−־().]/gu;
+const PHONE_INPUT_PATTERN = /^[+\d\s\-‐‑‒–—―−־().]+$/u;
+
+/**
  * Israeli prefixes we refuse to dial: premium-rate / paid services (1-900,
  * 1-901, 1-902…) and short service codes. Toll-free 1-800 is also excluded
  * because it is not a reachable personal destination for a bridged call.
@@ -54,9 +61,9 @@ export function normalizeIsraeliPhone(input: string | null | undefined): Normali
 
   // Reject anything that is not plausible phone punctuation up front so that
   // e-mail-ish or script-ish input never reaches the parser.
-  if (!/^[+\d\s\-().]+$/.test(raw)) return { ok: false, reason: "malformed" };
+  if (!PHONE_INPUT_PATTERN.test(raw)) return { ok: false, reason: "malformed" };
 
-  const cleaned = raw.replace(/[\s\-().]/g, "").replace(/^00/, "+");
+  const cleaned = raw.replace(PHONE_SEPARATOR_PATTERN, "").replace(/^00/, "+");
   const candidate = cleaned.startsWith("+") ? cleaned : cleaned.startsWith("972") ? `+${cleaned}` : cleaned;
 
   const parsed = parsePhoneNumberFromString(candidate, "IL");
