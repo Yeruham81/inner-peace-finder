@@ -8,6 +8,7 @@ import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { PublicRouteError } from "@/components/public-route-error";
 import { track } from "@/lib/analytics";
 import { readRememberedResultsReturn, resultsReturnLinkOptions } from "@/lib/search-return";
+import { absoluteUrl, encodePathSegment, serializeJsonLd, SITE_ORIGIN } from "@/lib/seo";
 
 function therapistQuery(slug: string) {
   return queryOptions({
@@ -29,22 +30,82 @@ export const Route = createFileRoute("/therapists/$slug")({
     return t;
   },
   head: ({ loaderData }) => {
-    if (!loaderData) return { meta: [{ title: "מטפל" }] };
-    const title = `${loaderData.full_name} — ${loaderData.professional_title}`;
-    const desc =
-      loaderData.short_intro?.slice(0, 155) ??
-      `${loaderData.full_name}, ${loaderData.professional_title} ב${loaderData.city}.`;
+    if (!loaderData) return { meta: [{ title: "פרופיל מטפל | טיפולינקס" }] };
+    const professionalTitle = loaderData.professional_title?.trim() || "מטפל/ת";
+    const title = `${loaderData.full_name} — ${professionalTitle} | טיפולינקס`;
+    const location = loaderData.city ? ` ב${loaderData.city}` : "";
+    const desc = loaderData.short_intro?.slice(0, 155) ?? `${loaderData.full_name}, ${professionalTitle}${location}.`;
+    const canonical = absoluteUrl(`/therapists/${encodePathSegment(loaderData.slug)}`);
     const meta: Array<{ title?: string; name?: string; property?: string; content?: string }> = [
       { title },
       { name: "description", content: desc },
       { property: "og:title", content: title },
       { property: "og:description", content: desc },
+      { property: "og:type", content: "profile" },
+      { property: "og:url", content: canonical },
     ];
     if (loaderData.image_url) {
       meta.push({ property: "og:image", content: loaderData.image_url });
       meta.push({ name: "twitter:image", content: loaderData.image_url });
     }
-    return { meta };
+    const personId = `${canonical}#person`;
+    return {
+      meta,
+      links: [{ rel: "canonical", href: canonical }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: serializeJsonLd({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "ProfilePage",
+                "@id": `${canonical}#profile-page`,
+                url: canonical,
+                name: title,
+                description: desc,
+                inLanguage: "he-IL",
+                isPartOf: { "@id": `${SITE_ORIGIN}/#website` },
+                mainEntity: { "@id": personId },
+              },
+              {
+                "@type": "Person",
+                "@id": personId,
+                name: loaderData.full_name,
+                jobTitle: loaderData.professional_title || undefined,
+                description: loaderData.short_intro || undefined,
+                image: loaderData.image_url || undefined,
+                url: canonical,
+                address: loaderData.city
+                  ? {
+                      "@type": "PostalAddress",
+                      addressLocality: loaderData.city,
+                      addressCountry: "IL",
+                    }
+                  : undefined,
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "דף הבית",
+                    item: absoluteUrl("/"),
+                  },
+                  {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: loaderData.full_name,
+                    item: canonical,
+                  },
+                ],
+              },
+            ],
+          }),
+        },
+      ],
+    };
   },
   component: TherapistPage,
   errorComponent: ({ error, reset }) => (
