@@ -3,10 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 /**
  * TwiML webhook for the visitor leg (POST only, signature required).
  *
- * The therapist is dialed only when Twilio's synchronous Answering Machine
- * Detection classified the visitor answer as `human`. Voicemail, fax, machine or
- * an unknown/unusable result ends the call without dialing anyone and without
- * any billable event.
+ * A technically answered visitor leg proceeds immediately to the therapist.
+ * The visitor is never asked to speak or press a key.
  */
 export const Route = createFileRoute("/api/public/voice/answer")({
   server: {
@@ -20,21 +18,19 @@ export const Route = createFileRoute("/api/public/voice/answer")({
           getTwilioConfig,
           voiceCallbackUrl,
         } = await import("@/lib/twilio-voice.server");
-
-
         const verified = await verifyTwilioWebhook(request);
         if (!verified.ok) return new Response("Forbidden", { status: verified.status });
 
-        const { visitorAnswerIsHuman } = await import("@/lib/voice-call-billing");
         const callSid = verified.params["CallSid"] ?? "";
-        const answeredBy = verified.params["AnsweredBy"] ?? null;
 
         if (!callSid) return twimlResponse(buildHangupTwiml());
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: rows, error } = await supabaseAdmin.rpc("voice_call_caller_answered", {
           _parent_call_sid: callSid,
-          _amd_result: visitorAnswerIsHuman(answeredBy) ? "human" : (answeredBy ?? "unknown"),
+          // The RPC signature is retained for backwards compatibility, but
+          // caller-side answer detection is deliberately disabled.
+          _amd_result: "disabled",
         });
         if (error) {
           console.error("[voice] caller-answer bookkeeping failed", { code: error.code });
@@ -46,17 +42,22 @@ export const Route = createFileRoute("/api/public/voice/answer")({
           return twimlResponse(buildHangupTwiml());
         }
 
+        // Database rows may contain familiar local formatting. Twilio must
+        // receive only a validated E.164 destination on the second leg.
+        const { normalizeIsraeliPhone } = await import("@/lib/phone-il");
+        const therapistPhone = normalizeIsraeliPhone(row.therapist_phone);
+        if (!therapistPhone.ok) return twimlResponse(buildHangupTwiml());
+
         const config = getTwilioConfig();
         return twimlResponse(
           buildBridgeTwiml({
-            therapistPhone: row.therapist_phone,
+            therapistPhone: therapistPhone.e164,
             callerId: config.phoneNumber,
             // Trusted-origin URLs only; the incoming request's headers are ignored.
             therapistStatusCallbackUrl: voiceCallbackUrl("/api/public/voice/therapist-status"),
             dialActionUrl: voiceCallbackUrl("/api/public/voice/dial-action"),
           }),
         );
-
       },
     },
   },
