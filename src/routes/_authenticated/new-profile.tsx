@@ -22,6 +22,7 @@ import { TherapistImageUpload } from "@/components/therapist-image-upload";
 import { TherapistCredentialPanel } from "@/components/therapist-credential-panel";
 import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { buildPreviewViewData } from "@/lib/profile-preview-adapter";
+import { looksLikeEmailAddress } from "@/lib/contact-validation";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
@@ -650,8 +651,11 @@ export function EditorPage({
   const orderedLanguages = orderCanonicalLanguages(options.data?.languages ?? []);
 
   const hasPhysicalLocation = form.locations.some((location) => location.city.trim().length > 0);
+  const adminEmailValue = form.email.trim();
+  const adminEmailOk = adminEmailValue.length === 0 || looksLikeEmailAddress(adminEmailValue);
   const publishMissingFields = [
     ...(isAdmin && !form.email.trim() ? ["אימייל מקצועי"] : []),
+    ...(isAdmin && adminEmailValue && !adminEmailOk ? ["אימייל מקצועי תקין"] : []),
     ...(form.full_name.trim().length < 2 ? ["שם מלא"] : []),
     ...(!form.gender ? ["מין"] : []),
     ...(!form.professional_title.trim() ? ["כותרת מקצועית"] : []),
@@ -1259,8 +1263,14 @@ export function EditorPage({
                       maxLength={160}
                       onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                       placeholder="therapist@example.com"
+                      aria-invalid={!adminEmailOk}
                       className="bg-white text-left"
                     />
+                    {!adminEmailOk && (
+                      <p className="mt-1 text-xs text-destructive">
+                        יש להזין כתובת אימייל תקינה, למשל name@example.com
+                      </p>
+                    )}
                   </Field>
                 </div>
               </section>
