@@ -26,7 +26,9 @@ describe("technical SEO foundation", () => {
     const sitemap = readSource("routes/sitemap[.]xml.ts");
     expect(sitemap).toMatch(/xmlEscape\(\s*absoluteUrl\(e\.path\),?\s*\)/);
     expect(sitemap).toMatch(/path:\s*["']\/for-therapists["']/);
+    expect(sitemap).toMatch(/path:\s*["']\/therapy-information["']/);
     expect(sitemap).toContain("listAllTherapistSlugs");
+    expect(sitemap).toMatch(/isProblemSeoPublished\(\s*problem\.slug\s*\)/);
     expect(sitemap).not.toMatch(/path:\s*["']\/search["']/);
     expect(sitemap).not.toContain('const BASE_URL = ""');
 
@@ -38,6 +40,7 @@ describe("technical SEO foundation", () => {
     for (const route of [
       "routes/index.tsx",
       "routes/for-therapists.tsx",
+      "routes/therapy-information.tsx",
       "routes/problems.$slug.tsx",
       "routes/therapists.$slug.tsx",
     ]) {
@@ -47,9 +50,9 @@ describe("technical SEO foundation", () => {
     }
   });
 
-  it("keeps search and placeholder content out of the index", () => {
+  it("keeps search out of the index and publishes the completed information hub", () => {
     expect(readSource("routes/search.tsx")).toContain('{ name: "robots", content: "noindex,follow" }');
-    expect(readSource("routes/therapy-information.tsx")).toContain('{ name: "robots", content: "noindex,follow" }');
+    expect(readSource("routes/therapy-information.tsx")).not.toContain('name: "robots"');
   });
 
   it("provides only the approved structured-data types", () => {
@@ -59,6 +62,10 @@ describe("technical SEO foundation", () => {
 
     const problem = readSource("routes/problems.$slug.tsx");
     expect(problem).toContain('"@type": "BreadcrumbList"');
+
+    const hub = readSource("routes/therapy-information.tsx");
+    expect(hub).toContain('"@type": "CollectionPage"');
+    expect(hub).toContain('"@type": "ItemList"');
 
     const therapist = readSource("routes/therapists.$slug.tsx");
     expect(therapist).toContain('"@type": "ProfilePage"');
