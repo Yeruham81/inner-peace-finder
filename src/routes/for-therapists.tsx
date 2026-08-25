@@ -443,14 +443,13 @@ function TherapistBenefitsSection() {
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {therapistAdvantages.map((advantage, index) => {
+          {therapistAdvantages.map((advantage) => {
             const Icon = advantage.icon;
-            const emphasisClass = index === 0 ? "border-primary/25 bg-primary/10" : "border-border bg-background";
 
             return (
               <article
                 key={advantage.title}
-                className={`rounded-3xl border p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${emphasisClass}`}
+                className="group rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition hover:border-primary/20 hover:bg-brand-soft/30 hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary">
                   <Icon className="h-6 w-6" />
@@ -463,7 +462,6 @@ function TherapistBenefitsSection() {
             );
           })}
         </div>
-
         <div className="mt-10 rounded-3xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
