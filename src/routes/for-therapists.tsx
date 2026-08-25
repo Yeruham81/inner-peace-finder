@@ -21,38 +21,44 @@ import {
   UsersRound,
   WalletCards,
 } from "lucide-react";
+import { absoluteUrl } from "@/lib/seo";
 
 const THERAPIST_SIGNUP_URL = "/auth" as const;
 
 export const Route = createFileRoute("/for-therapists")({
-  head: () => ({
-    meta: [
-      {
-        title: "טיפולינקס למטפלים | פניות ממוקדות ללא דמי מנוי",
-      },
-      {
-        name: "description",
-        content:
-          "פתחו פרופיל מטפל בחינם בטיפולינקס וקבלו פניות ממוקדות באמצעות מנוע חיפוש חכם מבוסס בינה מלאכותית. ללא דמי מנוי וללא התחייבות.",
-      },
-      {
-        property: "og:title",
-        content: "טיפולינקס למטפלים | פניות ממוקדות ללא דמי מנוי",
-      },
-      {
-        property: "og:description",
-        content: "פלטפורמה חכמה שמחברת בין אנשים שמחפשים עזרה לבין מטפלים רלוונטיים לצורך שתיארו.",
-      },
-      {
-        property: "og:type",
-        content: "website",
-      },
-      {
-        name: "twitter:card",
-        content: "summary",
-      },
-    ],
-  }),
+  head: () => {
+    const canonical = absoluteUrl("/for-therapists");
+    return {
+      meta: [
+        {
+          title: "טיפולינקס למטפלים | פניות ממוקדות ללא דמי מנוי",
+        },
+        {
+          name: "description",
+          content:
+            "פתחו פרופיל מטפל בחינם בטיפולינקס וקבלו פניות ממוקדות באמצעות מנוע חיפוש חכם מבוסס בינה מלאכותית. ללא דמי מנוי וללא התחייבות.",
+        },
+        {
+          property: "og:title",
+          content: "טיפולינקס למטפלים | פניות ממוקדות ללא דמי מנוי",
+        },
+        {
+          property: "og:description",
+          content: "פלטפורמה חכמה שמחברת בין אנשים שמחפשים עזרה לבין מטפלים רלוונטיים לצורך שתיארו.",
+        },
+        {
+          property: "og:type",
+          content: "website",
+        },
+        { property: "og:url", content: canonical },
+        {
+          name: "twitter:card",
+          content: "summary",
+        },
+      ],
+      links: [{ rel: "canonical", href: canonical }],
+    };
+  },
   component: ForTherapistsPage,
 });
 
@@ -436,7 +442,7 @@ function TherapistBenefitsSection() {
           </h2>
 
           <p className="mt-5 text-base leading-8 text-muted-foreground">
-             טיפולינקס עוזרת לכם להגיע למטופלים חדשים — בלי לשלם דמי מנוי קבועים
+            טיפולינקס עוזרת לכם להגיע למטופלים חדשים — בלי לשלם דמי מנוי קבועים
           </p>
         </div>
 
