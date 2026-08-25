@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { createLead } from "@/lib/lead.functions";
 import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
 import { track } from "@/lib/analytics";
+import { looksLikeIsraeliPhone } from "@/lib/phone-il";
 import { readRememberedResultsReturn, sanitizeSearchReturn } from "@/lib/search-return";
-
-const PHONE_RE = /^(\+?972|0)(5\d|[23489])\d{7,8}$/;
 
 /** Server-issued challenge. The expected answer never reaches the browser. */
 type Challenge = { id: string; prompt: string };
@@ -61,6 +61,7 @@ export function LeadModal({
   pageSource?: string;
   unclaimedProfile?: boolean;
 }) {
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState(() => defaultMessage(problemName, populationName));
@@ -174,7 +175,7 @@ export function LeadModal({
     Number.isFinite(challengeAnswerNum) &&
     isChallengeAnswerCorrect(challenge.prompt, challengeAnswerNum);
 
-  const phoneOk = PHONE_RE.test(phone.trim());
+  const phoneOk = looksLikeIsraeliPhone(phone);
   const nameOk = name.trim().length >= 2;
   const messageOk = message.trim().length >= 2;
   const canSubmit = nameOk && phoneOk && messageOk && challengeOk && !submitting;
@@ -204,6 +205,11 @@ export function LeadModal({
         },
       });
       if (!res.ok) {
+        if (res.reason === "invalid_phone") {
+          setError(res.message ?? "מספר טלפון ישראלי לא תקין.");
+          setSubmitting(false);
+          return;
+        }
         if (res.reason === "unclaimed_contact_limit") {
           setError(res.message ?? "לא ניתן לשלוח פנייה נוספת לפרופיל זה לפני אישור המטפל/ת.");
           setSubmitting(false);
@@ -239,6 +245,14 @@ export function LeadModal({
       });
       if (res.deliveryStatus === "sent") {
         track("lead_delivered", { therapist_id: therapistId, page_source: pageSource ?? null });
+      }
+      if (unclaimedProfile) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["unified-search"] }),
+          queryClient.invalidateQueries({ queryKey: ["search"] }),
+          queryClient.invalidateQueries({ queryKey: ["structured-search"] }),
+          queryClient.invalidateQueries({ queryKey: ["filter-options"] }),
+        ]);
       }
       setDone(true);
     } catch (err) {
