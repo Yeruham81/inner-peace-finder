@@ -79,16 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "מטפלים — מציאת מטפל לחרדה לפי בעיה" },
+      { title: "טיפולינקס — פשוט למצוא את הטיפול המתאים" },
       {
         name: "description",
-        content:
-          "פלטפורמה למציאת מטפלים בחרדה לפי סימפטומים ובעיות רגשיות בעברית. חפשו לפי תחושה, קבלו מטפלים מתאימים.",
+        content: "פלטפורמה לחיפוש מטפלים ואנשי מקצוע לפי הצורך, המיקום, שפת הטיפול, קהל היעד ואופן הטיפול.",
       },
-      { property: "og:title", content: "מטפלים — מציאת מטפל לחרדה לפי בעיה" },
+      { property: "og:title", content: "טיפולינקס — פשוט למצוא את הטיפול המתאים" },
       {
         property: "og:description",
-        content: "חיפוש מטפלים בעברית לפי בעיה, עיר, אוכלוסייה ושפה.",
+        content: "חיפוש חכם וגמיש של מטפלים ואנשי מקצוע לפי הצורך האישי שלכם.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
