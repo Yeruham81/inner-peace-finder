@@ -8,6 +8,9 @@ const migration = read("supabase/migrations/20260822090000_claim_invite_delivery
 const leadSource = read("src/lib/lead.functions.ts");
 const inviteServer = read("src/lib/profile-claim-v2.server.ts");
 const claimFunctions = read("src/lib/profile-claim-v2.functions.ts");
+const claimRoute = read("src/routes/_authenticated/claim.tsx");
+const searchEligibility = read("src/lib/search-eligibility.ts");
+const leadModal = read("src/components/lead-modal.tsx");
 
 describe("profile claim stage 3", () => {
   it("turns the committed first held lead into a Brevo ownership invitation", () => {
@@ -100,5 +103,24 @@ describe("profile claim stage 3", () => {
     const auth = read("src/routes/auth.tsx");
     expect(auth).toContain("emailRedirectTo");
     expect(auth).toContain("encodeURIComponent(dest)");
+  });
+
+  it("lets a mismatched Google user sign out and explicitly choose another account", () => {
+    expect(claimRoute).toContain('supabase.auth.signOut({ scope: "local" })');
+    expect(claimRoute).toContain("queryClient.clear()");
+    expect(claimRoute).toContain('extraParams: { prompt: "select_account" }');
+    expect(claimRoute).toContain("/claim?token=${encodeURIComponent(token)}");
+    expect(claimRoute).toContain("התנתקות ובחירת חשבון Google אחר");
+    expect(claimRoute).toContain("preview.emailMatchesSignedInUser && (");
+  });
+
+  it("removes an admin-created profile from all public reads after its first held lead", () => {
+    expect(searchEligibility).toContain("first_contact_reserved_at.is.null");
+    expect(searchEligibility).toContain("first_contact_sent_at.is.null");
+    expect(searchEligibility).toContain("owner_reviewed_at.not.is.null");
+    expect(searchEligibility).toContain("do_not_republish.eq.false");
+    expect(leadModal).toContain('queryKey: ["unified-search"]');
+    expect(leadModal).toContain('queryKey: ["structured-search"]');
+    expect(leadModal).toContain('queryKey: ["filter-options"]');
   });
 });
