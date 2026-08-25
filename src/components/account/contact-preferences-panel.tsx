@@ -7,11 +7,9 @@ import { toast } from "sonner";
 import { AccountSectionCard } from "@/components/account/account-section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  getMyProfile,
-  updateMyContactPreferences,
-  type ContactMethod,
-} from "@/lib/therapist-profile.functions";
+import { looksLikeEmailAddress } from "@/lib/contact-validation";
+import { looksLikeIsraeliPhone } from "@/lib/phone-il";
+import { getMyProfile, updateMyContactPreferences, type ContactMethod } from "@/lib/therapist-profile.functions";
 
 const CONTACT_METHOD_OPTIONS: readonly {
   id: ContactMethod;
@@ -47,9 +45,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
   useEffect(() => {
     if (initialized || !profile.isSuccess) return;
     const data = profile.data;
-    const methods = data?.contact_methods?.length
-      ? data.contact_methods
-      : (["email"] as ContactMethod[]);
+    const methods = data?.contact_methods?.length ? data.contact_methods : (["email"] as ContactMethod[]);
     const preferred =
       data?.preferred_contact_method && methods.includes(data.preferred_contact_method)
         ? data.preferred_contact_method
@@ -83,15 +79,19 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
   });
 
   const needsEmail = preferences.contact_methods.includes("email");
-  const needsPhone = preferences.contact_methods.some(
-    (method) => method === "whatsapp" || method === "phone",
-  );
+  const needsPhone = preferences.contact_methods.some((method) => method === "whatsapp" || method === "phone");
+  const emailValue = preferences.email.trim();
+  const phoneValue = preferences.phone.trim();
+  const emailOk = emailValue.length === 0 || looksLikeEmailAddress(emailValue);
+  const phoneOk = phoneValue.length === 0 || looksLikeIsraeliPhone(phoneValue);
   const canSave =
     !!profile.data &&
     preferences.contact_methods.length > 0 &&
     preferences.contact_methods.includes(preferences.preferred_contact_method) &&
-    (!needsEmail || preferences.email.trim().length > 0) &&
-    (!needsPhone || preferences.phone.trim().length > 0);
+    (!needsEmail || emailValue.length > 0) &&
+    (!needsPhone || phoneValue.length > 0) &&
+    emailOk &&
+    phoneOk;
 
   function toggleMethod(method: ContactMethod) {
     setPreferences((current) => {
@@ -149,9 +149,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-foreground">
-                        {option.label}
-                      </span>
+                      <span className="block text-sm font-semibold text-foreground">{option.label}</span>
                       <span className="block text-xs text-muted-foreground">
                         {selected ? "פעיל" : option.description}
                       </span>
@@ -169,9 +167,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
                         }))
                       }
                       className={`shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
-                        preferred
-                          ? "bg-brand text-brand-foreground"
-                          : "bg-surface-elevated text-muted-foreground"
+                        preferred ? "bg-brand text-brand-foreground" : "bg-surface-elevated text-muted-foreground"
                       }`}
                     >
                       {preferred ? "★ מועדף" : "העדפה"}
@@ -184,9 +180,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <label>
-              <span className="mb-1 block text-xs font-medium text-foreground">
-                אימייל{needsEmail ? " *" : ""}
-              </span>
+              <span className="mb-1 block text-xs font-medium text-foreground">אימייל{needsEmail ? " *" : ""}</span>
               <Input
                 dir="ltr"
                 type="email"
@@ -194,17 +188,15 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
                 placeholder="name@example.com"
                 value={preferences.email}
                 disabled={mutation.isPending}
-                onChange={(event) =>
-                  setPreferences((current) => ({ ...current, email: event.target.value }))
-                }
+                onChange={(event) => setPreferences((current) => ({ ...current, email: event.target.value }))}
                 maxLength={160}
+                aria-invalid={!emailOk}
                 className="bg-white text-left"
               />
+              {!emailOk && <span className="mt-1 block text-xs text-destructive">כתובת אימייל לא תקינה</span>}
             </label>
             <label>
-              <span className="mb-1 block text-xs font-medium text-foreground">
-                טלפון{needsPhone ? " *" : ""}
-              </span>
+              <span className="mb-1 block text-xs font-medium text-foreground">טלפון{needsPhone ? " *" : ""}</span>
               <Input
                 dir="ltr"
                 type="tel"
@@ -213,18 +205,14 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
                 placeholder="050-1234567"
                 value={preferences.phone}
                 disabled={mutation.isPending}
-                onChange={(event) =>
-                  setPreferences((current) => ({ ...current, phone: event.target.value }))
-                }
+                onChange={(event) => setPreferences((current) => ({ ...current, phone: event.target.value }))}
                 maxLength={40}
+                aria-invalid={!phoneOk}
                 className="bg-white text-left"
               />
+              {!phoneOk && <span className="mt-1 block text-xs text-destructive">מספר טלפון ישראלי לא תקין</span>}
             </label>
-            <Button
-              type="button"
-              disabled={!canSave || mutation.isPending}
-              onClick={() => mutation.mutate()}
-            >
+            <Button type="button" disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
               {mutation.isPending ? "שומר…" : "שמירה"}
             </Button>
           </div>
