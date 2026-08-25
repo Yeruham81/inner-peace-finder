@@ -432,7 +432,7 @@ function TherapistBenefitsSection() {
           <p className="text-sm font-semibold text-primary">מה יוצא לכם מזה?</p>
 
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            יותר רלוונטיות, פחות הוצאה קבועה
+            יותר פניות ממטופלים בפחות כסף
           </h2>
 
           <p className="mt-5 text-base leading-8 text-muted-foreground">
