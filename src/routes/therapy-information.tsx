@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicRouteError } from "@/components/public-route-error";
 import { listPublishedProblemSeoContent, PROBLEM_SEO_GROUPS } from "@/lib/problem-seo-content";
+import { toPublicProblemSlug } from "@/lib/problem-public-url";
 import { absoluteUrl, encodePathSegment, serializeJsonLd, SITE_ORIGIN } from "@/lib/seo";
 import { listProblems } from "@/lib/therapists.functions";
 
@@ -62,7 +63,7 @@ export const Route = createFileRoute("/therapy-information")({
                     "@type": "ListItem",
                     position: index + 1,
                     name: page.name,
-                    url: absoluteUrl(`/problems/${encodePathSegment(page.slug)}`),
+                    url: absoluteUrl(`/problems/${encodePathSegment(toPublicProblemSlug(page.slug))}`),
                   })),
                 },
               },
@@ -143,7 +144,7 @@ function TherapyInformationPage() {
                   <Link
                     key={page.slug}
                     to="/problems/$slug"
-                    params={{ slug: page.slug }}
+                    params={{ slug: toPublicProblemSlug(page.slug) }}
                     className="group flex min-h-52 flex-col rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
                   >
                     <h3 className="text-xl font-bold text-foreground transition-colors group-hover:text-primary">
