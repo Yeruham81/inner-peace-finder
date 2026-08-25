@@ -8,10 +8,7 @@ const LeadSchema = z.object({
   populationId: z.string().uuid().nullable().optional(),
   ctaId: z.string().trim().min(1).max(64).default("primary"),
   visitorName: z.string().trim().min(2).max(100),
-  visitorPhone: z
-    .string()
-    .trim()
-    .regex(/^(\+?972|0)(5\d|[23489])\d{7,8}$/, "מספר טלפון לא תקין"),
+  visitorPhone: z.string().trim().min(6).max(40),
   message: z.string().trim().min(2).max(2000),
   challengeId: z.string().uuid(),
   challengeAnswer: z.coerce.number().int(),
@@ -20,6 +17,16 @@ const LeadSchema = z.object({
 export const createLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
+    const { normalizeIsraeliPhone } = await import("./phone-il");
+    const visitorPhone = normalizeIsraeliPhone(data.visitorPhone);
+    if (!visitorPhone.ok) {
+      return {
+        ok: false as const,
+        reason: "invalid_phone" as const,
+        message: "מספר טלפון ישראלי לא תקין.",
+      };
+    }
+
     const req = getRequest();
     const headers = req?.headers;
 
@@ -46,7 +53,7 @@ export const createLead = createServerFn({ method: "POST" })
       _source_problem_id: data.sourceProblemId ?? (null as unknown as string),
       _population_id: data.populationId ?? (null as unknown as string),
       _visitor_name: data.visitorName,
-      _visitor_phone: data.visitorPhone,
+      _visitor_phone: visitorPhone.e164,
       _message: data.message,
       _user_agent: userAgent ?? (null as unknown as string),
     });
@@ -191,7 +198,7 @@ export const createLead = createServerFn({ method: "POST" })
     } else {
       result = await dispatchLead(channel, destination, {
         visitorName: data.visitorName,
-        visitorPhone: data.visitorPhone,
+        visitorPhone: visitorPhone.e164,
         problemName,
         populationName,
         message: data.message,
