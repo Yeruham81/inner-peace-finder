@@ -1,10 +1,11 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getProblemBySlug } from "@/lib/therapists.functions";
 import { searchProblemResults } from "@/lib/query-interpreter.functions";
 import { TherapistCard } from "@/components/therapist-card";
 import { PublicRouteError } from "@/components/public-route-error";
 import { getPublishedProblemSeoContent, type ProblemSeoContent } from "@/lib/problem-seo-content";
+import { toInternalProblemSlug, toPublicProblemSlug } from "@/lib/problem-public-url";
 import { absoluteUrl, encodePathSegment, serializeJsonLd } from "@/lib/seo";
 
 function problemQuery(slug: string) {
@@ -22,9 +23,18 @@ function problemTherapistsQuery(slug: string) {
 
 export const Route = createFileRoute("/problems/$slug")({
   loader: async ({ context, params }) => {
-    const p = await context.queryClient.ensureQueryData(problemQuery(params.slug));
+    const internalSlug = toInternalProblemSlug(params.slug);
+    const p = await context.queryClient.ensureQueryData(problemQuery(internalSlug));
     if (!p) throw notFound();
-    await context.queryClient.ensureQueryData(problemTherapistsQuery(params.slug));
+    const publicSlug = toPublicProblemSlug(p.slug);
+    if (params.slug !== publicSlug) {
+      throw redirect({
+        to: "/problems/$slug",
+        params: { slug: publicSlug },
+        statusCode: 301,
+      });
+    }
+    await context.queryClient.ensureQueryData(problemTherapistsQuery(internalSlug));
     return p;
   },
   head: ({ loaderData }) => {
@@ -33,7 +43,7 @@ export const Route = createFileRoute("/problems/$slug")({
     const seoContent = getPublishedProblemSeoContent(loaderData.slug);
     const desc =
       seoContent?.metaDescription ?? loaderData?.description?.slice(0, 155) ?? `מידע כללי ומטפלים בתחום ${name}.`;
-    const canonical = absoluteUrl(`/problems/${encodePathSegment(loaderData.slug)}`);
+    const canonical = absoluteUrl(`/problems/${encodePathSegment(toPublicProblemSlug(loaderData.slug))}`);
     const meta: Array<{ title?: string; name?: string; property?: string; content?: string }> = [
       { title: seoContent?.seoTitle ?? `${name} — תחום טיפול | טיפולינקס` },
       { name: "description", content: desc },
@@ -101,9 +111,9 @@ export const Route = createFileRoute("/problems/$slug")({
 });
 
 function ProblemPage() {
-  const { slug } = Route.useParams();
-  const { data: problem } = useSuspenseQuery(problemQuery(slug));
-  const { data: pipeline } = useSuspenseQuery(problemTherapistsQuery(slug));
+  const loadedProblem = Route.useLoaderData();
+  const { data: problem } = useSuspenseQuery(problemQuery(loadedProblem.slug));
+  const { data: pipeline } = useSuspenseQuery(problemTherapistsQuery(loadedProblem.slug));
   if (!problem) return null;
   const therapists = pipeline.results;
   const seoContent = getPublishedProblemSeoContent(problem.slug);
@@ -181,7 +191,7 @@ function ProblemPage() {
               <Link
                 key={c.id}
                 to="/problems/$slug"
-                params={{ slug: c.slug }}
+                params={{ slug: toPublicProblemSlug(c.slug) }}
                 className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:bg-brand-soft"
               >
                 {c.name}
@@ -227,7 +237,7 @@ function ProblemPage() {
               <Link
                 key={related.slug}
                 to="/problems/$slug"
-                params={{ slug: related.slug }}
+                params={{ slug: toPublicProblemSlug(related.slug) }}
                 className="rounded-full border border-brand/20 bg-brand-soft/45 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-brand/45 hover:text-primary"
               >
                 {related.label}
