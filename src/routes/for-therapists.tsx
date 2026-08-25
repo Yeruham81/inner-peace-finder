@@ -553,8 +553,7 @@ function JoinSection() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-          הצטרפו לטיפולינקס והתחילו לבנות את הפרופיל המקצועי שלכם. בהמשך נוסיף גם אפשרויות לקבלת הטבות על הזמנת מטפלים
-          נוספים לפלטפורמה.
+          הצטרפו לטיפולינקס והתחילו לקבל פניות ממטופלים
         </p>
 
         <div className="mt-8">
