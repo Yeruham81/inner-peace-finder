@@ -10,6 +10,7 @@ import {
   problemSeoStatus,
   PROBLEM_SEO_GROUPS,
 } from "./problem-seo-content";
+import { publicProblemPath, toInternalProblemSlug, toPublicProblemSlug } from "./problem-public-url";
 
 const SRC = join(import.meta.dir, "..");
 const readSource = (path: string) => readFileSync(join(SRC, path), "utf8");
@@ -35,6 +36,17 @@ describe("problem SEO publication", () => {
     expect(getPublishedProblemSeoContent("not-a-canonical-problem")).toBeNull();
   });
 
+  it("keeps catalog identifiers internal and publishes hyphenated topic URLs", () => {
+    for (const slug of CANONICAL_PROBLEM_SLUGS) {
+      expect(toInternalProblemSlug(toPublicProblemSlug(slug)), slug).toBe(slug);
+    }
+    expect(publicProblemPath("emotional_regulation")).toBe("/problems/emotional-regulation");
+    expect(toInternalProblemSlug("sleep-difficulties")).toBe("sleep_difficulties");
+    for (const content of published) {
+      expect(toPublicProblemSlug(content.slug), content.slug).not.toContain("_");
+    }
+  });
+
   it("keeps group ids and related pages inside the published catalog", () => {
     const groupIds = new Set(PROBLEM_SEO_GROUPS.map((group) => group.id));
     const publishedSlugs = new Set(published.map((content) => content.slug));
@@ -57,6 +69,9 @@ describe("problem SEO publication", () => {
     const route = readSource("routes/problems.$slug.tsx");
     expect(route).toContain("getPublishedProblemSeoContent(loaderData.slug)");
     expect(route).toContain('{ name: "robots", content: "noindex,follow" }');
+    expect(route).toContain("toInternalProblemSlug(params.slug)");
+    expect(route).toContain("toPublicProblemSlug(loaderData.slug)");
+    expect(route).toContain("statusCode: 301");
     // Prettier may wrap the conditional after `seoContent`; keep this assertion whitespace-safe.
     expect(route).toMatch(/\bscripts:\s*seoContent\s*\?/);
   });
@@ -65,8 +80,10 @@ describe("problem SEO publication", () => {
     const sitemap = readSource("routes/sitemap[.]xml.ts");
     const hub = readSource("routes/therapy-information.tsx");
     expect(sitemap).toMatch(/isProblemSeoPublished\(\s*problem\.slug\s*\)/);
+    expect(sitemap).toContain("toPublicProblemSlug(problem.slug)");
     expect(hub).toContain("listPublishedProblemSeoContent");
     expect(hub).toContain('to="/problems/$slug"');
+    expect(hub).toContain("toPublicProblemSlug(page.slug)");
   });
 
   it("describes topic professionals without recommendations and shows related topics last", () => {
@@ -75,5 +92,6 @@ describe("problem SEO publication", () => {
     expect(route).toContain("seoContent?.resultsHeading");
     expect(route).toContain("אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל");
     expect(route.indexOf('pageSource="problem"')).toBeLessThan(route.indexOf('aria-labelledby="related-topics"'));
+    expect(readSource("components/therapist-profile-view.tsx")).toContain("toPublicProblemSlug(item.problemSlug)");
   });
 });
