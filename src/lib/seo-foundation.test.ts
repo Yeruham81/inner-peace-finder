@@ -29,6 +29,7 @@ describe("technical SEO foundation", () => {
     expect(sitemap).toMatch(/path:\s*["']\/therapy-information["']/);
     expect(sitemap).toContain("listAllTherapistSlugs");
     expect(sitemap).toMatch(/isProblemSeoPublished\(\s*problem\.slug\s*\)/);
+    expect(sitemap).toContain("toPublicProblemSlug(problem.slug)");
     expect(sitemap).not.toMatch(/path:\s*["']\/search["']/);
     expect(sitemap).not.toContain('const BASE_URL = ""');
 
