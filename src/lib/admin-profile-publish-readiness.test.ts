@@ -14,6 +14,9 @@ describe("admin-created profile publish readiness", () => {
     expect(editorSource).toContain('isAdmin && !form.email.trim() ? ["אימייל מקצועי"] : []');
     expect(editorSource).toContain('<Field label="אימייל מקצועי *">');
     expect(editorSource).toContain("זהו שדה חובה לפרסום");
+    expect(editorSource).toContain("looksLikeEmailAddress(adminEmailValue)");
+    expect(editorSource).toContain('type="email"');
+    expect(editorSource).toContain("aria-invalid={!adminEmailOk}");
   });
 
   it("keeps the live readiness badge aligned with the publish button", () => {
@@ -26,6 +29,8 @@ describe("admin-created profile publish readiness", () => {
   });
 
   it("enforces the professional email again at the server boundary for admin-public profiles", () => {
+    expect(profileFunctions).toContain("OptionalContactEmailSchema");
+    expect(profileFunctions).toContain("looksLikeEmailAddress(value)");
     expect(profileFunctions).toContain("function validateForPublish(");
     expect(profileFunctions).toContain('saveMode: "self" | "admin_public_info" = "self"');
     expect(profileFunctions).toContain('saveMode === "admin_public_info" && !input.email?.trim()');
