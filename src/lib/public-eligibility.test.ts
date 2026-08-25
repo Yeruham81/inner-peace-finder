@@ -48,6 +48,11 @@ function therapistRow(over: FakeRow): FakeRow {
     contact_methods: ["whatsapp", "email", "phone"],
     preferred_contact_method: "whatsapp",
     owner_account_id: "acct-1",
+    owner_reviewed_at: null,
+    profile_origin: "self_created",
+    first_contact_reserved_at: null,
+    first_contact_sent_at: null,
+    do_not_republish: false,
     semantic_profile: [{ slug: "anxiety", weight: 1 }],
     bio_raw: "staging",
     license_number: "L-1",
@@ -64,6 +69,31 @@ const INELIGIBLE_STATES: Array<[string, FakeRow]> = [
   ["hidden_by_owner", { visibility: "hidden_by_owner" }],
   ["archived", { visibility: "archived" }],
   ["monthly budget hold", { budget_hold_until: "2999-01-01T00:00:00.000Z" }],
+  ["permanent suppression", { do_not_republish: true }],
+  [
+    "admin profile after first lead reservation",
+    {
+      profile_origin: "admin_public_info",
+      owner_account_id: null,
+      first_contact_reserved_at: "2026-08-25T10:00:00.000Z",
+    },
+  ],
+  [
+    "admin profile after first lead was sent",
+    {
+      profile_origin: "admin_public_info",
+      owner_account_id: null,
+      first_contact_sent_at: "2026-08-25T10:00:00.000Z",
+    },
+  ],
+  [
+    "claimed admin profile before owner review",
+    {
+      profile_origin: "admin_public_info",
+      owner_account_id: "acct-claimed",
+      owner_reviewed_at: null,
+    },
+  ],
 ];
 
 function db(rows: FakeRow[], overrides: Record<string, FakeRow[]> = {}, errors: Record<string, unknown> = {}) {
@@ -147,6 +177,21 @@ describe("public eligibility — shared predicate", () => {
     expect(isEligibleRow(therapistRow({ budget_hold_until: "2020-01-01T00:00:00.000Z" }) as never)).toBe(true);
   });
 
+  it("allows an admin-created profile only before its first inquiry or after owner review", () => {
+    expect(isEligibleRow(therapistRow({ profile_origin: "admin_public_info", owner_account_id: null }) as never)).toBe(
+      true,
+    );
+    expect(
+      isEligibleRow(
+        therapistRow({
+          profile_origin: "admin_public_info",
+          owner_account_id: "acct-claimed",
+          owner_reviewed_at: "2026-08-25T11:00:00.000Z",
+        }) as never,
+      ),
+    ).toBe(true);
+  });
+
   it("getTherapistBySlug's query returns null for every ineligible state", async () => {
     for (const [label, over] of INELIGIBLE_STATES) {
       const res = await fetchPublicTherapistBySlug(db([therapistRow(over)]), "eligible-one");
@@ -167,6 +212,22 @@ describe("public eligibility — shared predicate", () => {
     expect(res?.locations.map((item) => item.location_type)).toEqual(["clinic", "online"]);
     expect(res?.contact_methods).toEqual(["whatsapp", "email", "phone"]);
     expect(res?.preferred_contact_method).toBe("whatsapp");
+  });
+
+  it("loads a reviewed claimed admin profile but not one awaiting review", async () => {
+    const reviewed = therapistRow({
+      profile_origin: "admin_public_info",
+      owner_account_id: "acct-claimed",
+      owner_reviewed_at: "2026-08-25T11:00:00.000Z",
+    });
+    const pending = therapistRow({
+      profile_origin: "admin_public_info",
+      owner_account_id: "acct-claimed",
+      owner_reviewed_at: null,
+    });
+
+    expect(await fetchPublicTherapistBySlug(db([reviewed]), "eligible-one")).not.toBeNull();
+    expect(await fetchPublicTherapistBySlug(db([pending]), "eligible-one")).toBeNull();
   });
 
   it("preserves a missing years_experience value as null instead of coercing it to zero", async () => {
