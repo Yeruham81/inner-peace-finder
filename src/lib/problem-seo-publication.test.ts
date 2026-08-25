@@ -57,7 +57,8 @@ describe("problem SEO publication", () => {
     const route = readSource("routes/problems.$slug.tsx");
     expect(route).toContain("getPublishedProblemSeoContent(loaderData.slug)");
     expect(route).toContain('{ name: "robots", content: "noindex,follow" }');
-    expect(route).toContain("seoContent ?");
+    // Prettier may wrap the conditional after `seoContent`; keep this assertion whitespace-safe.
+    expect(route).toMatch(/\bscripts:\s*seoContent\s*\?/);
   });
 
   it("lists only published problem pages in the sitemap and hub", () => {
@@ -73,8 +74,6 @@ describe("problem SEO publication", () => {
     expect(route).not.toContain("מטפלים מומלצים");
     expect(route).toContain("seoContent?.resultsHeading");
     expect(route).toContain("אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל");
-    expect(route.indexOf('pageSource="problem"')).toBeLessThan(
-      route.indexOf('aria-labelledby="related-topics"'),
-    );
+    expect(route.indexOf('pageSource="problem"')).toBeLessThan(route.indexOf('aria-labelledby="related-topics"'));
   });
 });
