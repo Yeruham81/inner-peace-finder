@@ -73,6 +73,8 @@ describe("problem SEO publication", () => {
     expect(route).not.toContain("מטפלים מומלצים");
     expect(route).toContain("seoContent?.resultsHeading");
     expect(route).toContain("אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל");
-    expect(route.indexOf('pageSource="problem"')).toBeLessThan(route.indexOf('aria-labelledby="related-topics"'));
+    expect(route.indexOf('pageSource="problem"')).toBeLessThan(
+      route.indexOf('aria-labelledby="related-topics"'),
+    );
   });
 });
