@@ -553,7 +553,7 @@ function JoinSection() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-          הצטרפו לטיפולינקס כבר עכשיו והתחילו לקבל פניות 
+          הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות
         </p>
 
         <div className="mt-8">
