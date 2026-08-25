@@ -153,6 +153,7 @@ export const Route = createFileRoute("/search")({
         name: "description",
         content: "חיפוש מטפלים לפי צורך, אזור, יישוב, אוכלוסיית יעד, שפה ואופן הטיפול.",
       },
+      { name: "robots", content: "noindex,follow" },
     ],
   }),
   component: SearchPage,
