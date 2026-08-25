@@ -1,10 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, MailCheck } from "lucide-react";
 
+import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { acceptClaimInvite, getClaimInvitePreview, type ClaimInvitePreview } from "@/lib/profile-claim-v2.functions";
 
 export const Route = createFileRoute("/_authenticated/claim")({
@@ -21,9 +24,11 @@ function ClaimInvitePage() {
   const previewFn = useServerFn(getClaimInvitePreview);
   const acceptFn = useServerFn(acceptClaimInvite);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [preview, setPreview] = useState<ClaimInvitePreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -50,6 +55,31 @@ function ClaimInvitePage() {
       setError(err instanceof Error ? err.message : "לא ניתן לקבל בעלות על הפרופיל.");
     } finally {
       setAccepting(false);
+    }
+  }
+
+  async function chooseAnotherGoogleAccount() {
+    if (!token || switchingAccount) return;
+    setSwitchingAccount(true);
+    setError(null);
+    try {
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      if (signOutError) throw signOutError;
+      queryClient.clear();
+
+      const claimDestination = `/claim?token=${encodeURIComponent(token)}`;
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth?next=${encodeURIComponent(claimDestination)}`,
+        extraParams: { prompt: "select_account" },
+      });
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+
+      // Popup mode has already installed the new Supabase session.
+      window.location.assign(claimDestination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "לא ניתן לפתוח את בחירת חשבון Google.");
+      setSwitchingAccount(false);
     }
   }
 
@@ -115,14 +145,27 @@ function ClaimInvitePage() {
         </div>
       </div>
 
-      {!preview.signedInEmailVerified ? (
-        <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm leading-6 text-destructive">
-          יש לאמת את כתובת האימייל של החשבון לפני קבלת הבעלות. לאחר האימות יש לפתוח שוב את קישור ההזמנה.
-        </p>
-      ) : !preview.emailMatchesSignedInUser ? (
-        <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm leading-6 text-destructive">
-          כתובת האימייל של החשבון המחובר אינה תואמת לכתובת שאליה נשלחה ההזמנה. יש להתחבר באמצעות אותה כתובת אימייל.
-        </p>
+      {!preview.emailMatchesSignedInUser ? (
+        <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive">
+          {preview.signedInEmailVerified ? (
+            <p>
+              כתובת האימייל של החשבון המחובר אינה תואמת לכתובת שאליה נשלחה ההזמנה. יש להתחבר באמצעות אותה כתובת אימייל.
+            </p>
+          ) : (
+            <p>
+              יש לאמת את כתובת האימייל של החשבון לפני קבלת הבעלות. אפשר גם להתנתק ולבחור את חשבון Google שאליו נשלחה
+              ההזמנה.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => void chooseAnotherGoogleAccount()}
+            disabled={switchingAccount}
+            className="mt-3 w-full rounded-xl border border-destructive/30 bg-background px-4 py-2.5 font-semibold text-foreground disabled:opacity-60"
+          >
+            {switchingAccount ? "פותח את בחירת החשבונות…" : "התנתקות ובחירת חשבון Google אחר"}
+          </button>
+        </div>
       ) : (
         <p className="mt-4 text-sm leading-6 text-muted-foreground">
           בלחיצה על הכפתור מטה הפרופיל ישויך לחשבון שלך, ותינתן הסכמה מפורשת להמשך הצגתו בטיפולינקס ולקבלת פניות דרך
@@ -132,13 +175,15 @@ function ClaimInvitePage() {
       )}
 
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-      <button
-        onClick={() => void accept()}
-        disabled={!preview.emailMatchesSignedInUser || accepting}
-        className="mt-5 w-full rounded-xl bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {accepting ? "משייך את הפרופיל…" : "קבלת בעלות וניהול הפרופיל"}
-      </button>
+      {preview.emailMatchesSignedInUser && (
+        <button
+          onClick={() => void accept()}
+          disabled={accepting}
+          className="mt-5 w-full rounded-xl bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {accepting ? "משייך את הפרופיל…" : "קבלת בעלות וניהול הפרופיל"}
+        </button>
+      )}
     </ClaimCard>
   );
 }
