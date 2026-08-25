@@ -50,19 +50,15 @@ export function getTwilioConfig(): TwilioConfig {
 /** Ringing timeout for either leg, and the hard cap on a bridged call. */
 export const DIAL_TIMEOUT_SECONDS = 30;
 export const MAX_CALL_DURATION_SECONDS = 1800;
-export const MACHINE_DETECTION_TIMEOUT_SECONDS = 15;
 
-export type CreateCallResult =
-  | { ok: true; sid: string }
-  | { ok: false; code: string; missingPermission?: string };
+export type CreateCallResult = { ok: true; sid: string } | { ok: false; code: string; missingPermission?: string };
 
 /**
  * Create the FIRST (visitor) leg through the Calls REST API. The therapist leg
  * is created later by TwiML `<Dial><Number>`, never by this API.
  *
- * Synchronous Answering Machine Detection is requested for this leg only, so
- * the TwiML webhook receives `AnsweredBy` and can refuse to dial the therapist
- * when the visitor's voicemail answered.
+ * As soon as this leg is technically answered, Twilio requests the TwiML that
+ * dials the therapist. The visitor is not required to speak or press a key.
  */
 export async function createVisitorCall(params: {
   to: string;
@@ -84,8 +80,6 @@ export async function createVisitorCall(params: {
   body.append("StatusCallbackEvent", "completed");
   body.set("Timeout", String(DIAL_TIMEOUT_SECONDS));
   body.set("TimeLimit", String(MAX_CALL_DURATION_SECONDS));
-  body.set("MachineDetection", "Enable");
-  body.set("MachineDetectionTimeout", String(MACHINE_DETECTION_TIMEOUT_SECONDS));
   body.set("Record", "false");
 
   const authorization = `Basic ${Buffer.from(`${config.apiKeySid}:${config.apiKeySecret}`).toString("base64")}`;
@@ -216,10 +210,7 @@ export function signedWebhookUrl(request: Request): string {
   return `${trustedVoiceOrigin()}${incoming.pathname}${incoming.search}`;
 }
 
-
-export type VerifiedWebhook =
-  | { ok: true; params: Record<string, string>; url: string }
-  | { ok: false; status: number };
+export type VerifiedWebhook = { ok: true; params: Record<string, string>; url: string } | { ok: false; status: number };
 
 /**
  * Full inbound-webhook gate: HTTPS, POST, valid signature over the exact URL
@@ -244,7 +235,6 @@ export async function verifyTwilioWebhook(request: Request): Promise<VerifiedWeb
     console.error("[voice] webhook rejected: trusted origin unavailable");
     return { ok: false, status: 503 };
   }
-
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/x-www-form-urlencoded")) {
@@ -287,7 +277,7 @@ function escapeXml(value: string): string {
 }
 
 /**
- * Bridge TwiML for a confirmed human visitor.
+ * Bridge TwiML for an answered visitor leg.
  *
  * - `answerOnBridge="true"` keeps the visitor hearing ringback until the
  *   therapist leg is answered.
