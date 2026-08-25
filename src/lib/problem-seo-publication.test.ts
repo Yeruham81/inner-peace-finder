@@ -25,6 +25,7 @@ describe("problem SEO publication", () => {
       expect(content.status, content.slug).toBe("published");
       expect(hasCompleteProblemSeoContent(content), content.slug).toBe(true);
       expect(CANONICAL_PROBLEM_SLUGS).toContain(content.slug);
+      expect(content.resultsHeading).not.toContain("מומלצים");
     }
   });
 
@@ -65,5 +66,13 @@ describe("problem SEO publication", () => {
     expect(sitemap).toMatch(/isProblemSeoPublished\(\s*problem\.slug\s*\)/);
     expect(hub).toContain("listPublishedProblemSeoContent");
     expect(hub).toContain('to="/problems/$slug"');
+  });
+
+  it("describes topic professionals without recommendations and shows related topics last", () => {
+    const route = readSource("routes/problems.$slug.tsx");
+    expect(route).not.toContain("מטפלים מומלצים");
+    expect(route).toContain("seoContent?.resultsHeading");
+    expect(route).toContain("אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל");
+    expect(route.indexOf('pageSource="problem"')).toBeLessThan(route.indexOf('aria-labelledby="related-topics"'));
   });
 });
