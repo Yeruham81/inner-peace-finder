@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { isProblemSeoPublished } from "@/lib/problem-seo-content";
 import { listProblems, listAllTherapistSlugs } from "@/lib/therapists.functions";
 import { absoluteUrl, encodePathSegment, xmlEscape } from "@/lib/seo";
 
@@ -16,11 +17,18 @@ export const Route = createFileRoute("/sitemap.xml")({
             changefreq: "monthly",
             priority: "0.7",
           },
-          ...problems.map((p) => ({
-            path: `/problems/${encodePathSegment(p.slug)}`,
-            changefreq: "weekly",
+          {
+            path: "/therapy-information",
+            changefreq: "monthly",
             priority: "0.8",
-          })),
+          },
+          ...problems
+            .filter((problem) => isProblemSeoPublished(problem.slug))
+            .map((problem) => ({
+              path: `/problems/${encodePathSegment(problem.slug)}`,
+              changefreq: "monthly",
+              priority: "0.8",
+            })),
           ...therapistSlugs.map((s) => ({
             path: `/therapists/${encodePathSegment(s)}`,
             changefreq: "monthly",
