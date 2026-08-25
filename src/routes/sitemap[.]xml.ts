@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { isProblemSeoPublished } from "@/lib/problem-seo-content";
+import { toPublicProblemSlug } from "@/lib/problem-public-url";
 import { listProblems, listAllTherapistSlugs } from "@/lib/therapists.functions";
 import { absoluteUrl, encodePathSegment, xmlEscape } from "@/lib/seo";
 
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           ...problems
             .filter((problem) => isProblemSeoPublished(problem.slug))
             .map((problem) => ({
-              path: `/problems/${encodePathSegment(problem.slug)}`,
+              path: `/problems/${encodePathSegment(toPublicProblemSlug(problem.slug))}`,
               changefreq: "monthly",
               priority: "0.8",
             })),
