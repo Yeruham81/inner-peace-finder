@@ -12,26 +12,22 @@ describe("technical SEO foundation", () => {
     expect(SITE_ORIGIN).toBe("https://tipulinks.co.il");
     expect(absoluteUrl("/")).toBe("https://tipulinks.co.il/");
     expect(absoluteUrl("problems/anxiety")).toBe("https://tipulinks.co.il/problems/anxiety");
-    expect(encodePathSegment("חרדה חברתית")).toBe(
-      "%D7%97%D7%A8%D7%93%D7%94%20%D7%97%D7%91%D7%A8%D7%AA%D7%99%D7%AA",
-    );
+    expect(encodePathSegment("חרדה חברתית")).toBe("%D7%97%D7%A8%D7%93%D7%94%20%D7%97%D7%91%D7%A8%D7%AA%D7%99%D7%AA");
   });
 
   it("serializes route data without allowing a closing script element", () => {
     const serialized = serializeJsonLd({ text: "</script><script>alert(1)</script>" });
     expect(serialized).not.toContain("<");
     expect(JSON.parse(serialized)).toEqual({ text: "</script><script>alert(1)</script>" });
-    expect(xmlEscape("https://example.test/?a=1&b=2")).toBe(
-      "https://example.test/?a=1&amp;b=2",
-    );
+    expect(xmlEscape("https://example.test/?a=1&b=2")).toBe("https://example.test/?a=1&amp;b=2");
   });
 
   it("publishes only indexable routes in an absolute dynamic sitemap", () => {
     const sitemap = readSource("routes/sitemap[.]xml.ts");
-    expect(sitemap).toContain("absoluteUrl(e.path)");
-    expect(sitemap).toContain('{ path: "/for-therapists"');
+    expect(sitemap).toMatch(/xmlEscape\(\s*absoluteUrl\(e\.path\),?\s*\)/);
+    expect(sitemap).toMatch(/path:\s*["']\/for-therapists["']/);
     expect(sitemap).toContain("listAllTherapistSlugs");
-    expect(sitemap).not.toContain('{ path: "/search"');
+    expect(sitemap).not.toMatch(/path:\s*["']\/search["']/);
     expect(sitemap).not.toContain('const BASE_URL = ""');
 
     const robots = readFileSync(join(PROJECT, "public/robots.txt"), "utf8");
@@ -52,12 +48,8 @@ describe("technical SEO foundation", () => {
   });
 
   it("keeps search and placeholder content out of the index", () => {
-    expect(readSource("routes/search.tsx")).toContain(
-      '{ name: "robots", content: "noindex,follow" }',
-    );
-    expect(readSource("routes/therapy-information.tsx")).toContain(
-      '{ name: "robots", content: "noindex,follow" }',
-    );
+    expect(readSource("routes/search.tsx")).toContain('{ name: "robots", content: "noindex,follow" }');
+    expect(readSource("routes/therapy-information.tsx")).toContain('{ name: "robots", content: "noindex,follow" }');
   });
 
   it("provides only the approved structured-data types", () => {
