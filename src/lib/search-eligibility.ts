@@ -2,8 +2,8 @@
  * Phase Q1 v4 — centralized therapist eligibility.
  *
  * Every query against `therapists` MUST route through `applyEligibility()`.
- * This is the SINGLE definition of "eligible" (is_active + published +
- * visible) and prevents drift between search paths.
+ * This is the SINGLE definition of "eligible" (active publication, budget,
+ * suppression and claim lifecycle) and prevents drift between search paths.
  */
 
 import type { Database } from "@/integrations/supabase/types";
@@ -37,11 +37,16 @@ export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapist
     .eq(`${prefix}is_active`, THERAPIST_ELIGIBILITY.isActive)
     .eq(`${prefix}profile_status`, THERAPIST_ELIGIBILITY.profileStatus)
     .in(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibilities);
-  const automaticBudgetReset = `budget_hold_until.is.null,budget_hold_until.lte.${new Date().toISOString()}`;
+  const automaticBudgetReset = `or(budget_hold_until.is.null,budget_hold_until.lte.${new Date().toISOString()})`;
+  const claimLifecycle =
+    "or(profile_origin.neq.admin_public_info," +
+    "and(owner_account_id.is.null,first_contact_reserved_at.is.null,first_contact_sent_at.is.null)," +
+    "and(owner_account_id.not.is.null,owner_reviewed_at.not.is.null))";
+  const publicAvailability = `and(${automaticBudgetReset},do_not_republish.eq.false,${claimLifecycle})`;
   return (
     path === "therapists"
-      ? filtered.or(automaticBudgetReset)
-      : filtered.or(automaticBudgetReset, { referencedTable: "therapists" })
+      ? filtered.or(publicAvailability)
+      : filtered.or(publicAvailability, { referencedTable: "therapists" })
   ) as Q;
 }
 
@@ -50,11 +55,25 @@ export function isEligibleRow(row: {
   profile_status?: string | null;
   visibility?: string | null;
   budget_hold_until?: string | null;
+  do_not_republish?: boolean | null;
+  profile_origin?: string | null;
+  owner_account_id?: string | null;
+  first_contact_reserved_at?: string | null;
+  first_contact_sent_at?: string | null;
+  owner_reviewed_at?: string | null;
 }): boolean {
+  const claimLifecycleEligible =
+    row.profile_origin !== "admin_public_info" ||
+    (row.owner_account_id
+      ? Boolean(row.owner_reviewed_at)
+      : !row.first_contact_reserved_at && !row.first_contact_sent_at);
+
   return (
     row.is_active === true &&
     row.profile_status === THERAPIST_ELIGIBILITY.profileStatus &&
     (THERAPIST_ELIGIBILITY.visibilities as string[]).includes(row.visibility ?? "") &&
-    (!row.budget_hold_until || new Date(row.budget_hold_until).getTime() <= Date.now())
+    (!row.budget_hold_until || new Date(row.budget_hold_until).getTime() <= Date.now()) &&
+    row.do_not_republish !== true &&
+    claimLifecycleEligible
   );
 }
