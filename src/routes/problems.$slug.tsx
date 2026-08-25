@@ -167,26 +167,6 @@ function ProblemPage() {
             <p className="mt-3 text-base leading-8 text-muted-foreground">{seoContent.matchingGuidance}</p>
           </section>
 
-          {relatedPages.length > 0 && (
-            <section aria-labelledby="related-topics">
-              <h2 id="related-topics" className="text-xl font-bold text-foreground">
-                תחומים קשורים
-              </h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {relatedPages.map((related) => (
-                  <Link
-                    key={related.slug}
-                    to="/problems/$slug"
-                    params={{ slug: related.slug }}
-                    className="rounded-full border border-brand/20 bg-brand-soft/45 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-brand/45 hover:text-primary"
-                  >
-                    {related.label}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
           <p className="rounded-2xl bg-muted/40 p-4 text-sm leading-7 text-muted-foreground">
             המידע בעמוד הוא מידע כללי בלבד ואינו אבחון, המלצה רפואית או תחליף לייעוץ מקצועי.
           </p>
@@ -211,25 +191,51 @@ function ProblemPage() {
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="mb-4 text-xl font-bold text-foreground">
-          מטפלים מומלצים{" "}
+      <section className="mt-10" aria-labelledby="topic-professionals">
+        <h2 id="topic-professionals" className="text-xl font-bold text-foreground">
+          {seoContent?.resultsHeading ?? `מטפלים בתחום ${problem.name}`}{" "}
           <span className="text-sm font-normal text-muted-foreground">
             (<span className="ltr-num">{therapists.length}</span>)
           </span>
         </h2>
+        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+          אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל.
+        </p>
         {therapists.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-muted-foreground">
-            עוד אין מטפלים רשומים בקטגוריה זו.
+          <p className="mt-4 rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-muted-foreground">
+            עוד אין אנשי מקצוע רשומים בתחום זה.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {therapists.map((therapist, index) => (
               <TherapistCard key={therapist.id} t={therapist} rankPosition={index + 1} pageSource="problem" />
             ))}
           </div>
         )}
       </section>
+
+      {relatedPages.length > 0 && (
+        <section
+          aria-labelledby="related-topics"
+          className="mt-10 rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm sm:p-8"
+        >
+          <h2 id="related-topics" className="text-xl font-bold text-foreground">
+            תחומים קשורים
+          </h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {relatedPages.map((related) => (
+              <Link
+                key={related.slug}
+                to="/problems/$slug"
+                params={{ slug: related.slug }}
+                className="rounded-full border border-brand/20 bg-brand-soft/45 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-brand/45 hover:text-primary"
+              >
+                {related.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
