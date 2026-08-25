@@ -4,6 +4,7 @@ import { getProblemBySlug } from "@/lib/therapists.functions";
 import { searchProblemResults } from "@/lib/query-interpreter.functions";
 import { TherapistCard } from "@/components/therapist-card";
 import { PublicRouteError } from "@/components/public-route-error";
+import { absoluteUrl, encodePathSegment, serializeJsonLd } from "@/lib/seo";
 
 function problemQuery(slug: string) {
   return queryOptions({
@@ -26,14 +27,42 @@ export const Route = createFileRoute("/problems/$slug")({
     return p;
   },
   head: ({ loaderData }) => {
+    if (!loaderData) return { meta: [{ title: "תחום טיפול | טיפולינקס" }] };
     const name = loaderData?.name ?? "בעיה";
     const desc = loaderData?.description?.slice(0, 155) ?? `מטפלים מומחים בטיפול ב${name} בישראל.`;
+    const canonical = absoluteUrl(`/problems/${encodePathSegment(loaderData.slug)}`);
     return {
       meta: [
-        { title: `${name} — מטפלים מומחים` },
+        { title: `${name} — מטפלים מומחים | טיפולינקס` },
         { name: "description", content: desc },
         { property: "og:title", content: `${name} — מטפלים מומחים` },
         { property: "og:description", content: desc },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
+      ],
+      links: [{ rel: "canonical", href: canonical }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: serializeJsonLd({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "דף הבית",
+                item: absoluteUrl("/"),
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name,
+                item: canonical,
+              },
+            ],
+          }),
+        },
       ],
     };
   },
@@ -72,9 +101,7 @@ function ProblemPage() {
       <header className="mt-3 rounded-3xl bg-gradient-to-br from-brand-soft to-background p-8 sm:p-10">
         <h1 className="text-3xl font-extrabold text-foreground sm:text-4xl">{problem.name}</h1>
         {problem.description && (
-          <p className="mt-3 max-w-3xl text-base text-foreground/80 sm:text-lg">
-            {problem.description}
-          </p>
+          <p className="mt-3 max-w-3xl text-base text-foreground/80 sm:text-lg">{problem.description}</p>
         )}
       </header>
 
@@ -82,18 +109,16 @@ function ProblemPage() {
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-semibold text-foreground">תתי-קטגוריות</h2>
           <div className="flex flex-wrap gap-2">
-            {problem.children.map(
-              (c: { id: string | number; slug: string; name: string | null }) => (
-                <Link
-                  key={c.id}
-                  to="/problems/$slug"
-                  params={{ slug: c.slug }}
-                  className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:bg-brand-soft"
-                >
-                  {c.name}
-                </Link>
-              ),
-            )}
+            {problem.children.map((c: { id: string | number; slug: string; name: string | null }) => (
+              <Link
+                key={c.id}
+                to="/problems/$slug"
+                params={{ slug: c.slug }}
+                className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:bg-brand-soft"
+              >
+                {c.name}
+              </Link>
+            ))}
           </div>
         </section>
       )}
@@ -112,12 +137,7 @@ function ProblemPage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {therapists.map((therapist, index) => (
-              <TherapistCard
-                key={therapist.id}
-                t={therapist}
-                rankPosition={index + 1}
-                pageSource="problem"
-              />
+              <TherapistCard key={therapist.id} t={therapist} rankPosition={index + 1} pageSource="problem" />
             ))}
           </div>
         )}
