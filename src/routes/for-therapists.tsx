@@ -494,11 +494,11 @@ function ProfileManagementSection() {
           <p className="text-sm font-semibold text-primary">ממשק ניהול מתקדם</p>
 
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            כל מה שצריך לניהול הפרופיל במקום אחד
+            כל הכלים לניהול הפרופיל במקום אחד
           </h2>
 
           <p className="mt-5 text-base leading-8 text-muted-foreground">
-            האזור האישי מאפשר לכם לנהל את הפרופיל, הפניות והתקציב באופן עצמאי, ברור ונוח.
+            אזור אישי עם כל מה שצריך כדי לנהל, לעדכן ולעקוב אחר הפרופיל שלכם באופן עצמאי
           </p>
         </div>
 
