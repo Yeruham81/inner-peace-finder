@@ -6,6 +6,7 @@ import { SearchForm } from "@/components/search-form";
 import { homepageProblemSlugs } from "@/lib/homepage-problem-map";
 import { HOMEPAGE_SEARCH_PRESETS, type HomepageSearchPreset } from "@/lib/homepage-search-presets";
 import { serializeMultiValue } from "@/lib/search-contract";
+import { absoluteUrl, serializeJsonLd, SITE_NAME, SITE_ORIGIN } from "@/lib/seo";
 
 const filterOptionsQuery = queryOptions({
   queryKey: ["filter-options"],
@@ -287,24 +288,57 @@ const populationGroups: ExplorerItem[] = [
 const popularSearches = HOMEPAGE_SEARCH_PRESETS;
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "טיפולינקס — חיפוש חכם של מטפלים ואנשי מקצוע" },
-      {
-        name: "description",
-        content:
-          "תארו במילים שלכם מה מטריד אתכם ומצאו מטפלים ואנשי מקצוע לפי הבעיה, המיקום, שפת הטיפול, קהל היעד ואופן הטיפול.",
-      },
-      {
-        property: "og:title",
-        content: "טיפולינקס — פשוט למצוא את הטיפול שמתאים לכם",
-      },
-      {
-        property: "og:description",
-        content: "חיפוש חכם וגמיש של מטפלים לפי הצורך האישי שלכם.",
-      },
-    ],
-  }),
+  head: () => {
+    const canonical = absoluteUrl("/");
+    return {
+      meta: [
+        { title: "טיפולינקס — חיפוש חכם של מטפלים ואנשי מקצוע" },
+        {
+          name: "description",
+          content:
+            "תארו במילים שלכם מה מטריד אתכם ומצאו מטפלים ואנשי מקצוע לפי הבעיה, המיקום, שפת הטיפול, קהל היעד ואופן הטיפול.",
+        },
+        {
+          property: "og:title",
+          content: "טיפולינקס — פשוט למצוא את הטיפול שמתאים לכם",
+        },
+        {
+          property: "og:description",
+          content: "חיפוש חכם וגמיש של מטפלים לפי הצורך האישי שלכם.",
+        },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
+      ],
+      links: [{ rel: "canonical", href: canonical }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: serializeJsonLd({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "Organization",
+                "@id": `${SITE_ORIGIN}/#organization`,
+                name: SITE_NAME,
+                alternateName: "Tipulinks",
+                url: canonical,
+                description: "פלטפורמה לחיפוש מטפלים ואנשי מקצוע לפי הצורך, המיקום, שפת הטיפול, קהל היעד ואופן הטיפול.",
+              },
+              {
+                "@type": "WebSite",
+                "@id": `${SITE_ORIGIN}/#website`,
+                name: SITE_NAME,
+                alternateName: "Tipulinks",
+                url: canonical,
+                inLanguage: "he-IL",
+                publisher: { "@id": `${SITE_ORIGIN}/#organization` },
+              },
+            ],
+          }),
+        },
+      ],
+    };
+  },
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(filterOptionsQuery);
   },
