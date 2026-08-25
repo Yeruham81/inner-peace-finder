@@ -57,15 +57,6 @@ export function isBillableCallback(input: {
   return therapistLegAnswered(input.status);
 }
 
-/**
- * Twilio synchronous Answering Machine Detection result for the *visitor* leg
- * only. Anything other than a confident human classification stops the flow
- * before the therapist is dialed, and is never billable.
- */
-export function visitorAnswerIsHuman(answeredBy: string | null | undefined): boolean {
-  return answeredBy === "human";
-}
-
 /** Sanitize a provider error for storage: category/code only, never PII. */
 export function sanitizeProviderError(code: unknown): string {
   const text = typeof code === "string" || typeof code === "number" ? String(code) : "unknown";
