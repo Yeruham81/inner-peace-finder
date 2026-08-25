@@ -26,7 +26,7 @@ function getPath(row: FakeRow, path: string): unknown {
 type Filter =
   | { kind: "eq"; column: string; value: unknown }
   | { kind: "in"; column: string; values: unknown[] }
-  | { kind: "budget_hold_elapsed"; column: string; cutoff: number };
+  | { kind: "public_availability"; prefix: string; cutoff: number };
 
 class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknown }> {
   private filters: Filter[] = [];
@@ -50,11 +50,17 @@ class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknow
     return this;
   }
   or(expression: string, options?: { referencedTable?: string }): this {
-    const match = expression.match(/^budget_hold_until\.is\.null,budget_hold_until\.lte\.(.+)$/);
+    const match = expression.match(/budget_hold_until\.lte\.([^,)]+)/);
     if (!match) throw new Error(`Unsupported fake OR filter: ${expression}`);
+    if (
+      !expression.includes("first_contact_reserved_at.is.null") ||
+      !expression.includes("do_not_republish.eq.false")
+    ) {
+      throw new Error(`Unsupported fake public-availability filter: ${expression}`);
+    }
     this.filters.push({
-      kind: "budget_hold_elapsed",
-      column: options?.referencedTable ? `${options.referencedTable}.budget_hold_until` : "budget_hold_until",
+      kind: "public_availability",
+      prefix: options?.referencedTable ? `${options.referencedTable}.` : "",
       cutoff: new Date(match[1]).getTime(),
     });
     return this;
@@ -80,10 +86,22 @@ class FakeBuilder implements PromiseLike<{ data: FakeRow[] | null; error: unknow
     if (this.error) return { data: null, error: this.error };
     const data = this.rows.filter((row) =>
       this.filters.every((f) => {
-        const actual = getPath(row, f.column);
-        if (f.kind === "eq") return actual === f.value;
-        if (f.kind === "in") return (f.values as unknown[]).includes(actual as never);
-        return actual === null || actual === undefined || new Date(String(actual)).getTime() <= f.cutoff;
+        if (f.kind === "eq") return getPath(row, f.column) === f.value;
+        if (f.kind === "in") {
+          return (f.values as unknown[]).includes(getPath(row, f.column) as never);
+        }
+        const budgetHold = getPath(row, `${f.prefix}budget_hold_until`);
+        const budgetEligible =
+          budgetHold === null || budgetHold === undefined || new Date(String(budgetHold)).getTime() <= f.cutoff;
+        if (!budgetEligible || getPath(row, `${f.prefix}do_not_republish`) === true) return false;
+
+        const origin = getPath(row, `${f.prefix}profile_origin`);
+        if (origin !== "admin_public_info") return true;
+        const ownerAccountId = getPath(row, `${f.prefix}owner_account_id`);
+        if (ownerAccountId) return Boolean(getPath(row, `${f.prefix}owner_reviewed_at`));
+        return (
+          !getPath(row, `${f.prefix}first_contact_reserved_at`) && !getPath(row, `${f.prefix}first_contact_sent_at`)
+        );
       }),
     );
     return { data, error: null };
