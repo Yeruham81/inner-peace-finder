@@ -9,7 +9,6 @@ import {
   sanitizeProviderError,
   therapistLegAnswered,
   therapistLegNonBillableTerminal,
-  visitorAnswerIsHuman,
 } from "./voice-call-billing";
 import {
   buildBridgeTwiml,
@@ -22,7 +21,6 @@ import {
   voiceCallbackUrl,
 } from "./twilio-voice.server";
 
-
 const MIGRATIONS_DIR = join(import.meta.dir, "..", "..", "supabase", "migrations");
 
 function voiceMigration(): string {
@@ -34,9 +32,22 @@ function voiceMigration(): string {
   return readFileSync(join(MIGRATIONS_DIR, file), "utf8");
 }
 
+function noAmdMigration(): string {
+  return readFileSync(join(MIGRATIONS_DIR, "20260825010000_voice_caller_bridge_without_amd.sql"), "utf8");
+}
+
 describe("Israeli phone normalization", () => {
   it("accepts the familiar local mobile and landline formats", () => {
-    for (const input of ["050-123-4567", "0501234567", "+972501234567", "00972 50 123 4567", "(03) 123-4567"]) {
+    for (const input of [
+      "050-123-4567",
+      "050‑123‑4567",
+      "050–123–4567",
+      "050־123־4567",
+      "0501234567",
+      "+972501234567",
+      "00972 50 123 4567",
+      "(03) 123-4567",
+    ]) {
       expect(normalizeIsraeliPhone(input).ok).toBe(true);
     }
     expect(normalizeIsraeliPhone("050-123-4567")).toEqual({ ok: true, e164: "+972501234567" });
@@ -75,13 +86,6 @@ describe("billing decision", () => {
   it("never bills a visitor-leg event, even a long completed parent call", () => {
     expect(isBillableCallback({ leg: "caller", status: "completed", alreadyBilled: false })).toBe(false);
     expect(isBillableCallback({ leg: "caller", status: "answered", alreadyBilled: false })).toBe(false);
-  });
-
-  it("only a confident human visitor answer may proceed to dialing", () => {
-    expect(visitorAnswerIsHuman("human")).toBe(true);
-    for (const amd of ["machine_start", "machine_end_beep", "fax", "unknown", null, undefined]) {
-      expect(visitorAnswerIsHuman(amd)).toBe(false);
-    }
   });
 
   it("stores provider errors as sanitized codes only", () => {
@@ -226,7 +230,6 @@ describe("Twilio Voice URLs never depend on request headers", () => {
   });
 });
 
-
 describe("bridge TwiML", () => {
   const xml = buildBridgeTwiml({
     therapistPhone: "+972501112222",
@@ -250,9 +253,41 @@ describe("bridge TwiML", () => {
     expect(xml).not.toContain("MachineDetection");
   });
 
-  it("hangs up without dialing when the visitor answer is unusable", () => {
+  it("hangs up without dialing when the therapist destination is unavailable", () => {
     expect(buildHangupTwiml()).toContain("<Hangup/>");
     expect(buildHangupTwiml()).not.toContain("<Dial");
+  });
+});
+
+describe("visitor leg bridges without human-answer detection", () => {
+  const serverSource = readFileSync(join(import.meta.dir, "twilio-voice.server.ts"), "utf8");
+  const answerSource = readFileSync(
+    join(import.meta.dir, "..", "routes", "api", "public", "voice", "answer.ts"),
+    "utf8",
+  );
+  const sql = noAmdMigration();
+
+  it("does not ask Twilio to listen for a human voice on the first leg", () => {
+    expect(serverSource).not.toContain('body.set("MachineDetection"');
+    expect(serverSource).not.toContain('body.set("MachineDetectionTimeout"');
+    expect(answerSource).not.toContain('verified.params["AnsweredBy"]');
+    expect(answerSource).not.toContain("visitorAnswerIsHuman");
+    expect(answerSource).toContain('_amd_result: "disabled"');
+  });
+
+  it("normalizes the database destination to E.164 before Twilio receives it", () => {
+    expect(answerSource).toContain("normalizeIsraeliPhone(row.therapist_phone)");
+    expect(answerSource).toContain("therapistPhone: therapistPhone.e164");
+  });
+
+  it("keeps the caller-answer RPC signature but removes the old AMD gate", () => {
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION public.voice_call_caller_answered(");
+    expect(sql).toContain("caller_amd_result = 'disabled'");
+    expect(sql).not.toContain("visitor_not_human");
+    expect(sql).not.toContain("<> 'human'");
+    expect(sql).toContain("SECURITY DEFINER");
+    expect(sql).toContain("SET search_path = ''");
+    expect(sql).toContain("TO service_role");
   });
 });
 
@@ -267,7 +302,7 @@ describe("no phone number reaches the browser", () => {
     expect(source).not.toMatch(/return\s*{\s*ok:\s*true,\s*[a-zA-Z]+:/);
     expect(source).toContain("return { ok: true };");
     // The caller number is only ever persisted as a keyed hash.
-    expect(source).toContain('hashValue(`voice:${visitor.e164}`)');
+    expect(source).toContain("hashValue(`voice:${visitor.e164}`)");
   });
 });
 
