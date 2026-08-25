@@ -9,6 +9,8 @@ import { computeSemanticProfile } from "./profile-semantic-sync";
 import type { CredentialStatus } from "./credential-workflow";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 import { therapistSlugBase } from "./therapist-slug";
+import { looksLikeEmailAddress } from "./contact-validation";
+import { looksLikeIsraeliPhone } from "./phone-il";
 import {
   PRODUCT_REGIONS,
   loadLocalityOptions,
@@ -145,6 +147,22 @@ export const getProfileEditorActorMode = createServerFn({ method: "GET" })
 
 const ContactMethodSchema = z.enum(["whatsapp", "email", "phone"]);
 
+const OptionalContactEmailSchema = z
+  .string()
+  .trim()
+  .max(160, "כתובת האימייל ארוכה מדי.")
+  .refine((value) => value === "" || looksLikeEmailAddress(value), "כתובת אימייל לא תקינה.")
+  .nullable()
+  .optional();
+
+const OptionalIsraeliPhoneSchema = z
+  .string()
+  .trim()
+  .max(40, "מספר הטלפון ארוך מדי.")
+  .refine((value) => value === "" || looksLikeIsraeliPhone(value), "מספר טלפון ישראלי לא תקין.")
+  .nullable()
+  .optional();
+
 const SaveSchema = z
   .object({
     full_name: z
@@ -168,8 +186,8 @@ const SaveSchema = z
       .max(80, "שנות ניסיון לא תקין.")
       .nullable()
       .optional(),
-    email: z.string().trim().email("כתובת אימייל לא תקינה.").max(160).nullable().optional().or(z.literal("")),
-    phone: z.string().trim().max(40).nullable().optional().or(z.literal("")),
+    email: OptionalContactEmailSchema,
+    phone: OptionalIsraeliPhoneSchema,
     contact_methods: z
       .array(ContactMethodSchema)
       .max(3, "ניתן לבחור עד שלוש דרכי התקשרות.")
@@ -812,8 +830,8 @@ export const saveAdminManagedProfile = createServerFn({ method: "POST" })
 
 const ContactPreferencesSchema = z
   .object({
-    email: z.string().trim().max(160, "כתובת האימייל ארוכה מדי.").nullable().optional(),
-    phone: z.string().trim().max(40, "מספר הטלפון ארוך מדי.").nullable().optional(),
+    email: OptionalContactEmailSchema,
+    phone: OptionalIsraeliPhoneSchema,
     contact_methods: z
       .array(ContactMethodSchema)
       .min(1, "יש לבחור לפחות דרך התקשרות אחת.")
@@ -831,13 +849,6 @@ const ContactPreferencesSchema = z
     }
 
     const email = data.email?.trim() ?? "";
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["email"],
-        message: "כתובת אימייל לא תקינה.",
-      });
-    }
     if (data.contact_methods.includes("email") && !email) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -847,20 +858,6 @@ const ContactPreferencesSchema = z
     }
 
     const phone = data.phone?.trim() ?? "";
-    if (phone) {
-      const allowed = /^[+\d\s().-]+$/.test(phone);
-      const digits = phone.replace(/\D/g, "");
-      const validLength = phone.startsWith("+")
-        ? digits.length >= 10 && digits.length <= 15
-        : digits.length >= 9 && digits.length <= 10;
-      if (!allowed || !validLength) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["phone"],
-          message: "מספר טלפון לא תקין.",
-        });
-      }
-    }
     if ((data.contact_methods.includes("whatsapp") || data.contact_methods.includes("phone")) && !phone) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
