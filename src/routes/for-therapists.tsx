@@ -101,7 +101,7 @@ const therapistAdvantages = [
   },
   {
     icon: CircleDollarSign,
-    title: "תשלום לפי פניות",
+    title: "מודל תשלום פשוט",
     description: "משלמים רק על פניות שמתקבלות, ללא דמי הרשמה וללא דמי מנוי חודשיים קבועים",
   },
   {
