@@ -90,15 +90,14 @@ const matchingParameters = [
 
 const therapistAdvantages = [
   {
-    icon: UserRoundSearch,
-    title: "חשיפה ממוקדת",
-    description:
-      "משתמשים שמחפשים את סוג הטיפול שאתם מציעים נחשפים לפרופיל שלכם",
-  },
-  {
     icon: BadgeCheck,
     title: "פרופיל מקצועי",
     description: "פותחים פרופיל מקצועי תוך דקות ומצטרפים למאגר המטפלים של טיפולינקס",
+  },
+  {
+    icon: UserRoundSearch,
+    title: "חשיפה ממוקדת",
+    description: "משתמשים שמחפשים את סוג הטיפול שאתם מציעים נחשפים לפרופיל שלכם",
   },
   {
     icon: CircleDollarSign,
