@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { toPublicProblemSlug } from "@/lib/problem-public-url";
 import {
   BadgeCheck,
   Building2,
@@ -166,7 +167,7 @@ function TwoRowTags({ items, interactive }: { items: TagItem[]; interactive: boo
             <Link
               key={item.key}
               to="/problems/$slug"
-              params={{ slug: item.problemSlug }}
+              params={{ slug: toPublicProblemSlug(item.problemSlug) }}
               className={`${TAG_CLASS} transition-colors hover:border-brand/50 hover:bg-brand-soft`}
             >
               {item.label}
