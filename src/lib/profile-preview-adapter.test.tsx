@@ -372,16 +372,19 @@ describe("account ownership of contact preferences and deletion", () => {
     expect(editorSource).toContain('pendingAction === "publish" ? "מתבצע פרסום…" : "פרסום פרופיל"');
   });
 
-  it("explains the 60-character publish minimum and only reveals missing fields after saving", () => {
-    expect(editorSource).toContain("לפרסום הפרופיל נדרש תיאור של לפחות");
-    expect(editorSource).toContain("אורך התיאור טוב");
-    expect(editorSource).toContain("form.full_description.trim().length >= DESCRIPTION_MIN");
+  it("requires an inferred treatment domain, keeps experience optional and only reveals missing fields after saving", () => {
+    expect(editorSource).toContain("לפרסום הפרופיל נדרש לפחות תחום טיפול אחד שהמערכת מזהה בתיאור");
+    expect(editorSource).toContain("זוהה לפחות תחום טיפול אחד");
+    expect(editorSource).toContain("hasRecognizedTreatmentDomain");
+    expect(editorSource).toContain('<Field label="שנות ניסיון (לא חובה)">');
+    expect(editorSource).not.toContain("DESCRIPTION_MIN");
+    expect(editorSource).not.toContain('<Field label="שנות ניסיון *">');
     expect(editorSource).toContain("const [showPublishMissing, setShowPublishMissing] = useState(false)");
     expect(editorSource).toContain("setShowPublishMissing(true)");
     expect(editorSource).toContain("publishMissingFields={publishMissingFields}");
     expect(editorSource).toContain("showPublishMissing={showPublishMissing}");
     expect(editorSource).toContain("כדי להשלים את פרטי הפרופיל יש למלא:");
     expect(editorSource).not.toContain("כדי לפרסם את הפרופיל יש להשלים:");
-    expect(editorSource).not.toContain("מומלץ לפחות ${DESCRIPTION_MIN} תווים לתיאור מובן");
+    expect(editorSource).not.toContain("אורך התיאור טוב");
   });
 });
