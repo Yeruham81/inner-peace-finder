@@ -137,7 +137,7 @@ describe("profile onboarding migration", () => {
 
 describe("completed profile publication controls", () => {
   const publicationMigration = readFileSync(
-    join(import.meta.dir, "../../supabase/migrations/20260823110000_profile_publication_controls.sql"),
+    join(import.meta.dir, "../../supabase/migrations/20260826090000_profile_publish_domain_requirement.sql"),
     "utf8",
   );
   const onboardingCard = readFileSync(
@@ -154,6 +154,9 @@ describe("completed profile publication controls", () => {
     expect(publicationMigration).toContain("credential.verification_status in ('rejected', 'expired')");
     expect(publicationMigration).toContain("credential.verification_status in ('pending_review', 'verified')");
     expect(publicationMigration).toContain("profile_row.profile_status <> 'completed'");
+    expect(publicationMigration).toContain("profile_row.semantic_profile = '[]'::jsonb");
+    expect(publicationMigration).not.toContain("profile_row.years_experience is null");
+    expect(publicationMigration).not.toMatch(/full_description[\s\S]{0,80}< 60/);
     expect(publicationMigration).toContain("from public.therapist_professions");
     expect(publicationMigration).toContain("from public.therapist_languages");
     expect(publicationMigration).toContain("from public.therapist_populations");
