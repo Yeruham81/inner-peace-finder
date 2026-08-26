@@ -33,7 +33,6 @@ import {
 } from "@/lib/profile-display-options";
 import {
   DESCRIPTION_MAX,
-  DESCRIPTION_MIN,
   deleteMyProfilePermanently,
   getAdminManagedProfile,
   getEditorOptions,
@@ -424,6 +423,7 @@ export function EditorPage({
   const saveFn = useServerFn(saveMyProfile);
   const saveAdminFn = useServerFn(saveAdminManagedProfile);
   const deleteProfileFn = useServerFn(deleteMyProfilePermanently);
+  const getFeedbackFn = useServerFn(getSemanticFeedback);
 
   const actorMode = useQuery({
     queryKey: ["profile-editor-actor-mode"],
@@ -455,7 +455,26 @@ export function EditorPage({
   const [missing, setMissing] = useState<string[] | null>(null);
   const [showPublishMissing, setShowPublishMissing] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [debouncedDescription, setDebouncedDescription] = useState("");
   const preserveNextIdentityTransition = useRef(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedDescription(form.full_description), 600);
+    return () => clearTimeout(timer);
+  }, [form.full_description]);
+
+  const analyzedDescription = debouncedDescription.trim();
+  const semanticFeedback = useQuery({
+    queryKey: ["semantic-feedback", analyzedDescription],
+    queryFn: () => getFeedbackFn({ data: { description: analyzedDescription } }),
+    enabled: initialized && analyzedDescription.length > 0,
+    staleTime: 30_000,
+  });
+  const currentDescription = form.full_description.trim();
+  const semanticFeedbackIsCurrent = currentDescription.length > 0 && currentDescription === analyzedDescription;
+  const recognizedTreatmentDomains = semanticFeedbackIsCurrent ? (semanticFeedback.data?.domains ?? []) : [];
+  const hasRecognizedTreatmentDomain =
+    semanticFeedbackIsCurrent && semanticFeedback.isSuccess && recognizedTreatmentDomains.length > 0;
 
   const editorProfileIdentity = isAdmin ? `admin:${activeAdminTherapistId ?? "new"}` : "self";
 
@@ -660,8 +679,7 @@ export function EditorPage({
     ...(!form.gender ? ["מין"] : []),
     ...(!form.professional_title.trim() ? ["כותרת מקצועית"] : []),
     ...(form.profession_ids.length === 0 ? ["מקצוע"] : []),
-    ...(form.years_experience.trim() === "" ? ["שנות ניסיון"] : []),
-    ...(form.full_description.trim().length < DESCRIPTION_MIN ? [`קצת עליי (לפחות ${DESCRIPTION_MIN} תווים)`] : []),
+    ...(!hasRecognizedTreatmentDomain ? ['תחום טיפול אחד לפחות מתוך "קצת עליי"'] : []),
     ...(form.language_ids.length === 0 ? ["שפת טיפול"] : []),
     ...(form.population_ids.length === 0 ? ["אוכלוסיית טיפול"] : []),
     ...(form.home_visit_available && form.home_visit_regions.length === 0 ? ["אזורי ביקורי בית"] : []),
@@ -671,7 +689,7 @@ export function EditorPage({
   ];
   const publishMissing = publishMissingFields.length > 0;
   const displayStatus: "draft" | "completed" | "published" | "frozen" =
-    status === "published"
+    status === "published" && !publishMissing
       ? profile.data?.visibility === "visible"
         ? "published"
         : "frozen"
@@ -832,14 +850,14 @@ export function EditorPage({
                 <div className="mt-1 flex items-start justify-between gap-3 text-xs">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-muted-foreground">
-                      לפרסום הפרופיל נדרש תיאור של לפחות {DESCRIPTION_MIN} תווים.
+                      לפרסום הפרופיל נדרש לפחות תחום טיפול אחד שהמערכת מזהה בתיאור.
                     </span>
-                    {form.full_description.trim().length >= DESCRIPTION_MIN && (
+                    {hasRecognizedTreatmentDomain && (
                       <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
                         <span aria-hidden="true" className="text-sm leading-none">
                           ✓
                         </span>
-                        אורך התיאור טוב
+                        זוהה לפחות תחום טיפול אחד
                       </span>
                     )}
                   </div>
@@ -847,7 +865,13 @@ export function EditorPage({
                     {form.full_description.length} / {DESCRIPTION_MAX}
                   </span>
                 </div>
-                <SemanticFeedbackPanel description={form.full_description} />
+                <SemanticFeedbackPanel
+                  hasDescription={currentDescription.length > 0}
+                  isCurrent={semanticFeedbackIsCurrent}
+                  isPending={semanticFeedback.isPending}
+                  isError={semanticFeedback.isError}
+                  domains={recognizedTreatmentDomains}
+                />
               </Section>
 
               <Section title="גישות ושיטות טיפוליות">
@@ -1920,7 +1944,7 @@ function ProfessionSelector({
           </p>
         </div>
 
-        <Field label="שנות ניסיון *">
+        <Field label="שנות ניסיון (לא חובה)">
           <Input
             type="number"
             inputMode="numeric"
@@ -2434,37 +2458,36 @@ function friendlyErrorMessage(err: Error): string {
   return msg || "אירעה שגיאה. נסו שוב.";
 }
 
-function SemanticFeedbackPanel({ description }: { description: string }) {
-  const getFeedbackFn = useServerFn(getSemanticFeedback);
-  // Debounce input so we do not thrash the server on every keystroke.
-  const [debounced, setDebounced] = useState(description);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(description), 600);
-    return () => clearTimeout(t);
-  }, [description]);
-
-  const trimmedLen = useMemo(() => debounced.trim().length, [debounced]);
-  const enabled = trimmedLen >= 20;
-  const query = useQuery({
-    queryKey: ["semantic-feedback", debounced.trim()],
-    queryFn: () => getFeedbackFn({ data: { description: debounced } }),
-    enabled,
-    staleTime: 30_000,
-  });
-
-  const domains = query.data?.domains ?? [];
-
+function SemanticFeedbackPanel({
+  hasDescription,
+  isCurrent,
+  isPending,
+  isError,
+  domains,
+}: {
+  hasDescription: boolean;
+  isCurrent: boolean;
+  isPending: boolean;
+  isError: boolean;
+  domains: { slug: string; name: string }[];
+}) {
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
       <h3 className="text-base font-semibold text-foreground">תחומי טיפול שהמערכת זיהתה בתיאור שלך</h3>
-      <p className="mt-1 text-sm text-muted-foreground">המערכת מזהה בתיאור את תחומי הטיפול.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        יש לכלול בתיאור לפחות קושי או תחום טיפול מפורש כדי שניתן יהיה לפרסם את הפרופיל.
+      </p>
       <div className="mt-3">
-        {!enabled ? (
+        {!hasDescription ? (
           <p className="text-sm text-muted-foreground">הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.</p>
-        ) : query.isFetching && domains.length === 0 ? (
+        ) : !isCurrent || (isPending && domains.length === 0) ? (
           <p className="text-sm text-muted-foreground">מנתח…</p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">לא ניתן לנתח את התיאור כרגע. נסו לערוך אותו או לנסות שוב.</p>
         ) : domains.length === 0 ? (
-          <p className="text-sm text-muted-foreground">עדיין לא זוהו תחומי טיפול בתיאור.</p>
+          <p className="text-sm text-muted-foreground">
+            עדיין לא זוהה תחום טיפול. נסו לציין במפורש מצבים או קשיים שבהם אתם מטפלים, למשל חרדה, דיכאון או טראומה.
+          </p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {domains.map((d) => (
