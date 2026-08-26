@@ -173,7 +173,7 @@ function AccountOverviewPage() {
       <AccountPageHeader
         eyebrow="מרכז הניהול"
         title="סקירה"
-        description="כל מה שחשוב לדעת על החשיפה, הצפיות והפניות לפרופיל במקום אחד. הנתונים מתייחסים ל-30 הימים האחרונים."
+        description="כל מה שחשוב לדעת על ביצועי הפרופיל שלך. הנתונים מתייחסים ל-30 הימים האחרונים."
         action={
           showExample ? (
             <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900">
