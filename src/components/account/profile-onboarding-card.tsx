@@ -234,7 +234,7 @@ export function ProfileOnboardingCard({
           </div>
         ) : (
           <p className="text-xs leading-5 text-muted-foreground">
-            עם השלמת כל השלבים, תופיע כאן האפשרות לפרסם את הפרופיל
+             לאחר השלמת כל השלבים, תופיע כאן האפשרות לפרסם את הפרופיל
           </p>
         )}
       </div>
