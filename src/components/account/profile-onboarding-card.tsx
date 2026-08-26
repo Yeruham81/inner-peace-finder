@@ -205,7 +205,7 @@ export function ProfileOnboardingCard({
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
               {paymentRepairOnly
                 ? "ארבעת השלבים הראשונים כבר הושלמו. אפשר לעבור ישירות למסך החיובים כדי להשלים מחדש את השלב החמישי."
-                : "כדי שהפרופיל יוכל להתפרסם, יש להשלים את כל השלבים"}
+                : "כדי להתחיל להופיע באתר יש להשלים את כל השלבים"}
             </p>
           </div>
           <span className="rounded-full border border-brand/20 bg-white px-3 py-1.5 text-sm font-bold text-brand ltr-num">
@@ -234,7 +234,7 @@ export function ProfileOnboardingCard({
           </div>
         ) : (
           <p className="text-xs leading-5 text-muted-foreground">
-            לאחר השלמת כל חמשת השלבים, הפאנל יתכווץ ותופיע כאן אפשרות הפרסום הסופית.
+            עם השלמת כל השלבים, תופיע כאן האפשרות לפרסם את הפרופיל
           </p>
         )}
       </div>
