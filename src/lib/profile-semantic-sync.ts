@@ -37,8 +37,8 @@ async function loadActiveSlugs(sb: SupabaseClient<Database>): Promise<Set<string
 
 /**
  * Recompute the canonical semantic profile for a therapist description.
- * Returns `[]` when the description is empty / too short / yields no
- * canonical domain — which intentionally CLEARS an outdated value.
+ * Returns `[]` when the description is empty or yields no canonical domain —
+ * which intentionally CLEARS an outdated value.
  */
 export async function computeSemanticProfile(
   fullDescription: string | null | undefined,
