@@ -745,7 +745,7 @@ export function EditorPage({
             <FormArea
               number="1"
               title="פרטים אישיים"
-              description="המידע הראשוני שיופיע לצד שמכם ויעזור למטופלים להכיר אתכם בקצרה."
+              description="המידע הראשוני שיופיע לצד שמכם ויעזור למטופלים להכיר אתכם בקצרה"
             >
               <Section title="היכרות ופרטים בסיסיים">
                 <div className="grid gap-5 md:grid-cols-[minmax(180px,220px)_minmax(0,1fr)]">
@@ -815,7 +815,7 @@ export function EditorPage({
             <FormArea
               number="2"
               title="הפרופיל המקצועי"
-              description="ספרו על ההכשרה, הניסיון, תחומי העיסוק ודרך העבודה שלכם."
+              description="ספרו על ההכשרה, הניסיון, תחומי הטיפול ודרך העבודה שלכם"
             >
               <Section title="מקצוע וניסיון">
                 <ProfessionSelector
@@ -850,7 +850,7 @@ export function EditorPage({
                 <div className="mt-1 flex items-start justify-between gap-3 text-xs">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-muted-foreground">
-                      לפרסום הפרופיל נדרש לפחות תחום טיפול אחד שהמערכת מזהה בתיאור.
+                      נדרש תחום טיפול אחד לפחות שהמערכת מזהה בתיאור
                     </span>
                     {hasRecognizedTreatmentDomain && (
                       <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
@@ -884,7 +884,7 @@ export function EditorPage({
 
               <Section title="השכלה והכשרה">
                 <p className="text-sm text-muted-foreground">
-                  פרטו על תארים אקדמיים, הכשרות מקצועיות, לימודי המשך והסמכות רלוונטיות.
+                  פרטו על תארים אקדמיים, הכשרות מקצועיות, לימודי המשך והסמכות רלוונטיות
                 </p>
                 <textarea
                   value={form.education_training}
@@ -909,7 +909,7 @@ export function EditorPage({
 
               <Section title="ניסיון מקצועי">
                 <p className="text-sm text-muted-foreground">
-                  פרטו על הניסיון התעסוקתי, מקומות עבודה, תחומי אחריות ורקע מקצועי רלוונטי.
+                  פרטו על הניסיון התעסוקתי, מקומות עבודה, תחומי אחריות ורקע מקצועי רלוונטי
                 </p>
                 <textarea
                   value={form.professional_experience}
@@ -922,7 +922,7 @@ export function EditorPage({
               </Section>
 
               <Section title="איגודים מקצועיים">
-                <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד.</p>
+                <p className="text-sm text-muted-foreground">המידע מבוסס על הצהרה עצמית ומיועד להצגה בפרופיל בלבד</p>
                 <MembershipListEditor
                   items={form.professional_memberships}
                   onChange={(professional_memberships) => setForm({ ...form, professional_memberships })}
@@ -933,7 +933,7 @@ export function EditorPage({
             <FormArea
               number="3"
               title="פרטי הטיפול"
-              description="הגדירו למי הטיפול מתאים, היכן ובאילו שפות הוא ניתן וכיצד ניתן ליצור אתכם קשר."
+              description="הגדירו למי הטיפול מתאים, היכן ובאילו שפות הוא ניתן וכיצד אפשר ליצור אתכם קשר"
             >
               <Section title="שפות הטיפול *">
                 <SelectionGrid
@@ -941,7 +941,7 @@ export function EditorPage({
                   selected={form.language_ids}
                   onChange={(ids) => setForm({ ...form, language_ids: ids })}
                   columns="four"
-                  hint="סמנו את כל השפות שבהן ניתן לקבל מכם טיפול."
+                  hint="סמנו את כל השפות שבהן ניתן לקבל מכם טיפול"
                 />
               </Section>
 
@@ -954,7 +954,7 @@ export function EditorPage({
                   selected={form.population_ids}
                   onChange={(ids) => setForm({ ...form, population_ids: ids })}
                   columns="four"
-                  hint="סמנו את כל האוכלוסיות שעבורן אתם מציעים טיפול."
+                  hint="סמנו את כל האוכלוסיות שעבורן אתם מציעים טיפול"
                 />
               </Section>
 
@@ -967,7 +967,7 @@ export function EditorPage({
                   selected={form.therapy_format_ids}
                   onChange={(ids) => setForm({ ...form, therapy_format_ids: ids })}
                   columns="twoToThree"
-                  hint="ניתן לבחור יותר ממסגרת טיפול אחת."
+                  hint="ניתן לבחור יותר ממסגרת טיפול אחת"
                 />
               </Section>
 
@@ -977,7 +977,7 @@ export function EditorPage({
                     checked={form.lgbtq_affirming}
                     onChange={(checked) => setForm({ ...form, lgbtq_affirming: checked })}
                     title="טיפול מותאם לקהילה הגאה"
-                    description="הצהרה עצמית שתוצג כתגית בפרופיל. אינה מהווה הסמכה מקצועית מאומתת."
+                    description="הצהרה עצמית שתוצג כתגית בפרופיל"
                   />
                   <CheckCard
                     checked={form.offers_free_intro}
@@ -990,7 +990,7 @@ export function EditorPage({
                       })
                     }
                     title="פגישת או שיחת היכרות ללא תשלום"
-                    description="ציינו כיצד ניתן לקיים את ההיכרות וכמה זמן היא נמשכת."
+                    description="ציינו כיצד ניתן לקיים את ההיכרות וכמה זמן היא נמשכת"
                   />
                   {form.offers_free_intro && (
                     <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
@@ -1035,7 +1035,7 @@ export function EditorPage({
               <Section title="מיקום הטיפול *">
                 <p className="text-sm text-muted-foreground">
                   בחרו את היישוב שבו אתם מקבלים מטופלים. האזור יתעדכן אוטומטית. ניתן להוסיף עד שלושה מיקומים פיזיים,
-                  ולהציע גם טיפול אונליין או ביקורי בית.
+                  ולהציע גם טיפול אונליין או ביקורי בית
                 </p>
 
                 {options.data?.locality_options_error && (
@@ -1266,7 +1266,7 @@ export function EditorPage({
                 </div>
 
                 <p className="text-sm text-muted-foreground">
-                  לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור שירות.
+                  לפרסום הפרופיל יש להגדיר לפחות מיקום פיזי אחד, טיפול אונליין או ביקורי בית עם אזור שירות
                 </p>
               </Section>
             </FormArea>
@@ -1940,7 +1940,7 @@ function ProfessionSelector({
         <div className="min-w-0 text-right">
           <div className="text-base font-medium text-foreground">מקצועות ותחומי עיסוק *</div>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים.
+            בחרו תחום כדי להציג את המקצועות הכלולים בו. ניתן לבחור כמה מקצועות ומכמה תחומים שונים
           </p>
         </div>
 
@@ -2308,7 +2308,7 @@ function ModalitySelector({
   return (
     <div>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        סמנו את הגישות והשיטות שבהן אתם משתמשים במסגרת הטיפול. ניתן לבחור יותר מאפשרות אחת.
+        סמנו את הגישות והשיטות שבהן אתם משתמשים במסגרת הטיפול
       </p>
 
       {selectedModalities.length > 0 && (
@@ -2475,7 +2475,7 @@ function SemanticFeedbackPanel({
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
       <h3 className="text-base font-semibold text-foreground">תחומי טיפול שהמערכת זיהתה בתיאור שלך</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        יש לכלול בתיאור לפחות קושי או תחום טיפול מפורש כדי שניתן יהיה לפרסם את הפרופיל.
+        
       </p>
       <div className="mt-3">
         {!hasDescription ? (
