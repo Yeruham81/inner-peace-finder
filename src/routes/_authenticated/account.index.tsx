@@ -1,16 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  ArrowLeft,
-  BadgeCheck,
-  CreditCard,
-  Eye,
-  MessageSquareText,
-  MousePointerClick,
-  Search,
-  UserRoundPen,
-} from "lucide-react";
+import { CreditCard, Eye, MessageSquareText, Search, UserRoundPen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -22,18 +13,10 @@ import { ProfileOnboardingCard } from "@/components/account/profile-onboarding-c
 import {
   ACCOUNT_MOCK_CHANNELS,
   ACCOUNT_MOCK_DAILY,
-  ACCOUNT_MOCK_LEADS,
   ACCOUNT_MOCK_SUMMARY,
 } from "@/components/account/account-mock-data";
 import { Button } from "@/components/ui/button";
-import {
-  accountChannelLabel,
-  accountLeadStatusLabel,
-  formatAccountActivityDate,
-  formatAgorot,
-  formatChartDay,
-  percentageChange,
-} from "@/lib/account-activity";
+import { accountChannelLabel, formatAgorot, formatChartDay, percentageChange } from "@/lib/account-activity";
 import { getMyAccountDashboard } from "@/lib/account-activity.functions";
 import { getMyProfileOnboarding, publishMyProfile } from "@/lib/profile-onboarding.functions";
 import { setMyProfileVisibility } from "@/lib/therapist-profile.functions";
@@ -144,30 +127,6 @@ function AccountOverviewPage() {
       }));
   }, [dashboardQuery.data?.channels, showExample]);
 
-  const recentLeads = useMemo(() => {
-    if (showExample) {
-      return ACCOUNT_MOCK_LEADS.slice(0, 4).map((lead) => ({
-        id: lead.id,
-        channel: lead.channel,
-        date: lead.date,
-        time: lead.time,
-        status: lead.status,
-        chargeAgorot: lead.charge * 100,
-      }));
-    }
-    return (dashboardQuery.data?.recent_leads ?? []).map((lead) => {
-      const timestamp = formatAccountActivityDate(lead.created_at);
-      return {
-        id: lead.id,
-        channel: accountChannelLabel(lead.channel),
-        date: timestamp.date,
-        time: timestamp.time,
-        status: accountLeadStatusLabel(lead.delivery_status, lead.channel),
-        chargeAgorot: lead.charge_agorot,
-      };
-    });
-  }, [dashboardQuery.data?.recent_leads, showExample]);
-
   return (
     <>
       <AccountPageHeader
@@ -274,14 +233,18 @@ function AccountOverviewPage() {
             <AccountStatCard
               label="צפיות בפרופיל"
               value={summary.profile_views.toLocaleString("he-IL")}
-              detail={`${summary.unique_profile_views.toLocaleString("he-IL")} מבקרים ייחודיים`}
+              detail={`${summary.unique_profile_views.toLocaleString("he-IL")} מבקרים ייחודיים · ${conversionNote(
+                summary.profile_views,
+                summary.impressions,
+                "מההופעות",
+              )}`}
               change={percentageChange(summary.profile_views, summary.previous_profile_views)}
               icon={Eye}
             />
             <AccountStatCard
               label="פניות"
               value={summary.leads.toLocaleString("he-IL")}
-              detail="מכל אמצעי התקשורת"
+              detail={conversionNote(summary.leads, summary.profile_views, "מהצפיות")}
               change={percentageChange(summary.leads, summary.previous_leads)}
               icon={MessageSquareText}
             />
@@ -293,34 +256,6 @@ function AccountOverviewPage() {
               icon={CreditCard}
             />
           </div>
-
-          <AccountSectionCard
-            title="מסלול החשיפה לפנייה"
-            description="כך משתמשים מתקדמים מהופעה בתוצאות החיפוש ועד ליצירת קשר."
-          >
-            <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
-              <FunnelStep
-                icon={Search}
-                value={summary.impressions.toLocaleString("he-IL")}
-                label="הופעות בתוצאות"
-                note={summary.impressions ? "100%" : "טרם נצברו נתונים"}
-              />
-              <ArrowLeft className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" />
-              <FunnelStep
-                icon={MousePointerClick}
-                value={summary.profile_views.toLocaleString("he-IL")}
-                label="צפיות בפרופיל"
-                note={conversionNote(summary.profile_views, summary.impressions, "מההופעות")}
-              />
-              <ArrowLeft className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" />
-              <FunnelStep
-                icon={MessageSquareText}
-                value={summary.leads.toLocaleString("he-IL")}
-                label="פניות"
-                note={conversionNote(summary.leads, summary.profile_views, "מהצפיות")}
-              />
-            </div>
-          </AccountSectionCard>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,0.75fr)]">
             <AccountSectionCard
@@ -392,57 +327,6 @@ function AccountOverviewPage() {
               )}
             </AccountSectionCard>
           </div>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <AccountSectionCard
-              title="פניות אחרונות"
-              description="הפניות האחרונות שהתקבלו דרך הפרופיל."
-              action={
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/account/leads">לכל הפניות</Link>
-                </Button>
-              }
-            >
-              {recentLeads.length ? (
-                <div className="divide-y divide-border/70">
-                  {recentLeads.map((lead) => (
-                    <div key={lead.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">פנייה ב-{lead.channel}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {lead.date} · {lead.time} · {lead.status}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold text-foreground ltr-num">
-                        {lead.chargeAgorot ? formatAgorot(lead.chargeAgorot) : "—"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="py-8 text-center text-sm text-muted-foreground">הפניות האחרונות יופיעו כאן.</p>
-              )}
-            </AccountSectionCard>
-
-            <AccountSectionCard title="מצב הפרופיל" description="קיצורי דרך לניהול הנראות והאמינות של הפרופיל.">
-              <div className="space-y-3">
-                <QuickStatusRow
-                  icon={UserRoundPen}
-                  title="הפרופיל מקושר לחשבון"
-                  description="ניתן לערוך, לשמור ולהציג תצוגה מקדימה בכל עת."
-                  actionLabel="עריכת פרופיל"
-                  to="/account/profile"
-                />
-                <QuickStatusRow
-                  icon={BadgeCheck}
-                  title="אימות הסמכות"
-                  description="נהלו מסמכים מקצועיים ובדקו את סטטוס האימות."
-                  actionLabel="ניהול הסמכות"
-                  to="/account/credentials"
-                />
-              </div>
-            </AccountSectionCard>
-          </div>
         </div>
       )}
     </>
@@ -491,58 +375,6 @@ function NoProfileState({ email, accountStatus }: { email: string; accountStatus
           </span>
           <span>סטטוס: {accountStatus}</span>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function FunnelStep({
-  icon: Icon,
-  value,
-  label,
-  note,
-}: {
-  icon: typeof Search;
-  value: string;
-  label: string;
-  note: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-surface p-4 text-center">
-      <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-soft text-brand">
-        <Icon className="h-4 w-4" />
-      </span>
-      <p className="mt-3 text-2xl font-bold text-foreground ltr-num">{value}</p>
-      <p className="mt-1 text-sm font-medium text-foreground">{label}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{note}</p>
-    </div>
-  );
-}
-
-function QuickStatusRow({
-  icon: Icon,
-  title,
-  description,
-  actionLabel,
-  to,
-}: {
-  icon: typeof UserRoundPen;
-  title: string;
-  description: string;
-  actionLabel: string;
-  to: "/account/profile" | "/account/credentials";
-}) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
-        <Link to={to} className="mt-2 inline-block text-xs font-semibold text-brand underline-offset-4 hover:underline">
-          {actionLabel}
-        </Link>
       </div>
     </div>
   );
