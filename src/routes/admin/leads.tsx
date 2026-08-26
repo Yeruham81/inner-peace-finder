@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -43,7 +44,7 @@ function LeadsPage() {
   const listFn = useServerFn(listAdminLeads);
   const leads = useQuery({
     queryKey: ["admin-leads"],
-    queryFn: () => listFn(),
+    queryFn: async (): Promise<AdminLeadRow[]> => listFn(),
   });
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("all");
@@ -52,9 +53,10 @@ function LeadsPage() {
   const [therapist, setTherapist] = useState("all");
   const [selected, setSelected] = useState<AdminLeadRow | null>(null);
 
-  const rows = leads.data ?? [];
-  const therapists = useMemo(
-    () => Array.from(new Set(rows.map((row) => row.therapistName))).sort((a, b) => a.localeCompare(b, "he")),
+  const rows: AdminLeadRow[] = leads.data ?? [];
+  const therapists = useMemo<string[]>(
+    () =>
+      Array.from(new Set(rows.map((row: AdminLeadRow) => row.therapistName))).sort((a, b) => a.localeCompare(b, "he")),
     [rows],
   );
 
