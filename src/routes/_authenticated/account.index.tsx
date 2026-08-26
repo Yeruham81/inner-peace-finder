@@ -93,8 +93,6 @@ function AccountOverviewPage() {
         previous_impressions: 1088,
         profile_views: ACCOUNT_MOCK_SUMMARY.profileViews,
         previous_profile_views: 157,
-        unique_profile_views: ACCOUNT_MOCK_SUMMARY.uniqueViews,
-        previous_unique_profile_views: 126,
         leads: ACCOUNT_MOCK_SUMMARY.leads,
         previous_leads: 19,
         charges_agorot: ACCOUNT_MOCK_SUMMARY.charges * 100,
@@ -132,7 +130,7 @@ function AccountOverviewPage() {
       <AccountPageHeader
         eyebrow="מרכז הניהול"
         title="סקירה"
-        description="כל מה שחשוב לדעת על ביצועי הפרופיל שלך. הנתונים מתייחסים ל-30 הימים האחרונים."
+        description="כל מה שחשוב לדעת על ביצועי הפרופיל שלך."
         action={
           showExample ? (
             <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900">
@@ -222,46 +220,40 @@ function AccountOverviewPage() {
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <AccountStatCard
-              label="הופעות בתוצאות"
-              value={summary.impressions.toLocaleString("he-IL")}
-              detail="לעומת 30 הימים הקודמים"
-              change={percentageChange(summary.impressions, summary.previous_impressions)}
-              icon={Search}
-            />
-            <AccountStatCard
-              label="צפיות בפרופיל"
-              value={summary.profile_views.toLocaleString("he-IL")}
-              detail={`${summary.unique_profile_views.toLocaleString("he-IL")} מבקרים ייחודיים · ${conversionNote(
-                summary.profile_views,
-                summary.impressions,
-                "מההופעות",
-              )}`}
-              change={percentageChange(summary.profile_views, summary.previous_profile_views)}
-              icon={Eye}
-            />
-            <AccountStatCard
-              label="פניות"
-              value={summary.leads.toLocaleString("he-IL")}
-              detail={conversionNote(summary.leads, summary.profile_views, "מהצפיות")}
-              change={percentageChange(summary.leads, summary.previous_leads)}
-              icon={MessageSquareText}
-            />
-            <AccountStatCard
-              label="חיובים"
-              value={formatAgorot(summary.charges_agorot)}
-              detail="ב-30 הימים האחרונים"
-              change={percentageChange(summary.charges_agorot, summary.previous_charges_agorot)}
-              icon={CreditCard}
-            />
-          </div>
+          <section aria-labelledby="profile-performance-heading">
+            <h2 id="profile-performance-heading" className="mb-3 text-lg font-bold text-foreground">
+              ביצועי הפרופיל ב-30 הימים האחרונים
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <AccountStatCard
+                label="הופעות בתוצאות"
+                value={summary.impressions.toLocaleString("he-IL")}
+                detail="לעומת 30 הימים הקודמים"
+                change={percentageChange(summary.impressions, summary.previous_impressions)}
+                icon={Search}
+              />
+              <AccountStatCard
+                label="צפיות בפרופיל"
+                value={summary.profile_views.toLocaleString("he-IL")}
+                detail={conversionNote(summary.profile_views, summary.impressions, "מההופעות")}
+                secondaryDetail="לעומת 30 הימים הקודמים"
+                change={percentageChange(summary.profile_views, summary.previous_profile_views)}
+                icon={Eye}
+              />
+              <AccountStatCard
+                label="פניות"
+                value={summary.leads.toLocaleString("he-IL")}
+                detail={conversionNote(summary.leads, summary.profile_views, "מהצפיות")}
+                secondaryDetail="לעומת 30 הימים הקודמים"
+                change={percentageChange(summary.leads, summary.previous_leads)}
+                icon={MessageSquareText}
+              />
+              <AccountStatCard label="חיובים" value={formatAgorot(summary.charges_agorot)} icon={CreditCard} />
+            </div>
+          </section>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,0.75fr)]">
-            <AccountSectionCard
-              title="ביצועים ב-30 הימים האחרונים"
-              description="הופעות בתוצאות וצפיות בפרופיל לאורך התקופה."
-            >
+            <AccountSectionCard title="הופעות בתוצאות וצפיות בפרופיל">
               <div className="h-72" dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: -24 }}>
@@ -339,8 +331,6 @@ function emptySummary() {
     previous_impressions: 0,
     profile_views: 0,
     previous_profile_views: 0,
-    unique_profile_views: 0,
-    previous_unique_profile_views: 0,
     leads: 0,
     previous_leads: 0,
     charges_agorot: 0,
