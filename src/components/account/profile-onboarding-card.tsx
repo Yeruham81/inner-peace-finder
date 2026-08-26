@@ -396,7 +396,7 @@ function buildSteps(status: ProfileOnboardingStatus): Step[] {
       : status.ownershipMode === "claimed"
         ? "הבעלות אושרה והפרופיל הקיים משויך לחשבון שלך."
         : status.ownershipMode === "self_created"
-          ? "החשבון נפתח והפרופיל החדש משויך אליו."
+          ? "החשבון נפתח והפרופיל החדש משויך אליו"
           : "החשבון נפתח. לאחר שמירת הפרופיל הוא ישויך אליו אוטומטית.";
 
   const credentialCopy: Record<ProfileOnboardingStatus["credentialState"], [string, string]> = {
