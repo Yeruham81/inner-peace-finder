@@ -409,7 +409,7 @@ function buildSteps(status: ProfileOnboardingStatus): Step[] {
 
   const paymentCopy: Record<ProfileOnboardingStatus["paymentMethodStatus"], string> = {
     not_configured: "יש להוסיף אמצעי תשלום כדי להשלים את ההצטרפות ולפרסם את הפרופיל.",
-    active: "אמצעי התשלום תקין ופעיל.",
+    active: "אמצעי התשלום תקין ופעיל",
     action_required: "אמצעי התשלום דורש עדכון כדי לחדש את הופעת הפרופיל.",
     expired: "תוקף אמצעי התשלום פג ויש לעדכן אותו כדי לחדש את הופעת הפרופיל.",
   };
