@@ -47,8 +47,7 @@ async function slugs(text: string): Promise<string[]> {
 
 describe("extractProfile — proximity + anchor-heavy guard", () => {
   it("rejects משבר זהות when tokens only co-occur far apart", async () => {
-    const text =
-      "אני מלווה מטופלים בהתמודדות עם משברים שונים ובעבודה על תחושת זהות עצמית. אני מטפלת מזה שנים רבות.";
+    const text = "אני מלווה מטופלים בהתמודדות עם משברים שונים ובעבודה על תחושת זהות עצמית. אני מטפלת מזה שנים רבות.";
     expect(await slugs(text)).not.toContain("self_identity");
   });
 
@@ -70,5 +69,9 @@ describe("extractProfile — proximity + anchor-heavy guard", () => {
   it("still accepts an explicit single-token treatment domain (דיכאון)", async () => {
     const text = "אני מטפל בדיכאון ובדכאונות ממושכים אצל מבוגרים ובני נוער.";
     expect(await slugs(text)).toContain("depression");
+  });
+
+  it("does not impose a hidden minimum length on an explicit treatment domain", async () => {
+    expect(await slugs("דיכאון")).toContain("depression");
   });
 });
