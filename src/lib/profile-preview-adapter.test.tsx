@@ -376,7 +376,8 @@ describe("account ownership of contact preferences and deletion", () => {
     expect(editorSource).toContain("לפרסום הפרופיל נדרש לפחות תחום טיפול אחד שהמערכת מזהה בתיאור");
     expect(editorSource).toContain("זוהה לפחות תחום טיפול אחד");
     expect(editorSource).toContain("hasRecognizedTreatmentDomain");
-    expect(editorSource).toContain('<Field label="שנות ניסיון (לא חובה)">');
+    expect(editorSource).toContain('<Field label="שנות ניסיון">');
+    expect(editorSource).not.toContain('<Field label="שנות ניסיון (לא חובה)">');
     expect(editorSource).not.toContain("DESCRIPTION_MIN");
     expect(editorSource).not.toContain('<Field label="שנות ניסיון *">');
     expect(editorSource).toContain("const [showPublishMissing, setShowPublishMissing] = useState(false)");
