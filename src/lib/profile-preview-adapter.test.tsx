@@ -373,7 +373,7 @@ describe("account ownership of contact preferences and deletion", () => {
   });
 
   it("requires an inferred treatment domain, keeps experience optional and only reveals missing fields after saving", () => {
-    expect(editorSource).toContain("לפרסום הפרופיל נדרש לפחות תחום טיפול אחד שהמערכת מזהה בתיאור");
+    expect(editorSource).toContain("נדרש תחום טיפול אחד לפחות שהמערכת מזהה בתיאור");
     expect(editorSource).toContain("זוהה לפחות תחום טיפול אחד");
     expect(editorSource).toContain("hasRecognizedTreatmentDomain");
     expect(editorSource).toContain('<Field label="שנות ניסיון">');
