@@ -5,12 +5,14 @@ export function AccountStatCard({
   label,
   value,
   detail,
+  secondaryDetail,
   change,
   icon: Icon,
 }: {
   label: string;
   value: string;
   detail?: string;
+  secondaryDetail?: string;
   change?: number;
   icon: LucideIcon;
 }) {
@@ -27,17 +29,34 @@ export function AccountStatCard({
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
       </div>
-      <div className="mt-3 flex min-h-5 items-center gap-2 text-xs">
-        {typeof change === "number" && (
-          <span
-            className={`inline-flex items-center gap-0.5 font-semibold ${positive ? "text-emerald-700" : "text-red-700"}`}
-          >
-            {positive ? <ArrowUpLeft className="h-3.5 w-3.5" /> : <ArrowDownLeft className="h-3.5 w-3.5" />}
-            <span className="ltr-num">{Math.abs(change)}%</span>
-          </span>
-        )}
-        {detail && <span className="text-muted-foreground">{detail}</span>}
-      </div>
+      {secondaryDetail ? (
+        <div className="mt-3 space-y-1 text-xs">
+          {detail && <div className="min-h-5 text-muted-foreground">{detail}</div>}
+          <div className="flex min-h-5 items-center gap-2">
+            {typeof change === "number" && (
+              <span
+                className={`inline-flex items-center gap-0.5 font-semibold ${positive ? "text-emerald-700" : "text-red-700"}`}
+              >
+                {positive ? <ArrowUpLeft className="h-3.5 w-3.5" /> : <ArrowDownLeft className="h-3.5 w-3.5" />}
+                <span className="ltr-num">{Math.abs(change)}%</span>
+              </span>
+            )}
+            <span className="text-muted-foreground">{secondaryDetail}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 flex min-h-5 items-center gap-2 text-xs">
+          {typeof change === "number" && (
+            <span
+              className={`inline-flex items-center gap-0.5 font-semibold ${positive ? "text-emerald-700" : "text-red-700"}`}
+            >
+              {positive ? <ArrowUpLeft className="h-3.5 w-3.5" /> : <ArrowDownLeft className="h-3.5 w-3.5" />}
+              <span className="ltr-num">{Math.abs(change)}%</span>
+            </span>
+          )}
+          {detail && <span className="text-muted-foreground">{detail}</span>}
+        </div>
+      )}
     </article>
   );
 }
