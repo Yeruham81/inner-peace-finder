@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
 import { AdminFilterBar, AdminSearchField, AdminSelectFilter } from "@/components/admin/admin-filter-bar";
 import { formatAdminDateTime } from "@/components/admin/admin-formatters";
-import { MOCK_LEADS, type MockLead } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { listAdminLeads, type AdminLeadRow } from "@/lib/admin-leads.functions";
 
 export const Route = createFileRoute("/admin/leads")({
   head: () => ({
@@ -21,32 +22,58 @@ export const Route = createFileRoute("/admin/leads")({
   component: LeadsPage,
 });
 
-const PERIODS = ["7 ימים אחרונים", "30 ימים אחרונים", "כל התקופה"];
+const PERIODS = ["7 ימים אחרונים", "30 ימים אחרונים"];
+
+const WORKFLOW_LABELS: Record<AdminLeadRow["workflowStatus"], string> = {
+  new: "חדשה",
+  in_progress: "בטיפול",
+  handled: "טופלה",
+  archived: "בארכיון",
+};
+
+function withinPeriod(createdAt: string, period: string): boolean {
+  if (period === "all" || period === "כל התקופה") return true;
+  const days = period === "7 ימים אחרונים" ? 7 : period === "30 ימים אחרונים" ? 30 : null;
+  if (!days) return true;
+  const created = Date.parse(createdAt);
+  return Number.isFinite(created) && created >= Date.now() - days * 24 * 60 * 60 * 1000;
+}
 
 function LeadsPage() {
+  const listFn = useServerFn(listAdminLeads);
+  const leads = useQuery({
+    queryKey: ["admin-leads"],
+    queryFn: () => listFn(),
+  });
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("all");
   const [channel, setChannel] = useState("all");
   const [status, setStatus] = useState("all");
   const [therapist, setTherapist] = useState("all");
-  const [selected, setSelected] = useState<MockLead | null>(null);
+  const [selected, setSelected] = useState<AdminLeadRow | null>(null);
 
-  const therapists = useMemo(() => Array.from(new Set(MOCK_LEADS.map((row) => row.therapistName))), []);
+  const rows = leads.data ?? [];
+  const therapists = useMemo(
+    () => Array.from(new Set(rows.map((row) => row.therapistName))).sort((a, b) => a.localeCompare(b, "he")),
+    [rows],
+  );
 
   const filtered = useMemo(() => {
-    const term = search.trim();
-    return MOCK_LEADS.filter((row) => {
-      if (term && !row.id.toLowerCase().includes(term.toLowerCase()) && !row.therapistName.includes(term)) return false;
+    const term = search.trim().toLocaleLowerCase("he");
+    return rows.filter((row) => {
+      if (term) {
+        const haystack = `${row.id} ${row.therapistName} ${row.source}`.toLocaleLowerCase("he");
+        if (!haystack.includes(term)) return false;
+      }
       if (channel !== "all" && row.channel !== channel) return false;
       if (status !== "all" && row.status !== status) return false;
       if (therapist !== "all" && row.therapistName !== therapist) return false;
-      if (period === "7 ימים אחרונים" && row.createdAt < "2026-08-12") return false;
-      if (period === "30 ימים אחרונים" && row.createdAt < "2026-07-20") return false;
+      if (!withinPeriod(row.createdAt, period)) return false;
       return true;
     });
-  }, [search, channel, status, therapist, period]);
+  }, [rows, search, channel, status, therapist, period]);
 
-  const columns: AdminColumn<MockLead>[] = [
+  const columns: AdminColumn<AdminLeadRow>[] = [
     {
       key: "id",
       header: "מזהה",
@@ -69,13 +96,23 @@ function LeadsPage() {
 
   return (
     <div>
-      <AdminPageHeader title="פניות" subtitle="מעקב אחר פניות (נתוני הדגמה בלבד)" breadcrumb="פניות" />
+      <AdminPageHeader
+        title="פניות"
+        subtitle={leads.isLoading ? "טוען פניות…" : `${rows.length.toLocaleString("he-IL")} פניות שנוצרו במערכת`}
+        breadcrumb="פניות"
+      />
+
+      {leads.isError ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          לא ניתן לטעון את רשימת הפניות. {leads.error instanceof Error ? leads.error.message : ""}
+        </div>
+      ) : null}
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
-        <AdminStatCard label="סה״כ פניות" value={MOCK_LEADS.length} hint="נתוני הדגמה" />
-        <AdminStatCard label="נמסרו" value={MOCK_LEADS.filter((l) => l.status === "נמסרה").length} hint="נתוני הדגמה" />
-        <AdminStatCard label="נענו" value={MOCK_LEADS.filter((l) => l.status === "נענתה").length} hint="נתוני הדגמה" />
-        <AdminStatCard label="נכשלו" value={MOCK_LEADS.filter((l) => l.status === "נכשלה").length} hint="נתוני הדגמה" />
+        <AdminStatCard label="סה״כ פניות" value={rows.length} />
+        <AdminStatCard label="נמסרו" value={rows.filter((lead) => lead.status === "נמסרה").length} />
+        <AdminStatCard label="נענו" value={rows.filter((lead) => lead.status === "נענתה").length} />
+        <AdminStatCard label="נכשלו" value={rows.filter((lead) => lead.status === "נכשלה").length} />
       </div>
 
       <AdminFilterBar>
@@ -86,13 +123,20 @@ function LeadsPage() {
           value={search}
           onChange={setSearch}
         />
-        <AdminSelectFilter id="lead-period" label="תקופה" value={period} onChange={setPeriod} options={PERIODS} />
+        <AdminSelectFilter
+          id="lead-period"
+          label="תקופה"
+          value={period}
+          onChange={setPeriod}
+          options={PERIODS}
+          allLabel="כל התקופה"
+        />
         <AdminSelectFilter
           id="lead-channel"
           label="ערוץ"
           value={channel}
           onChange={setChannel}
-          options={["WhatsApp", "טלפון", "אימייל"]}
+          options={["WhatsApp", "טלפון", "אימייל", "אחר"]}
         />
         <AdminSelectFilter
           id="lead-status"
@@ -131,7 +175,8 @@ function LeadsPage() {
             </p>
           </div>
         )}
-        emptyTitle="אין פניות מתאימות"
+        emptyTitle={leads.isLoading ? "טוען…" : "אין פניות מתאימות"}
+        emptyDescription="נסו לשנות את מסנני החיפוש."
       />
 
       <AdminDetailDrawer
@@ -140,7 +185,7 @@ function LeadsPage() {
           if (!open) setSelected(null);
         }}
         title={selected ? `פנייה ${selected.id}` : ""}
-        description="נתוני הדגמה — אינם מקושרים לפניות אמיתיות."
+        description="נתוני הפנייה כפי שנשמרו במערכת."
       >
         {selected ? (
           <>
@@ -153,19 +198,33 @@ function LeadsPage() {
               <AdminDetailRow label="מטפל/ת" value={selected.therapistName} />
               <AdminDetailRow label="ערוץ פנייה" value={selected.channel} />
               <AdminDetailRow label="מקור" value={selected.source} />
-              <AdminDetailRow label="סטטוס" value={<AdminStatusBadge status={selected.status} />} />
+              <AdminDetailRow label="סטטוס מסירה" value={<AdminStatusBadge status={selected.status} />} />
             </AdminDetailSection>
 
-            <AdminDetailSection title="היסטוריית סטטוס">
-              {selected.history.map((entry) => (
-                <AdminDetailRow key={entry.label} label={entry.label} value={<span dir="ltr">{entry.at}</span>} />
-              ))}
+            <AdminDetailSection title="מצב טיפול">
+              <AdminDetailRow
+                label="מצב אצל המטפל/ת"
+                value={<AdminStatusBadge status={WORKFLOW_LABELS[selected.workflowStatus]} />}
+              />
+              <AdminDetailRow
+                label="עודכן לאחרונה"
+                value={
+                  selected.workflowUpdatedAt ? (
+                    <span dir="ltr">{formatAdminDateTime(selected.workflowUpdatedAt)}</span>
+                  ) : (
+                    "טרם עודכן"
+                  )
+                }
+              />
             </AdminDetailSection>
 
             <AdminDetailSection title="מטא-דאטה טכנית">
-              <AdminDetailRow label="מזהה בקשה" value={<span dir="ltr">req_mock_00{selected.id.slice(-2)}</span>} />
-              <AdminDetailRow label="ערוץ מסירה" value="ספק חיצוני יוגדר בשלב הבא" />
-              <AdminDetailRow label="ניסיונות מסירה" value="1" />
+              <AdminDetailRow label="מזהה אירוע CTA" value={<span dir="ltr">{selected.ctaEventId ?? "—"}</span>} />
+              <AdminDetailRow label="סטטוס ספק" value={<span dir="ltr">{selected.deliveryStatus}</span>} />
+              <AdminDetailRow
+                label="מזהה הודעת ספק"
+                value={<span dir="ltr">{selected.providerMessageId ?? "—"}</span>}
+              />
             </AdminDetailSection>
           </>
         ) : null}
