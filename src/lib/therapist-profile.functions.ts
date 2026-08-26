@@ -119,7 +119,6 @@ export type SemanticFeedback = {
 /* Constants + helpers                                                */
 /* ------------------------------------------------------------------ */
 
-export const DESCRIPTION_MIN = 60;
 export const DESCRIPTION_MAX = 4000;
 
 function publicClient() {
@@ -562,7 +561,11 @@ export const getAdminManagedProfile = createServerFn({ method: "POST" })
 /* Validation for publish                                             */
 /* ------------------------------------------------------------------ */
 
-function validateForPublish(input: SaveInput, saveMode: "self" | "admin_public_info" = "self"): string[] {
+function validateForPublish(
+  input: SaveInput,
+  semanticProfile: readonly { slug: string; weight: number }[],
+  saveMode: "self" | "admin_public_info" = "self",
+): string[] {
   const missing: string[] = [];
   if (saveMode === "admin_public_info" && !input.email?.trim()) {
     missing.push("אימייל מקצועי");
@@ -571,10 +574,7 @@ function validateForPublish(input: SaveInput, saveMode: "self" | "admin_public_i
   if (!input.gender) missing.push("מין");
   if (!input.professional_title || input.professional_title.trim().length === 0) missing.push("כותרת מקצועית");
   if (!input.profession_ids || input.profession_ids.length === 0) missing.push("מקצועות");
-  if (input.years_experience === null || input.years_experience === undefined) missing.push("שנות ניסיון");
-  if (!input.full_description || input.full_description.trim().length < DESCRIPTION_MIN) {
-    missing.push("תיאור מקצועי");
-  }
+  if (semanticProfile.length === 0) missing.push('תחום טיפול אחד לפחות מתוך "קצת עליי"');
   if (!input.language_ids || input.language_ids.length === 0) missing.push("שפות");
   if (!input.population_ids || input.population_ids.length === 0) missing.push("אוכלוסיות טיפול");
   if (!input.contact_methods || input.contact_methods.length === 0) {
@@ -655,15 +655,14 @@ async function saveProfileForActor(args: {
     }
   }
 
-  const missing = data.publish ? validateForPublish(data, saveMode) : [];
-  if (data.publish && missing.length > 0) {
-    return { therapist_id: "", profile_status: "draft", missing };
-  }
-
   // Recompute the semantic source of truth BEFORE any write. A catalog or
   // extraction failure must abort the save/publish instead of persisting an
   // outdated (or silently emptied) semantic_profile.
   const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
+  const readinessMissing = validateForPublish(data, semanticProfile, saveMode);
+  if (data.publish && readinessMissing.length > 0) {
+    return { therapist_id: "", profile_status: "draft", missing: readinessMissing };
+  }
 
   const existingProfileQuery =
     saveMode === "self"
@@ -673,13 +672,13 @@ async function saveProfileForActor(args: {
         : Promise.resolve({ data: null, error: null });
   const { data: existingProfile, error: existingProfileError } = await existingProfileQuery;
   if (existingProfileError) throw new Error(existingProfileError.message);
-  const preservePublishedStatus = existingProfile?.profile_status === "published";
+  const preservePublishedStatus = existingProfile?.profile_status === "published" && readinessMissing.length === 0;
 
   const nextStatus: ProfileStatus = data.publish
     ? "published"
     : preservePublishedStatus
       ? "published"
-      : validateForPublish(data, saveMode).length === 0
+      : readinessMissing.length === 0
         ? "completed"
         : "draft";
 
@@ -1012,7 +1011,7 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<SemanticFeedback> => {
     const desc = (data.description ?? "").trim();
-    if (desc.length < 20) return { domains: [] };
+    if (desc.length === 0) return { domains: [] };
 
     // Two fixed queries (no N+1): the FULL active canonical catalog plus the
     // aliases of those active problems. Direct matching must never be gated
