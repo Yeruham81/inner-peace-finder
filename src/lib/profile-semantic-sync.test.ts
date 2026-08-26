@@ -91,8 +91,8 @@ describe("computeSemanticProfile", () => {
     expect(await computeSemanticProfile(null, makeSb())).toEqual([]);
   });
 
-  it("clears the profile for a too-short description", async () => {
-    expect(await computeSemanticProfile("חרדה", makeSb())).toEqual([]);
+  it("recognizes an explicit canonical domain without an arbitrary character minimum", async () => {
+    expect((await computeSemanticProfile("חרדה", makeSb())).map((entry) => entry.slug)).toContain("anxiety");
   });
 
   it("returns [] (not an error) when nothing canonical is recognized", async () => {
