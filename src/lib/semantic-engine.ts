@@ -246,9 +246,7 @@ async function fetchVocabulary(sb: SupabaseClient<Database>): Promise<Vocab> {
   // vocabulary. Historical inactive children can remain in the database for
   // old URLs/data, but they must never become new query/profile signals.
   // `undefined` is accepted only for older in-memory fixtures.
-  const problems = ((problemsRes.data ?? []) as VocabProblem[]).filter(
-    (problem) => problem.is_active !== false,
-  );
+  const problems = ((problemsRes.data ?? []) as VocabProblem[]).filter((problem) => problem.is_active !== false);
   const aliases = (aliasesRes.data ?? []) as VocabAlias[];
   const intents = (intentsRes.data ?? []) as unknown as VocabIntent[];
   const slugById = new Map<string, string>();
@@ -280,9 +278,7 @@ export type CanonicalProblemEntry = {
  * Database errors propagate (Q1 behavior): a catalog read failure must never
  * degrade into a valid empty catalog.
  */
-async function loadCanonicalProblems(
-  sb: SupabaseClient<Database>,
-): Promise<CanonicalProblemEntry[]> {
+async function loadCanonicalProblems(sb: SupabaseClient<Database>): Promise<CanonicalProblemEntry[]> {
   const [problemsRes, aliasesRes] = await Promise.all([
     sb.from("problems").select("id, slug, name:name_he, is_active"),
     sb.from("problem_aliases").select("problem_id, alias"),
@@ -293,9 +289,7 @@ async function loadCanonicalProblems(
     if (err) throw err;
   }
 
-  const problems = ((problemsRes.data ?? []) as VocabProblem[]).filter(
-    (problem) => problem.is_active !== false,
-  );
+  const problems = ((problemsRes.data ?? []) as VocabProblem[]).filter((problem) => problem.is_active !== false);
   const aliases = (aliasesRes.data ?? []) as VocabAlias[];
   const activeIds = new Set(problems.map((problem) => String(problem.id)));
   const aliasesById = new Map<string, string[]>();
@@ -786,7 +780,7 @@ async function extractProfile(
 ): Promise<SemanticProfile> {
   const source = (fullDescription ?? "").trim();
   const normalized = normalizeText(source);
-  if (normalized.length < 20) return [];
+  if (normalized.length === 0) return [];
 
   const vocab = await fetchVocabulary(sb);
   // Precision-first pipeline (see collectEvidenceForExtract +
