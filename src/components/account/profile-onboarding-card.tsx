@@ -441,8 +441,8 @@ function buildSteps(status: ProfileOnboardingStatus): Step[] {
     },
     {
       id: "contact",
-      title: "הגדרת דרכי התקשרות",
-      description: "בחירת הערוצים לקבלת פניות והזנת הפרטים הנדרשים לכל ערוץ.",
+      title: "בחירת דרכי התקשרות",
+      description: "הגדרת הערוצים בהם אתם מעוניינים שיפנו אליכם לצורך תיאום טיפול",
       action: "להגדרת דרכי ההתקשרות",
       route: "leads",
       icon: MailCheck,
