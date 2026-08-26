@@ -1944,7 +1944,7 @@ function ProfessionSelector({
           </p>
         </div>
 
-        <Field label="שנות ניסיון (לא חובה)">
+        <Field label="שנות ניסיון">
           <Input
             type="number"
             inputMode="numeric"
