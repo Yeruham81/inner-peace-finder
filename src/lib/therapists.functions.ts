@@ -8,6 +8,7 @@ import { SemanticEngine } from "./semantic-engine";
 import { buildClarificationPrompt, needsClarification, type ClarificationPrompt } from "./search-clarification";
 import { parseStoredProfile, type SemanticProfileEntry } from "./therapist-semantic-profile";
 import { applyEligibility } from "./search-eligibility";
+import { filterAvailableContactMethods, resolveAvailablePreferredContactMethod } from "./contact-channel-settings";
 import {
   fetchPublicTherapistBySlug,
   listEligibleFilterOptions,
@@ -307,7 +308,21 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
 export const getTherapistBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
-    return fetchPublicTherapistBySlug(await publicClient(), data.slug);
+    const profile = await fetchPublicTherapistBySlug(await publicClient(), data.slug);
+    if (!profile) return null;
+
+    const { readContactChannelAvailability } = await import("./contact-channel-settings.server");
+    const availability = await readContactChannelAvailability();
+    const contactMethods = filterAvailableContactMethods(profile.contact_methods, availability);
+
+    return {
+      ...profile,
+      contact_methods: contactMethods,
+      preferred_contact_method: resolveAvailablePreferredContactMethod(
+        contactMethods,
+        profile.preferred_contact_method,
+      ),
+    };
   });
 
 export const listAllTherapistSlugs = createServerFn({ method: "GET" }).handler(async () => {
