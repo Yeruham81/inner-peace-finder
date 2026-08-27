@@ -124,9 +124,7 @@ export function ContactActions(props: ContactActionsProps) {
   // inquiry. Never render phone/WhatsApp actions that cannot be released until
   // ownership is accepted; the server function enforces the same boundary.
   const methods: PublicContactMethod[] = props.unclaimedProfile
-    ? props.contactMethods.includes("email")
-      ? ["email"]
-      : []
+    ? ["email"]
     : orderedContactMethods(props.contactMethods, props.preferredContactMethod);
 
   if (props.interactive === false) {
