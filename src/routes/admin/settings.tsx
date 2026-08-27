@@ -1,6 +1,9 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
@@ -8,24 +11,51 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  getAdminContactChannelAvailability,
+  updateAdminContactChannelAvailability,
+} from "@/lib/contact-channel-settings.functions";
+import { DEFAULT_CONTACT_CHANNEL_AVAILABILITY, type ContactChannelAvailability } from "@/lib/contact-channel-settings";
 
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({
     meta: [
       { title: "הגדרות מערכת | ניהול טיפולינקס" },
       { name: "robots", content: "noindex" },
-      { name: "description", content: "הגדרות מערכת עתידיות" },
+      { name: "description", content: "הגדרות מערכת" },
     ],
   }),
   component: SettingsPage,
 });
 
 function SettingsPage() {
+  const getChannelsFn = useServerFn(getAdminContactChannelAvailability);
+  const updateChannelsFn = useServerFn(updateAdminContactChannelAvailability);
+  const channelsQuery = useQuery({
+    queryKey: ["admin-contact-channel-availability"],
+    queryFn: () => getChannelsFn(),
+  });
+
   const [systemName, setSystemName] = useState("טיפולינקס");
   const [supportEmail, setSupportEmail] = useState("support@example.com");
   const [maintenance, setMaintenance] = useState(false);
-  const [channels, setChannels] = useState({ whatsapp: true, phone: true, email: true });
+  const [channels, setChannels] = useState<ContactChannelAvailability>({
+    ...DEFAULT_CONTACT_CHANNEL_AVAILABILITY,
+  });
   const [saved, setSaved] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (channelsQuery.data) setChannels(channelsQuery.data);
+  }, [channelsQuery.data]);
+
+  const channelMutation = useMutation({
+    mutationFn: () => updateChannelsFn({ data: channels }),
+    onSuccess: (next) => {
+      setChannels(next);
+      toast.success("הגדרות ערוצי הפנייה נשמרו.");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לשמור את הגדרות ערוצי הפנייה."),
+  });
 
   function mockSave(section: string) {
     setSaved(section);
@@ -36,7 +66,7 @@ function SettingsPage() {
     <div>
       <AdminPageHeader
         title="הגדרות מערכת"
-        subtitle="הגדרות הדגמה בלבד — אינן נשמרות ואינן משפיעות על המערכת"
+        subtitle="הגדרות ערוצי הפנייה פעילות ונשמרות במערכת; יתר האזורים במסך עדיין מיועדים להגדרות עתידיות."
         breadcrumb="הגדרות מערכת"
       />
 
@@ -83,29 +113,50 @@ function SettingsPage() {
             <CardTitle className="text-base">הגדרות פניות</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">ערוצי פנייה זמינים (הדגמה)</p>
-            <div className="space-y-2">
-              {(
-                [
-                  ["whatsapp", "WhatsApp"],
-                  ["phone", "שיחת טלפון"],
-                  ["email", "אימייל"],
-                ] as const
-              ).map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
-                  <span className="text-sm text-foreground">{label}</span>
-                  <Switch
-                    checked={channels[key]}
-                    onCheckedChange={(value) => setChannels((current) => ({ ...current, [key]: value }))}
-                    aria-label={label}
-                  />
-                </div>
-              ))}
+            <p className="text-xs text-muted-foreground">
+              ערוץ כבוי מוסתר מהציבור ונחסם בצד השרת. בחירת המטפל נשמרת ותוחזר אוטומטית כאשר הערוץ יופעל מחדש.
+            </p>
+            {channelsQuery.isLoading ? (
+              <p className="py-3 text-sm text-muted-foreground">טוען את הגדרות ערוצי הפנייה…</p>
+            ) : channelsQuery.isError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                לא ניתן לטעון את הגדרות ערוצי הפנייה. נסו לרענן את העמוד.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(
+                  [
+                    ["whatsapp", "WhatsApp"],
+                    ["phone", "שיחת טלפון"],
+                    ["email", "אימייל"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+                    <div>
+                      <span className="text-sm text-foreground">{label}</span>
+                      <p className="text-[11px] text-muted-foreground">
+                        {channels[key] ? "זמין למטפלים" : "לא זמין כרגע"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={channels[key]}
+                      disabled={channelMutation.isPending}
+                      onCheckedChange={(value) => setChannels((current) => ({ ...current, [key]: value }))}
+                      aria-label={label}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                disabled={channelsQuery.isLoading || channelsQuery.isError || channelMutation.isPending}
+                onClick={() => channelMutation.mutate()}
+              >
+                {channelMutation.isPending ? "שומר…" : "שמירה"}
+              </Button>
             </div>
-            <div className="rounded-md border border-dashed border-border p-3 text-[11px] text-muted-foreground">
-              הגדרות עתידיות של חיוב ליד יוגדרו בשלב מאוחר יותר.
-            </div>
-            <SaveRow section="leads" saved={saved} onSave={mockSave} />
           </CardContent>
         </Card>
 
