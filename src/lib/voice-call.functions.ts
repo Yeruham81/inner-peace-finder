@@ -33,6 +33,9 @@ export type StartVoiceCallResult =
 export const startVoiceCall = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => StartVoiceCallInput.parse(input))
   .handler(async ({ data }): Promise<StartVoiceCallResult> => {
+    const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
+    if (!(await isContactChannelEnabled("phone"))) return { ok: false, reason: "channel_unavailable" };
+
     const { normalizeIsraeliPhone } = await import("./phone-il");
     const visitor = normalizeIsraeliPhone(data.phone);
     if (!visitor.ok) return { ok: false, reason: "invalid_phone" };
@@ -116,7 +119,6 @@ export const startVoiceCall = createServerFn({ method: "POST" })
       answerUrl,
       statusCallbackUrl,
     });
-
 
     if (!created.ok) {
       const { sanitizeProviderError } = await import("./voice-call-billing");
