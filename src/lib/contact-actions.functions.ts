@@ -25,6 +25,11 @@ export type DirectContactTargetResult =
 export const getDirectContactTarget = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DirectContactInput.parse(input))
   .handler(async ({ data }): Promise<DirectContactTargetResult> => {
+    const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
+    if (!(await isContactChannelEnabled("whatsapp"))) {
+      return { ok: false, reason: "method_unavailable", phone: null };
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: therapist, error } = await applyEligibility(
