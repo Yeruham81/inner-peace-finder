@@ -47,7 +47,6 @@ function orderedContactMethods(
   return [preferred, ...unique.filter((method) => method !== preferred)];
 }
 
-
 function whatsappHref(phone: string): string | null {
   const raw = phone.trim();
   if (!raw) return null;
@@ -125,7 +124,9 @@ export function ContactActions(props: ContactActionsProps) {
   // inquiry. Never render phone/WhatsApp actions that cannot be released until
   // ownership is accepted; the server function enforces the same boundary.
   const methods: PublicContactMethod[] = props.unclaimedProfile
-    ? ["email"]
+    ? props.contactMethods.includes("email")
+      ? ["email"]
+      : []
     : orderedContactMethods(props.contactMethods, props.preferredContactMethod);
 
   if (props.interactive === false) {

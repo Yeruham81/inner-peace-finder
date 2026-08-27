@@ -8,6 +8,8 @@ import { AccountSectionCard } from "@/components/account/account-section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { looksLikeEmailAddress } from "@/lib/contact-validation";
+import { getContactChannelAvailability } from "@/lib/contact-channel-settings.functions";
+import { DEFAULT_CONTACT_CHANNEL_AVAILABILITY } from "@/lib/contact-channel-settings";
 import { looksLikeIsraeliPhone } from "@/lib/phone-il";
 import { getMyProfile, updateMyContactPreferences, type ContactMethod } from "@/lib/therapist-profile.functions";
 
@@ -33,7 +35,13 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
   const queryClient = useQueryClient();
   const getProfileFn = useServerFn(getMyProfile);
   const updateContactFn = useServerFn(updateMyContactPreferences);
+  const getAvailabilityFn = useServerFn(getContactChannelAvailability);
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
+  const availabilityQuery = useQuery({
+    queryKey: ["contact-channel-availability"],
+    queryFn: () => getAvailabilityFn(),
+  });
+  const availability = availabilityQuery.data ?? DEFAULT_CONTACT_CHANNEL_AVAILABILITY;
   const [preferences, setPreferences] = useState<ContactPreferencesState>({
     email: defaultEmail,
     phone: "",
@@ -94,6 +102,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
     phoneOk;
 
   function toggleMethod(method: ContactMethod) {
+    if (!availability[method]) return;
     setPreferences((current) => {
       const selected = current.contact_methods.includes(method);
       const nextMethods = selected
@@ -116,7 +125,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
       title="דרכי קבלת פניות"
       description="בחרו באילו ערוצים לקבל פניות ומהו הערוץ המועדף. לפחות ערוץ אחד חייב להישאר פעיל."
     >
-      {profile.isLoading || !initialized ? (
+      {profile.isLoading || availabilityQuery.isLoading || !initialized ? (
         <p className="text-sm text-muted-foreground">טוען את דרכי ההתקשרות…</p>
       ) : profile.isError ? (
         <p className="text-sm text-destructive">לא הצלחנו לטעון את דרכי ההתקשרות.</p>
@@ -128,20 +137,27 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
         <div className="space-y-4">
           <div className="grid gap-2 sm:grid-cols-3">
             {CONTACT_METHOD_OPTIONS.map((option) => {
-              const selected = preferences.contact_methods.includes(option.id);
-              const preferred = preferences.preferred_contact_method === option.id;
+              const configured = preferences.contact_methods.includes(option.id);
+              const available = availability[option.id];
+              const selected = available && configured;
+              const preferred = selected && preferences.preferred_contact_method === option.id;
               const Icon = option.icon;
               return (
                 <div
                   key={option.id}
                   className={`flex items-center gap-2 rounded-xl border p-2 ${
-                    selected ? "border-brand/50 bg-brand-soft/45" : "border-border bg-surface"
+                    selected
+                      ? "border-brand/50 bg-brand-soft/45"
+                      : available
+                        ? "border-border bg-surface"
+                        : "border-border bg-muted/35 opacity-75"
                   }`}
                 >
                   <button
                     type="button"
                     aria-pressed={selected}
-                    disabled={mutation.isPending}
+                    aria-disabled={!available || mutation.isPending}
+                    disabled={!available || mutation.isPending}
                     onClick={() => toggleMethod(option.id)}
                     className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   >
@@ -151,7 +167,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-foreground">{option.label}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {selected ? "פעיל" : option.description}
+                        {!available ? "לא זמין כרגע" : selected ? "פעיל" : option.description}
                       </span>
                     </span>
                   </button>
