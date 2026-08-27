@@ -17,6 +17,15 @@ const LeadSchema = z.object({
 export const createLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
+    const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
+    if (!(await isContactChannelEnabled("email"))) {
+      return {
+        ok: false as const,
+        reason: "therapist_unavailable" as const,
+        message: "לא ניתן לשלוח פנייה בפרופיל זה כרגע.",
+      };
+    }
+
     const { normalizeIsraeliPhone } = await import("./phone-il");
     const visitorPhone = normalizeIsraeliPhone(data.visitorPhone);
     if (!visitorPhone.ok) {
