@@ -1927,6 +1927,95 @@ export type Database = {
           },
         ]
       }
+      whatsapp_lead_deliveries: {
+        Row: {
+          billed_at: string | null
+          budget_reservation_id: string | null
+          channel: string
+          created_at: string
+          cta_event_id: string | null
+          delivered_at: string | null
+          error_code: string | null
+          failed_at: string | null
+          id: string
+          lead_id: string
+          message_sid: string | null
+          provider: string
+          reservation_released_at: string | null
+          sent_at: string | null
+          status: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          billed_at?: string | null
+          budget_reservation_id?: string | null
+          channel?: string
+          created_at?: string
+          cta_event_id?: string | null
+          delivered_at?: string | null
+          error_code?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id: string
+          message_sid?: string | null
+          provider?: string
+          reservation_released_at?: string | null
+          sent_at?: string | null
+          status?: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          billed_at?: string | null
+          budget_reservation_id?: string | null
+          channel?: string
+          created_at?: string
+          cta_event_id?: string | null
+          delivered_at?: string | null
+          error_code?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string
+          message_sid?: string | null
+          provider?: string
+          reservation_released_at?: string | null
+          sent_at?: string | null
+          status?: string
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_lead_deliveries_budget_reservation_id_fkey"
+            columns: ["budget_reservation_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_budget_reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_lead_deliveries_cta_event_id_fkey"
+            columns: ["cta_event_id"]
+            isOneToOne: false
+            referencedRelation: "cta_clicks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_lead_deliveries_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lead_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_lead_deliveries_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1942,6 +2031,10 @@ export type Database = {
       }
       attach_voice_call_provider: {
         Args: { _attempt_id: string; _parent_call_sid: string }
+        Returns: undefined
+      }
+      attach_whatsapp_lead_message: {
+        Args: { _delivery_id: string; _message_sid: string }
         Returns: undefined
       }
       begin_admin_public_profile_deletion: {
@@ -2016,6 +2109,10 @@ export type Database = {
       }
       fail_voice_call_attempt: {
         Args: { _attempt_id: string; _error_code: string }
+        Returns: undefined
+      }
+      fail_whatsapp_lead_delivery: {
+        Args: { _delivery_id: string; _error_code: string }
         Returns: undefined
       }
       finalize_admin_public_profile_deletion: {
@@ -2141,6 +2238,15 @@ export type Database = {
           handled: boolean
         }[]
       }
+      record_whatsapp_lead_status: {
+        Args: { _error_code?: string; _message_sid: string; _status: string }
+        Returns: {
+          billed: boolean
+          handled: boolean
+          lead_id: string
+          therapist_id: string
+        }[]
+      }
       register_monthly_budget_event: {
         Args: {
           _source_key: string
@@ -2152,6 +2258,15 @@ export type Database = {
       release_monthly_budget_reservation: {
         Args: { _reservation_id: string }
         Returns: boolean
+      }
+      reserve_monthly_budget_for_source: {
+        Args: {
+          _source_key: string
+          _source_type: string
+          _therapist_id: string
+          _ttl_minutes?: number
+        }
+        Returns: Json
       }
       reserve_monthly_budget_for_voice: {
         Args: {
@@ -2226,6 +2341,31 @@ export type Database = {
       submit_my_support_request: {
         Args: { _category: string; _message: string; _subject: string }
         Returns: string
+      }
+      submit_whatsapp_lead: {
+        Args: {
+          _answer: number
+          _challenge_id: string
+          _cta_id: string
+          _ip_hash: string
+          _message: string
+          _population_id: string
+          _session_hash: string
+          _session_id: string
+          _source_problem_id: string
+          _therapist_id: string
+          _user_agent: string
+          _visitor_name: string
+          _visitor_phone: string
+        }
+        Returns: {
+          allowed: boolean
+          delivery_id: string
+          destination: string
+          lead_id: string
+          reason: string
+          therapist_name: string
+        }[]
       }
       update_my_account_lead: {
         Args: {
