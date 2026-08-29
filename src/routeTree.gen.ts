@@ -40,6 +40,7 @@ import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authe
 import { Route as AuthenticatedAccountLeadsRouteImport } from './routes/_authenticated/account.leads'
 import { Route as AuthenticatedAccountCredentialsRouteImport } from './routes/_authenticated/account.credentials'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated/account.billing'
+import { Route as ApiPublicWhatsappLeadStatusRouteImport } from './routes/api/public/whatsapp/lead-status'
 import { Route as ApiPublicVoiceTherapistStatusRouteImport } from './routes/api/public/voice/therapist-status'
 import { Route as ApiPublicVoiceParentStatusRouteImport } from './routes/api/public/voice/parent-status'
 import { Route as ApiPublicVoiceDialActionRouteImport } from './routes/api/public/voice/dial-action'
@@ -205,6 +206,12 @@ const AuthenticatedAccountBillingRoute =
     path: '/billing',
     getParentRoute: () => AuthenticatedAccountRoute,
   } as any)
+const ApiPublicWhatsappLeadStatusRoute =
+  ApiPublicWhatsappLeadStatusRouteImport.update({
+    id: '/api/public/whatsapp/lead-status',
+    path: '/api/public/whatsapp/lead-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicVoiceTherapistStatusRoute =
   ApiPublicVoiceTherapistStatusRouteImport.update({
     id: '/api/public/voice/therapist-status',
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
   '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
   '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
+  '/api/public/whatsapp/lead-status': typeof ApiPublicWhatsappLeadStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -298,6 +306,7 @@ export interface FileRoutesByTo {
   '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
   '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
   '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
+  '/api/public/whatsapp/lead-status': typeof ApiPublicWhatsappLeadStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -336,6 +345,7 @@ export interface FileRoutesById {
   '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
   '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
   '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
+  '/api/public/whatsapp/lead-status': typeof ApiPublicWhatsappLeadStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/api/public/voice/dial-action'
     | '/api/public/voice/parent-status'
     | '/api/public/voice/therapist-status'
+    | '/api/public/whatsapp/lead-status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/api/public/voice/dial-action'
     | '/api/public/voice/parent-status'
     | '/api/public/voice/therapist-status'
+    | '/api/public/whatsapp/lead-status'
   id:
     | '__root__'
     | '/'
@@ -445,6 +457,7 @@ export interface FileRouteTypes {
     | '/api/public/voice/dial-action'
     | '/api/public/voice/parent-status'
     | '/api/public/voice/therapist-status'
+    | '/api/public/whatsapp/lead-status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -464,6 +477,7 @@ export interface RootRouteChildren {
   ApiPublicVoiceDialActionRoute: typeof ApiPublicVoiceDialActionRoute
   ApiPublicVoiceParentStatusRoute: typeof ApiPublicVoiceParentStatusRoute
   ApiPublicVoiceTherapistStatusRoute: typeof ApiPublicVoiceTherapistStatusRoute
+  ApiPublicWhatsappLeadStatusRoute: typeof ApiPublicWhatsappLeadStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -685,6 +699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport
       parentRoute: typeof AuthenticatedAccountRoute
     }
+    '/api/public/whatsapp/lead-status': {
+      id: '/api/public/whatsapp/lead-status'
+      path: '/api/public/whatsapp/lead-status'
+      fullPath: '/api/public/whatsapp/lead-status'
+      preLoaderRoute: typeof ApiPublicWhatsappLeadStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/voice/therapist-status': {
       id: '/api/public/voice/therapist-status'
       path: '/api/public/voice/therapist-status'
@@ -799,6 +820,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicVoiceDialActionRoute: ApiPublicVoiceDialActionRoute,
   ApiPublicVoiceParentStatusRoute: ApiPublicVoiceParentStatusRoute,
   ApiPublicVoiceTherapistStatusRoute: ApiPublicVoiceTherapistStatusRoute,
+  ApiPublicWhatsappLeadStatusRoute: ApiPublicWhatsappLeadStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

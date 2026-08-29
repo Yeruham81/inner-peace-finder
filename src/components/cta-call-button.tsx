@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { Mail, MessageCircle, Phone } from "lucide-react";
-import { toast } from "sonner";
 
 import { track } from "@/lib/analytics";
-import { getDirectContactTarget } from "@/lib/contact-actions.functions";
 import type { PublicContactMethod } from "@/lib/public-therapist-profile";
 import { LeadModal } from "@/components/lead-modal";
 import { VoiceCallModal } from "@/components/voice-call-modal";
+import { WhatsAppLeadModal } from "@/components/whatsapp-lead-modal";
 
 type SharedContactProps = {
   therapistId: string;
@@ -45,18 +43,6 @@ function orderedContactMethods(
   const unique = [...new Set(methods)].slice(0, 3);
   if (!preferred || !unique.includes(preferred)) return unique;
   return [preferred, ...unique.filter((method) => method !== preferred)];
-}
-
-function whatsappHref(phone: string): string | null {
-  const raw = phone.trim();
-  if (!raw) return null;
-
-  let digits = raw.replace(/\D/g, "");
-  if (!digits) return null;
-
-  // wa.me expects an international number without "+" or punctuation.
-  if (digits.startsWith("0")) digits = `972${digits.slice(1)}`;
-  return `https://wa.me/${digits}`;
 }
 
 function ContactButtons({
@@ -155,9 +141,9 @@ function InteractiveContactActions({
   pageSource,
   unclaimedProfile = false,
 }: ContactActionsProps) {
-  const getContactTarget = useServerFn(getDirectContactTarget);
   const [emailOpen, setEmailOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [pendingMethod, setPendingMethod] = useState<PublicContactMethod | null>(null);
   const shownFiredRef = useRef(false);
   const methods = orderedContactMethods(contactMethods, preferredContactMethod);
@@ -195,32 +181,9 @@ function InteractiveContactActions({
       return;
     }
 
-    setPendingMethod(method);
-    try {
-      const result = await getContactTarget({
-        data: {
-          therapistId,
-          method: "whatsapp",
-        },
-      });
-
-      if (!result.ok || !result.phone) {
-        toast.error("לא ניתן להתחיל את הפנייה בדרך זו כרגע.");
-        return;
-      }
-
-      const href = whatsappHref(result.phone);
-      if (!href) {
-        toast.error("פרטי ההתקשרות אינם זמינים כרגע.");
-        return;
-      }
-
-      window.location.assign(href);
-    } catch {
-      toast.error("לא ניתן להתחיל את הפנייה כרגע. נסו שוב.");
-    } finally {
-      setPendingMethod(null);
-    }
+    // WhatsApp keeps the visitor inside Tipulinks: the message is created here
+    // and sent to the therapist server-side. No number reaches the browser.
+    setWhatsappOpen(true);
   }
 
   return (
@@ -240,6 +203,20 @@ function InteractiveContactActions({
           onClose={() => setCallOpen(false)}
           therapistId={therapistId}
           therapistName={therapistName}
+          pageSource={pageSource ?? null}
+        />
+      )}
+
+      {contactMethods.includes("whatsapp") && (
+        <WhatsAppLeadModal
+          open={whatsappOpen}
+          onClose={() => setWhatsappOpen(false)}
+          therapistId={therapistId}
+          therapistName={therapistName}
+          problemId={sourceProblemId ?? null}
+          problemName={sourceProblemName ?? null}
+          populationId={populationId ?? null}
+          populationName={populationName ?? null}
           pageSource={pageSource ?? null}
         />
       )}
