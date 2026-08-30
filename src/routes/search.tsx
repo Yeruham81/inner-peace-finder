@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -8,13 +8,14 @@ import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter
 import type { SearchCriterion } from "@/lib/query-interpreter.types";
 import type { SearchResultCard } from "@/lib/search-result-card";
 import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
+import { readPrivateSearchQuery } from "@/lib/private-search-query";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { PublicRouteError } from "@/components/public-route-error";
 import { track } from "@/lib/analytics";
 
 const searchSchema = z.object({
-  q: fallback(z.string().trim().max(200), "").default(""),
+  searchId: fallback(z.string().regex(/^[a-f0-9]{32}$/), "").default(""),
   problem: fallback(z.string().trim().max(80), "").default(""),
   city: fallback(z.string().trim().max(80), "").default(""),
   population: fallback(z.string().trim().max(40), "").default(""),
@@ -79,13 +80,24 @@ export function unifiedResultsQuery(p: UnifiedParams) {
 }
 
 export const Route = createFileRoute("/search")({
+  // The loader needs sessionStorage to recover the private free-text query.
+  // /search is already noindex, so disabling SSR here does not sacrifice an
+  // indexable landing page.
+  ssr: false,
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    await Promise.all([
-      context.queryClient.ensureQueryData(filterOptionsQuery),
-      context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps))),
-    ]);
+    const privateQuery = deps.searchId ? readPrivateSearchQuery(deps.searchId) : "";
+    const promises: Promise<unknown>[] = [context.queryClient.ensureQueryData(filterOptionsQuery)];
+
+    // If a URL containing only an opaque searchId is opened in another tab or
+    // device, the private query is deliberately unavailable. Do not silently
+    // turn that request into a broad search.
+    if (privateQuery !== null) {
+      promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps, privateQuery))));
+    }
+
+    await Promise.all(promises);
   },
   head: () => ({
     meta: [
@@ -112,9 +124,9 @@ export const Route = createFileRoute("/search")({
 
 type SearchParams = z.infer<typeof searchSchema>;
 
-export function toUnifiedParams(s: SearchParams): UnifiedParams {
+export function toUnifiedParams(s: SearchParams, privateQuery = ""): UnifiedParams {
   return resolveSearchContract({
-    q: s.q,
+    q: privateQuery,
     problem: s.problem,
     city: s.city,
     population: s.population,
@@ -180,7 +192,7 @@ function useSearchAnalytics(args: { search: SearchParams; mode: string; count: n
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    search.q,
+    search.searchId,
     search.problem,
     search.city,
     search.population,
@@ -322,14 +334,15 @@ export function availableQuickFilters(results: SearchResultCard[]): string[] {
 
 function UnifiedSearchResults({
   search,
+  contract,
   onQuickFiltersChange,
   onInferredCriteriaChange,
 }: {
   search: SearchParams;
+  contract: UnifiedParams;
   onQuickFiltersChange?: (filters: string[]) => void;
   onInferredCriteriaChange?: (criteria: SearchCriterion[]) => void;
 }) {
-  const contract = toUnifiedParams(search);
   const { data: pipeline } = useSuspenseQuery(unifiedResultsQuery(contract));
   // No adaptation: the unified pipeline already returns the card contract.
   const results: SearchResultCard[] = pipeline?.results ?? [];
@@ -365,12 +378,37 @@ function UnifiedSearchResults({
   );
 }
 
+function PrivateSearchUnavailableState() {
+  return (
+    <div className="mt-6 rounded-2xl border border-dashed border-border bg-surface px-5 py-10 text-center sm:px-10 sm:py-12">
+      <p className="text-lg font-semibold text-foreground">החיפוש החופשי אינו זמין בלשונית הזו</p>
+      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        מטעמי פרטיות, תוכן החיפוש החופשי אינו נשמר בקישור. הזינו מחדש את הבקשה בשדה החיפוש כדי לקבל תוצאות.
+      </p>
+    </div>
+  );
+}
+
 function SearchPage() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
-  const contract = toUnifiedParams(search);
+  const privateQuery = search.searchId ? readPrivateSearchQuery(search.searchId) : "";
+  const queryUnavailable = Boolean(search.searchId) && privateQuery === null;
+  const contract = toUnifiedParams(search, privateQuery ?? "");
   const [quickFilters, setQuickFilters] = useState<string[] | undefined>(undefined);
   const [inferredCriteria, setInferredCriteria] = useState<SearchCriterion[]>([]);
+
+  // Old bookmarks may still contain the retired raw `q` parameter (or the old
+  // `flow` switch). They are ignored by the schema and removed from the visible
+  // URL without ever being processed as a search query.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("q") && !url.searchParams.has("flow")) return;
+    url.searchParams.delete("q");
+    url.searchParams.delete("flow");
+    void navigate({ href: `${url.pathname}${url.search}${url.hash}`, replace: true });
+  }, [navigate]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -399,17 +437,25 @@ function SearchPage() {
           freeIntro: contract.freeIntro,
           excludedCriteria: [...(contract.excludedCriteria ?? [])],
         }}
-        preserveSearch={{ problem: search.problem }}
-        inferredCriteria={inferredCriteria}
+        preserveSearch={{
+          problem: search.problem,
+          searchId: search.searchId || undefined,
+        }}
+        inferredCriteria={queryUnavailable ? [] : inferredCriteria}
         variant="compact"
-        availableQuickFilters={quickFilters}
+        availableQuickFilters={queryUnavailable ? undefined : quickFilters}
       />
 
-      <UnifiedSearchResults
-        search={search}
-        onQuickFiltersChange={setQuickFilters}
-        onInferredCriteriaChange={setInferredCriteria}
-      />
+      {queryUnavailable ? (
+        <PrivateSearchUnavailableState />
+      ) : (
+        <UnifiedSearchResults
+          search={search}
+          contract={contract}
+          onQuickFiltersChange={setQuickFilters}
+          onInferredCriteriaChange={setInferredCriteria}
+        />
+      )}
     </div>
   );
 }
