@@ -14,7 +14,7 @@ function normalizeQuery(rawQuery: string): string {
   return rawQuery.trim().slice(0, 200);
 }
 
-function createSearchId(): string {
+export function createPrivateSearchId(): string {
   const bytes = new Uint8Array(16);
   if (typeof globalThis.crypto?.getRandomValues === "function") {
     globalThis.crypto.getRandomValues(bytes);
@@ -35,7 +35,7 @@ export function storePrivateSearchQuery(rawQuery: string, existingSearchId?: str
   const query = normalizeQuery(rawQuery);
   if (!query) return undefined;
 
-  const searchId = isPrivateSearchId(existingSearchId) ? existingSearchId : createSearchId();
+  const searchId = isPrivateSearchId(existingSearchId) ? existingSearchId : createPrivateSearchId();
   memoryFallback.set(searchId, query);
 
   try {
