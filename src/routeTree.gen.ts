@@ -8,772 +8,803 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as TherapyInformationRouteImport } from "./routes/therapy-information";
-import { Route as TermsOfUseRouteImport } from "./routes/terms-of-use";
-import { Route as SitemapDotxmlRouteImport } from "./routes/sitemap[.]xml";
-import { Route as SearchRouteImport } from "./routes/search";
-import { Route as ResetPasswordRouteImport } from "./routes/reset-password";
-import { Route as ProfilePreviewDemoRouteImport } from "./routes/profile-preview-demo";
-import { Route as PrivacyPolicyRouteImport } from "./routes/privacy-policy";
-import { Route as ForTherapistsRouteImport } from "./routes/for-therapists";
-import { Route as AuthRouteImport } from "./routes/auth";
-import { Route as AdminRouteRouteImport } from "./routes/admin/route";
-import { Route as AuthenticatedRouteRouteImport } from "./routes/_authenticated/route";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as AdminIndexRouteImport } from "./routes/admin/index";
-import { Route as TherapistsSlugRouteImport } from "./routes/therapists.$slug";
-import { Route as ProblemsSlugRouteImport } from "./routes/problems.$slug";
-import { Route as AdminTherapistsRouteImport } from "./routes/admin/therapists";
-import { Route as AdminSupportRouteImport } from "./routes/admin/support";
-import { Route as AdminSettingsRouteImport } from "./routes/admin/settings";
-import { Route as AdminLeadsRouteImport } from "./routes/admin/leads";
-import { Route as AdminIntegrationsRouteImport } from "./routes/admin/integrations";
-import { Route as AdminCredentialsRouteImport } from "./routes/admin/credentials";
-import { Route as AdminClaimsRouteImport } from "./routes/admin/claims";
-import { Route as AdminCatalogsRouteImport } from "./routes/admin/catalogs";
-import { Route as AdminBillingRouteImport } from "./routes/admin/billing";
-import { Route as AuthenticatedNewProfileRouteImport } from "./routes/_authenticated/new-profile";
-import { Route as AuthenticatedClaimRouteImport } from "./routes/_authenticated/claim";
-import { Route as AuthenticatedAccountRouteImport } from "./routes/_authenticated/account";
-import { Route as AuthenticatedAccountIndexRouteImport } from "./routes/_authenticated/account.index";
-import { Route as AuthenticatedAccountSettingsRouteImport } from "./routes/_authenticated/account.settings";
-import { Route as AuthenticatedAccountProfileRouteImport } from "./routes/_authenticated/account.profile";
-import { Route as AuthenticatedAccountLeadsRouteImport } from "./routes/_authenticated/account.leads";
-import { Route as AuthenticatedAccountCredentialsRouteImport } from "./routes/_authenticated/account.credentials";
-import { Route as AuthenticatedAccountBillingRouteImport } from "./routes/_authenticated/account.billing";
-import { Route as ApiPublicWhatsappLeadStatusRouteImport } from "./routes/api/public/whatsapp/lead-status";
-import { Route as ApiPublicVoiceTherapistStatusRouteImport } from "./routes/api/public/voice/therapist-status";
-import { Route as ApiPublicVoiceParentStatusRouteImport } from "./routes/api/public/voice/parent-status";
-import { Route as ApiPublicVoiceDialActionRouteImport } from "./routes/api/public/voice/dial-action";
-import { Route as ApiPublicVoiceAnswerRouteImport } from "./routes/api/public/voice/answer";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as TherapyInformationRouteImport } from './routes/therapy-information'
+import { Route as TermsOfUseRouteImport } from './routes/terms-of-use'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ProfilePreviewDemoRouteImport } from './routes/profile-preview-demo'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as ForTherapistsRouteImport } from './routes/for-therapists'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as TherapistsSlugRouteImport } from './routes/therapists.$slug'
+import { Route as ProblemsSlugRouteImport } from './routes/problems.$slug'
+import { Route as AdminTherapistsRouteImport } from './routes/admin/therapists'
+import { Route as AdminSupportRouteImport } from './routes/admin/support'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
+import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
+import { Route as AdminCredentialsRouteImport } from './routes/admin/credentials'
+import { Route as AdminClaimsRouteImport } from './routes/admin/claims'
+import { Route as AdminCatalogsRouteImport } from './routes/admin/catalogs'
+import { Route as AdminBillingRouteImport } from './routes/admin/billing'
+import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
+import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
+import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
+import { Route as AuthenticatedAccountIndexRouteImport } from './routes/_authenticated/account.index'
+import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account.settings'
+import { Route as AuthenticatedAccountProfileRouteImport } from './routes/_authenticated/account.profile'
+import { Route as AuthenticatedAccountLeadsRouteImport } from './routes/_authenticated/account.leads'
+import { Route as AuthenticatedAccountCredentialsRouteImport } from './routes/_authenticated/account.credentials'
+import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated/account.billing'
+import { Route as ApiPublicWhatsappLeadStatusRouteImport } from './routes/api/public/whatsapp/lead-status'
+import { Route as ApiPublicVoiceTherapistStatusRouteImport } from './routes/api/public/voice/therapist-status'
+import { Route as ApiPublicVoiceParentStatusRouteImport } from './routes/api/public/voice/parent-status'
+import { Route as ApiPublicVoiceDialActionRouteImport } from './routes/api/public/voice/dial-action'
+import { Route as ApiPublicVoiceAnswerRouteImport } from './routes/api/public/voice/answer'
+import { Route as ApiPublicEmailLeadStatusRouteImport } from './routes/api/public/email/lead-status'
 
 const TherapyInformationRoute = TherapyInformationRouteImport.update({
-  id: "/therapy-information",
-  path: "/therapy-information",
+  id: '/therapy-information',
+  path: '/therapy-information',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const TermsOfUseRoute = TermsOfUseRouteImport.update({
-  id: "/terms-of-use",
-  path: "/terms-of-use",
+  id: '/terms-of-use',
+  path: '/terms-of-use',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: "/sitemap.xml",
-  path: "/sitemap.xml",
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const SearchRoute = SearchRouteImport.update({
-  id: "/search",
-  path: "/search",
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: "/reset-password",
-  path: "/reset-password",
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ProfilePreviewDemoRoute = ProfilePreviewDemoRouteImport.update({
-  id: "/profile-preview-demo",
-  path: "/profile-preview-demo",
+  id: '/profile-preview-demo',
+  path: '/profile-preview-demo',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
-  id: "/privacy-policy",
-  path: "/privacy-policy",
+  id: '/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ForTherapistsRoute = ForTherapistsRouteImport.update({
-  id: "/for-therapists",
-  path: "/for-therapists",
+  id: '/for-therapists',
+  path: '/for-therapists',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthRoute = AuthRouteImport.update({
-  id: "/auth",
-  path: "/auth",
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: "/admin",
-  path: "/admin",
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: "/_authenticated",
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const TherapistsSlugRoute = TherapistsSlugRouteImport.update({
-  id: "/therapists/$slug",
-  path: "/therapists/$slug",
+  id: '/therapists/$slug',
+  path: '/therapists/$slug',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ProblemsSlugRoute = ProblemsSlugRouteImport.update({
-  id: "/problems/$slug",
-  path: "/problems/$slug",
+  id: '/problems/$slug',
+  path: '/problems/$slug',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AdminTherapistsRoute = AdminTherapistsRouteImport.update({
-  id: "/therapists",
-  path: "/therapists",
+  id: '/therapists',
+  path: '/therapists',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminSupportRoute = AdminSupportRouteImport.update({
-  id: "/support",
-  path: "/support",
+  id: '/support',
+  path: '/support',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: "/settings",
-  path: "/settings",
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminLeadsRoute = AdminLeadsRouteImport.update({
-  id: "/leads",
-  path: "/leads",
+  id: '/leads',
+  path: '/leads',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminIntegrationsRoute = AdminIntegrationsRouteImport.update({
-  id: "/integrations",
-  path: "/integrations",
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminCredentialsRoute = AdminCredentialsRouteImport.update({
-  id: "/credentials",
-  path: "/credentials",
+  id: '/credentials',
+  path: '/credentials',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminClaimsRoute = AdminClaimsRouteImport.update({
-  id: "/claims",
-  path: "/claims",
+  id: '/claims',
+  path: '/claims',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminCatalogsRoute = AdminCatalogsRouteImport.update({
-  id: "/catalogs",
-  path: "/catalogs",
+  id: '/catalogs',
+  path: '/catalogs',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AdminBillingRoute = AdminBillingRouteImport.update({
-  id: "/billing",
-  path: "/billing",
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
 const AuthenticatedNewProfileRoute = AuthenticatedNewProfileRouteImport.update({
-  id: "/new-profile",
-  path: "/new-profile",
+  id: '/new-profile',
+  path: '/new-profile',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
 const AuthenticatedClaimRoute = AuthenticatedClaimRouteImport.update({
-  id: "/claim",
-  path: "/claim",
+  id: '/claim',
+  path: '/claim',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
 const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
-  id: "/account",
-  path: "/account",
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
-const AuthenticatedAccountIndexRoute = AuthenticatedAccountIndexRouteImport.update({
-  id: "/",
-  path: "/",
-  getParentRoute: () => AuthenticatedAccountRoute,
-} as any);
-const AuthenticatedAccountSettingsRoute = AuthenticatedAccountSettingsRouteImport.update({
-  id: "/settings",
-  path: "/settings",
-  getParentRoute: () => AuthenticatedAccountRoute,
-} as any);
-const AuthenticatedAccountProfileRoute = AuthenticatedAccountProfileRouteImport.update({
-  id: "/profile",
-  path: "/profile",
-  getParentRoute: () => AuthenticatedAccountRoute,
-} as any);
-const AuthenticatedAccountLeadsRoute = AuthenticatedAccountLeadsRouteImport.update({
-  id: "/leads",
-  path: "/leads",
-  getParentRoute: () => AuthenticatedAccountRoute,
-} as any);
-const AuthenticatedAccountCredentialsRoute = AuthenticatedAccountCredentialsRouteImport.update({
-  id: "/credentials",
-  path: "/credentials",
-  getParentRoute: () => AuthenticatedAccountRoute,
-} as any);
-const AuthenticatedAccountBillingRoute = AuthenticatedAccountBillingRouteImport.update({
-  id: "/billing",
-  path: "/billing",
-  getParentRoute: () => AuthenticatedAccountRoute,
-} as any);
-const ApiPublicWhatsappLeadStatusRoute = ApiPublicWhatsappLeadStatusRouteImport.update({
-  id: "/api/public/whatsapp/lead-status",
-  path: "/api/public/whatsapp/lead-status",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiPublicVoiceTherapistStatusRoute = ApiPublicVoiceTherapistStatusRouteImport.update({
-  id: "/api/public/voice/therapist-status",
-  path: "/api/public/voice/therapist-status",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiPublicVoiceParentStatusRoute = ApiPublicVoiceParentStatusRouteImport.update({
-  id: "/api/public/voice/parent-status",
-  path: "/api/public/voice/parent-status",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiPublicVoiceDialActionRoute = ApiPublicVoiceDialActionRouteImport.update({
-  id: "/api/public/voice/dial-action",
-  path: "/api/public/voice/dial-action",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const AuthenticatedAccountIndexRoute =
+  AuthenticatedAccountIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountSettingsRoute =
+  AuthenticatedAccountSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountProfileRoute =
+  AuthenticatedAccountProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountLeadsRoute =
+  AuthenticatedAccountLeadsRouteImport.update({
+    id: '/leads',
+    path: '/leads',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountCredentialsRoute =
+  AuthenticatedAccountCredentialsRouteImport.update({
+    id: '/credentials',
+    path: '/credentials',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const AuthenticatedAccountBillingRoute =
+  AuthenticatedAccountBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedAccountRoute,
+  } as any)
+const ApiPublicWhatsappLeadStatusRoute =
+  ApiPublicWhatsappLeadStatusRouteImport.update({
+    id: '/api/public/whatsapp/lead-status',
+    path: '/api/public/whatsapp/lead-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicVoiceTherapistStatusRoute =
+  ApiPublicVoiceTherapistStatusRouteImport.update({
+    id: '/api/public/voice/therapist-status',
+    path: '/api/public/voice/therapist-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicVoiceParentStatusRoute =
+  ApiPublicVoiceParentStatusRouteImport.update({
+    id: '/api/public/voice/parent-status',
+    path: '/api/public/voice/parent-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicVoiceDialActionRoute =
+  ApiPublicVoiceDialActionRouteImport.update({
+    id: '/api/public/voice/dial-action',
+    path: '/api/public/voice/dial-action',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicVoiceAnswerRoute = ApiPublicVoiceAnswerRouteImport.update({
-  id: "/api/public/voice/answer",
-  path: "/api/public/voice/answer",
+  id: '/api/public/voice/answer',
+  path: '/api/public/voice/answer',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const ApiPublicEmailLeadStatusRoute =
+  ApiPublicEmailLeadStatusRouteImport.update({
+    id: '/api/public/email/lead-status',
+    path: '/api/public/email/lead-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/admin": typeof AdminRouteRouteWithChildren;
-  "/auth": typeof AuthRoute;
-  "/for-therapists": typeof ForTherapistsRoute;
-  "/profile-preview-demo": typeof ProfilePreviewDemoRoute;
-  "/privacy-policy": typeof PrivacyPolicyRoute;
-  "/reset-password": typeof ResetPasswordRoute;
-  "/search": typeof SearchRoute;
-  "/sitemap.xml": typeof SitemapDotxmlRoute;
-  "/therapy-information": typeof TherapyInformationRoute;
-  "/terms-of-use": typeof TermsOfUseRoute;
-  "/account": typeof AuthenticatedAccountRouteWithChildren;
-  "/claim": typeof AuthenticatedClaimRoute;
-  "/new-profile": typeof AuthenticatedNewProfileRoute;
-  "/admin/billing": typeof AdminBillingRoute;
-  "/admin/catalogs": typeof AdminCatalogsRoute;
-  "/admin/claims": typeof AdminClaimsRoute;
-  "/admin/credentials": typeof AdminCredentialsRoute;
-  "/admin/integrations": typeof AdminIntegrationsRoute;
-  "/admin/leads": typeof AdminLeadsRoute;
-  "/admin/settings": typeof AdminSettingsRoute;
-  "/admin/support": typeof AdminSupportRoute;
-  "/admin/therapists": typeof AdminTherapistsRoute;
-  "/problems/$slug": typeof ProblemsSlugRoute;
-  "/therapists/$slug": typeof TherapistsSlugRoute;
-  "/admin/": typeof AdminIndexRoute;
-  "/account/billing": typeof AuthenticatedAccountBillingRoute;
-  "/account/credentials": typeof AuthenticatedAccountCredentialsRoute;
-  "/account/leads": typeof AuthenticatedAccountLeadsRoute;
-  "/account/profile": typeof AuthenticatedAccountProfileRoute;
-  "/account/settings": typeof AuthenticatedAccountSettingsRoute;
-  "/account/": typeof AuthenticatedAccountIndexRoute;
-  "/api/public/voice/answer": typeof ApiPublicVoiceAnswerRoute;
-  "/api/public/voice/dial-action": typeof ApiPublicVoiceDialActionRoute;
-  "/api/public/voice/parent-status": typeof ApiPublicVoiceParentStatusRoute;
-  "/api/public/voice/therapist-status": typeof ApiPublicVoiceTherapistStatusRoute;
-  "/api/public/whatsapp/lead-status": typeof ApiPublicWhatsappLeadStatusRoute;
+  '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/for-therapists': typeof ForTherapistsRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile-preview-demo': typeof ProfilePreviewDemoRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-of-use': typeof TermsOfUseRoute
+  '/therapy-information': typeof TherapyInformationRoute
+  '/account': typeof AuthenticatedAccountRouteWithChildren
+  '/claim': typeof AuthenticatedClaimRoute
+  '/new-profile': typeof AuthenticatedNewProfileRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/catalogs': typeof AdminCatalogsRoute
+  '/admin/claims': typeof AdminClaimsRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
+  '/admin/therapists': typeof AdminTherapistsRoute
+  '/problems/$slug': typeof ProblemsSlugRoute
+  '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/account/billing': typeof AuthenticatedAccountBillingRoute
+  '/account/credentials': typeof AuthenticatedAccountCredentialsRoute
+  '/account/leads': typeof AuthenticatedAccountLeadsRoute
+  '/account/profile': typeof AuthenticatedAccountProfileRoute
+  '/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/account/': typeof AuthenticatedAccountIndexRoute
+  '/api/public/email/lead-status': typeof ApiPublicEmailLeadStatusRoute
+  '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
+  '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
+  '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
+  '/api/public/whatsapp/lead-status': typeof ApiPublicWhatsappLeadStatusRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/auth": typeof AuthRoute;
-  "/for-therapists": typeof ForTherapistsRoute;
-  "/profile-preview-demo": typeof ProfilePreviewDemoRoute;
-  "/privacy-policy": typeof PrivacyPolicyRoute;
-  "/reset-password": typeof ResetPasswordRoute;
-  "/search": typeof SearchRoute;
-  "/sitemap.xml": typeof SitemapDotxmlRoute;
-  "/therapy-information": typeof TherapyInformationRoute;
-  "/terms-of-use": typeof TermsOfUseRoute;
-  "/claim": typeof AuthenticatedClaimRoute;
-  "/new-profile": typeof AuthenticatedNewProfileRoute;
-  "/admin/billing": typeof AdminBillingRoute;
-  "/admin/catalogs": typeof AdminCatalogsRoute;
-  "/admin/claims": typeof AdminClaimsRoute;
-  "/admin/credentials": typeof AdminCredentialsRoute;
-  "/admin/integrations": typeof AdminIntegrationsRoute;
-  "/admin/leads": typeof AdminLeadsRoute;
-  "/admin/settings": typeof AdminSettingsRoute;
-  "/admin/support": typeof AdminSupportRoute;
-  "/admin/therapists": typeof AdminTherapistsRoute;
-  "/problems/$slug": typeof ProblemsSlugRoute;
-  "/therapists/$slug": typeof TherapistsSlugRoute;
-  "/admin": typeof AdminIndexRoute;
-  "/account/billing": typeof AuthenticatedAccountBillingRoute;
-  "/account/credentials": typeof AuthenticatedAccountCredentialsRoute;
-  "/account/leads": typeof AuthenticatedAccountLeadsRoute;
-  "/account/profile": typeof AuthenticatedAccountProfileRoute;
-  "/account/settings": typeof AuthenticatedAccountSettingsRoute;
-  "/account": typeof AuthenticatedAccountIndexRoute;
-  "/api/public/voice/answer": typeof ApiPublicVoiceAnswerRoute;
-  "/api/public/voice/dial-action": typeof ApiPublicVoiceDialActionRoute;
-  "/api/public/voice/parent-status": typeof ApiPublicVoiceParentStatusRoute;
-  "/api/public/voice/therapist-status": typeof ApiPublicVoiceTherapistStatusRoute;
-  "/api/public/whatsapp/lead-status": typeof ApiPublicWhatsappLeadStatusRoute;
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/for-therapists': typeof ForTherapistsRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile-preview-demo': typeof ProfilePreviewDemoRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-of-use': typeof TermsOfUseRoute
+  '/therapy-information': typeof TherapyInformationRoute
+  '/claim': typeof AuthenticatedClaimRoute
+  '/new-profile': typeof AuthenticatedNewProfileRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/catalogs': typeof AdminCatalogsRoute
+  '/admin/claims': typeof AdminClaimsRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
+  '/admin/therapists': typeof AdminTherapistsRoute
+  '/problems/$slug': typeof ProblemsSlugRoute
+  '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin': typeof AdminIndexRoute
+  '/account/billing': typeof AuthenticatedAccountBillingRoute
+  '/account/credentials': typeof AuthenticatedAccountCredentialsRoute
+  '/account/leads': typeof AuthenticatedAccountLeadsRoute
+  '/account/profile': typeof AuthenticatedAccountProfileRoute
+  '/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/account': typeof AuthenticatedAccountIndexRoute
+  '/api/public/email/lead-status': typeof ApiPublicEmailLeadStatusRoute
+  '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
+  '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
+  '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
+  '/api/public/whatsapp/lead-status': typeof ApiPublicWhatsappLeadStatusRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/_authenticated": typeof AuthenticatedRouteRouteWithChildren;
-  "/admin": typeof AdminRouteRouteWithChildren;
-  "/auth": typeof AuthRoute;
-  "/for-therapists": typeof ForTherapistsRoute;
-  "/profile-preview-demo": typeof ProfilePreviewDemoRoute;
-  "/privacy-policy": typeof PrivacyPolicyRoute;
-  "/reset-password": typeof ResetPasswordRoute;
-  "/search": typeof SearchRoute;
-  "/sitemap.xml": typeof SitemapDotxmlRoute;
-  "/therapy-information": typeof TherapyInformationRoute;
-  "/terms-of-use": typeof TermsOfUseRoute;
-  "/_authenticated/account": typeof AuthenticatedAccountRouteWithChildren;
-  "/_authenticated/claim": typeof AuthenticatedClaimRoute;
-  "/_authenticated/new-profile": typeof AuthenticatedNewProfileRoute;
-  "/admin/billing": typeof AdminBillingRoute;
-  "/admin/catalogs": typeof AdminCatalogsRoute;
-  "/admin/claims": typeof AdminClaimsRoute;
-  "/admin/credentials": typeof AdminCredentialsRoute;
-  "/admin/integrations": typeof AdminIntegrationsRoute;
-  "/admin/leads": typeof AdminLeadsRoute;
-  "/admin/settings": typeof AdminSettingsRoute;
-  "/admin/support": typeof AdminSupportRoute;
-  "/admin/therapists": typeof AdminTherapistsRoute;
-  "/problems/$slug": typeof ProblemsSlugRoute;
-  "/therapists/$slug": typeof TherapistsSlugRoute;
-  "/admin/": typeof AdminIndexRoute;
-  "/_authenticated/account/billing": typeof AuthenticatedAccountBillingRoute;
-  "/_authenticated/account/credentials": typeof AuthenticatedAccountCredentialsRoute;
-  "/_authenticated/account/leads": typeof AuthenticatedAccountLeadsRoute;
-  "/_authenticated/account/profile": typeof AuthenticatedAccountProfileRoute;
-  "/_authenticated/account/settings": typeof AuthenticatedAccountSettingsRoute;
-  "/_authenticated/account/": typeof AuthenticatedAccountIndexRoute;
-  "/api/public/voice/answer": typeof ApiPublicVoiceAnswerRoute;
-  "/api/public/voice/dial-action": typeof ApiPublicVoiceDialActionRoute;
-  "/api/public/voice/parent-status": typeof ApiPublicVoiceParentStatusRoute;
-  "/api/public/voice/therapist-status": typeof ApiPublicVoiceTherapistStatusRoute;
-  "/api/public/whatsapp/lead-status": typeof ApiPublicWhatsappLeadStatusRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/admin': typeof AdminRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/for-therapists': typeof ForTherapistsRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile-preview-demo': typeof ProfilePreviewDemoRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-of-use': typeof TermsOfUseRoute
+  '/therapy-information': typeof TherapyInformationRoute
+  '/_authenticated/account': typeof AuthenticatedAccountRouteWithChildren
+  '/_authenticated/claim': typeof AuthenticatedClaimRoute
+  '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/catalogs': typeof AdminCatalogsRoute
+  '/admin/claims': typeof AdminClaimsRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
+  '/admin/therapists': typeof AdminTherapistsRoute
+  '/problems/$slug': typeof ProblemsSlugRoute
+  '/therapists/$slug': typeof TherapistsSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
+  '/_authenticated/account/credentials': typeof AuthenticatedAccountCredentialsRoute
+  '/_authenticated/account/leads': typeof AuthenticatedAccountLeadsRoute
+  '/_authenticated/account/profile': typeof AuthenticatedAccountProfileRoute
+  '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/_authenticated/account/': typeof AuthenticatedAccountIndexRoute
+  '/api/public/email/lead-status': typeof ApiPublicEmailLeadStatusRoute
+  '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
+  '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
+  '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
+  '/api/public/voice/therapist-status': typeof ApiPublicVoiceTherapistStatusRoute
+  '/api/public/whatsapp/lead-status': typeof ApiPublicWhatsappLeadStatusRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/admin"
-    | "/auth"
-    | "/for-therapists"
-    | "/profile-preview-demo"
-    | "/privacy-policy"
-    | "/reset-password"
-    | "/search"
-    | "/sitemap.xml"
-    | "/therapy-information"
-    | "/terms-of-use"
-    | "/account"
-    | "/claim"
-    | "/new-profile"
-    | "/admin/billing"
-    | "/admin/catalogs"
-    | "/admin/claims"
-    | "/admin/credentials"
-    | "/admin/integrations"
-    | "/admin/leads"
-    | "/admin/settings"
-    | "/admin/support"
-    | "/admin/therapists"
-    | "/problems/$slug"
-    | "/therapists/$slug"
-    | "/admin/"
-    | "/account/billing"
-    | "/account/credentials"
-    | "/account/leads"
-    | "/account/profile"
-    | "/account/settings"
-    | "/account/"
-    | "/api/public/voice/answer"
-    | "/api/public/voice/dial-action"
-    | "/api/public/voice/parent-status"
-    | "/api/public/voice/therapist-status"
-    | "/api/public/whatsapp/lead-status";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/for-therapists'
+    | '/privacy-policy'
+    | '/profile-preview-demo'
+    | '/reset-password'
+    | '/search'
+    | '/sitemap.xml'
+    | '/terms-of-use'
+    | '/therapy-information'
+    | '/account'
+    | '/claim'
+    | '/new-profile'
+    | '/admin/billing'
+    | '/admin/catalogs'
+    | '/admin/claims'
+    | '/admin/credentials'
+    | '/admin/integrations'
+    | '/admin/leads'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/therapists'
+    | '/problems/$slug'
+    | '/therapists/$slug'
+    | '/admin/'
+    | '/account/billing'
+    | '/account/credentials'
+    | '/account/leads'
+    | '/account/profile'
+    | '/account/settings'
+    | '/account/'
+    | '/api/public/email/lead-status'
+    | '/api/public/voice/answer'
+    | '/api/public/voice/dial-action'
+    | '/api/public/voice/parent-status'
+    | '/api/public/voice/therapist-status'
+    | '/api/public/whatsapp/lead-status'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/auth"
-    | "/for-therapists"
-    | "/profile-preview-demo"
-    | "/privacy-policy"
-    | "/reset-password"
-    | "/search"
-    | "/sitemap.xml"
-    | "/therapy-information"
-    | "/terms-of-use"
-    | "/claim"
-    | "/new-profile"
-    | "/admin/billing"
-    | "/admin/catalogs"
-    | "/admin/claims"
-    | "/admin/credentials"
-    | "/admin/integrations"
-    | "/admin/leads"
-    | "/admin/settings"
-    | "/admin/support"
-    | "/admin/therapists"
-    | "/problems/$slug"
-    | "/therapists/$slug"
-    | "/admin"
-    | "/account/billing"
-    | "/account/credentials"
-    | "/account/leads"
-    | "/account/profile"
-    | "/account/settings"
-    | "/account"
-    | "/api/public/voice/answer"
-    | "/api/public/voice/dial-action"
-    | "/api/public/voice/parent-status"
-    | "/api/public/voice/therapist-status"
-    | "/api/public/whatsapp/lead-status";
+    | '/'
+    | '/auth'
+    | '/for-therapists'
+    | '/privacy-policy'
+    | '/profile-preview-demo'
+    | '/reset-password'
+    | '/search'
+    | '/sitemap.xml'
+    | '/terms-of-use'
+    | '/therapy-information'
+    | '/claim'
+    | '/new-profile'
+    | '/admin/billing'
+    | '/admin/catalogs'
+    | '/admin/claims'
+    | '/admin/credentials'
+    | '/admin/integrations'
+    | '/admin/leads'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/therapists'
+    | '/problems/$slug'
+    | '/therapists/$slug'
+    | '/admin'
+    | '/account/billing'
+    | '/account/credentials'
+    | '/account/leads'
+    | '/account/profile'
+    | '/account/settings'
+    | '/account'
+    | '/api/public/email/lead-status'
+    | '/api/public/voice/answer'
+    | '/api/public/voice/dial-action'
+    | '/api/public/voice/parent-status'
+    | '/api/public/voice/therapist-status'
+    | '/api/public/whatsapp/lead-status'
   id:
-    | "__root__"
-    | "/"
-    | "/_authenticated"
-    | "/admin"
-    | "/auth"
-    | "/for-therapists"
-    | "/profile-preview-demo"
-    | "/privacy-policy"
-    | "/reset-password"
-    | "/search"
-    | "/sitemap.xml"
-    | "/therapy-information"
-    | "/terms-of-use"
-    | "/_authenticated/account"
-    | "/_authenticated/claim"
-    | "/_authenticated/new-profile"
-    | "/admin/billing"
-    | "/admin/catalogs"
-    | "/admin/claims"
-    | "/admin/credentials"
-    | "/admin/integrations"
-    | "/admin/leads"
-    | "/admin/settings"
-    | "/admin/support"
-    | "/admin/therapists"
-    | "/problems/$slug"
-    | "/therapists/$slug"
-    | "/admin/"
-    | "/_authenticated/account/billing"
-    | "/_authenticated/account/credentials"
-    | "/_authenticated/account/leads"
-    | "/_authenticated/account/profile"
-    | "/_authenticated/account/settings"
-    | "/_authenticated/account/"
-    | "/api/public/voice/answer"
-    | "/api/public/voice/dial-action"
-    | "/api/public/voice/parent-status"
-    | "/api/public/voice/therapist-status"
-    | "/api/public/whatsapp/lead-status";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/admin'
+    | '/auth'
+    | '/for-therapists'
+    | '/privacy-policy'
+    | '/profile-preview-demo'
+    | '/reset-password'
+    | '/search'
+    | '/sitemap.xml'
+    | '/terms-of-use'
+    | '/therapy-information'
+    | '/_authenticated/account'
+    | '/_authenticated/claim'
+    | '/_authenticated/new-profile'
+    | '/admin/billing'
+    | '/admin/catalogs'
+    | '/admin/claims'
+    | '/admin/credentials'
+    | '/admin/integrations'
+    | '/admin/leads'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/therapists'
+    | '/problems/$slug'
+    | '/therapists/$slug'
+    | '/admin/'
+    | '/_authenticated/account/billing'
+    | '/_authenticated/account/credentials'
+    | '/_authenticated/account/leads'
+    | '/_authenticated/account/profile'
+    | '/_authenticated/account/settings'
+    | '/_authenticated/account/'
+    | '/api/public/email/lead-status'
+    | '/api/public/voice/answer'
+    | '/api/public/voice/dial-action'
+    | '/api/public/voice/parent-status'
+    | '/api/public/voice/therapist-status'
+    | '/api/public/whatsapp/lead-status'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren;
-  AdminRouteRoute: typeof AdminRouteRouteWithChildren;
-  AuthRoute: typeof AuthRoute;
-  ForTherapistsRoute: typeof ForTherapistsRoute;
-  ProfilePreviewDemoRoute: typeof ProfilePreviewDemoRoute;
-  PrivacyPolicyRoute: typeof PrivacyPolicyRoute;
-  ResetPasswordRoute: typeof ResetPasswordRoute;
-  SearchRoute: typeof SearchRoute;
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute;
-  TherapyInformationRoute: typeof TherapyInformationRoute;
-  TermsOfUseRoute: typeof TermsOfUseRoute;
-  ProblemsSlugRoute: typeof ProblemsSlugRoute;
-  TherapistsSlugRoute: typeof TherapistsSlugRoute;
-  ApiPublicVoiceAnswerRoute: typeof ApiPublicVoiceAnswerRoute;
-  ApiPublicVoiceDialActionRoute: typeof ApiPublicVoiceDialActionRoute;
-  ApiPublicVoiceParentStatusRoute: typeof ApiPublicVoiceParentStatusRoute;
-  ApiPublicVoiceTherapistStatusRoute: typeof ApiPublicVoiceTherapistStatusRoute;
-  ApiPublicWhatsappLeadStatusRoute: typeof ApiPublicWhatsappLeadStatusRoute;
+  IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ForTherapistsRoute: typeof ForTherapistsRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  ProfilePreviewDemoRoute: typeof ProfilePreviewDemoRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SearchRoute: typeof SearchRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsOfUseRoute: typeof TermsOfUseRoute
+  TherapyInformationRoute: typeof TherapyInformationRoute
+  ProblemsSlugRoute: typeof ProblemsSlugRoute
+  TherapistsSlugRoute: typeof TherapistsSlugRoute
+  ApiPublicEmailLeadStatusRoute: typeof ApiPublicEmailLeadStatusRoute
+  ApiPublicVoiceAnswerRoute: typeof ApiPublicVoiceAnswerRoute
+  ApiPublicVoiceDialActionRoute: typeof ApiPublicVoiceDialActionRoute
+  ApiPublicVoiceParentStatusRoute: typeof ApiPublicVoiceParentStatusRoute
+  ApiPublicVoiceTherapistStatusRoute: typeof ApiPublicVoiceTherapistStatusRoute
+  ApiPublicWhatsappLeadStatusRoute: typeof ApiPublicWhatsappLeadStatusRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/terms-of-use": {
-      id: "/terms-of-use";
-      path: "/terms-of-use";
-      fullPath: "/terms-of-use";
-      preLoaderRoute: typeof TermsOfUseRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/therapy-information": {
-      id: "/therapy-information";
-      path: "/therapy-information";
-      fullPath: "/therapy-information";
-      preLoaderRoute: typeof TherapyInformationRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/sitemap.xml": {
-      id: "/sitemap.xml";
-      path: "/sitemap.xml";
-      fullPath: "/sitemap.xml";
-      preLoaderRoute: typeof SitemapDotxmlRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/search": {
-      id: "/search";
-      path: "/search";
-      fullPath: "/search";
-      preLoaderRoute: typeof SearchRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/reset-password": {
-      id: "/reset-password";
-      path: "/reset-password";
-      fullPath: "/reset-password";
-      preLoaderRoute: typeof ResetPasswordRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/privacy-policy": {
-      id: "/privacy-policy";
-      path: "/privacy-policy";
-      fullPath: "/privacy-policy";
-      preLoaderRoute: typeof PrivacyPolicyRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/profile-preview-demo": {
-      id: "/profile-preview-demo";
-      path: "/profile-preview-demo";
-      fullPath: "/profile-preview-demo";
-      preLoaderRoute: typeof ProfilePreviewDemoRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/for-therapists": {
-      id: "/for-therapists";
-      path: "/for-therapists";
-      fullPath: "/for-therapists";
-      preLoaderRoute: typeof ForTherapistsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/auth": {
-      id: "/auth";
-      path: "/auth";
-      fullPath: "/auth";
-      preLoaderRoute: typeof AuthRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/admin": {
-      id: "/admin";
-      path: "/admin";
-      fullPath: "/admin";
-      preLoaderRoute: typeof AdminRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authenticated": {
-      id: "/_authenticated";
-      path: "";
-      fullPath: "/";
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/admin/": {
-      id: "/admin/";
-      path: "/";
-      fullPath: "/admin/";
-      preLoaderRoute: typeof AdminIndexRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/therapists/$slug": {
-      id: "/therapists/$slug";
-      path: "/therapists/$slug";
-      fullPath: "/therapists/$slug";
-      preLoaderRoute: typeof TherapistsSlugRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/problems/$slug": {
-      id: "/problems/$slug";
-      path: "/problems/$slug";
-      fullPath: "/problems/$slug";
-      preLoaderRoute: typeof ProblemsSlugRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/admin/therapists": {
-      id: "/admin/therapists";
-      path: "/therapists";
-      fullPath: "/admin/therapists";
-      preLoaderRoute: typeof AdminTherapistsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/support": {
-      id: "/admin/support";
-      path: "/support";
-      fullPath: "/admin/support";
-      preLoaderRoute: typeof AdminSupportRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/settings": {
-      id: "/admin/settings";
-      path: "/settings";
-      fullPath: "/admin/settings";
-      preLoaderRoute: typeof AdminSettingsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/leads": {
-      id: "/admin/leads";
-      path: "/leads";
-      fullPath: "/admin/leads";
-      preLoaderRoute: typeof AdminLeadsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/integrations": {
-      id: "/admin/integrations";
-      path: "/integrations";
-      fullPath: "/admin/integrations";
-      preLoaderRoute: typeof AdminIntegrationsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/credentials": {
-      id: "/admin/credentials";
-      path: "/credentials";
-      fullPath: "/admin/credentials";
-      preLoaderRoute: typeof AdminCredentialsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/claims": {
-      id: "/admin/claims";
-      path: "/claims";
-      fullPath: "/admin/claims";
-      preLoaderRoute: typeof AdminClaimsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/catalogs": {
-      id: "/admin/catalogs";
-      path: "/catalogs";
-      fullPath: "/admin/catalogs";
-      preLoaderRoute: typeof AdminCatalogsRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/billing": {
-      id: "/admin/billing";
-      path: "/billing";
-      fullPath: "/admin/billing";
-      preLoaderRoute: typeof AdminBillingRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/_authenticated/new-profile": {
-      id: "/_authenticated/new-profile";
-      path: "/new-profile";
-      fullPath: "/new-profile";
-      preLoaderRoute: typeof AuthenticatedNewProfileRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/claim": {
-      id: "/_authenticated/claim";
-      path: "/claim";
-      fullPath: "/claim";
-      preLoaderRoute: typeof AuthenticatedClaimRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/account": {
-      id: "/_authenticated/account";
-      path: "/account";
-      fullPath: "/account";
-      preLoaderRoute: typeof AuthenticatedAccountRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/account/": {
-      id: "/_authenticated/account/";
-      path: "/";
-      fullPath: "/account/";
-      preLoaderRoute: typeof AuthenticatedAccountIndexRouteImport;
-      parentRoute: typeof AuthenticatedAccountRoute;
-    };
-    "/_authenticated/account/settings": {
-      id: "/_authenticated/account/settings";
-      path: "/settings";
-      fullPath: "/account/settings";
-      preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport;
-      parentRoute: typeof AuthenticatedAccountRoute;
-    };
-    "/_authenticated/account/profile": {
-      id: "/_authenticated/account/profile";
-      path: "/profile";
-      fullPath: "/account/profile";
-      preLoaderRoute: typeof AuthenticatedAccountProfileRouteImport;
-      parentRoute: typeof AuthenticatedAccountRoute;
-    };
-    "/_authenticated/account/leads": {
-      id: "/_authenticated/account/leads";
-      path: "/leads";
-      fullPath: "/account/leads";
-      preLoaderRoute: typeof AuthenticatedAccountLeadsRouteImport;
-      parentRoute: typeof AuthenticatedAccountRoute;
-    };
-    "/_authenticated/account/credentials": {
-      id: "/_authenticated/account/credentials";
-      path: "/credentials";
-      fullPath: "/account/credentials";
-      preLoaderRoute: typeof AuthenticatedAccountCredentialsRouteImport;
-      parentRoute: typeof AuthenticatedAccountRoute;
-    };
-    "/_authenticated/account/billing": {
-      id: "/_authenticated/account/billing";
-      path: "/billing";
-      fullPath: "/account/billing";
-      preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport;
-      parentRoute: typeof AuthenticatedAccountRoute;
-    };
-    "/api/public/whatsapp/lead-status": {
-      id: "/api/public/whatsapp/lead-status";
-      path: "/api/public/whatsapp/lead-status";
-      fullPath: "/api/public/whatsapp/lead-status";
-      preLoaderRoute: typeof ApiPublicWhatsappLeadStatusRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/public/voice/therapist-status": {
-      id: "/api/public/voice/therapist-status";
-      path: "/api/public/voice/therapist-status";
-      fullPath: "/api/public/voice/therapist-status";
-      preLoaderRoute: typeof ApiPublicVoiceTherapistStatusRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/public/voice/parent-status": {
-      id: "/api/public/voice/parent-status";
-      path: "/api/public/voice/parent-status";
-      fullPath: "/api/public/voice/parent-status";
-      preLoaderRoute: typeof ApiPublicVoiceParentStatusRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/public/voice/dial-action": {
-      id: "/api/public/voice/dial-action";
-      path: "/api/public/voice/dial-action";
-      fullPath: "/api/public/voice/dial-action";
-      preLoaderRoute: typeof ApiPublicVoiceDialActionRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/public/voice/answer": {
-      id: "/api/public/voice/answer";
-      path: "/api/public/voice/answer";
-      fullPath: "/api/public/voice/answer";
-      preLoaderRoute: typeof ApiPublicVoiceAnswerRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/therapy-information': {
+      id: '/therapy-information'
+      path: '/therapy-information'
+      fullPath: '/therapy-information'
+      preLoaderRoute: typeof TherapyInformationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-of-use': {
+      id: '/terms-of-use'
+      path: '/terms-of-use'
+      fullPath: '/terms-of-use'
+      preLoaderRoute: typeof TermsOfUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile-preview-demo': {
+      id: '/profile-preview-demo'
+      path: '/profile-preview-demo'
+      fullPath: '/profile-preview-demo'
+      preLoaderRoute: typeof ProfilePreviewDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/for-therapists': {
+      id: '/for-therapists'
+      path: '/for-therapists'
+      fullPath: '/for-therapists'
+      preLoaderRoute: typeof ForTherapistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/therapists/$slug': {
+      id: '/therapists/$slug'
+      path: '/therapists/$slug'
+      fullPath: '/therapists/$slug'
+      preLoaderRoute: typeof TherapistsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/problems/$slug': {
+      id: '/problems/$slug'
+      path: '/problems/$slug'
+      fullPath: '/problems/$slug'
+      preLoaderRoute: typeof ProblemsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/therapists': {
+      id: '/admin/therapists'
+      path: '/therapists'
+      fullPath: '/admin/therapists'
+      preLoaderRoute: typeof AdminTherapistsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/support': {
+      id: '/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminSupportRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/integrations': {
+      id: '/admin/integrations'
+      path: '/integrations'
+      fullPath: '/admin/integrations'
+      preLoaderRoute: typeof AdminIntegrationsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/credentials': {
+      id: '/admin/credentials'
+      path: '/credentials'
+      fullPath: '/admin/credentials'
+      preLoaderRoute: typeof AdminCredentialsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/claims': {
+      id: '/admin/claims'
+      path: '/claims'
+      fullPath: '/admin/claims'
+      preLoaderRoute: typeof AdminClaimsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/catalogs': {
+      id: '/admin/catalogs'
+      path: '/catalogs'
+      fullPath: '/admin/catalogs'
+      preLoaderRoute: typeof AdminCatalogsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/billing': {
+      id: '/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AdminBillingRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_authenticated/new-profile': {
+      id: '/_authenticated/new-profile'
+      path: '/new-profile'
+      fullPath: '/new-profile'
+      preLoaderRoute: typeof AuthenticatedNewProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/claim': {
+      id: '/_authenticated/claim'
+      path: '/claim'
+      fullPath: '/claim'
+      preLoaderRoute: typeof AuthenticatedClaimRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/account/': {
+      id: '/_authenticated/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AuthenticatedAccountIndexRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/settings': {
+      id: '/_authenticated/account/settings'
+      path: '/settings'
+      fullPath: '/account/settings'
+      preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/profile': {
+      id: '/_authenticated/account/profile'
+      path: '/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AuthenticatedAccountProfileRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/leads': {
+      id: '/_authenticated/account/leads'
+      path: '/leads'
+      fullPath: '/account/leads'
+      preLoaderRoute: typeof AuthenticatedAccountLeadsRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/credentials': {
+      id: '/_authenticated/account/credentials'
+      path: '/credentials'
+      fullPath: '/account/credentials'
+      preLoaderRoute: typeof AuthenticatedAccountCredentialsRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/_authenticated/account/billing': {
+      id: '/_authenticated/account/billing'
+      path: '/billing'
+      fullPath: '/account/billing'
+      preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport
+      parentRoute: typeof AuthenticatedAccountRoute
+    }
+    '/api/public/whatsapp/lead-status': {
+      id: '/api/public/whatsapp/lead-status'
+      path: '/api/public/whatsapp/lead-status'
+      fullPath: '/api/public/whatsapp/lead-status'
+      preLoaderRoute: typeof ApiPublicWhatsappLeadStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/voice/therapist-status': {
+      id: '/api/public/voice/therapist-status'
+      path: '/api/public/voice/therapist-status'
+      fullPath: '/api/public/voice/therapist-status'
+      preLoaderRoute: typeof ApiPublicVoiceTherapistStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/voice/parent-status': {
+      id: '/api/public/voice/parent-status'
+      path: '/api/public/voice/parent-status'
+      fullPath: '/api/public/voice/parent-status'
+      preLoaderRoute: typeof ApiPublicVoiceParentStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/voice/dial-action': {
+      id: '/api/public/voice/dial-action'
+      path: '/api/public/voice/dial-action'
+      fullPath: '/api/public/voice/dial-action'
+      preLoaderRoute: typeof ApiPublicVoiceDialActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/voice/answer': {
+      id: '/api/public/voice/answer'
+      path: '/api/public/voice/answer'
+      fullPath: '/api/public/voice/answer'
+      preLoaderRoute: typeof ApiPublicVoiceAnswerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/email/lead-status': {
+      id: '/api/public/email/lead-status'
+      path: '/api/public/email/lead-status'
+      fullPath: '/api/public/email/lead-status'
+      preLoaderRoute: typeof ApiPublicEmailLeadStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedAccountRouteChildren {
-  AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute;
-  AuthenticatedAccountCredentialsRoute: typeof AuthenticatedAccountCredentialsRoute;
-  AuthenticatedAccountLeadsRoute: typeof AuthenticatedAccountLeadsRoute;
-  AuthenticatedAccountProfileRoute: typeof AuthenticatedAccountProfileRoute;
-  AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute;
-  AuthenticatedAccountIndexRoute: typeof AuthenticatedAccountIndexRoute;
+  AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
+  AuthenticatedAccountCredentialsRoute: typeof AuthenticatedAccountCredentialsRoute
+  AuthenticatedAccountLeadsRoute: typeof AuthenticatedAccountLeadsRoute
+  AuthenticatedAccountProfileRoute: typeof AuthenticatedAccountProfileRoute
+  AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
+  AuthenticatedAccountIndexRoute: typeof AuthenticatedAccountIndexRoute
 }
 
 const AuthenticatedAccountRouteChildren: AuthenticatedAccountRouteChildren = {
@@ -783,37 +814,37 @@ const AuthenticatedAccountRouteChildren: AuthenticatedAccountRouteChildren = {
   AuthenticatedAccountProfileRoute: AuthenticatedAccountProfileRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedAccountIndexRoute: AuthenticatedAccountIndexRoute,
-};
+}
 
-const AuthenticatedAccountRouteWithChildren = AuthenticatedAccountRoute._addFileChildren(
-  AuthenticatedAccountRouteChildren,
-);
+const AuthenticatedAccountRouteWithChildren =
+  AuthenticatedAccountRoute._addFileChildren(AuthenticatedAccountRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAccountRoute: typeof AuthenticatedAccountRouteWithChildren;
-  AuthenticatedClaimRoute: typeof AuthenticatedClaimRoute;
-  AuthenticatedNewProfileRoute: typeof AuthenticatedNewProfileRoute;
+  AuthenticatedAccountRoute: typeof AuthenticatedAccountRouteWithChildren
+  AuthenticatedClaimRoute: typeof AuthenticatedClaimRoute
+  AuthenticatedNewProfileRoute: typeof AuthenticatedNewProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRouteWithChildren,
   AuthenticatedClaimRoute: AuthenticatedClaimRoute,
   AuthenticatedNewProfileRoute: AuthenticatedNewProfileRoute,
-};
+}
 
-const AuthenticatedRouteRouteWithChildren = AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren);
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface AdminRouteRouteChildren {
-  AdminBillingRoute: typeof AdminBillingRoute;
-  AdminCatalogsRoute: typeof AdminCatalogsRoute;
-  AdminClaimsRoute: typeof AdminClaimsRoute;
-  AdminCredentialsRoute: typeof AdminCredentialsRoute;
-  AdminIntegrationsRoute: typeof AdminIntegrationsRoute;
-  AdminLeadsRoute: typeof AdminLeadsRoute;
-  AdminSettingsRoute: typeof AdminSettingsRoute;
-  AdminSupportRoute: typeof AdminSupportRoute;
-  AdminTherapistsRoute: typeof AdminTherapistsRoute;
-  AdminIndexRoute: typeof AdminIndexRoute;
+  AdminBillingRoute: typeof AdminBillingRoute
+  AdminCatalogsRoute: typeof AdminCatalogsRoute
+  AdminClaimsRoute: typeof AdminClaimsRoute
+  AdminCredentialsRoute: typeof AdminCredentialsRoute
+  AdminIntegrationsRoute: typeof AdminIntegrationsRoute
+  AdminLeadsRoute: typeof AdminLeadsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSupportRoute: typeof AdminSupportRoute
+  AdminTherapistsRoute: typeof AdminTherapistsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
@@ -827,9 +858,11 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminSupportRoute: AdminSupportRoute,
   AdminTherapistsRoute: AdminTherapistsRoute,
   AdminIndexRoute: AdminIndexRoute,
-};
+}
 
-const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(AdminRouteRouteChildren);
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -837,29 +870,32 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ForTherapistsRoute: ForTherapistsRoute,
-  ProfilePreviewDemoRoute: ProfilePreviewDemoRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  ProfilePreviewDemoRoute: ProfilePreviewDemoRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  TherapyInformationRoute: TherapyInformationRoute,
   TermsOfUseRoute: TermsOfUseRoute,
+  TherapyInformationRoute: TherapyInformationRoute,
   ProblemsSlugRoute: ProblemsSlugRoute,
   TherapistsSlugRoute: TherapistsSlugRoute,
+  ApiPublicEmailLeadStatusRoute: ApiPublicEmailLeadStatusRoute,
   ApiPublicVoiceAnswerRoute: ApiPublicVoiceAnswerRoute,
   ApiPublicVoiceDialActionRoute: ApiPublicVoiceDialActionRoute,
   ApiPublicVoiceParentStatusRoute: ApiPublicVoiceParentStatusRoute,
   ApiPublicVoiceTherapistStatusRoute: ApiPublicVoiceTherapistStatusRoute,
   ApiPublicWhatsappLeadStatusRoute: ApiPublicWhatsappLeadStatusRoute,
-};
-export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)._addFileTypes<FileRouteTypes>();
+}
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { startInstance } from "./start.ts";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
