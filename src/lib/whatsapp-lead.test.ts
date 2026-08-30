@@ -10,8 +10,10 @@ import {
   whatsappDirectChatUrl,
   whatsappLeadStatusCallbackUrl,
   whatsappSender,
+  sanitizeWhatsAppTemplateVariable,
 } from "./whatsapp-lead.server";
 import { voiceCallbackUrl } from "./twilio-voice.server";
+import { WHATSAPP_LEAD_MESSAGE_MAX_LENGTH } from "./whatsapp-lead.shared";
 
 const ORIGINAL_ORIGIN = process.env["TIPULINKS_PUBLIC_ORIGIN"];
 const ORIGINAL_FROM = process.env["TWILIO_WHATSAPP_FROM"];
@@ -78,6 +80,20 @@ describe("message rendering", () => {
       "3": "אשמח לתאם פגישה",
       "4": "https://wa.me/972501234567",
     });
+  });
+
+  it("normalizes Twilio template variables without stripping legitimate punctuation or emoji", () => {
+    expect(sanitizeWhatsAppTemplateVariable("  שלום,\n\tאשמח  לדבר 🙂\u0000  ")).toBe("שלום, אשמח לדבר 🙂");
+
+    const variables = JSON.parse(
+      whatsappContentVariables({
+        visitorName: "  יוסי\nלוי  ",
+        visitorPhone: "+972501234567",
+        message: "שלום!\nאשמח לתאם פגישה. 🙂",
+      }),
+    );
+    expect(variables["1"]).toBe("יוסי לוי");
+    expect(variables["3"]).toBe("שלום! אשמח לתאם פגישה. 🙂");
   });
 
   it("builds the direct WhatsApp link from E.164 without the leading plus", () => {
@@ -151,5 +167,25 @@ describe("WhatsApp lead submit button", () => {
   it("renders a WhatsApp icon together with the submit label", () => {
     expect(modalSource).toContain("function WhatsAppIcon");
     expect(modalSource).toContain('<WhatsAppIcon className="h-5 w-5 shrink-0" />');
+  });
+});
+
+describe("WhatsApp lead message length", () => {
+  const modalSource = readFileSync(join(import.meta.dir, "../components/whatsapp-lead-modal.tsx"), "utf8");
+  const functionSource = readFileSync(join(import.meta.dir, "whatsapp-lead.functions.ts"), "utf8");
+
+  it("uses the same 1000-character cap in both the UI and server validation", () => {
+    expect(WHATSAPP_LEAD_MESSAGE_MAX_LENGTH).toBe(1000);
+    expect(modalSource).toContain("maxLength={WHATSAPP_LEAD_MESSAGE_MAX_LENGTH}");
+    expect(functionSource).toContain(".max(WHATSAPP_LEAD_MESSAGE_MAX_LENGTH)");
+  });
+});
+
+describe("WhatsApp Twilio authentication", () => {
+  const serverSource = readFileSync(join(import.meta.dir, "whatsapp-lead.server.ts"), "utf8");
+
+  it("keeps WhatsApp on Account SID + Auth Token rather than the Voice API key", () => {
+    expect(serverSource).toContain("`${config.accountSid}:${config.authToken}`");
+    expect(serverSource).not.toContain("`${config.apiKeySid}:${config.apiKeySecret}`");
   });
 });
