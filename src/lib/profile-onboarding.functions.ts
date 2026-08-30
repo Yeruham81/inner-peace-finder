@@ -85,7 +85,7 @@ export const publishMyProfile = createServerFn({ method: "POST" })
         throw new Error("יש לעדכן אמצעי תשלום פעיל לפני פרסום הפרופיל.");
       }
       if (error.message.includes("credential_step_incomplete")) {
-        throw new Error("יש להשלים את שלב אימות ההסמכות לפני פרסום הפרופיל.");
+        throw new Error("יש להשלים את אימות ההסמכות לפני פרסום הפרופיל.");
       }
       if (error.message.includes("contact_step_incomplete")) {
         throw new Error("יש להשלים את דרכי קבלת הפניות לפני פרסום הפרופיל.");
