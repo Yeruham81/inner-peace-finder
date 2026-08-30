@@ -4,22 +4,11 @@ import { HOMEPAGE_SEARCH_PRESETS } from "./homepage-search-presets";
 import { CANONICAL_PROBLEM_SLUGS } from "./homepage-problem-map";
 import { CANONICAL_LANGUAGE_CODES } from "./language-options";
 import { REGION_SLUGS } from "./locality-options";
-import {
-  SERVICE_TYPES,
-  THERAPIST_GENDERS,
-  THERAPY_FORMAT_SLUGS,
-  resolveSearchContract,
-} from "./search-contract";
+import { SERVICE_TYPES, THERAPIST_GENDERS, THERAPY_FORMAT_SLUGS, resolveSearchContract } from "./search-contract";
 
 const expected = new Map([
-  [
-    "טיפול בחרדה חברתית לבני נוער",
-    { problemSlugs: ["anxiety"], population: "adolescents" },
-  ],
-  [
-    "טיפול זוגי באזור השרון",
-    { regions: ["sharon"], therapyFormats: ["couples"] },
-  ],
+  ["טיפול בחרדה חברתית לבני נוער", { problemSlugs: ["anxiety"], population: "adolescents" }],
+  ["טיפול זוגי באזור השרון", { regions: ["sharon"], therapyFormats: ["couples"] }],
   [
     "קלינאית תקשורת לפעוטות בפתח תקווה",
     {
@@ -45,10 +34,7 @@ const expected = new Map([
       serviceTypes: ["online"],
     },
   ],
-  [
-    "טיפול בטראומה באזור ירושלים",
-    { problemSlugs: ["trauma"], regions: ["jerusalem-area"] },
-  ],
+  ["טיפול בטראומה באזור ירושלים", { problemSlugs: ["trauma"], regions: ["jerusalem-area"] }],
   [
     "פסיכולוגית דוברת רוסית באזור חיפה",
     {
@@ -71,9 +57,7 @@ describe("homepage curated search presets", () => {
   it("defines exactly the eight visible example searches once each", () => {
     expect(HOMEPAGE_SEARCH_PRESETS).toHaveLength(8);
     expect(new Set(HOMEPAGE_SEARCH_PRESETS.map((preset) => preset.label)).size).toBe(8);
-    expect(new Set(HOMEPAGE_SEARCH_PRESETS.map((preset) => preset.label))).toEqual(
-      new Set(expected.keys()),
-    );
+    expect(new Set(HOMEPAGE_SEARCH_PRESETS.map((preset) => preset.label))).toEqual(new Set(expected.keys()));
   });
 
   it("never carries free text, so example-search clicks cannot create an LLM semantic remainder", () => {
@@ -101,11 +85,26 @@ describe("homepage curated search presets", () => {
 
     for (const preset of HOMEPAGE_SEARCH_PRESETS) {
       const contract = resolveSearchContract(preset.search);
-      expect(contract.problemSlugs.every((slug) => problems.has(slug)), preset.label).toBe(true);
-      expect(contract.languages.every((code) => languages.has(code)), preset.label).toBe(true);
-      expect(contract.regions.every((slug) => regions.has(slug)), preset.label).toBe(true);
-      expect(contract.serviceTypes.every((value) => services.has(value)), preset.label).toBe(true);
-      expect(contract.therapyFormats.every((slug) => formats.has(slug)), preset.label).toBe(true);
+      expect(
+        contract.problemSlugs.every((slug) => problems.has(slug)),
+        preset.label,
+      ).toBe(true);
+      expect(
+        contract.languages.every((code) => languages.has(code)),
+        preset.label,
+      ).toBe(true);
+      expect(
+        contract.regions.every((slug) => regions.has(slug)),
+        preset.label,
+      ).toBe(true);
+      expect(
+        contract.serviceTypes.every((value) => services.has(value)),
+        preset.label,
+      ).toBe(true);
+      expect(
+        contract.therapyFormats.every((slug) => formats.has(slug)),
+        preset.label,
+      ).toBe(true);
       expect(!contract.gender || genders.has(contract.gender), preset.label).toBe(true);
     }
   });
@@ -123,6 +122,7 @@ describe("homepage topic/population LLM bypass guard", () => {
     const homepageSource = readFileSync("src/routes/index.tsx", "utf8");
     expect(homepageSource).toContain("const problemSlugs = homepageProblemSlugs(problem)");
     expect(homepageSource).toContain("problem: serializeMultiValue(problemSlugs)");
+    expect(homepageSource).not.toContain("q: problem");
   });
 
   it("keeps the LLM classifier disabled whenever a curated problem parameter was supplied", () => {
