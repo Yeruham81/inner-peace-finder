@@ -3,6 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { CANONICAL_LANGUAGES } from "@/lib/language-options";
 import { REGION_DEFINITIONS, REGION_SLUGS } from "@/lib/locality-options";
 import { criterionExclusionToken, resolveSearchContract, serializeMultiValue } from "@/lib/search-contract";
+import { storePrivateSearchQuery } from "@/lib/private-search-query";
 import type { SearchCriterion } from "@/lib/query-interpreter.types";
 import { buildPopulationOptions } from "@/lib/population-options";
 
@@ -84,6 +85,7 @@ type SearchFormProps = {
   };
   preserveSearch?: {
     problem?: string;
+    searchId?: string;
   };
   variant?: "hero" | "compact" | "simple";
   availableQuickFilters?: string[];
@@ -453,11 +455,16 @@ export function SearchForm({
     excludedCriteria?: readonly string[];
   }) {
     const contract = resolveSearchContract(input);
-    const keepCanonicalProblem = contract.q === appliedContract.q;
+    const queryChanged = contract.q !== appliedContract.q;
+    const keepCanonicalProblem = !queryChanged;
+    const searchId = contract.q
+      ? storePrivateSearchQuery(contract.q, queryChanged ? undefined : preserveSearch?.searchId)
+      : undefined;
+
     navigate({
       to: "/search",
       search: {
-        q: contract.q || undefined,
+        searchId,
         problem: keepCanonicalProblem ? preserveSearch?.problem || undefined : undefined,
         city: contract.city || undefined,
         population: contract.population || undefined,
