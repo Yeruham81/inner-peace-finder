@@ -144,7 +144,6 @@ function InteractiveContactActions({
   const [emailOpen, setEmailOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
-  const [pendingMethod, setPendingMethod] = useState<PublicContactMethod | null>(null);
   const shownFiredRef = useRef(false);
   const methods = orderedContactMethods(contactMethods, preferredContactMethod);
 
@@ -159,9 +158,7 @@ function InteractiveContactActions({
     });
   }, [methods.length, pageSource, sourceProblemId, therapistId]);
 
-  async function handleSelect(method: PublicContactMethod) {
-    if (pendingMethod) return;
-
+  function handleSelect(method: PublicContactMethod) {
     track("cta_clicked", {
       therapist_id: therapistId,
       problem_id: sourceProblemId ?? null,
@@ -192,8 +189,8 @@ function InteractiveContactActions({
         methods={methods}
         preferred={preferredContactMethod}
         disabled={false}
-        pendingMethod={pendingMethod}
-        onSelect={(method) => void handleSelect(method)}
+        pendingMethod={null}
+        onSelect={handleSelect}
         unclaimedProfile={unclaimedProfile}
       />
 

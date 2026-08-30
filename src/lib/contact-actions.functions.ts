@@ -25,8 +25,10 @@ export type DirectContactTargetResult =
 export const getDirectContactTarget = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DirectContactInput.parse(input))
   .handler(async ({ data }): Promise<DirectContactTargetResult> => {
-    const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
-    if (!(await isContactChannelEnabled("whatsapp"))) {
+    // WhatsApp is now delivered server-side by Tipulinks (see
+    // whatsapp-lead.functions.ts). No caller may obtain a therapist WhatsApp
+    // number through this endpoint any more.
+    if (data.method === "whatsapp") {
       return { ok: false, reason: "method_unavailable", phone: null };
     }
 
