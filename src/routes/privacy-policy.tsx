@@ -894,7 +894,7 @@ const privacyBlocks: LegalDocumentBlock[] = [
   },
   {
     type: "p",
-    text: "כתובת למשלוח דואר: חיים בר-לב 19 רמת גן",
+    text: "כתובת למשלוח דואר: חיים בר לב 19 רמת גן",
   },
   {
     type: "p",
