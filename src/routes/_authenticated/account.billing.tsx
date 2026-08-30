@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getMyProfileOnboarding, setMyCredentialVerificationSkip } from "@/lib/profile-onboarding.functions";
 import { getEditorOptions, getMyProfile } from "@/lib/therapist-profile.functions";
 
-export const Route = createFileRoute("/_authenticated/account/credentials")({
+export const Route = createFileRoute("/_authenticated/account/billing")({
   head: () => ({
     meta: [{ title: "אימות והסמכות | החשבון שלי | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
   }),

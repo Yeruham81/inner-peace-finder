@@ -104,7 +104,7 @@ function AccountCredentialsPage() {
             <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/25 p-4">
               <h3 className="text-sm font-semibold text-foreground">לא נדרש אימות מקצועי?</h3>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                אפשר להשלים את שלב ההצטרפות גם ללא העלאת מסמכים. במקרה כזה לא תוצג בפרופיל תגית אימות, וניתן יהיה להגיש
+                אפשר להמשיך בתהליך ההצטרפות גם ללא העלאת מסמכים. במקרה כזה לא תוצג בפרופיל תגית אימות, וניתן יהיה להגיש
                 מסמכים בהמשך.
               </p>
               <Button
@@ -125,7 +125,7 @@ function AccountCredentialsPage() {
               <div className="flex min-w-0 items-start gap-2">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
                 <div>
-                  <h3 className="text-sm font-semibold text-emerald-950">השלב הושלם ללא אימות מקצועי</h3>
+                  <h3 className="text-sm font-semibold text-emerald-950">נבחר להמשיך ללא אימות מקצועי</h3>
                   <p className="mt-1 text-xs leading-5 text-emerald-900/80">
                     לא תוצג תגית אימות בפרופיל. אפשר לבטל את הבחירה ולהעלות מסמך בכל עת.
                   </p>
