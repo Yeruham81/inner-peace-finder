@@ -39,7 +39,7 @@ describe("technical SEO foundation", () => {
 
   it("temporarily keeps the entire site out of search indexes without blocking crawlers", () => {
     const root = readSource("routes/__root.tsx");
-    expect(root).toContain('{ name: "robots", content: "noindex,follow" }');
+    expect(root).toContain('<meta name="robots" content="noindex,follow" />');
 
     const robots = readFileSync(join(PROJECT, "public/robots.txt"), "utf8");
     expect(robots).toContain("Allow: /");
