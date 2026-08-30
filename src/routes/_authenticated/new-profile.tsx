@@ -1,3 +1,4 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -457,18 +458,54 @@ export function EditorPage({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [debouncedDescription, setDebouncedDescription] = useState("");
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
+  const [pendingNavigationHref, setPendingNavigationHref] = useState<string | null>(null);
   const preserveNextIdentityTransition = useRef(false);
   const hasUnsavedChangesRef = useRef(false);
+  const allowNavigationRef = useRef(false);
 
   const formSnapshot = useMemo(() => JSON.stringify(form), [form]);
   const hasUnsavedChanges = initialized && savedFormSnapshot !== null && formSnapshot !== savedFormSnapshot;
   hasUnsavedChangesRef.current = hasUnsavedChanges;
 
-  const navigationBlocker = useBlocker({
-    shouldBlockFn: () => hasUnsavedChangesRef.current,
-    enableBeforeUnload: () => hasUnsavedChangesRef.current,
-    withResolver: true,
-  });
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChangesRef.current || allowNavigationRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!hasUnsavedChangesRef.current || allowNavigationRef.current) return;
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target instanceof Element ? event.target : null;
+      const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+
+      const href = anchor.href;
+      if (!href || href === window.location.href) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingNavigationHref(href);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedDescription(form.full_description), 600);
@@ -635,13 +672,19 @@ export function EditorPage({
     onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
   });
 
+  const continuePendingNavigation = () => {
+    if (!pendingNavigationHref) return;
+    allowNavigationRef.current = true;
+    window.location.assign(pendingNavigationHref);
+  };
+
   const saveAndContinueNavigation = async () => {
-    if (mutation.isPending || navigationBlocker.status !== "blocked") return;
+    if (mutation.isPending || !pendingNavigationHref) return;
     setShowPublishMissing(true);
     try {
       const result = await mutation.mutateAsync(false);
       if (result.missing && result.missing.length > 0) return;
-      navigationBlocker.proceed();
+      continuePendingNavigation();
     } catch {
       // The mutation already shows a user-facing error through onError.
     }
@@ -1403,11 +1446,9 @@ export function EditorPage({
       </Dialog>
 
       <Dialog
-        open={navigationBlocker.status === "blocked"}
+        open={pendingNavigationHref !== null}
         onOpenChange={(open) => {
-          if (!open && navigationBlocker.status === "blocked" && !mutation.isPending) {
-            navigationBlocker.reset();
-          }
+          if (!open && !mutation.isPending) setPendingNavigationHref(null);
         }}
       >
         <DialogContent dir="rtl" className="sm:max-w-md">
@@ -1421,22 +1462,10 @@ export function EditorPage({
             <Button disabled={mutation.isPending} onClick={() => void saveAndContinueNavigation()}>
               {mutation.isPending ? "מתבצעת שמירה…" : "שמירה והמשך"}
             </Button>
-            <Button
-              variant="destructive"
-              disabled={mutation.isPending}
-              onClick={() => {
-                if (navigationBlocker.status === "blocked") navigationBlocker.proceed();
-              }}
-            >
+            <Button variant="destructive" disabled={mutation.isPending} onClick={continuePendingNavigation}>
               יציאה ללא שמירה
             </Button>
-            <Button
-              variant="outline"
-              disabled={mutation.isPending}
-              onClick={() => {
-                if (navigationBlocker.status === "blocked") navigationBlocker.reset();
-              }}
-            >
+            <Button variant="outline" disabled={mutation.isPending} onClick={() => setPendingNavigationHref(null)}>
               ביטול
             </Button>
           </DialogFooter>
