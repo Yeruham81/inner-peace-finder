@@ -43,14 +43,14 @@ describe("account/profile UX follow-up", () => {
   });
 
   it("protects unsaved profile edits across internal navigation and browser unloads", () => {
-    expect(editorSource).toContain("useBlocker");
-    expect(editorSource).toContain("shouldBlockFn: () => hasUnsavedChangesRef.current");
-    expect(editorSource).toContain("enableBeforeUnload: () => hasUnsavedChangesRef.current");
+    expect(editorSource).toContain('window.addEventListener("beforeunload", handleBeforeUnload)');
+    expect(editorSource).toContain('document.addEventListener("click", handleDocumentClick, true)');
+    expect(editorSource).toContain("hasUnsavedChangesRef.current");
+    expect(editorSource).toContain("pendingNavigationHref");
     expect(editorSource).toContain("יש שינויים שלא נשמרו");
     expect(editorSource).toContain("שמירה והמשך");
     expect(editorSource).toContain("יציאה ללא שמירה");
-    expect(editorSource).toContain("navigationBlocker.reset()");
-    expect(editorSource).toContain("navigationBlocker.proceed()");
+    expect(editorSource).toContain("continuePendingNavigation");
   });
 
   it("keeps profile deletion in the editor and account deletion in settings", () => {
