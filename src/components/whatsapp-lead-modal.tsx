@@ -252,6 +252,9 @@ export function WhatsAppLeadModal({
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
               הפנייה נשלחה למטפל
             </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              הפנייה נשלחה למטפל דרך WhatsApp. אם תתקבל תשובה, היא תופיע ישירות ב-WhatsApp שלך.
+            </p>
             <button
               type="button"
               onClick={onClose}
