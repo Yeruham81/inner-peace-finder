@@ -6,8 +6,9 @@
  *    returned to the browser. The visitor stays inside Tipulinks.
  *  - Twilio callback URLs are built exclusively from `TIPULINKS_PUBLIC_ORIGIN`;
  *    request headers are never used to construct or reconstruct them.
- *  - Sending authenticates with the restricted API key against the account
- *    context. `TWILIO_AUTH_TOKEN` is only ever used to validate signatures.
+ *  - WhatsApp sending authenticates with the Twilio Account SID + Auth Token.
+ *    Voice remains on the configured API key; the Auth Token is also used to
+ *    validate Twilio callback signatures.
  */
 import { getTwilioConfig, voiceCallbackUrl } from "./twilio-voice.server";
 
@@ -36,11 +37,24 @@ export function whatsappDirectChatUrl(visitorPhoneE164: string): string {
   return `https://wa.me/${visitorPhoneE164.replace(/^\+/, "")}`;
 }
 
+/**
+ * Twilio Content Template variables may not contain line breaks, tabs or other
+ * control characters. Normalize only the copy sent to Twilio: the original
+ * visitor message stored with the lead remains unchanged. Unicode letters,
+ * punctuation and emoji are intentionally preserved.
+ */
+export function sanitizeWhatsAppTemplateVariable(value: string): string {
+  return value
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 export function whatsappContentVariables(payload: WhatsAppLeadMessage): string {
   return JSON.stringify({
-    "1": payload.visitorName,
+    "1": sanitizeWhatsAppTemplateVariable(payload.visitorName),
     "2": payload.visitorPhone,
-    "3": payload.message,
+    "3": sanitizeWhatsAppTemplateVariable(payload.message),
     "4": whatsappDirectChatUrl(payload.visitorPhone),
   });
 }
