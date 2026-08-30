@@ -1,4 +1,3 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1453,9 +1452,9 @@ export function EditorPage({
       >
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader className="text-right">
-            <DialogTitle>יש שינויים שלא נשמרו</DialogTitle>
-            <DialogDescription className="leading-6">
-              ביצעת שינויים בפרופיל שעדיין לא נשמרו. אם תעזוב עכשיו, השינויים יאבדו.
+            <DialogTitle className="text-right">יש שינויים שלא נשמרו</DialogTitle>
+            <DialogDescription className="text-right leading-6">
+              קיימים שינויים בפרופיל שעדיין לא נשמרו. יציאה עכשיו תגרום לאובדן השינויים.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:flex-row-reverse sm:space-x-0">
@@ -1803,7 +1802,7 @@ function ProfileActions({
           תצוגה מקדימה
         </Button>
         {hasUnsavedChanges && (
-          <p className="text-center text-xs font-medium text-amber-700 sm:col-span-2 lg:col-span-1">
+          <p className="text-right text-xs font-medium text-amber-700 sm:col-span-2 lg:col-span-1">
             יש שינויים שלא נשמרו
           </p>
         )}
