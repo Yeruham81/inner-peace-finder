@@ -210,6 +210,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      therapist_registration_settings: {
+        Row: {
+          created_at: string;
+          registration_enabled: boolean;
+          singleton: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          registration_enabled?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          registration_enabled?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       contact_email_suppressions: {
         Row: {
           created_at: string;
