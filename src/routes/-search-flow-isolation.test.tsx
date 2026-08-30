@@ -53,4 +53,12 @@ describe("Unified-only search architecture", () => {
       expect(src, retired).not.toContain(retired);
     }
   });
+
+  it("keeps sensitive free-text out of the route search schema", () => {
+    const src = read("routes/search.tsx");
+    expect(src).toContain("searchId:");
+    expect(src).toContain("readPrivateSearchQuery");
+    expect(src).toContain("ssr: false");
+    expect(src).not.toMatch(/\n\s*q:\s*fallback\(/);
+  });
 });
