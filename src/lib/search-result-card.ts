@@ -1,9 +1,8 @@
 /**
  * Shared result-card data contract for therapist result cards.
  *
- * Pure types. This is the contract `TherapistCard` consumes; the Unified
- * production flow produces it directly and the DEV-only Legacy flow uses an
- * explicit adapter. It NEVER contains contact details (no email, no phone),
+ * Pure types. This is the contract `TherapistCard` consumes; Unified Search
+ * produces it directly. It NEVER contains contact details (no email, no phone),
  * and the displayed professional identity is `professional_title` only —
  * professions are search/ranking metadata, not display data.
  */
@@ -152,50 +151,4 @@ export function cardLocationLine(card: SearchResultCard): string | null {
   }
   if (parts.length === 0 && card.online_available) parts.push("טיפול אונליין");
   return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-/**
- * Explicit adapter for the DEV-only Legacy flow and the problem pages, which
- * still produce the older `ScoredTherapist`-shaped rows. Kept narrow on
- * purpose: the Legacy backend is not extended to mirror new fields.
- */
-export function legacyRowToCard(row: {
-  id: string;
-  slug: string;
-  full_name: string;
-  professional_title: string | null;
-  short_intro: string | null;
-  years_experience: number | null;
-  city: string | null;
-  image_url: string | null;
-  verified: boolean;
-  score?: number;
-  population_names?: string[];
-  language_names?: string[];
-}): SearchResultCard {
-  return {
-    id: row.id,
-    slug: row.slug,
-    full_name: row.full_name,
-    professional_title: row.professional_title,
-    image_url: row.image_url,
-    verified: row.verified,
-    years_experience: row.years_experience,
-    short_intro: row.short_intro,
-    primary_clinic: row.city ? { city: row.city, region_slug: null, region_label: null } : null,
-    clinic_locations: row.city ? [{ city: row.city, region_slug: null, region_label: null }] : [],
-    additional_clinic_count: 0,
-    online_available: false,
-    gender: null,
-    accessible_clinic: false,
-    home_visit_regions: [],
-    language_names: row.language_names ?? [],
-    population_names: row.population_names ?? [],
-    population_tags: [],
-    modality_names: [],
-    treatment_domains: [],
-    lgbtq_affirming: false,
-    offers_free_intro: false,
-    scores: { semantic: row.score ?? 0, preference: 0, quality: 0 },
-  };
 }

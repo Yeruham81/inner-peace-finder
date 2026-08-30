@@ -84,7 +84,6 @@ type SearchFormProps = {
   };
   preserveSearch?: {
     problem?: string;
-    flow?: string;
   };
   variant?: "hero" | "compact" | "simple";
   availableQuickFilters?: string[];
@@ -476,7 +475,6 @@ export function SearchForm({
         lgbtqAffirming: contract.lgbtqAffirming ? "1" : undefined,
         freeIntro: contract.freeIntro ? "1" : undefined,
         excludedCriteria: serializeMultiValue(contract.excludedCriteria ?? []),
-        flow: preserveSearch?.flow || undefined,
       },
     });
   }
