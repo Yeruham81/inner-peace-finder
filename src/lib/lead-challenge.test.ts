@@ -150,6 +150,7 @@ describe("createLead client contract", () => {
     for (const reason of ["rate_limit_exceeded", "challenge_expired", "challenge_failed", "therapist_unavailable"]) {
       expect(head).toContain(`reason: "${reason}" as const`);
     }
+    expect(head).toContain('reason === "monthly_budget_exhausted"');
   });
 
   it("keeps the session-based distinct-therapist limit inside the atomic transaction", () => {
@@ -170,9 +171,9 @@ describe("createLead client contract", () => {
   });
 
   it("keeps a committed lead successful when delivery-status persistence fails", () => {
-    expect(src).toContain("if (statusErr)");
+    expect(src).toContain("statusWriteFailed = true");
     expect(src).toContain('console.error("[lead] delivery status update failed"');
-    expect(src).toContain('deliveryStatus: statusErr ? ("pending" as const) : result.status');
+    expect(src).toContain("deliveryStatus: statusWriteFailed");
     expect(src).not.toContain('throw new Error("lead_status_update_failed")');
   });
 
@@ -383,10 +384,12 @@ describe("migration: atomic submit_lead transaction", () => {
   });
 
   it("stores an empty years_experience as NULL", () => {
-    expect(submitLeadMigration).toContain("ALTER COLUMN years_experience DROP NOT NULL");
-    expect(submitLeadMigration).toContain("ALTER COLUMN years_experience DROP DEFAULT");
-    expect(submitLeadMigration).toContain("v_years_raw !~ '^[0-9]{1,3}$'");
-    expect(submitLeadMigration).toContain("years_experience = v_years");
-    expect(submitLeadMigration).not.toMatch(/coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/);
+    // This profile-editor hardening is independent of whichever migration most
+    // recently replaces submit_lead. Assert it across the migration history.
+    expect(migrationSql).toContain("ALTER COLUMN years_experience DROP NOT NULL");
+    expect(migrationSql).toContain("ALTER COLUMN years_experience DROP DEFAULT");
+    expect(migrationSql).toContain("v_years_raw !~ '^[0-9]{1,3}$'");
+    expect(migrationSql).toContain("years_experience = v_years");
+    expect(migrationSql).not.toMatch(/coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/);
   });
 });
