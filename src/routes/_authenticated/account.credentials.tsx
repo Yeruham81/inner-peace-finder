@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/account/credentials")({
 });
 
 function AccountCredentialsPage() {
+  const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const getProfileFn = useServerFn(getMyProfile);
   const getOptionsFn = useServerFn(getEditorOptions);
@@ -26,8 +27,11 @@ function AccountCredentialsPage() {
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
   const options = useQuery({ queryKey: ["editor-options"], queryFn: () => getOptionsFn() });
   const onboarding = useQuery({
-    queryKey: ["profile-onboarding"],
+    queryKey: ["profile-onboarding", user.id],
     queryFn: () => getOnboardingFn(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 3,
   });
   const skipMutation = useMutation({
     mutationFn: (skip: boolean) => setSkipFn({ data: { skip } }),
