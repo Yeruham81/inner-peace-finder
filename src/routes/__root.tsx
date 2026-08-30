@@ -291,11 +291,28 @@ function SiteHeader() {
 function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-muted-foreground">
-        <p>
-          © {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת מטפלים. הוא אינו מחליף אבחון, ייעוץ או טיפול מקצועי
-          ואינו מיועד לספק מענה במצבי חירום.
-        </p>
+      <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-muted-foreground sm:px-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <p className="max-w-4xl leading-6">
+            © {new Date().getFullYear()} Tipulinks — האתר מסייע במציאת מטפלים. הוא אינו מחליף אבחון, ייעוץ או טיפול
+            מקצועי ואינו מיועד לספק מענה במצבי חירום.
+          </p>
+
+          <nav aria-label="מידע משפטי" className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2">
+            <Link
+              to="/privacy-policy"
+              className="font-medium text-foreground transition-colors hover:text-primary hover:underline"
+            >
+              מדיניות פרטיות
+            </Link>
+            <Link
+              to="/terms-of-use"
+              className="font-medium text-foreground transition-colors hover:text-primary hover:underline"
+            >
+              תנאי שימוש
+            </Link>
+          </nav>
+        </div>
       </div>
     </footer>
   );
