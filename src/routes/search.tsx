@@ -8,7 +8,7 @@ import { unifiedSearch, type UnifiedSearchResult } from "@/lib/query-interpreter
 import type { SearchCriterion } from "@/lib/query-interpreter.types";
 import type { SearchResultCard } from "@/lib/search-result-card";
 import { hasAnyExplicitFilter, resolveSearchContract, type ExplicitSearchContract } from "@/lib/search-contract";
-import { readPrivateSearchQuery } from "@/lib/private-search-query";
+import { createPrivateSearchId, readPrivateSearchQuery } from "@/lib/private-search-query";
 import { TherapistCard } from "@/components/therapist-card";
 import { SearchForm } from "@/components/search-form";
 import { PublicRouteError } from "@/components/public-route-error";
@@ -87,13 +87,14 @@ export const Route = createFileRoute("/search")({
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
+    const hasRetiredRawQuery = typeof window !== "undefined" && new URL(window.location.href).searchParams.has("q");
     const privateQuery = deps.searchId ? readPrivateSearchQuery(deps.searchId) : "";
     const promises: Promise<unknown>[] = [context.queryClient.ensureQueryData(filterOptionsQuery)];
 
-    // If a URL containing only an opaque searchId is opened in another tab or
-    // device, the private query is deliberately unavailable. Do not silently
-    // turn that request into a broad search.
-    if (privateQuery !== null) {
+    // Old bookmarks containing raw q are fail-closed. Treat them like a
+    // private search whose text is unavailable instead of silently converting
+    // them into an empty/browse-all Unified search.
+    if (!hasRetiredRawQuery && privateQuery !== null) {
       promises.push(context.queryClient.ensureQueryData(unifiedResultsQuery(toUnifiedParams(deps, privateQuery))));
     }
 
@@ -393,8 +394,9 @@ function SearchPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { data: filters } = useSuspenseQuery(filterOptionsQuery);
+  const hasRetiredRawQuery = new URL(window.location.href).searchParams.has("q");
   const privateQuery = search.searchId ? readPrivateSearchQuery(search.searchId) : "";
-  const queryUnavailable = Boolean(search.searchId) && privateQuery === null;
+  const queryUnavailable = hasRetiredRawQuery || (Boolean(search.searchId) && privateQuery === null);
   const contract = toUnifiedParams(search, privateQuery ?? "");
   const [quickFilters, setQuickFilters] = useState<string[] | undefined>(undefined);
   const [inferredCriteria, setInferredCriteria] = useState<SearchCriterion[]>([]);
@@ -404,9 +406,19 @@ function SearchPage() {
   // URL without ever being processed as a search query.
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (!url.searchParams.has("q") && !url.searchParams.has("flow")) return;
+    const hadRawQuery = url.searchParams.has("q");
+    if (!hadRawQuery && !url.searchParams.has("flow")) return;
+
     url.searchParams.delete("q");
     url.searchParams.delete("flow");
+
+    // Preserve the fail-closed state after the cleanup navigation (and after a
+    // refresh) with an opaque id that intentionally has no stored query behind
+    // it. Existing structured filters remain shareable in the URL.
+    if (hadRawQuery && !url.searchParams.get("searchId")) {
+      url.searchParams.set("searchId", createPrivateSearchId());
+    }
+
     void navigate({ href: `${url.pathname}${url.search}${url.hash}`, replace: true });
   }, [navigate]);
 
