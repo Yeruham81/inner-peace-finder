@@ -101,7 +101,7 @@ export const createLead = createServerFn({ method: "POST" })
           message: "לא ניתן לשלוח פנייה נוספת לפרופיל זה לפני אישור המטפל/ת.",
         };
       }
-      if (reason === "therapist_unavailable") {
+      if (reason === "therapist_unavailable" || reason === "monthly_budget_exhausted") {
         return {
           ok: false as const,
           reason: "therapist_unavailable" as const,
@@ -119,20 +119,8 @@ export const createLead = createServerFn({ method: "POST" })
     // external delivery fails.
     const leadId = row.lead_id as string;
     const billable = !!row.billable;
+    const deliveryId = (row.delivery_id as string | null | undefined) ?? null;
     const awaitingTherapistConsent = row.delivery_channel === "consent_hold";
-
-    if (billable) {
-      try {
-        const { sendBudgetExhaustedNotification } = await import("./billing-budget.server");
-        await sendBudgetExhaustedNotification(data.therapistId);
-      } catch (notificationError) {
-        console.error("[billing-budget] lead notification failed", {
-          leadId,
-          therapistId: data.therapistId,
-          error: notificationError instanceof Error ? notificationError.message : "unknown_error",
-        });
-      }
-    }
 
     // An admin-created, unclaimed profile gets at most one initial inquiry.
     // The visitor's personal details are held in the database and are NOT
@@ -207,6 +195,7 @@ export const createLead = createServerFn({ method: "POST" })
     } else {
       result = await dispatchLead(channel, destination, {
         visitorName: data.visitorName,
+        deliveryId,
         visitorPhone: visitorPhone.e164,
         problemName,
         populationName,
@@ -215,19 +204,48 @@ export const createLead = createServerFn({ method: "POST" })
       });
     }
 
-    const { error: statusErr } = await supabaseAdmin
-      .from("lead_events")
-      .update({
-        delivery_status: result.status,
-        provider_message_id: result.providerMessageId ?? null,
-      })
-      .eq("id", leadId);
-    // The lead is already recorded. If the post-commit status sync fails, keep
-    // the database row at its existing `pending` status, log the server-side
-    // failure, and still report success to the user. Do not claim delivery
-    // succeeded when that status could not be persisted.
-    if (statusErr) {
-      console.error("[lead] delivery status update failed", { leadId, code: statusErr.code });
+    let statusWriteFailed = false;
+    if (channel === "email" && deliveryId) {
+      if (result.status === "sent") {
+        const { error: attachErr } = await supabaseAdmin.rpc("attach_email_lead_message", {
+          _delivery_id: deliveryId,
+          _message_id: result.providerMessageId ?? "",
+        });
+        if (attachErr) {
+          statusWriteFailed = true;
+          console.error("[email-lead] message id attach failed", { leadId, code: attachErr.code });
+        }
+
+        const { error: providerIdErr } = await supabaseAdmin
+          .from("lead_events")
+          .update({ provider_message_id: result.providerMessageId ?? null })
+          .eq("id", leadId);
+        if (providerIdErr) {
+          statusWriteFailed = true;
+          console.error("[email-lead] provider id sync failed", { leadId, code: providerIdErr.code });
+        }
+      } else {
+        const { error: failErr } = await supabaseAdmin.rpc("fail_email_lead_delivery", {
+          _delivery_id: deliveryId,
+          _error_code: result.error ?? result.status,
+        });
+        if (failErr) {
+          statusWriteFailed = true;
+          console.error("[email-lead] failure bookkeeping failed", { leadId, code: failErr.code });
+        }
+      }
+    } else {
+      const { error: statusErr } = await supabaseAdmin
+        .from("lead_events")
+        .update({
+          delivery_status: result.status,
+          provider_message_id: result.providerMessageId ?? null,
+        })
+        .eq("id", leadId);
+      if (statusErr) {
+        statusWriteFailed = true;
+        console.error("[lead] delivery status update failed", { leadId, code: statusErr.code });
+      }
     }
 
     try {
@@ -245,6 +263,10 @@ export const createLead = createServerFn({ method: "POST" })
       ok: true as const,
       leadId,
       billable,
-      deliveryStatus: statusErr ? ("pending" as const) : result.status,
+      deliveryStatus: statusWriteFailed
+        ? ("pending" as const)
+        : channel === "email" && result.status === "sent"
+          ? ("pending" as const)
+          : result.status,
     };
   });
