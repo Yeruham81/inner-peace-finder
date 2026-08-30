@@ -7,7 +7,7 @@ import { createFileRoute } from "@tanstack/react-router";
  * event. Deferred delivery keeps the reservation; terminal delivery failures
  * release it. Database bookkeeping is idempotent for webhook retries.
  */
-export const Route = createFileRoute("/api/public/email/lead-status")({
+export const Route = createFileRoute("/api/public/whatsapp/lead-status")({
   server: {
     handlers: {
       POST: async ({ request }) => {
