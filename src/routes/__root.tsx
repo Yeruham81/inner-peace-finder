@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import {
   Outlet,
   Link,
@@ -79,6 +79,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // Temporary pre-launch safeguard: keep every route out of search indexes
+      // while the public site remains crawlable for third-party verification.
+      { name: "robots", content: "noindex,follow" },
       { title: "טיפולינקס — פשוט למצוא את הטיפול המתאים" },
       {
         name: "description",
@@ -296,5 +299,3 @@ function SiteFooter() {
         </p>
       </div>
     </footer>
-  );
-}
