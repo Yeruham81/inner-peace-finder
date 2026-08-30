@@ -42,6 +42,17 @@ describe("account/profile UX follow-up", () => {
     expect(editorSource).toContain("preserveNextIdentityTransition.current = true");
   });
 
+  it("protects unsaved profile edits across internal navigation and browser unloads", () => {
+    expect(editorSource).toContain("useBlocker");
+    expect(editorSource).toContain("shouldBlockFn: () => hasUnsavedChangesRef.current");
+    expect(editorSource).toContain("enableBeforeUnload: () => hasUnsavedChangesRef.current");
+    expect(editorSource).toContain("יש שינויים שלא נשמרו");
+    expect(editorSource).toContain("שמירה והמשך");
+    expect(editorSource).toContain("יציאה ללא שמירה");
+    expect(editorSource).toContain("navigationBlocker.reset()");
+    expect(editorSource).toContain("navigationBlocker.proceed()");
+  });
+
   it("keeps profile deletion in the editor and account deletion in settings", () => {
     expect(editorSource).toContain("<DeleteProfilePanel");
     expect(settingsSource).toContain("<DeleteAccountPanel");
