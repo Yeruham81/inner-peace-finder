@@ -52,7 +52,18 @@ describe("account/profile UX follow-up", () => {
       expect(source).toContain("retry: 3");
     }
     expect(overviewSource).toContain("onboardingQuery.isError && onboardingQuery.isFetching");
-    expect(overviewSource).toContain("מנסה שוב לטעון את שלבי ההצטרפות…");
+    expect(overviewSource).toContain("מנסה שוב לטעון את מצב ההצטרפות…");
+  });
+
+  it("keeps onboarding copy focused on named requirements instead of step numbers", () => {
+    expect(onboardingCardSource).toContain("ההצטרפות הושלמה");
+    expect(onboardingCardSource).toContain("נדרש לעדכן את אמצעי התשלום");
+    expect(onboardingCardSource).not.toContain("כל חמשת השלבים");
+    expect(onboardingCardSource).not.toContain("השלב החמישי");
+    expect(onboardingCardSource).not.toContain("number={");
+    expect(billingSource).not.toContain("שלב החיוב");
+    expect(credentialsSource).not.toContain("השלב הושלם ללא אימות מקצועי");
+    expect(settingsSource).not.toContain("זהו השלב האחרון");
   });
 
   it("protects unsaved profile edits across internal navigation and browser unloads", () => {
