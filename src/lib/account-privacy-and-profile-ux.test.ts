@@ -10,6 +10,8 @@ const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 const sidebarSource = read("src", "components", "account", "account-sidebar.tsx");
 const editorSource = read("src", "routes", "_authenticated", "new-profile.tsx");
 const overviewSource = read("src", "routes", "_authenticated", "account.index.tsx");
+const credentialsSource = read("src", "routes", "_authenticated", "account.credentials.tsx");
+const billingSource = read("src", "routes", "_authenticated", "account.billing.tsx");
 const onboardingCardSource = read("src", "components", "account", "profile-onboarding-card.tsx");
 const settingsSource = read("src", "routes", "_authenticated", "account.settings.tsx");
 const leadsSource = read("src", "routes", "_authenticated", "account.leads.tsx");
@@ -40,6 +42,17 @@ describe("account/profile UX follow-up", () => {
     expect(editorSource).toContain("const preserveSaveFeedback = preserveNextIdentityTransition.current");
     expect(editorSource).toContain("if (!preserveSaveFeedback)");
     expect(editorSource).toContain("preserveNextIdentityTransition.current = true");
+  });
+
+  it("reuses onboarding state across account screens and avoids preview focus refetch churn", () => {
+    for (const source of [overviewSource, credentialsSource, billingSource]) {
+      expect(source).toContain('queryKey: ["profile-onboarding", user.id]');
+      expect(source).toContain("staleTime: 60_000");
+      expect(source).toContain("refetchOnWindowFocus: false");
+      expect(source).toContain("retry: 3");
+    }
+    expect(overviewSource).toContain("onboardingQuery.isError && onboardingQuery.isFetching");
+    expect(overviewSource).toContain("מנסה שוב לטעון את שלבי ההצטרפות…");
   });
 
   it("protects unsaved profile edits across internal navigation and browser unloads", () => {
