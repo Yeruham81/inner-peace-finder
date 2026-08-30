@@ -40,4 +40,10 @@ describe("private free-text search", () => {
     expect(explorerStart).toContain("problem: serializeMultiValue(problemSlugs)");
     expect(explorerStart).not.toContain("q: problem");
   });
+  it("fails closed for retired raw q URLs instead of browsing all therapists", () => {
+    expect(route).toContain('searchParams.has("q")');
+    expect(route).toContain("if (!hasRetiredRawQuery && privateQuery !== null)");
+    expect(route).toContain('url.searchParams.set("searchId", createPrivateSearchId())');
+    expect(route).toContain("const queryUnavailable = hasRetiredRawQuery ||");
+  });
 });
