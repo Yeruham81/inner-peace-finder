@@ -18,6 +18,17 @@ function problemSlugFromPath(pathname: string): string | null {
   return pathname.match(PROBLEM_PATH_PATTERN)?.[1] ?? null;
 }
 
+function sanitizeSearchQuery(searchStr: string): string {
+  const raw = searchStr && searchStr !== "?" ? (searchStr.startsWith("?") ? searchStr.slice(1) : searchStr) : "";
+  if (!raw) return "";
+
+  const params = new URLSearchParams(raw);
+  params.delete("q");
+  params.delete("flow");
+  const rendered = params.toString();
+  return rendered ? `?${rendered}` : "";
+}
+
 /**
  * Builds the `ret` value for links that originate from a supported results
  * surface. Search parameters are preserved for `/search`; problem pages use
@@ -25,8 +36,7 @@ function problemSlugFromPath(pathname: string): string | null {
  */
 export function buildResultsReturn(pathname: string, searchStr: string): string | undefined {
   if (pathname === SEARCH_PATH) {
-    const query = searchStr && searchStr !== "?" ? (searchStr.startsWith("?") ? searchStr : `?${searchStr}`) : "";
-    return `${SEARCH_PATH}${query}`;
+    return `${SEARCH_PATH}${sanitizeSearchQuery(searchStr)}`;
   }
   if (problemSlugFromPath(pathname)) return pathname;
   return undefined;
@@ -59,7 +69,7 @@ export function sanitizeResultsReturn(raw: unknown): string {
 
   if (pathname === SEARCH_PATH) {
     if (query.includes("//")) return DEFAULT_SEARCH_RETURN;
-    return `${SEARCH_PATH}${query === "?" ? "" : query}`;
+    return `${SEARCH_PATH}${sanitizeSearchQuery(query)}`;
   }
 
   if (query === "" && problemSlugFromPath(pathname)) return pathname;
