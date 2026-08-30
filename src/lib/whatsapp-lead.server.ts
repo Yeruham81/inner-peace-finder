@@ -45,12 +45,19 @@ export function whatsappContentVariables(payload: WhatsAppLeadMessage): string {
   });
 }
 
+export function whatsappLeadStatusCallbackUrl(deliveryId: string): string {
+  const url = new URL(voiceCallbackUrl(WHATSAPP_LEAD_STATUS_PATH));
+  url.searchParams.set("delivery_id", deliveryId);
+  return url.toString();
+}
+
 /**
  * Send the lead to the therapist. `destination` must already be a normalized
  * E.164 Israeli number resolved server-side from the therapist record.
  */
 export async function sendWhatsAppLead(input: {
   destinationE164: string;
+  deliveryId: string;
   payload: WhatsAppLeadMessage;
 }): Promise<WhatsAppSendResult> {
   const from = whatsappSender();
@@ -65,7 +72,7 @@ export async function sendWhatsAppLead(input: {
   let statusCallback: string;
   try {
     config = getTwilioConfig();
-    statusCallback = voiceCallbackUrl(WHATSAPP_LEAD_STATUS_PATH);
+    statusCallback = whatsappLeadStatusCallbackUrl(input.deliveryId);
   } catch {
     return { ok: false, code: "whatsapp_not_configured" };
   }
