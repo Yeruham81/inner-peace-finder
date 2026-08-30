@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../..");
@@ -69,9 +69,18 @@ describe("profile claim stage 3", () => {
   it("blocks direct phone and WhatsApp disclosure until ownership is accepted", () => {
     const directContact = read("src/lib/contact-actions.functions.ts");
     const contactActions = read("src/components/cta-call-button.tsx");
-    expect(directContact).toContain('therapist.profile_origin === "admin_public_info"');
-    expect(directContact).toContain("!therapist.owner_account_id");
-    expect(directContact).toContain('reason: "therapist_unavailable"');
+    // No contact endpoint releases a therapist number to the browser any more.
+    expect(directContact).toContain('reason: "method_unavailable"');
+    expect(directContact).not.toContain("supabaseAdmin");
+    // The WhatsApp channel is brokered server-side and refuses unclaimed
+    // admin-created profiles inside the transactional submission RPC.
+    const migrationsDir = resolve(root, "supabase/migrations");
+    const whatsappMigration = readdirSync(migrationsDir)
+      .map((file) => readFileSync(resolve(migrationsDir, file), "utf8"))
+      .find((sql) => sql.includes("function public.submit_whatsapp_lead"))!;
+    expect(whatsappMigration).toContain("v_therapist.owner_account_id is null");
+    expect(whatsappMigration).toContain("v_therapist.do_not_republish");
+    expect(whatsappMigration).toContain("'therapist_unavailable'");
     expect(contactActions).toContain('props.unclaimedProfile\n    ? ["email"]');
   });
 

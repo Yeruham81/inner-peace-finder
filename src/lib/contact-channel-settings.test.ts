@@ -21,7 +21,7 @@ const migration = read(
 const adminRoute = read("routes", "admin", "settings.tsx");
 const accountPanel = read("components", "account", "contact-preferences-panel.tsx");
 const therapistFunctions = read("lib", "therapists.functions.ts");
-const whatsappFunctions = read("lib", "contact-actions.functions.ts");
+const whatsappFunctions = read("lib", "whatsapp-lead.functions.ts");
 const voiceFunctions = read("lib", "voice-call.functions.ts");
 const leadFunctions = read("lib", "lead.functions.ts");
 

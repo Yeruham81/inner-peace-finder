@@ -358,7 +358,6 @@ describe("public eligibility — centralization", () => {
     "lib/structured-search.functions.ts",
     "lib/query-interpreter.functions.ts",
     "lib/public-therapist-queries.ts",
-    "lib/contact-actions.functions.ts",
   ];
 
   it("no public query file hard-codes the eligibility values inline", () => {
@@ -428,16 +427,21 @@ describe("public eligibility — centralization", () => {
     expect(ctaSection.includes("client.server")).toBe(true);
     expect(ctaSection.includes("publicClient()")).toBe(false);
 
+    // The legacy direct-contact endpoint no longer releases any number: both
+    // phone and WhatsApp are brokered entirely server-side.
     const directSrc = read("lib/contact-actions.functions.ts");
-    expect(
-      directSrc.includes('select("phone, contact_methods, profile_origin, owner_account_id, do_not_republish")'),
-    ).toBe(true);
-    expect(directSrc.includes("applyEligibility")).toBe(true);
-    expect(directSrc.includes("supabaseAdmin")).toBe(true);
-    expect(directSrc.includes('therapist.profile_origin === "admin_public_info"')).toBe(true);
-    expect(directSrc.includes("!therapist.owner_account_id")).toBe(true);
-    expect(directSrc.includes("therapist.do_not_republish")).toBe(true);
+    expect(directSrc.includes('reason: "method_unavailable"')).toBe(true);
+    expect(directSrc.includes("supabaseAdmin")).toBe(false);
+    expect(directSrc.includes("phone: null")).toBe(true);
     expect(directSrc.includes("record_cta_click")).toBe(false);
+
+    // WhatsApp delivery reads the destination server-side and never returns it.
+    const waSrc = read("lib/whatsapp-lead.functions.ts");
+    expect(waSrc.includes("submit_whatsapp_lead")).toBe(true);
+    expect(waSrc.includes("destinationE164")).toBe(true);
+    const waClient = read("components/whatsapp-lead-modal.tsx");
+    expect(waClient.includes("wa.me")).toBe(false);
+    expect(waClient.includes("phone: ")).toBe(false);
   });
 
   it("production search remains Unified-only with no Legacy fallback", () => {
