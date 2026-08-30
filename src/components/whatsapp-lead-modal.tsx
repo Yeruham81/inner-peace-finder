@@ -344,9 +344,7 @@ export function WhatsAppLeadModal({
               />
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              הפרטים שתמלאו כאן יישלחו למטפל/ת ב־WhatsApp דרך טיפולינקס. מספר הטלפון של המטפל/ת אינו נחשף.
-            </p>
+            <p className="text-xs text-muted-foreground">הפרטים שתמלאו כאן יישלחו למטפל/ת ב־WhatsApp דרך טיפולינקס.</p>
 
             {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
 
