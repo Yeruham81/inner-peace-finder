@@ -43,8 +43,11 @@ function AccountBillingPage() {
   const updateMonthlyBudgetFn = useServerFn(updateMyMonthlyBudget);
   const setTestPaymentFn = useServerFn(setMyTestPaymentMethod);
   const onboarding = useQuery({
-    queryKey: ["profile-onboarding"],
+    queryKey: ["profile-onboarding", user.id],
     queryFn: () => getOnboardingFn(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 3,
   });
   const budget = useQuery({
     queryKey: ["my-monthly-budget"],
