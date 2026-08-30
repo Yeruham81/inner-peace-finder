@@ -911,7 +911,6 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
     navigate({
       to: "/search",
       search: {
-        q: problem,
         problem: serializeMultiValue(problemSlugs),
         population: populationSlug,
       },
