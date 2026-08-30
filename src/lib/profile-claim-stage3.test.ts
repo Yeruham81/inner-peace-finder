@@ -74,7 +74,10 @@ describe("profile claim stage 3", () => {
     expect(directContact).not.toContain("supabaseAdmin");
     // The WhatsApp channel is brokered server-side and refuses unclaimed
     // admin-created profiles inside the transactional submission RPC.
-    const whatsappMigration = read("supabase/migrations/20260828010000_whatsapp_lead_channel.sql");
+    const migrationsDir = resolve(root, "supabase/migrations");
+    const whatsappMigration = readdirSync(migrationsDir)
+      .map((file) => readFileSync(resolve(migrationsDir, file), "utf8"))
+      .find((sql) => sql.includes("function public.submit_whatsapp_lead"))!;
     expect(whatsappMigration).toContain("v_therapist.owner_account_id is null");
     expect(whatsappMigration).toContain("v_therapist.do_not_republish");
     expect(whatsappMigration).toContain("'therapist_unavailable'");
