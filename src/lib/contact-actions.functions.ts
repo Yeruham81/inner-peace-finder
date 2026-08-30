@@ -1,12 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { applyEligibility } from "./search-eligibility";
-
 const DirectContactInput = z.object({
   therapistId: z.string().uuid(),
-  // Phone is deliberately NOT accepted here: the phone channel is served by the
-  // server-bridged callback flow, which never releases a number to the browser.
+  // Neither phone nor WhatsApp numbers are released to the browser any more:
+  // the phone channel is served by the server-bridged callback flow, and
+  // WhatsApp leads are delivered server-side by Tipulinks.
   method: z.enum(["whatsapp"]),
 });
 
@@ -15,62 +14,13 @@ export type DirectContactTargetResult =
   | { ok: false; reason: "therapist_unavailable" | "method_unavailable"; phone: null };
 
 /**
- * Releases a direct phone/WhatsApp target only after an explicit user action.
+ * Legacy direct-contact endpoint, retained only as a hard boundary.
  *
- * This function is intentionally non-billable. Final phone billing depends on
- * an answered-call event, and written-lead billing depends on successful lead
- * creation/handoff; neither condition is proven by merely opening a dialer or
- * WhatsApp.
+ * Every public contact channel is now brokered server-side, so this function
+ * never releases a therapist number. It is intentionally non-billable.
  */
 export const getDirectContactTarget = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DirectContactInput.parse(input))
-  .handler(async ({ data }): Promise<DirectContactTargetResult> => {
-    // WhatsApp is now delivered server-side by Tipulinks (see
-    // whatsapp-lead.functions.ts). No caller may obtain a therapist WhatsApp
-    // number through this endpoint any more.
-    if (data.method === "whatsapp") {
-      return { ok: false, reason: "method_unavailable", phone: null };
-    }
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: therapist, error } = await applyEligibility(
-      supabaseAdmin
-        .from("therapists")
-        .select("phone, contact_methods, profile_origin, owner_account_id, do_not_republish")
-        .eq("id", data.therapistId),
-    ).maybeSingle();
-
-    if (error) throw new Error(error.message);
-    if (
-      !therapist ||
-      therapist.do_not_republish ||
-      (therapist.profile_origin === "admin_public_info" && !therapist.owner_account_id)
-    ) {
-      return {
-        ok: false,
-        reason: "therapist_unavailable",
-        phone: null,
-      };
-    }
-
-    const contactMethods = Array.isArray(therapist.contact_methods) ? therapist.contact_methods : [];
-    if (!contactMethods.includes(data.method)) {
-      return {
-        ok: false,
-        reason: "method_unavailable",
-        phone: null,
-      };
-    }
-
-    const phone = therapist.phone?.trim() || null;
-    if (!phone) {
-      return {
-        ok: false,
-        reason: "method_unavailable",
-        phone: null,
-      };
-    }
-
-    return { ok: true, phone };
+  .handler(async (): Promise<DirectContactTargetResult> => {
+    return { ok: false, reason: "method_unavailable", phone: null };
   });
