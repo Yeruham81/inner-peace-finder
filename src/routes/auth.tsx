@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ensureTherapistAccount } from "@/lib/therapist-accounts.functions";
+import { getTherapistRegistrationAvailability } from "@/lib/therapist-registration-settings.functions";
+import { THERAPIST_REGISTRATION_CLOSED_MESSAGE } from "@/lib/therapist-registration-settings";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).optional(),
@@ -33,9 +36,20 @@ function safeNext(next: string | undefined): string {
   return next;
 }
 
+function isRegistrationClosedError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes(THERAPIST_REGISTRATION_CLOSED_MESSAGE);
+}
+
 function AuthPage() {
   const { mode, next } = useSearch({ from: "/auth" });
   const navigate = useNavigate();
+  const getRegistrationFn = useServerFn(getTherapistRegistrationAvailability);
+  const registrationQuery = useQuery({
+    queryKey: ["therapist-registration-availability"],
+    queryFn: () => getRegistrationFn(),
+    staleTime: 30_000,
+  });
+  const registrationEnabled = registrationQuery.data?.enabled === true;
   const [tab, setTab] = useState<"signin" | "signup" | "forgot">(mode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +58,14 @@ function AuthPage() {
   const [msg, setMsg] = useState<{ kind: "err" | "ok"; text: string } | null>(null);
   const dest = safeNext(next);
 
-  // If already signed in, ensure account row exists and redirect.
+  useEffect(() => {
+    if (!registrationQuery.isSuccess || registrationEnabled || tab !== "signup") return;
+    setTab("signin");
+    setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
+  }, [registrationEnabled, registrationQuery.isSuccess, tab]);
+
+  // If already signed in, ensure account row exists and redirect. Existing
+  // therapist accounts keep working while new-account creation is disabled.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -52,10 +73,19 @@ function AuthPage() {
       if (!cancelled && data.session) {
         try {
           await ensureTherapistAccount();
-        } catch {
-          /* non-fatal */
+        } catch (error) {
+          if (isRegistrationClosedError(error)) {
+            await supabase.auth.signOut({ scope: "local" });
+            if (!cancelled) {
+              setTab("signin");
+              setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
+            }
+            return;
+          }
+          // Preserve the existing behavior for unrelated account bootstrap
+          // failures; the account area will surface those errors if needed.
         }
-        navigate({ to: dest });
+        if (!cancelled) navigate({ to: dest });
       }
     })();
     return () => {
@@ -75,14 +105,25 @@ function AuthPage() {
     }
     try {
       await ensureTherapistAccount();
-    } catch {
-      /* non-fatal */
+    } catch (accountError) {
+      if (isRegistrationClosedError(accountError)) {
+        await supabase.auth.signOut({ scope: "local" });
+        setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
+        setLoading(false);
+        return;
+      }
+      /* preserve existing non-fatal behavior for unrelated bootstrap errors */
     }
     navigate({ to: dest });
   }
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!registrationEnabled) {
+      setTab("signin");
+      setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
+      return;
+    }
     setLoading(true);
     setMsg(null);
     const { data, error } = await supabase.auth.signUp({
@@ -103,8 +144,15 @@ function AuthPage() {
     if (data.session) {
       try {
         await ensureTherapistAccount();
-      } catch {
-        /* non-fatal */
+      } catch (accountError) {
+        if (isRegistrationClosedError(accountError)) {
+          await supabase.auth.signOut({ scope: "local" });
+          setTab("signin");
+          setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
+          setLoading(false);
+          return;
+        }
+        /* preserve existing non-fatal behavior for unrelated bootstrap errors */
       }
       navigate({ to: dest });
       return;
@@ -143,11 +191,19 @@ function AuthPage() {
       return;
     }
     if (res.redirected) return;
-    // Popup flow: session set, ensure account and redirect.
+    // Popup flow: session set, ensure account and redirect. A new OAuth
+    // identity cannot become a therapist account while registration is off.
     try {
       await ensureTherapistAccount();
-    } catch {
-      /* non-fatal */
+    } catch (accountError) {
+      if (isRegistrationClosedError(accountError)) {
+        await supabase.auth.signOut({ scope: "local" });
+        setTab("signin");
+        setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
+        setLoading(false);
+        return;
+      }
+      /* preserve existing non-fatal behavior for unrelated bootstrap errors */
     }
     navigate({ to: dest });
   }
@@ -158,7 +214,9 @@ function AuthPage() {
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-foreground">{tab === "forgot" ? "שחזור סיסמה" : "כניסת מטפלים"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            הצטרפו לפלטפורמה, נהלו את הפרופיל שלכם וקבלו פניות ממטופלים.
+            {registrationEnabled
+              ? "הצטרפו לפלטפורמה, נהלו את הפרופיל שלכם וקבלו פניות ממטופלים."
+              : "הכניסה לחשבונות קיימים זמינה. הרשמת מטפלים חדשים סגורה כרגע."}
           </p>
         </div>
 
@@ -174,16 +232,18 @@ function AuthPage() {
             >
               כניסה
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTab("signup");
-                setMsg(null);
-              }}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${tab === "signup" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-            >
-              הרשמה
-            </button>
+            {registrationEnabled && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("signup");
+                  setMsg(null);
+                }}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${tab === "signup" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+              >
+                הרשמה
+              </button>
+            )}
           </div>
         )}
 
@@ -242,7 +302,7 @@ function AuthPage() {
           </form>
         )}
 
-        {tab === "signup" && (
+        {tab === "signup" && registrationEnabled && (
           <form onSubmit={handleSignUp} className="grid gap-3">
             <div>
               <Label htmlFor="full_name">שם מלא</Label>
@@ -305,6 +365,12 @@ function AuthPage() {
               חזרה לכניסה
             </button>
           </form>
+        )}
+
+        {!registrationEnabled && !registrationQuery.isLoading && tab !== "forgot" && !msg && (
+          <div className="mt-4 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            {THERAPIST_REGISTRATION_CLOSED_MESSAGE}
+          </div>
         )}
 
         {msg && (

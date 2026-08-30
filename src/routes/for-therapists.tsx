@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -22,6 +24,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { absoluteUrl } from "@/lib/seo";
+import { getTherapistRegistrationAvailability } from "@/lib/therapist-registration-settings.functions";
 
 const THERAPIST_SIGNUP_URL = "/auth" as const;
 
@@ -161,6 +164,14 @@ const profileManagementFeatures = [
 ];
 
 function ForTherapistsPage() {
+  const getRegistrationFn = useServerFn(getTherapistRegistrationAvailability);
+  const registrationQuery = useQuery({
+    queryKey: ["therapist-registration-availability"],
+    queryFn: () => getRegistrationFn(),
+    staleTime: 30_000,
+  });
+  const registrationEnabled = registrationQuery.data?.enabled === true;
+
   return (
     <main
       dir="rtl"
@@ -174,7 +185,7 @@ function ForTherapistsPage() {
 
       <ProfileManagementSection />
 
-      <JoinSection />
+      <JoinSection registrationEnabled={registrationEnabled} />
     </main>
   );
 }
@@ -541,13 +552,13 @@ function ProfileManagementSection() {
   );
 }
 
-function JoinSection() {
+function JoinSection({ registrationEnabled }: { registrationEnabled: boolean }) {
   return (
     <section id="join" className="scroll-mt-6 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
       <div className="mx-auto max-w-5xl rounded-[2rem] border border-primary/20 bg-primary/10 px-6 py-12 text-center shadow-sm sm:px-10 sm:py-16">
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm">
           <Sparkles className="h-4 w-4" />
-          הטבות למצטרפים חדשים
+          {registrationEnabled ? "הטבות למצטרפים חדשים" : "ההרשמה תיפתח בהמשך"}
         </div>
 
         <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -555,18 +566,29 @@ function JoinSection() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-          הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות
+          {registrationEnabled
+            ? "הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות"
+            : "בשלב זה ההרשמה למטפלים חדשים סגורה זמנית. חשבונות קיימים ממשיכים לפעול כרגיל."}
         </p>
 
         <div className="mt-8">
-          <Link
-            to={THERAPIST_SIGNUP_URL}
-            search={{ mode: "signup" as const }}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-base font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            פתיחת פרופיל מטפל בחינם
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+          {registrationEnabled ? (
+            <Link
+              to={THERAPIST_SIGNUP_URL}
+              search={{ mode: "signup" as const }}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-base font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              פתיחת פרופיל מטפל בחינם
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          ) : (
+            <div className="mx-auto max-w-xl rounded-2xl border border-primary/15 bg-background/80 px-5 py-4">
+              <p className="text-sm font-semibold text-foreground">ההרשמה למטפלים חדשים אינה זמינה כרגע</p>
+              <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                ניתן יהיה לפתוח פרופיל חדש כאשר ההרשמה תופעל מחדש.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </section>
