@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -12,6 +13,7 @@ export type DeliveryResult = {
 export type LeadPayload = {
   visitorName: string;
   visitorPhone: string;
+  deliveryId?: string | null;
   problemName?: string | null;
   populationName?: string | null;
   message: string;
@@ -71,6 +73,46 @@ async function sendSms(to: string, body: string): Promise<DeliveryResult> {
 
 const BREVO_TEMPLATE_ID = 1;
 
+export const BREVO_EMAIL_LEAD_TAG_PREFIX = "tipulinks_email_lead_";
+
+export function brevoEmailLeadTag(deliveryId: string): string {
+  return `${BREVO_EMAIL_LEAD_TAG_PREFIX}${deliveryId}`;
+}
+
+export function brevoEmailLeadDeliveryId(tags: unknown): string | null {
+  if (!Array.isArray(tags)) return null;
+  for (const tag of tags) {
+    if (typeof tag !== "string" || !tag.startsWith(BREVO_EMAIL_LEAD_TAG_PREFIX)) continue;
+    const candidate = tag.slice(BREVO_EMAIL_LEAD_TAG_PREFIX.length);
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+export function normalizeBrevoEmailEvent(event: unknown): string {
+  if (typeof event !== "string") return "";
+  const normalized = event
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase();
+  if (normalized === "invalid") return "invalid_email";
+  return normalized;
+}
+
+export function verifyBrevoWebhookAuthorization(request: Request): boolean {
+  const expected = process.env["BREVO_WEBHOOK_SECRET"]?.trim();
+  if (!expected) return false;
+  const header = request.headers.get("authorization") ?? "";
+  if (!header.startsWith("Bearer ")) return false;
+  const actual = header.slice("Bearer ".length);
+  const expectedBytes = Buffer.from(expected);
+  const actualBytes = Buffer.from(actual);
+  if (expectedBytes.length !== actualBytes.length) return false;
+  return timingSafeEqual(expectedBytes, actualBytes);
+}
+
 async function sendEmail(to: string, payload: LeadPayload): Promise<DeliveryResult> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
@@ -92,6 +134,7 @@ async function sendEmail(to: string, payload: LeadPayload): Promise<DeliveryResu
         },
       ],
       templateId: BREVO_TEMPLATE_ID,
+      ...(payload.deliveryId ? { tags: ["tipulinks_email_lead", brevoEmailLeadTag(payload.deliveryId)] } : {}),
       params: {
         therapist_name: payload.therapistName,
         sender_name: payload.visitorName,
