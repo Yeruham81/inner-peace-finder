@@ -48,6 +48,9 @@ describe("account/profile UX follow-up", () => {
     expect(editorSource).toContain("hasUnsavedChangesRef.current");
     expect(editorSource).toContain("pendingNavigationHref");
     expect(editorSource).toContain("יש שינויים שלא נשמרו");
+    expect(editorSource).toContain("קיימים שינויים בפרופיל שעדיין לא נשמרו. יציאה עכשיו תגרום לאובדן השינויים.");
+    expect(editorSource).toContain('<DialogTitle className="text-right">יש שינויים שלא נשמרו</DialogTitle>');
+    expect(editorSource).toContain('<DialogDescription className="text-right leading-6">');
     expect(editorSource).toContain("שמירה והמשך");
     expect(editorSource).toContain("יציאה ללא שמירה");
     expect(editorSource).toContain("continuePendingNavigation");
