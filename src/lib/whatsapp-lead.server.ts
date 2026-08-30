@@ -13,12 +13,9 @@ import { getTwilioConfig, voiceCallbackUrl } from "./twilio-voice.server";
 
 export const WHATSAPP_LEAD_STATUS_PATH = "/api/public/whatsapp/lead-status";
 
-export type WhatsAppSendResult =
-  | { ok: true; sid: string }
-  | { ok: false; code: string };
+export type WhatsAppSendResult = { ok: true; sid: string } | { ok: false; code: string };
 
 export type WhatsAppLeadMessage = {
-  therapistName: string;
   visitorName: string;
   visitorPhone: string;
   message: string;
@@ -48,12 +45,16 @@ export function renderWhatsAppLeadBody(payload: WhatsAppLeadMessage): string {
   ].join("\n");
 }
 
+export function whatsappDirectChatUrl(visitorPhoneE164: string): string {
+  return `https://wa.me/${visitorPhoneE164.replace(/^\+/, "")}`;
+}
+
 export function whatsappContentVariables(payload: WhatsAppLeadMessage): string {
   return JSON.stringify({
-    "1": payload.therapistName,
-    "2": payload.visitorName,
-    "3": payload.visitorPhone,
-    "4": payload.message,
+    "1": payload.visitorName,
+    "2": payload.visitorPhone,
+    "3": payload.message,
+    "4": whatsappDirectChatUrl(payload.visitorPhone),
   });
 }
 
@@ -95,24 +96,19 @@ export async function sendWhatsAppLead(input: {
 
   let response: Response;
   try {
-    response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${credentials}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params,
+    response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-    );
+      body: params,
+    });
   } catch {
     return { ok: false, code: "provider_unreachable" };
   }
 
-  const json = (await response.json().catch(() => null)) as
-    | { sid?: string; code?: number; message?: string }
-    | null;
+  const json = (await response.json().catch(() => null)) as { sid?: string; code?: number; message?: string } | null;
 
   if (!response.ok || !json?.sid) {
     // Log the provider status/code only — never the destination or message.
