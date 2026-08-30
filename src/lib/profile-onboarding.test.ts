@@ -56,7 +56,7 @@ describe("profile onboarding state", () => {
     ).toBe(false);
   });
 
-  it("completes all five steps only with an active payment method", () => {
+  it("completes onboarding only with an active payment method", () => {
     const active = buildProfileOnboardingStatus({
       accountStatus: "active",
       credentialVerificationSkippedAt: null,
@@ -83,7 +83,7 @@ describe("profile onboarding state", () => {
     expect(notConfigured.isBillingPaused).toBe(true);
   });
 
-  it("opens the payment step and marks a billing-paused profile as non-public", () => {
+  it("requires payment repair and marks a billing-paused profile as non-public", () => {
     const status = buildProfileOnboardingStatus({
       accountStatus: "active",
       credentialVerificationSkippedAt: "2026-08-23T00:00:00Z",
@@ -167,11 +167,11 @@ describe("completed profile publication controls", () => {
     );
   });
 
-  it("uses a compact green management panel and reopens the steps only for billing repair", () => {
+  it("uses a compact green management panel and shows only payment when billing repair is required", () => {
     expect(onboardingCard).toContain(
       "const compact = !billingNeedsAction && (status.allStepsComplete || status.isPublished)",
     );
-    expect(onboardingCard).toContain("כל חמשת השלבים הושלמו");
+    expect(onboardingCard).toContain("ההצטרפות הושלמה");
     expect(onboardingCard).toContain("bg-emerald-50/85");
     expect(onboardingCard).toContain('<X className="h-4 w-4" />');
     expect(onboardingCard).toContain("פרסום הפרופיל");
@@ -179,8 +179,12 @@ describe("completed profile publication controls", () => {
     expect(onboardingCard).toContain("הפעלת הפרופיל מחדש");
     expect(onboardingCard).toContain("פתיחת הפרופיל");
     expect(onboardingCard).toContain("const displayedSteps = paymentRepairOnly");
-    expect(onboardingCard).toContain('step.id === "payment" ? 5 : index + 1');
-    expect(onboardingCard).toContain("ארבעת השלבים הראשונים כבר הושלמו");
+    expect(onboardingCard).not.toContain('step.id === "payment" ? 5 : index + 1');
+    expect(onboardingCard).not.toContain("number={");
+    expect(onboardingCard).toContain("נדרש לעדכן את אמצעי התשלום");
+    expect(onboardingCard).not.toContain("כל חמשת השלבים");
+    expect(onboardingCard).not.toContain("השלב החמישי");
+    expect(onboardingCard).not.toMatch(/\{status\.completedCount\}\/\{status\.totalCount\}/);
   });
 
   it("keeps public-state actions in overview while the therapist editor only saves and previews", () => {
