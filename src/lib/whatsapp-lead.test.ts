@@ -1,9 +1,11 @@
+import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 
 import {
   WHATSAPP_LEAD_STATUS_PATH,
-  renderWhatsAppLeadBody,
+  sendWhatsAppLead,
+  whatsappContentSid,
   whatsappContentVariables,
   whatsappDirectChatUrl,
   whatsappSender,
@@ -12,6 +14,7 @@ import { voiceCallbackUrl } from "./twilio-voice.server";
 
 const ORIGINAL_ORIGIN = process.env["TIPULINKS_PUBLIC_ORIGIN"];
 const ORIGINAL_FROM = process.env["TWILIO_WHATSAPP_FROM"];
+const ORIGINAL_CONTENT_SID = process.env["TIPULINKS_WHATSAPP_LEAD_CONTENT_SID"];
 
 beforeEach(() => {
   process.env["TIPULINKS_PUBLIC_ORIGIN"] = "https://tipulinks.co.il";
@@ -22,6 +25,8 @@ afterEach(() => {
   else process.env["TIPULINKS_PUBLIC_ORIGIN"] = ORIGINAL_ORIGIN;
   if (ORIGINAL_FROM === undefined) delete process.env["TWILIO_WHATSAPP_FROM"];
   else process.env["TWILIO_WHATSAPP_FROM"] = ORIGINAL_FROM;
+  if (ORIGINAL_CONTENT_SID === undefined) delete process.env["TIPULINKS_WHATSAPP_LEAD_CONTENT_SID"];
+  else process.env["TIPULINKS_WHATSAPP_LEAD_CONTENT_SID"] = ORIGINAL_CONTENT_SID;
 });
 
 describe("whatsapp lead status callback URL", () => {
@@ -58,13 +63,6 @@ describe("message rendering", () => {
     message: "אשמח לתאם פגישה",
   };
 
-  it("includes the visitor's callback details and message", () => {
-    const body = renderWhatsAppLeadBody(payload);
-    expect(body).toContain("יוסי לוי");
-    expect(body).toContain("+972501234567");
-    expect(body).toContain("אשמח לתאם פגישה");
-  });
-
   it("maps template variables in a stable order", () => {
     expect(JSON.parse(whatsappContentVariables(payload))).toEqual({
       "1": "יוסי לוי",
@@ -76,6 +74,39 @@ describe("message rendering", () => {
 
   it("builds the direct WhatsApp link from E.164 without the leading plus", () => {
     expect(whatsappDirectChatUrl("+972501234567")).toBe("https://wa.me/972501234567");
+  });
+});
+
+describe("WhatsApp approved template requirement", () => {
+  const payload = {
+    visitorName: "יוסי לוי",
+    visitorPhone: "+972501234567",
+    message: "אשמח לתאם פגישה",
+  };
+
+  it("fails closed before Twilio when the approved Content SID is missing", async () => {
+    process.env["TWILIO_WHATSAPP_FROM"] = "+97233828222";
+    delete process.env["TIPULINKS_WHATSAPP_LEAD_CONTENT_SID"];
+
+    expect(whatsappContentSid()).toBeNull();
+    expect(
+      await sendWhatsAppLead({
+        destinationE164: "+972501111111",
+        payload,
+      }),
+    ).toEqual({ ok: false, code: "whatsapp_template_not_configured" });
+  });
+
+  it("reads the approved Content SID from the server environment", () => {
+    process.env["TIPULINKS_WHATSAPP_LEAD_CONTENT_SID"] = "HXtest-approved-template";
+    expect(whatsappContentSid()).toBe("HXtest-approved-template");
+  });
+
+  it("contains no plain Body fallback in the WhatsApp sender", () => {
+    const serverSource = readFileSync(join(import.meta.dir, "whatsapp-lead.server.ts"), "utf8");
+    expect(serverSource).not.toContain('params.set("Body"');
+    expect(serverSource).not.toContain("renderWhatsAppLeadBody");
+    expect(serverSource).toContain("whatsapp_template_not_configured");
   });
 });
 
