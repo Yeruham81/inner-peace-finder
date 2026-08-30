@@ -32,19 +32,6 @@ export function whatsappContentSid(): string | null {
   return process.env["TIPULINKS_WHATSAPP_LEAD_CONTENT_SID"]?.trim() || null;
 }
 
-/** Plain-text fallback used when no approved template is configured. */
-export function renderWhatsAppLeadBody(payload: WhatsAppLeadMessage): string {
-  return [
-    "פנייה חדשה מטיפולינקס",
-    "",
-    `שם: ${payload.visitorName}`,
-    `טלפון: ${payload.visitorPhone}`,
-    "",
-    "הודעה:",
-    payload.message,
-  ].join("\n");
-}
-
 export function whatsappDirectChatUrl(visitorPhoneE164: string): string {
   return `https://wa.me/${visitorPhoneE164.replace(/^\+/, "")}`;
 }
@@ -69,6 +56,11 @@ export async function sendWhatsAppLead(input: {
   const from = whatsappSender();
   if (!from) return { ok: false, code: "whatsapp_sender_not_configured" };
 
+  const contentSid = whatsappContentSid();
+  if (!contentSid) {
+    return { ok: false, code: "whatsapp_template_not_configured" };
+  }
+
   let config: ReturnType<typeof getTwilioConfig>;
   let statusCallback: string;
   try {
@@ -82,15 +74,9 @@ export async function sendWhatsAppLead(input: {
     To: `whatsapp:${input.destinationE164}`,
     From: from,
     StatusCallback: statusCallback,
+    ContentSid: contentSid,
+    ContentVariables: whatsappContentVariables(input.payload),
   });
-
-  const contentSid = whatsappContentSid();
-  if (contentSid) {
-    params.set("ContentSid", contentSid);
-    params.set("ContentVariables", whatsappContentVariables(input.payload));
-  } else {
-    params.set("Body", renderWhatsAppLeadBody(input.payload));
-  }
 
   const credentials = Buffer.from(`${config.apiKeySid}:${config.apiKeySecret}`).toString("base64");
 
