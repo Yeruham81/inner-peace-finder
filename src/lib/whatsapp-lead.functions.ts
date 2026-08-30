@@ -121,7 +121,6 @@ export const createWhatsAppLead = createServerFn({ method: "POST" })
     const sent = await sendWhatsAppLead({
       destinationE164: therapistDestination.e164,
       payload: {
-        therapistName: row.therapist_name ?? "",
         visitorName: data.visitorName,
         visitorPhone: visitorPhone.e164,
         message: data.message,
