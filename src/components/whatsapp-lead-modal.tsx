@@ -9,6 +9,24 @@ import { CHALLENGE_ERROR_MESSAGES } from "@/components/lead-modal";
 
 type Challenge = { id: string; prompt: string };
 
+function WhatsAppIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M20.5 11.9a8.5 8.5 0 0 1-12.6 7.45L3.5 20.5l1.17-4.25A8.5 8.5 0 1 1 20.5 11.9Z" />
+      <path d="M8.15 7.65c.18-.4.38-.41.58-.42h.5c.16 0 .42.06.64.53.22.48.76 1.86.83 2 .07.15.12.32.02.51-.1.2-.15.32-.3.49-.15.17-.31.37-.44.5-.15.15-.3.31-.13.61.17.3.75 1.24 1.62 2.01 1.11.99 2.05 1.3 2.34 1.44.3.15.47.13.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.72.81 2.02.96.3.15.49.22.57.35.07.12.07.72-.17 1.42-.25.7-1.43 1.34-1.97 1.43-.5.08-1.14.12-1.84-.1-.42-.13-.96-.31-1.65-.61a12.7 12.7 0 0 1-4.83-4.27c-.13-.17-1.18-1.57-1.18-3 0-1.42.75-2.13 1.02-2.42Z" />
+    </svg>
+  );
+}
+
 function defaultMessage(problemName?: string | null, populationName?: string | null): string {
   const base = "היי, הגעתי אליך דרך טיפולינקס.";
   if (problemName && populationName) {
@@ -332,9 +350,10 @@ export function WhatsAppLeadModal({
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? "שולח..." : "שליחת ההודעה"}
+              <WhatsAppIcon className="h-5 w-5 shrink-0" />
+              <span>{submitting ? "שולח..." : "שלח הודעה בווטסאפ"}</span>
             </button>
           </form>
         )}
