@@ -1,5 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 /**
  * Twilio WhatsApp message-status callback (POST only, signature required).
  *
@@ -19,6 +17,12 @@ export const Route = createFileRoute("/api/public/whatsapp/lead-status")({
         const messageSid = verified.params["MessageSid"] ?? verified.params["SmsSid"] ?? "";
         const status = verified.params["MessageStatus"] ?? verified.params["SmsStatus"] ?? "";
         const errorCode = verified.params["ErrorCode"] ?? "";
+        const deliveryIdRaw = new URL(verified.url).searchParams.get("delivery_id") ?? "";
+        const deliveryId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          deliveryIdRaw,
+        )
+          ? deliveryIdRaw
+          : null;
 
         if (!messageSid || !status) return new Response("", { status: 204 });
 
@@ -27,6 +31,7 @@ export const Route = createFileRoute("/api/public/whatsapp/lead-status")({
           _message_sid: messageSid,
           _status: status,
           _error_code: errorCode || (null as unknown as string),
+          _delivery_id: deliveryId ?? (null as unknown as string),
         });
         if (error) {
           console.error("[whatsapp-lead] status bookkeeping failed", { code: error.code });
