@@ -37,6 +37,15 @@ describe("technical SEO foundation", () => {
     expect(robots).toContain("Sitemap: https://tipulinks.co.il/sitemap.xml");
   });
 
+  it("temporarily keeps the entire site out of search indexes without blocking crawlers", () => {
+    const root = readSource("routes/__root.tsx");
+    expect(root).toContain('{ name: "robots", content: "noindex,follow" }');
+
+    const robots = readFileSync(join(PROJECT, "public/robots.txt"), "utf8");
+    expect(robots).toContain("Allow: /");
+    expect(robots).not.toContain("Disallow: /");
+  });
+
   it("sets canonical links on every indexable public page", () => {
     for (const route of [
       "routes/index.tsx",
