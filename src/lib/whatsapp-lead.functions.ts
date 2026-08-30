@@ -120,6 +120,7 @@ export const createWhatsAppLead = createServerFn({ method: "POST" })
     const { sendWhatsAppLead } = await import("./whatsapp-lead.server");
     const sent = await sendWhatsAppLead({
       destinationE164: therapistDestination.e164,
+      deliveryId,
       payload: {
         visitorName: data.visitorName,
         visitorPhone: visitorPhone.e164,
