@@ -334,6 +334,10 @@ async function resolveAccount(
     .maybeSingle();
   if (existingError) throw new Error(`therapist_accounts: ${existingError.message}`);
   if (existing) return existing.id as string;
+
+  const { assertTherapistRegistrationEnabled } = await import("./therapist-registration-settings.server");
+  await assertTherapistRegistrationEnabled();
+
   const { data: created, error } = await supabase
     .from("therapist_accounts")
     .insert({ auth_user_id: userId })
