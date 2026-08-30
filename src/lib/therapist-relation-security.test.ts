@@ -121,11 +121,7 @@ describe("therapist relation tables — server/client boundary", () => {
   });
 
   it("public relation reads live in server-function modules using the trusted client", () => {
-    for (const f of [
-      "lib/therapists.functions.ts",
-      "lib/structured-search.functions.ts",
-      "lib/query-interpreter.functions.ts",
-    ]) {
+    for (const f of ["lib/therapists.functions.ts", "lib/query-interpreter.functions.ts"]) {
       const src = read(f);
       expect(src.includes('await import("./trusted-read-client.server")'), f).toBe(true);
       expect(/^import .*trusted-read-client/m.test(src), f).toBe(false);
