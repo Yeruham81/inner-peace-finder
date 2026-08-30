@@ -1,88 +1,53 @@
 import { createFileRoute } from "@tanstack/react-router";
-
 /**
- * Brevo transactional-email status webhook.
+ * Twilio WhatsApp message-status callback (POST only, signature required).
  *
- * Billing boundary: only `delivered` may turn an Email lead into a billable
- * event. Deferred delivery keeps the reservation; terminal delivery failures
- * release it. Database bookkeeping is idempotent for webhook retries.
+ * This is the ONLY signal that can charge a WhatsApp lead: the therapist is
+ * billed exactly once when the provider reports `delivered`. `failed` and
+ * `undelivered` release the budget reservation without any charge. Retries and
+ * out-of-order deliveries are absorbed idempotently by the database function.
  */
 export const Route = createFileRoute("/api/public/whatsapp/lead-status")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { brevoEmailLeadDeliveryId, normalizeBrevoEmailEvent, verifyBrevoWebhookAuthorization } =
-          await import("@/lib/lead-delivery.server");
+        const { verifyTwilioWebhook } = await import("@/lib/twilio-voice.server");
+        const verified = await verifyTwilioWebhook(request);
+        if (!verified.ok) return new Response("Forbidden", { status: verified.status });
 
-        if (!verifyBrevoWebhookAuthorization(request)) {
-          return new Response("Forbidden", { status: 403 });
-        }
+        const messageSid = verified.params["MessageSid"] ?? verified.params["SmsSid"] ?? "";
+        const status = verified.params["MessageStatus"] ?? verified.params["SmsStatus"] ?? "";
+        const errorCode = verified.params["ErrorCode"] ?? "";
+        const deliveryIdRaw = new URL(verified.url).searchParams.get("delivery_id") ?? "";
+        const deliveryId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          deliveryIdRaw,
+        )
+          ? deliveryIdRaw
+          : null;
 
-        let raw: unknown;
-        try {
-          raw = await request.json();
-        } catch {
-          return new Response("", { status: 204 });
-        }
+        if (!messageSid || !status) return new Response("", { status: 204 });
 
-        const events = Array.isArray(raw) ? raw : [raw];
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: rows, error } = await supabaseAdmin.rpc("record_whatsapp_lead_status", {
+          _message_sid: messageSid,
+          _status: status,
+          _error_code: errorCode || (null as unknown as string),
+          _delivery_id: deliveryId ?? (null as unknown as string),
+        });
+        if (error) {
+          console.error("[whatsapp-lead] status bookkeeping failed", { code: error.code });
+          return new Response("", { status: 500 });
+        }
 
-        for (const item of events) {
-          if (!item || typeof item !== "object") continue;
-          const payload = item as Record<string, unknown>;
-          const status = normalizeBrevoEmailEvent(payload.event);
-          if (!status) continue;
-
-          const messageId =
-            typeof payload["message-id"] === "string"
-              ? payload["message-id"]
-              : typeof payload.messageId === "string"
-                ? payload.messageId
-                : "";
-          const tags = Array.isArray(payload.tags)
-            ? payload.tags
-            : typeof payload.tag === "string"
-              ? (() => {
-                  try {
-                    const parsed = JSON.parse(payload.tag) as unknown;
-                    return Array.isArray(parsed) ? parsed : [];
-                  } catch {
-                    return [];
-                  }
-                })()
-              : [];
-          const deliveryId = brevoEmailLeadDeliveryId(tags);
-          if (!messageId && !deliveryId) continue;
-
-          const errorCode =
-            typeof payload.reason === "string"
-              ? payload.reason
-              : typeof payload.error === "string"
-                ? payload.error
-                : status;
-
-          const { data: rows, error } = await supabaseAdmin.rpc("record_email_lead_status", {
-            _message_id: messageId,
-            _status: status,
-            _error_code: errorCode,
-            _delivery_id: deliveryId ?? (null as unknown as string),
-          });
-          if (error) {
-            console.error("[email-lead] status bookkeeping failed", { code: error.code });
-            return new Response("", { status: 500 });
-          }
-
-          const row = Array.isArray(rows) ? rows[0] : rows;
-          if (row?.billed && row.therapist_id) {
-            try {
-              const { sendBudgetExhaustedNotification } = await import("@/lib/billing-budget.server");
-              await sendBudgetExhaustedNotification(row.therapist_id);
-            } catch (notificationError) {
-              console.error("[billing-budget] email notification failed", {
-                error: notificationError instanceof Error ? notificationError.message : "unknown_error",
-              });
-            }
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        if (row?.billed && row.therapist_id) {
+          try {
+            const { sendBudgetExhaustedNotification } = await import("@/lib/billing-budget.server");
+            await sendBudgetExhaustedNotification(row.therapist_id);
+          } catch (notificationError) {
+            console.error("[billing-budget] whatsapp notification failed", {
+              error: notificationError instanceof Error ? notificationError.message : "unknown_error",
+            });
           }
         }
 
