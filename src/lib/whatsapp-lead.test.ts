@@ -1,4 +1,5 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 import {
   WHATSAPP_LEAD_STATUS_PATH,
@@ -75,5 +76,25 @@ describe("message rendering", () => {
 
   it("builds the direct WhatsApp link from E.164 without the leading plus", () => {
     expect(whatsappDirectChatUrl("+972501234567")).toBe("https://wa.me/972501234567");
+  });
+});
+
+describe("WhatsApp visitor-facing delivery privacy", () => {
+  const modalSource = readFileSync(join(import.meta.dir, "../components/whatsapp-lead-modal.tsx"), "utf8");
+
+  it("shows the same success state for internal availability and delivery failures", () => {
+    expect(modalSource).toContain('res.reason === "therapist_unavailable" || res.reason === "delivery_failed"');
+    expect(modalSource).toContain("setDone(true)");
+  });
+
+  it("keeps actionable visitor validation and anti-abuse failures visible", () => {
+    expect(modalSource).toContain('res.reason === "rate_limit_exceeded"');
+    expect(modalSource).toContain('res.reason === "challenge_failed" || res.reason === "challenge_expired"');
+    expect(modalSource).toContain("setError(res.message)");
+  });
+
+  it("uses the exact single success message agreed for WhatsApp submissions", () => {
+    expect(modalSource).toContain("הפנייה נשלחה למטפל");
+    expect(modalSource).not.toContain("ההודעה נשלחה ל{therapistName} ב־WhatsApp");
   });
 });
