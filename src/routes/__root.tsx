@@ -79,9 +79,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      // Temporary pre-launch safeguard: keep every route out of search indexes
-      // while the public site remains crawlable for third-party verification.
-      { name: "robots", content: "noindex,follow" },
       { title: "טיפולינקס — פשוט למצוא את הטיפול המתאים" },
       {
         name: "description",
@@ -126,6 +123,8 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="he" dir="rtl">
       <head>
         <HeadContent />
+        {/* Temporary pre-launch safeguard: keep every route out of search indexes while remaining crawlable. */}
+        <meta name="robots" content="noindex,follow" />
       </head>
       <body>
         {children}
