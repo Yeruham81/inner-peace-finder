@@ -355,7 +355,6 @@ describe("public eligibility — shared predicate", () => {
 describe("public eligibility — centralization", () => {
   const PUBLIC_QUERY_FILES = [
     "lib/therapists.functions.ts",
-    "lib/structured-search.functions.ts",
     "lib/query-interpreter.functions.ts",
     "lib/public-therapist-queries.ts",
   ];
@@ -444,9 +443,12 @@ describe("public eligibility — centralization", () => {
     expect(waClient.includes("phone: ")).toBe(false);
   });
 
-  it("production search remains Unified-only with no Legacy fallback", () => {
+  it("search has only the Unified pipeline and no retired fallback", () => {
     const src = read("routes/search.tsx");
-    expect(src.includes('if (!opts.isDev) return "unified"')).toBe(true);
-    expect(src.includes("catch")).toBe(false);
+    expect(src.includes("unifiedResultsQuery")).toBe(true);
+    expect(src.includes("classifyAndSearch")).toBe(false);
+    expect(src.includes("structuredTherapistQuery")).toBe(false);
+    expect(src.includes("LegacySearchResults")).toBe(false);
+    expect(src.includes("flow=legacy")).toBe(false);
   });
 });
