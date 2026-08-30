@@ -1,4 +1,3 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +10,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -456,7 +456,19 @@ export function EditorPage({
   const [showPublishMissing, setShowPublishMissing] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [debouncedDescription, setDebouncedDescription] = useState("");
+  const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
   const preserveNextIdentityTransition = useRef(false);
+  const hasUnsavedChangesRef = useRef(false);
+
+  const formSnapshot = useMemo(() => JSON.stringify(form), [form]);
+  const hasUnsavedChanges = initialized && savedFormSnapshot !== null && formSnapshot !== savedFormSnapshot;
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+
+  const navigationBlocker = useBlocker({
+    shouldBlockFn: () => hasUnsavedChangesRef.current,
+    enableBeforeUnload: () => hasUnsavedChangesRef.current,
+    withResolver: true,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedDescription(form.full_description), 600);
@@ -482,6 +494,8 @@ export function EditorPage({
     const preserveSaveFeedback = preserveNextIdentityTransition.current;
     preserveNextIdentityTransition.current = false;
     setInitialized(false);
+    setSavedFormSnapshot(null);
+    hasUnsavedChangesRef.current = false;
     if (!preserveSaveFeedback) {
       setMissing(null);
       setShowPublishMissing(false);
@@ -490,23 +504,28 @@ export function EditorPage({
 
   useEffect(() => {
     if (initialized || !actorMode.isSuccess || !profile.isSuccess || !options.isSuccess) return;
+    let nextForm: FormState;
     if (profile.data) {
-      setForm(fromProfile(profile.data, options.data, editorDefaultEmail));
+      nextForm = fromProfile(profile.data, options.data, editorDefaultEmail);
     } else if (isAdmin) {
       // Admin-created public profiles must never inherit the admin account's
       // login email or contact preferences. The therapist's professional
       // contact details can be entered explicitly when available.
-      setForm({ ...emptyForm });
+      nextForm = { ...emptyForm };
     } else {
       // A therapist creating their own profile keeps the existing default:
       // email is enabled and preferred from the start.
-      setForm({
+      nextForm = {
         ...emptyForm,
         email: defaultEmail,
         contact_methods: ["email"],
         preferred_contact_method: "email",
-      });
+      };
     }
+    const nextSnapshot = JSON.stringify(nextForm);
+    setForm(nextForm);
+    setSavedFormSnapshot(nextSnapshot);
+    hasUnsavedChangesRef.current = false;
     setInitialized(true);
   }, [
     actorMode.isSuccess,
@@ -597,6 +616,9 @@ export function EditorPage({
         toast.error("לא ניתן לפרסם — יש להשלים שדות חובה");
         return;
       }
+      const savedSnapshot = JSON.stringify(form);
+      setSavedFormSnapshot(savedSnapshot);
+      hasUnsavedChangesRef.current = false;
       setMissing(null);
       if (isAdmin && res.therapist_id) {
         if (activeAdminTherapistId !== res.therapist_id) preserveNextIdentityTransition.current = true;
@@ -612,6 +634,18 @@ export function EditorPage({
     },
     onError: (e: Error) => toast.error(friendlyErrorMessage(e)),
   });
+
+  const saveAndContinueNavigation = async () => {
+    if (mutation.isPending || navigationBlocker.status !== "blocked") return;
+    setShowPublishMissing(true);
+    try {
+      const result = await mutation.mutateAsync(false);
+      if (result.missing && result.missing.length > 0) return;
+      navigationBlocker.proceed();
+    } catch {
+      // The mutation already shows a user-facing error through onError.
+    }
+  };
 
   const deleteProfileMutation = useMutation({
     mutationFn: () => deleteProfileFn({ data: { confirmation: "מחיקת הפרופיל לצמיתות" } }),
@@ -849,9 +883,7 @@ export function EditorPage({
                 />
                 <div className="mt-1 flex items-start justify-between gap-3 text-xs">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-muted-foreground">
-                      נדרש תחום טיפול אחד לפחות שהמערכת מזהה בתיאור
-                    </span>
+                    <span className="text-muted-foreground">נדרש תחום טיפול אחד לפחות שהמערכת מזהה בתיאור</span>
                     {hasRecognizedTreatmentDomain && (
                       <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
                         <span aria-hidden="true" className="text-sm leading-none">
@@ -1311,6 +1343,7 @@ export function EditorPage({
               <ProfileActions
                 status={displayStatus}
                 pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
+                hasUnsavedChanges={hasUnsavedChanges}
                 publishMissing={publishMissing}
                 publishMissingFields={publishMissingFields}
                 showPublishMissing={showPublishMissing}
@@ -1329,6 +1362,7 @@ export function EditorPage({
             <ProfileActions
               status={displayStatus}
               pendingAction={mutation.isPending ? (mutation.variables ? "publish" : "save") : null}
+              hasUnsavedChanges={hasUnsavedChanges}
               publishMissing={publishMissing}
               publishMissingFields={publishMissingFields}
               showPublishMissing={showPublishMissing}
@@ -1365,6 +1399,47 @@ export function EditorPage({
               <TherapistProfileView therapist={previewData} interactive={false} />
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={navigationBlocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && navigationBlocker.status === "blocked" && !mutation.isPending) {
+            navigationBlocker.reset();
+          }
+        }}
+      >
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader className="text-right">
+            <DialogTitle>יש שינויים שלא נשמרו</DialogTitle>
+            <DialogDescription className="leading-6">
+              ביצעת שינויים בפרופיל שעדיין לא נשמרו. אם תעזוב עכשיו, השינויים יאבדו.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:flex-row-reverse sm:space-x-0">
+            <Button disabled={mutation.isPending} onClick={() => void saveAndContinueNavigation()}>
+              {mutation.isPending ? "מתבצעת שמירה…" : "שמירה והמשך"}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={mutation.isPending}
+              onClick={() => {
+                if (navigationBlocker.status === "blocked") navigationBlocker.proceed();
+              }}
+            >
+              יציאה ללא שמירה
+            </Button>
+            <Button
+              variant="outline"
+              disabled={mutation.isPending}
+              onClick={() => {
+                if (navigationBlocker.status === "blocked") navigationBlocker.reset();
+              }}
+            >
+              ביטול
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -1638,6 +1713,7 @@ function ContactPreferencesSummary({
 function ProfileActions({
   status,
   pendingAction,
+  hasUnsavedChanges,
   publishMissing,
   publishMissingFields,
   showPublishMissing,
@@ -1648,6 +1724,7 @@ function ProfileActions({
 }: {
   status: "draft" | "completed" | "published" | "frozen";
   pendingAction: "save" | "publish" | null;
+  hasUnsavedChanges: boolean;
   publishMissing: boolean;
   publishMissingFields: string[];
   showPublishMissing: boolean;
@@ -1696,6 +1773,11 @@ function ProfileActions({
         <Button variant="outline" onClick={onPreview} className="w-full">
           תצוגה מקדימה
         </Button>
+        {hasUnsavedChanges && (
+          <p className="text-center text-xs font-medium text-amber-700 sm:col-span-2 lg:col-span-1">
+            יש שינויים שלא נשמרו
+          </p>
+        )}
         <Button variant="outline" disabled={pendingAction !== null} onClick={onSaveDraft} className="w-full">
           {pendingAction === "save" ? "מתבצעת שמירה…" : "שמירת פרופיל"}
         </Button>
@@ -2474,9 +2556,7 @@ function SemanticFeedbackPanel({
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface p-4">
       <h3 className="text-base font-semibold text-foreground">תחומי טיפול שהמערכת זיהתה בתיאור שלך</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        
-      </p>
+      <p className="mt-1 text-sm text-muted-foreground"></p>
       <div className="mt-3">
         {!hasDescription ? (
           <p className="text-sm text-muted-foreground">הוסיפו תיאור כדי לראות אילו תחומי טיפול המערכת מזהה.</p>
