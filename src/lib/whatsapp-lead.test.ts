@@ -8,6 +8,7 @@ import {
   whatsappContentSid,
   whatsappContentVariables,
   whatsappDirectChatUrl,
+  whatsappLeadStatusCallbackUrl,
   whatsappSender,
 } from "./whatsapp-lead.server";
 import { voiceCallbackUrl } from "./twilio-voice.server";
@@ -39,6 +40,13 @@ describe("whatsapp lead status callback URL", () => {
     expect(voiceCallbackUrl(WHATSAPP_LEAD_STATUS_PATH)).not.toContain("tipulinks.co.il");
     process.env["TIPULINKS_PUBLIC_ORIGIN"] = "https://tipulinks.co.il";
     expect(voiceCallbackUrl(WHATSAPP_LEAD_STATUS_PATH)).toContain("tipulinks.co.il");
+  });
+
+  it("includes the pre-created delivery id as a signed correlation query parameter", () => {
+    const deliveryId = "11111111-1111-4111-8111-111111111111";
+    expect(whatsappLeadStatusCallbackUrl(deliveryId)).toBe(
+      `https://tipulinks.co.il/api/public/whatsapp/lead-status?delivery_id=${deliveryId}`,
+    );
   });
 });
 
@@ -92,6 +100,7 @@ describe("WhatsApp approved template requirement", () => {
     expect(
       await sendWhatsAppLead({
         destinationE164: "+972501111111",
+        deliveryId: "11111111-1111-4111-8111-111111111111",
         payload,
       }),
     ).toEqual({ ok: false, code: "whatsapp_template_not_configured" });
