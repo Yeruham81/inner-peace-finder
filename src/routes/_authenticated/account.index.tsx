@@ -148,12 +148,12 @@ function AccountOverviewPage() {
           {onboardingQuery.isLoading || (onboardingQuery.isError && onboardingQuery.isFetching) ? (
             <div className="rounded-2xl border border-border bg-surface-elevated p-6 text-sm text-muted-foreground shadow-card">
               {onboardingQuery.isFetching && onboardingQuery.isError
-                ? "מנסה שוב לטעון את שלבי ההצטרפות…"
-                : "טוען את שלבי ההצטרפות…"}
+                ? "מנסה שוב לטעון את מצב ההצטרפות…"
+                : "טוען את מצב ההצטרפות…"}
             </div>
           ) : onboardingQuery.isError ? (
             <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 shadow-card">
-              <p className="text-sm font-medium text-destructive">לא הצלחנו לטעון את שלבי ההצטרפות.</p>
+              <p className="text-sm font-medium text-destructive">לא הצלחנו לטעון את מצב ההצטרפות.</p>
               <Button
                 type="button"
                 variant="outline"
