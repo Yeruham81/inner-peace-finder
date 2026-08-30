@@ -129,7 +129,8 @@ describe("profile claim stage 3", () => {
     expect(searchEligibility).toContain("owner_reviewed_at.not.is.null");
     expect(searchEligibility).toContain("do_not_republish.eq.false");
     expect(leadModal).toContain('queryKey: ["unified-search"]');
-    expect(leadModal).toContain('queryKey: ["structured-search"]');
+    expect(leadModal).not.toContain('queryKey: ["structured-search"]');
+    expect(leadModal).not.toContain('queryKey: ["search"]');
     expect(leadModal).toContain('queryKey: ["filter-options"]');
   });
 });
