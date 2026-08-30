@@ -4,6 +4,7 @@ import {
   WHATSAPP_LEAD_STATUS_PATH,
   renderWhatsAppLeadBody,
   whatsappContentVariables,
+  whatsappDirectChatUrl,
   whatsappSender,
 } from "./whatsapp-lead.server";
 import { voiceCallbackUrl } from "./twilio-voice.server";
@@ -24,9 +25,7 @@ afterEach(() => {
 
 describe("whatsapp lead status callback URL", () => {
   it("is built only from the trusted public origin", () => {
-    expect(voiceCallbackUrl(WHATSAPP_LEAD_STATUS_PATH)).toBe(
-      "https://tipulinks.co.il/api/public/whatsapp/lead-status",
-    );
+    expect(voiceCallbackUrl(WHATSAPP_LEAD_STATUS_PATH)).toBe("https://tipulinks.co.il/api/public/whatsapp/lead-status");
   });
 
   it("cannot be built from a spoofed host header value", () => {
@@ -53,7 +52,6 @@ describe("whatsapp sender", () => {
 
 describe("message rendering", () => {
   const payload = {
-    therapistName: "דנה כהן",
     visitorName: "יוסי לוי",
     visitorPhone: "+972501234567",
     message: "אשמח לתאם פגישה",
@@ -68,10 +66,14 @@ describe("message rendering", () => {
 
   it("maps template variables in a stable order", () => {
     expect(JSON.parse(whatsappContentVariables(payload))).toEqual({
-      "1": "דנה כהן",
-      "2": "יוסי לוי",
-      "3": "+972501234567",
-      "4": "אשמח לתאם פגישה",
+      "1": "יוסי לוי",
+      "2": "+972501234567",
+      "3": "אשמח לתאם פגישה",
+      "4": "https://wa.me/972501234567",
     });
+  });
+
+  it("builds the direct WhatsApp link from E.164 without the leading plus", () => {
+    expect(whatsappDirectChatUrl("+972501234567")).toBe("https://wa.me/972501234567");
   });
 });
