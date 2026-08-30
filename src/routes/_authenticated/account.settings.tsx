@@ -632,9 +632,7 @@ function DeleteAccountPanel({ pending, onConfirm }: { pending: boolean; onConfir
         <DialogContent dir="rtl" className="max-w-lg">
           <DialogHeader>
             <DialogTitle>אישור מחיקת החשבון</DialogTitle>
-            <DialogDescription>
-              זהו השלב האחרון. לאחר המחיקה לא תהיה אפשרות לשחזר את החשבון או את הפרופיל.
-            </DialogDescription>
+            <DialogDescription>לאחר המחיקה לא תהיה אפשרות לשחזר את החשבון או את הפרופיל.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
