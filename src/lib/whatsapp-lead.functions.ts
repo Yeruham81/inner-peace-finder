@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
+import { WHATSAPP_LEAD_MESSAGE_MAX_LENGTH, WHATSAPP_LEAD_MESSAGE_MIN_LENGTH } from "./whatsapp-lead.shared";
+
 const WhatsAppLeadSchema = z.object({
   therapistId: z.string().uuid(),
   sourceProblemId: z.string().uuid().nullable().optional(),
@@ -9,7 +11,7 @@ const WhatsAppLeadSchema = z.object({
   ctaId: z.string().trim().min(1).max(64).default("whatsapp_lead"),
   visitorName: z.string().trim().min(2).max(100),
   visitorPhone: z.string().trim().min(6).max(40),
-  message: z.string().trim().min(2).max(2000),
+  message: z.string().trim().min(WHATSAPP_LEAD_MESSAGE_MIN_LENGTH).max(WHATSAPP_LEAD_MESSAGE_MAX_LENGTH),
   challengeId: z.string().uuid(),
   challengeAnswer: z.coerce.number().int(),
 });
