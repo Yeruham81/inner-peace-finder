@@ -1,3 +1,4 @@
+import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -96,5 +97,19 @@ describe("WhatsApp visitor-facing delivery privacy", () => {
   it("uses the exact single success message agreed for WhatsApp submissions", () => {
     expect(modalSource).toContain("הפנייה נשלחה למטפל");
     expect(modalSource).not.toContain("ההודעה נשלחה ל{therapistName} ב־WhatsApp");
+  });
+});
+
+describe("WhatsApp lead submit button", () => {
+  const modalSource = readFileSync(join(import.meta.dir, "../components/whatsapp-lead-modal.tsx"), "utf8");
+
+  it("uses the agreed WhatsApp-specific Hebrew action label", () => {
+    expect(modalSource).toContain('"שלח הודעה בווטסאפ"');
+    expect(modalSource).not.toContain('"שליחת ההודעה"');
+  });
+
+  it("renders a WhatsApp icon together with the submit label", () => {
+    expect(modalSource).toContain("function WhatsAppIcon");
+    expect(modalSource).toContain('<WhatsAppIcon className="h-5 w-5 shrink-0" />');
   });
 });
