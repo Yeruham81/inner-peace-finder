@@ -45,6 +45,7 @@ import { Route as ApiPublicVoiceTherapistStatusRouteImport } from './routes/api/
 import { Route as ApiPublicVoiceParentStatusRouteImport } from './routes/api/public/voice/parent-status'
 import { Route as ApiPublicVoiceDialActionRouteImport } from './routes/api/public/voice/dial-action'
 import { Route as ApiPublicVoiceAnswerRouteImport } from './routes/api/public/voice/answer'
+import { Route as ApiPublicEmailLeadStatusRouteImport } from './routes/api/public/email/lead-status'
 
 const TherapyInformationRoute = TherapyInformationRouteImport.update({
   id: '/therapy-information',
@@ -235,6 +236,12 @@ const ApiPublicVoiceAnswerRoute = ApiPublicVoiceAnswerRouteImport.update({
   path: '/api/public/voice/answer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEmailLeadStatusRoute =
+  ApiPublicEmailLeadStatusRouteImport.update({
+    id: '/api/public/email/lead-status',
+    path: '/api/public/email/lead-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/account/': typeof AuthenticatedAccountIndexRoute
+  '/api/public/email/lead-status': typeof ApiPublicEmailLeadStatusRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
   '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
   '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
@@ -302,6 +310,7 @@ export interface FileRoutesByTo {
   '/account/profile': typeof AuthenticatedAccountProfileRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/account': typeof AuthenticatedAccountIndexRoute
+  '/api/public/email/lead-status': typeof ApiPublicEmailLeadStatusRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
   '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
   '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
@@ -341,6 +350,7 @@ export interface FileRoutesById {
   '/_authenticated/account/profile': typeof AuthenticatedAccountProfileRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/account/': typeof AuthenticatedAccountIndexRoute
+  '/api/public/email/lead-status': typeof ApiPublicEmailLeadStatusRoute
   '/api/public/voice/answer': typeof ApiPublicVoiceAnswerRoute
   '/api/public/voice/dial-action': typeof ApiPublicVoiceDialActionRoute
   '/api/public/voice/parent-status': typeof ApiPublicVoiceParentStatusRoute
@@ -380,6 +390,7 @@ export interface FileRouteTypes {
     | '/account/profile'
     | '/account/settings'
     | '/account/'
+    | '/api/public/email/lead-status'
     | '/api/public/voice/answer'
     | '/api/public/voice/dial-action'
     | '/api/public/voice/parent-status'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/account/profile'
     | '/account/settings'
     | '/account'
+    | '/api/public/email/lead-status'
     | '/api/public/voice/answer'
     | '/api/public/voice/dial-action'
     | '/api/public/voice/parent-status'
@@ -453,6 +465,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/profile'
     | '/_authenticated/account/settings'
     | '/_authenticated/account/'
+    | '/api/public/email/lead-status'
     | '/api/public/voice/answer'
     | '/api/public/voice/dial-action'
     | '/api/public/voice/parent-status'
@@ -473,6 +486,7 @@ export interface RootRouteChildren {
   TherapyInformationRoute: typeof TherapyInformationRoute
   ProblemsSlugRoute: typeof ProblemsSlugRoute
   TherapistsSlugRoute: typeof TherapistsSlugRoute
+  ApiPublicEmailLeadStatusRoute: typeof ApiPublicEmailLeadStatusRoute
   ApiPublicVoiceAnswerRoute: typeof ApiPublicVoiceAnswerRoute
   ApiPublicVoiceDialActionRoute: typeof ApiPublicVoiceDialActionRoute
   ApiPublicVoiceParentStatusRoute: typeof ApiPublicVoiceParentStatusRoute
@@ -734,6 +748,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicVoiceAnswerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/lead-status': {
+      id: '/api/public/email/lead-status'
+      path: '/api/public/email/lead-status'
+      fullPath: '/api/public/email/lead-status'
+      preLoaderRoute: typeof ApiPublicEmailLeadStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -816,6 +837,7 @@ const rootRouteChildren: RootRouteChildren = {
   TherapyInformationRoute: TherapyInformationRoute,
   ProblemsSlugRoute: ProblemsSlugRoute,
   TherapistsSlugRoute: TherapistsSlugRoute,
+  ApiPublicEmailLeadStatusRoute: ApiPublicEmailLeadStatusRoute,
   ApiPublicVoiceAnswerRoute: ApiPublicVoiceAnswerRoute,
   ApiPublicVoiceDialActionRoute: ApiPublicVoiceDialActionRoute,
   ApiPublicVoiceParentStatusRoute: ApiPublicVoiceParentStatusRoute,

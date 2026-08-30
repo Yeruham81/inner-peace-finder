@@ -1,4 +1,4 @@
-
+import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Brevo transactional-email status webhook.
@@ -11,11 +11,8 @@ export const Route = createFileRoute("/api/public/email/lead-status")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const {
-          brevoEmailLeadDeliveryId,
-          normalizeBrevoEmailEvent,
-          verifyBrevoWebhookAuthorization,
-        } = await import("@/lib/lead-delivery.server");
+        const { brevoEmailLeadDeliveryId, normalizeBrevoEmailEvent, verifyBrevoWebhookAuthorization } =
+          await import("@/lib/lead-delivery.server");
 
         if (!verifyBrevoWebhookAuthorization(request)) {
           return new Response("Forbidden", { status: 403 });
