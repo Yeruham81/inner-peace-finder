@@ -85,7 +85,7 @@ export async function sendWhatsAppLead(input: {
     ContentVariables: whatsappContentVariables(input.payload),
   });
 
-  const credentials = Buffer.from(`${config.apiKeySid}:${config.apiKeySecret}`).toString("base64");
+  const credentials = Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64");
 
   let response: Response;
   try {
