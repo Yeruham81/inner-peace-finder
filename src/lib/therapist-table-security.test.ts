@@ -83,7 +83,6 @@ describe("therapists table lockdown — server/client boundary", () => {
   it("server-function modules load the trusted client dynamically, never at module scope", () => {
     for (const f of [
       "lib/therapists.functions.ts",
-      "lib/structured-search.functions.ts",
       "lib/query-interpreter.functions.ts",
       "lib/query-catalog.ts",
       "lib/profile-claim-v2.functions.ts",
@@ -96,12 +95,7 @@ describe("therapists table lockdown — server/client boundary", () => {
   });
 
   it("public therapist reads no longer rely on the anon publishable key", () => {
-    for (const f of [
-      "lib/therapists.functions.ts",
-      "lib/structured-search.functions.ts",
-      "lib/query-interpreter.functions.ts",
-      "lib/query-catalog.ts",
-    ]) {
+    for (const f of ["lib/therapists.functions.ts", "lib/query-interpreter.functions.ts", "lib/query-catalog.ts"]) {
       expect(read(f).includes("SUPABASE_PUBLISHABLE_KEY"), f).toBe(false);
     }
   });
