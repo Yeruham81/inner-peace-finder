@@ -43,6 +43,14 @@ const submitLeadMigration =
     .map((f) => readFileSync(join(MIGRATIONS, f), "utf8"))
     .filter((sql) => sql.includes("CREATE OR REPLACE FUNCTION public.submit_lead("))
     .pop() ?? "";
+/** Latest effective migration that replaces the profile-save function. */
+const profileSaveMigration =
+  readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => readFileSync(join(MIGRATIONS, f), "utf8"))
+    .filter((sql) => sql.includes("CREATE OR REPLACE FUNCTION public.save_therapist_profile("))
+    .pop() ?? "";
 
 describe("challenge generation (server-only)", () => {
   it("produces a solvable arithmetic prompt", () => {
@@ -384,12 +392,14 @@ describe("migration: atomic submit_lead transaction", () => {
   });
 
   it("stores an empty years_experience as NULL", () => {
-    // This profile-editor hardening is independent of whichever migration most
-    // recently replaces submit_lead. Assert it across the migration history.
+    // Schema nullability was restored in an earlier migration, while the
+    // currently effective profile-save function preserves an empty value as
+    // NULL. Historical migrations may legitimately contain the superseded
+    // `coalesce(..., 0)` implementation, so do not scan all history for it.
     expect(migrationSql).toContain("ALTER COLUMN years_experience DROP NOT NULL");
     expect(migrationSql).toContain("ALTER COLUMN years_experience DROP DEFAULT");
-    expect(migrationSql).toContain("v_years_raw !~ '^[0-9]{1,3}$'");
-    expect(migrationSql).toContain("years_experience = v_years");
-    expect(migrationSql).not.toMatch(/coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/);
+    expect(profileSaveMigration).toContain("v_years_raw !~ '^[0-9]{1,3}$'");
+    expect(profileSaveMigration).toContain("years_experience = v_years");
+    expect(profileSaveMigration).not.toMatch(/coalesce\(\(v_profile ->> 'years_experience'\)::integer, 0\)/);
   });
 });
