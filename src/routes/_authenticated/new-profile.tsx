@@ -1803,7 +1803,7 @@ function ProfileActions({
           תצוגה מקדימה
         </Button>
         {hasUnsavedChanges && (
-          <p className="text-right text-xs font-medium text-amber-700 sm:col-span-2 lg:col-span-1">
+          <p className="text-center text-xs font-medium text-amber-700 sm:col-span-2 lg:col-span-1">
             יש שינויים שלא נשמרו
           </p>
         )}
