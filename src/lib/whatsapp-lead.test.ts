@@ -1,4 +1,3 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -94,8 +93,9 @@ describe("WhatsApp visitor-facing delivery privacy", () => {
     expect(modalSource).toContain("setError(res.message)");
   });
 
-  it("uses the exact single success message agreed for WhatsApp submissions", () => {
+  it("shows the agreed WhatsApp success heading and explanatory follow-up", () => {
     expect(modalSource).toContain("הפנייה נשלחה למטפל");
+    expect(modalSource).toContain("הפנייה נשלחה למטפל דרך WhatsApp. אם תתקבל תשובה, היא תופיע ישירות ב-WhatsApp שלך.");
     expect(modalSource).not.toContain("ההודעה נשלחה ל{therapistName} ב־WhatsApp");
   });
 });
