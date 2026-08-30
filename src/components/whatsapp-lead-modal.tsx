@@ -5,6 +5,7 @@ import { createWhatsAppLead } from "@/lib/whatsapp-lead.functions";
 import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
 import { track } from "@/lib/analytics";
 import { looksLikeIsraeliPhone } from "@/lib/phone-il";
+import { WHATSAPP_LEAD_MESSAGE_MAX_LENGTH, WHATSAPP_LEAD_MESSAGE_MIN_LENGTH } from "@/lib/whatsapp-lead.shared";
 import { CHALLENGE_ERROR_MESSAGES } from "@/components/lead-modal";
 
 type Challenge = { id: string; prompt: string };
@@ -153,7 +154,8 @@ export function WhatsAppLeadModal({
 
   const phoneOk = looksLikeIsraeliPhone(phone);
   const nameOk = name.trim().length >= 2;
-  const messageOk = message.trim().length >= 2;
+  const messageOk =
+    message.trim().length >= WHATSAPP_LEAD_MESSAGE_MIN_LENGTH && message.length <= WHATSAPP_LEAD_MESSAGE_MAX_LENGTH;
   const canSubmit = nameOk && phoneOk && messageOk && challengeOk && !submitting;
 
   const titleId = useMemo(() => `whatsapp-lead-modal-${therapistId}`, [therapistId]);
@@ -318,9 +320,16 @@ export function WhatsAppLeadModal({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
+                minLength={WHATSAPP_LEAD_MESSAGE_MIN_LENGTH}
+                maxLength={WHATSAPP_LEAD_MESSAGE_MAX_LENGTH}
                 required
+                aria-describedby="wa-lead-msg-limit"
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-brand focus:outline-none"
               />
+              <p id="wa-lead-msg-limit" className="mt-1 text-xs text-muted-foreground">
+                עד {WHATSAPP_LEAD_MESSAGE_MAX_LENGTH.toLocaleString("he-IL")} תווים ·{" "}
+                {message.length.toLocaleString("he-IL")}/{WHATSAPP_LEAD_MESSAGE_MAX_LENGTH.toLocaleString("he-IL")}
+              </p>
             </div>
 
             <div>
