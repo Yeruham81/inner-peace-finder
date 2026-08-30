@@ -50,6 +50,9 @@ function AccountOverviewPage() {
     queryKey: ["profile-onboarding", user.id],
     queryFn: () => getOnboardingFn(),
     enabled: Boolean(account),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 3,
   });
   const dashboardQuery = useQuery({
     queryKey: ["my-account-dashboard", user.id],
@@ -142,9 +145,11 @@ function AccountOverviewPage() {
 
       {!isLoading && !isError && account && (
         <div className="mb-6">
-          {onboardingQuery.isLoading ? (
+          {onboardingQuery.isLoading || (onboardingQuery.isError && onboardingQuery.isFetching) ? (
             <div className="rounded-2xl border border-border bg-surface-elevated p-6 text-sm text-muted-foreground shadow-card">
-              טוען את שלבי ההצטרפות…
+              {onboardingQuery.isFetching && onboardingQuery.isError
+                ? "מנסה שוב לטעון את שלבי ההצטרפות…"
+                : "טוען את שלבי ההצטרפות…"}
             </div>
           ) : onboardingQuery.isError ? (
             <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 shadow-card">
