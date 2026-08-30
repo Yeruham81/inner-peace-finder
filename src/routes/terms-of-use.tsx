@@ -1298,15 +1298,15 @@ const termsBlocks: LegalDocumentBlock[] = [
   },
   {
     type: "bullet",
-    text: "דואר אלקטרוני: admin@tipulinks.co.il;",
+    text: "דואר אלקטרוני: admin@tipulinks.co.il",
   },
   {
     type: "bullet",
-    text: "טלפון: 0522594893;",
+    text: "טלפון: 0522594893",
   },
   {
     type: "bullet",
-    text: "טופס יצירת קשר: admin@tipulinks.co.il;",
+    text: "טופס יצירת קשר: admin@tipulinks.co.il",
   },
   {
     type: "bullet",
