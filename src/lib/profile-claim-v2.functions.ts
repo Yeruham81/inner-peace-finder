@@ -68,6 +68,9 @@ async function ensureAccount(
   if (readError) throw new Error(readError.message);
   if (existing?.id) return existing.id;
 
+  const { assertTherapistRegistrationEnabled } = await import("./therapist-registration-settings.server");
+  await assertTherapistRegistrationEnabled();
+
   const { data: created, error: createError } = await supabase
     .from("therapist_accounts")
     .insert({ auth_user_id: userId })
