@@ -28,7 +28,7 @@ function WhatsAppIcon({ className = "h-5 w-5" }: { className?: string }) {
 }
 
 function defaultMessage(problemName?: string | null, populationName?: string | null): string {
-  const base = "היי, הגעתי אליך דרך טיפולינקס.";
+  const base = "היי, הגעתי אליך דרך אתר טיפולינקס.";
   if (problemName && populationName) {
     return `${base}\nאני מחפש/ת עזרה בנושא ${problemName} ל${populationName} ואשמח לשוחח.`;
   }
