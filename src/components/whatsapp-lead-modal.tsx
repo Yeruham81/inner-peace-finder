@@ -270,7 +270,7 @@ export function WhatsAppLeadModal({
                 שליחת הודעה ל{therapistName} ב־WhatsApp
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                ההודעה נשלחת מטיפולינקס ישירות למטפל/ת ב־WhatsApp. אין צורך לצאת מהאתר.
+                ההודעה תישלח ישירות למטפל/ת ב־WhatsApp. אין צורך לצאת מהאתר.
               </p>
             </div>
 
