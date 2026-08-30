@@ -16,6 +16,10 @@ import {
   updateAdminContactChannelAvailability,
 } from "@/lib/contact-channel-settings.functions";
 import { DEFAULT_CONTACT_CHANNEL_AVAILABILITY, type ContactChannelAvailability } from "@/lib/contact-channel-settings";
+import {
+  getAdminTherapistRegistrationAvailability,
+  updateAdminTherapistRegistrationAvailability,
+} from "@/lib/therapist-registration-settings.functions";
 
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({
@@ -31,9 +35,15 @@ export const Route = createFileRoute("/admin/settings")({
 function SettingsPage() {
   const getChannelsFn = useServerFn(getAdminContactChannelAvailability);
   const updateChannelsFn = useServerFn(updateAdminContactChannelAvailability);
+  const getRegistrationFn = useServerFn(getAdminTherapistRegistrationAvailability);
+  const updateRegistrationFn = useServerFn(updateAdminTherapistRegistrationAvailability);
   const channelsQuery = useQuery({
     queryKey: ["admin-contact-channel-availability"],
     queryFn: () => getChannelsFn(),
+  });
+  const registrationQuery = useQuery({
+    queryKey: ["admin-therapist-registration-availability"],
+    queryFn: () => getRegistrationFn(),
   });
 
   const [systemName, setSystemName] = useState("טיפולינקס");
@@ -42,11 +52,16 @@ function SettingsPage() {
   const [channels, setChannels] = useState<ContactChannelAvailability>({
     ...DEFAULT_CONTACT_CHANNEL_AVAILABILITY,
   });
+  const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
 
   useEffect(() => {
     if (channelsQuery.data) setChannels(channelsQuery.data);
   }, [channelsQuery.data]);
+
+  useEffect(() => {
+    if (registrationQuery.data) setRegistrationEnabled(registrationQuery.data.enabled);
+  }, [registrationQuery.data]);
 
   const channelMutation = useMutation({
     mutationFn: () => updateChannelsFn({ data: channels }),
@@ -55,6 +70,15 @@ function SettingsPage() {
       toast.success("הגדרות ערוצי הפנייה נשמרו.");
     },
     onError: (error: Error) => toast.error(error.message || "לא ניתן לשמור את הגדרות ערוצי הפנייה."),
+  });
+
+  const registrationMutation = useMutation({
+    mutationFn: () => updateRegistrationFn({ data: { enabled: registrationEnabled } }),
+    onSuccess: (next) => {
+      setRegistrationEnabled(next.enabled);
+      toast.success(next.enabled ? "הרשמת מטפלים חדשים הופעלה." : "הרשמת מטפלים חדשים הושבתה.");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לשמור את הגדרת הרשמת המטפלים."),
   });
 
   function mockSave(section: string) {
@@ -66,7 +90,7 @@ function SettingsPage() {
     <div>
       <AdminPageHeader
         title="הגדרות מערכת"
-        subtitle="הגדרות ערוצי הפנייה פעילות ונשמרות במערכת; יתר האזורים במסך עדיין מיועדים להגדרות עתידיות."
+        subtitle="הגדרות ערוצי הפנייה והרשמת המטפלים פעילות ונשמרות במערכת; יתר האזורים במסך עדיין מיועדים להגדרות עתידיות."
         breadcrumb="הגדרות מערכת"
       />
 
@@ -105,6 +129,48 @@ function SettingsPage() {
             </div>
 
             <SaveRow section="general" saved={saved} onSave={mockSave} />
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">הרשמת מטפלים</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              כאשר האפשרות כבויה, לא ניתן ליצור חשבון מטפל חדש. חשבונות מטפלים קיימים יכולים להמשיך להיכנס ולעבוד כרגיל.
+            </p>
+            {registrationQuery.isLoading ? (
+              <p className="py-3 text-sm text-muted-foreground">טוען את הגדרת ההרשמה…</p>
+            ) : registrationQuery.isError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                לא ניתן לטעון את הגדרת הרשמת המטפלים. נסו לרענן את העמוד.
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded-md border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">אפשר הרשמת מטפלים חדשים</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {registrationEnabled ? "ההרשמה פתוחה" : "ההרשמה סגורה זמנית"}
+                  </p>
+                </div>
+                <Switch
+                  checked={registrationEnabled}
+                  disabled={registrationMutation.isPending}
+                  onCheckedChange={setRegistrationEnabled}
+                  aria-label="אפשר הרשמת מטפלים חדשים"
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                disabled={registrationQuery.isLoading || registrationQuery.isError || registrationMutation.isPending}
+                onClick={() => registrationMutation.mutate()}
+              >
+                {registrationMutation.isPending ? "שומר…" : "שמירה"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
