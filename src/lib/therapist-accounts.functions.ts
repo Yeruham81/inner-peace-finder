@@ -36,6 +36,9 @@ export const ensureTherapistAccount = createServerFn({ method: "POST" })
 
     let account = existing;
     if (!account) {
+      const { assertTherapistRegistrationEnabled } = await import("./therapist-registration-settings.server");
+      await assertTherapistRegistrationEnabled();
+
       const { data: inserted, error: insErr } = await supabase
         .from("therapist_accounts")
         .insert({ auth_user_id: userId })
