@@ -20,7 +20,8 @@ describe("private free-text search", () => {
     expect(route).not.toMatch(/\n\s*q:\s*fallback\(/);
     expect(form).not.toContain("q: contract.q || undefined");
     expect(form).toContain("storePrivateSearchQuery");
-    expect(form).toContain("searchId:");
+    expect(form).toContain("const searchId =");
+    expect(form).toMatch(/\n\s*searchId,\n/);
   });
 
   it("runs Unified Search with the recovered private query only", () => {
