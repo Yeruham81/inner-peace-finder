@@ -249,8 +249,6 @@ export function LeadModal({
       if (unclaimedProfile) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["unified-search"] }),
-          queryClient.invalidateQueries({ queryKey: ["search"] }),
-          queryClient.invalidateQueries({ queryKey: ["structured-search"] }),
           queryClient.invalidateQueries({ queryKey: ["filter-options"] }),
         ]);
       }
