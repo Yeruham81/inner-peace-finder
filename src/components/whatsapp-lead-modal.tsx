@@ -164,6 +164,15 @@ export function WhatsAppLeadModal({
       });
 
       if (!res.ok) {
+        // Internal delivery/eligibility failures are intentionally hidden from
+        // the visitor. From their perspective the submission is complete; they
+        // can continue contacting other therapists without being exposed to
+        // provider, therapist-availability or budget state.
+        if (res.reason === "therapist_unavailable" || res.reason === "delivery_failed") {
+          setDone(true);
+          return;
+        }
+
         if (res.reason === "rate_limit_exceeded") {
           track("lead_rate_limited", { therapist_id: therapistId, page_source: pageSource ?? null });
         }
@@ -183,8 +192,10 @@ export function WhatsAppLeadModal({
         page_source: pageSource ?? null,
       });
       setDone(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "אירעה שגיאה. נסו שוב.");
+    } catch {
+      // Unexpected server/provider failures are also kept internal. Do not
+      // disclose whether the therapist ultimately received the WhatsApp lead.
+      setDone(true);
     } finally {
       setSubmitting(false);
     }
@@ -221,11 +232,8 @@ export function WhatsAppLeadModal({
               ✓
             </div>
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
-              ההודעה נשלחה
+              הפנייה נשלחה למטפל
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              ההודעה נשלחה ל{therapistName} ב־WhatsApp. אם המטפל/ת ירצו להשיב, הם יפנו אליכם ישירות לטלפון שהשארתם.
-            </p>
             <button
               type="button"
               onClick={onClose}
