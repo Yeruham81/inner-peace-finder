@@ -14,13 +14,14 @@ const problemRoute = readFileSync("src/routes/problems.$slug.tsx", "utf8");
 const unifiedSearchFunctions = readFileSync("src/lib/query-interpreter.functions.ts", "utf8");
 
 describe("back-to-search button", () => {
-  it("restores the exact filtered results state, including sort and page", () => {
-    const ret = "/search?q=%D7%96%D7%95%D7%92&problem=couples_conflict&sort=rank&page=3&online=true";
+  it("restores the filtered results state without restoring retired raw q", () => {
+    const ret =
+      "/search?q=%D7%96%D7%95%D7%92&searchId=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&problem=couples_conflict&sort=rank&page=3&online=true";
     const opts = resultsReturnLinkOptions(ret);
     expect(opts.to).toBe("/search");
     if (opts.to !== "/search") throw new Error("expected search return options");
     expect(opts.search).toEqual({
-      q: "זוג",
+      searchId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       problem: "couples_conflict",
       sort: "rank",
       page: 3,
@@ -34,11 +35,11 @@ describe("back-to-search button", () => {
     expect(DEFAULT_SEARCH_RETURN).toBe("/search");
   });
 
-  it("keeps backwards-compatible ret parsing while new profile links stay clean", () => {
+  it("keeps backwards-compatible ret parsing while stripping retired raw q", () => {
     expect(profileRoute).toContain("ret: z.string().optional()");
-    const opts = resultsReturnLinkOptions("/search?q=abc");
+    const opts = resultsReturnLinkOptions("/search?q=abc&city=haifa");
     if (opts.to !== "/search") throw new Error("expected search return options");
-    expect(opts.search).toEqual({ q: "abc" });
+    expect(opts.search).toEqual({ city: "haifa" });
   });
 
   it("returns to the exact canonical problem results page", () => {
@@ -66,9 +67,12 @@ describe("back-to-search button", () => {
 });
 
 describe("buildResultsReturn", () => {
-  it("preserves the full search-results URL (query, filters, sort, state)", () => {
-    const qs = "?q=%D7%96%D7%95%D7%92&problem=couples_conflict&city=&sort=rank&page=2";
-    expect(buildResultsReturn("/search", qs)).toBe(`/search${qs}`);
+  it("preserves non-sensitive search state while stripping retired raw q", () => {
+    const qs =
+      "?q=%D7%96%D7%95%D7%92&searchId=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&problem=couples_conflict&city=&sort=rank&page=2";
+    expect(buildResultsReturn("/search", qs)).toBe(
+      "/search?searchId=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&problem=couples_conflict&city=&sort=rank&page=2",
+    );
   });
 
   it("returns the bare results path when there is no query string", () => {
@@ -87,10 +91,12 @@ describe("buildResultsReturn", () => {
 });
 
 describe("sanitizeResultsReturn", () => {
-  it("accepts internal search-results paths and keeps parameters", () => {
-    expect(sanitizeResultsReturn("/search?q=abc&city=%D7%AA%D7%9C+%D7%90%D7%91%D7%99%D7%91")).toBe(
-      "/search?q=abc&city=%D7%AA%D7%9C+%D7%90%D7%91%D7%99%D7%91",
-    );
+  it("accepts internal search-results paths but removes raw q/flow", () => {
+    expect(
+      sanitizeResultsReturn(
+        "/search?q=abc&flow=legacy&searchId=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&city=%D7%AA%D7%9C+%D7%90%D7%91%D7%99%D7%91",
+      ),
+    ).toBe("/search?searchId=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&city=%D7%AA%D7%9C+%D7%90%D7%91%D7%99%D7%91");
     expect(sanitizeResultsReturn("/search")).toBe("/search");
   });
 
