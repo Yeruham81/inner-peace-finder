@@ -121,7 +121,7 @@ export function ProfileOnboardingCard({
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-bold text-emerald-950">כל חמשת השלבים הושלמו</h2>
+                  <h2 className="text-sm font-bold text-emerald-950">ההצטרפות הושלמה</h2>
                   <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${copy.badgeClass}`}>
                     {copy.badge}
                   </span>
@@ -204,25 +204,17 @@ export function ProfileOnboardingCard({
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
               {paymentRepairOnly
-                ? "ארבעת השלבים הראשונים כבר הושלמו. אפשר לעבור ישירות למסך החיובים כדי להשלים מחדש את השלב החמישי."
-                : "כדי להתחיל להופיע באתר יש להשלים את כל השלבים"}
+                ? "נדרש לעדכן את אמצעי התשלום. אפשר לעבור ישירות למסך החיובים כדי להסדיר אותו."
+                : "כדי להתחיל להופיע באתר יש להשלים את הפרטים וההגדרות הנדרשים"}
             </p>
           </div>
-          <span className="rounded-full border border-brand/20 bg-white px-3 py-1.5 text-sm font-bold text-brand ltr-num">
-            {status.completedCount}/{status.totalCount}
-          </span>
         </div>
         <Progress value={progress} className="mt-4 h-2.5 bg-brand/15 [&>div]:bg-emerald-600" />
       </div>
 
       <ol className="divide-y divide-border/70 px-4 sm:px-6">
-        {displayedSteps.map((step, index) => (
-          <OnboardingStep
-            key={step.id}
-            number={step.id === "payment" ? 5 : index + 1}
-            step={step}
-            state={status.steps[step.id]}
-          />
+        {displayedSteps.map((step) => (
+          <OnboardingStep key={step.id} step={step} state={status.steps[step.id]} />
         ))}
       </ol>
 
@@ -234,7 +226,7 @@ export function ProfileOnboardingCard({
           </div>
         ) : (
           <p className="text-xs leading-5 text-muted-foreground">
-             לאחר השלמת כל השלבים, תופיע כאן האפשרות לפרסם את הפרופיל
+            לאחר השלמת כל הדרישות, תופיע כאן האפשרות לפרסם את הפרופיל
           </p>
         )}
       </div>
@@ -295,7 +287,7 @@ function ManagementActionDialog({
   );
 }
 
-function OnboardingStep({ number, step, state }: { number: number; step: Step; state: OnboardingStepState }) {
+function OnboardingStep({ step, state }: { step: Step; state: OnboardingStepState }) {
   const Icon = step.icon;
   const content = (
     <div className="flex items-start gap-3 py-4">
@@ -313,7 +305,7 @@ function OnboardingStep({ number, step, state }: { number: number; step: Step; s
         ) : state === "action_required" ? (
           <X className="h-4 w-4" />
         ) : (
-          number
+          <Circle className="h-3 w-3" />
         )}
       </span>
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
