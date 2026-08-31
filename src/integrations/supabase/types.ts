@@ -1,4 +1,4 @@
-export type Json =
+
   | string
   | number
   | boolean
@@ -850,6 +850,9 @@ export type Database = {
           auth_user_id: string
           created_at: string
           credential_verification_skipped_at: string | null
+          contact_policy_last_violation_at: string | null
+          contact_policy_last_violation_types: string[]
+          contact_policy_violation_count: number
           id: string
           notify_account_updates: boolean
           notify_new_leads: boolean
@@ -863,6 +866,9 @@ export type Database = {
           auth_user_id: string
           created_at?: string
           credential_verification_skipped_at?: string | null
+          contact_policy_last_violation_at?: string | null
+          contact_policy_last_violation_types?: string[]
+          contact_policy_violation_count?: number
           id?: string
           notify_account_updates?: boolean
           notify_new_leads?: boolean
@@ -876,6 +882,9 @@ export type Database = {
           auth_user_id?: string
           created_at?: string
           credential_verification_skipped_at?: string | null
+          contact_policy_last_violation_at?: string | null
+          contact_policy_last_violation_types?: string[]
+          contact_policy_violation_count?: number
           id?: string
           notify_account_updates?: boolean
           notify_new_leads?: boolean
@@ -885,6 +894,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      therapist_contact_policy_events: {
+        Row: {
+          created_at: string
+          field_names: string[]
+          id: string
+          therapist_account_id: string
+          therapist_id: string | null
+          violation_types: string[]
+        }
+        Insert: {
+          created_at?: string
+          field_names: string[]
+          id?: string
+          therapist_account_id: string
+          therapist_id?: string | null
+          violation_types: string[]
+        }
+        Update: {
+          created_at?: string
+          field_names?: string[]
+          id?: string
+          therapist_account_id?: string
+          therapist_id?: string | null
+          violation_types?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_contact_policy_events_therapist_account_id_fkey"
+            columns: ["therapist_account_id"]
+            isOneToOne: false
+            referencedRelation: "therapist_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_contact_policy_events_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       therapist_claim_invites: {
         Row: {
@@ -2244,6 +2295,15 @@ export type Database = {
       record_contact_email_suppressions: {
         Args: { _emails: string[]; _source: string }
         Returns: number
+      }
+      record_profile_contact_policy_violation: {
+        Args: {
+          _actor: string
+          _field_names: string[]
+          _therapist_id: string | null
+          _violation_types: string[]
+        }
+        Returns: Json
       }
       record_cta_click: {
         Args: {
