@@ -7,6 +7,7 @@ const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
 
 const foundation = read("supabase/migrations/20260823120000_monthly_budget_foundation.sql");
 const enforcement = read("supabase/migrations/20260823121000_monthly_budget_enforcement.sql");
+const budgetFloor = read("supabase/migrations/20260831094500_monthly_budget_floor.sql");
 const billingPage = read("src/routes/_authenticated/account.billing.tsx");
 const searchEligibility = read("src/lib/search-eligibility.ts");
 const budgetFunctions = read("src/lib/billing-budget.functions.ts");
@@ -34,9 +35,7 @@ describe("monthly advertising budget foundation", () => {
       "monthly_budget_notifications",
     ]) {
       expect(foundation).toContain(`alter table public.${table} force row level security`);
-      expect(foundation).toContain(
-        `revoke all on table public.${table} from public, anon, authenticated`,
-      );
+      expect(foundation).toContain(`revoke all on table public.${table} from public, anon, authenticated`);
     }
   });
 
@@ -69,6 +68,19 @@ describe("monthly advertising budget enforcement", () => {
     expect(enforcement).toContain("commit_monthly_budget_reservation");
     expect(enforcement).toContain("release_unused_voice_monthly_budget");
     expect(enforcement).toContain("new.outcome <> 'answered'");
+  });
+
+  it("prevents lowering the budget below accrued charges and active reservations", () => {
+    expect(budgetFloor).toContain("v_minimum_agorot := v_spent + v_reserved");
+    expect(budgetFloor).toContain("_monthly_limit_agorot < v_minimum_agorot");
+    expect(budgetFloor).toContain("monthly_budget_below_current_usage");
+    expect(budgetFloor).toContain("reservation.status = 'reserved'");
+    expect(budgetFloor).toContain("reservation.expires_at > pg_catalog.now()");
+    expect(budgetFloor).toContain("pg_advisory_xact_lock");
+    expect(billingPage).toContain("minimumBudgetAgorot = spent + reserved");
+    expect(billingPage).toContain("min={minimumBudgetShekels}");
+    expect(billingPage).toContain("התקרה המינימלית כעת היא");
+    expect(budgetFunctions).toContain("monthly_budget_below_current_usage");
   });
 
   it("queues one notification per account and month and sends a billing-page link", () => {
