@@ -293,6 +293,8 @@ export function scanProfileContactPolicy(input: ProfileContactPolicyInput): Cont
   ]);
 }
 
-export function contactPolicyWarningText(_types: readonly ContactBypassType[]): string {
-  return "נמצאו פרטי קשר ישירים או מוסווים (מספר טלפון, כתובת אתר או קישור) המפרים את תנאי השימוש. יש להסיר אותם ולהשתמש בדרכי ההתקשרות המובנות של טיפולינקס. ניסיונות חוזרים נרשמים ועשויים להוביל להשעיה ולחסימת הפרופיל.";
+export function contactPolicyWarningText(types: readonly ContactBypassType[]): string {
+  const labels = [...new Set(types)].map((type) => CONTACT_BYPASS_LABELS[type]);
+  const detectedTypes = labels.length > 0 ? ` (${labels.join(", ")})` : "";
+  return `נמצאו פרטי קשר ישירים או מוסווים${detectedTypes} המפרים את תנאי השימוש. יש להסיר אותם ולהשתמש בדרכי ההתקשרות המובנות של טיפולינקס. ניסיונות חוזרים נרשמים ועשויים להוביל להשעיה ולחסימת הפרופיל.`;
 }
