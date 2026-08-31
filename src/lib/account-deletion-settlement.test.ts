@@ -1,4 +1,3 @@
-import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -29,7 +28,9 @@ describe("account deletion settlement flow", () => {
     expect(migration).toContain("expires_at <> 'infinity'::timestamptz");
     expect(migration).toContain("and expires_at <= pg_catalog.now()");
     expect(migration).toContain("v_status := 'blocked_pending_leads'");
-    expect(migration).not.toContain("set status = 'released', released_at = pg_catalog.now()\n  where account_id = v_account.id\n    and status = 'reserved';");
+    expect(migration).not.toContain(
+      "set status = 'released', released_at = pg_catalog.now()\n  where account_id = v_account.id\n    and status = 'reserved';",
+    );
     expect(settings).toContain("מחיקת החשבון אינה אפשרית כרגע.");
     expect(settings).toContain("admin@tipulinks.co.il");
     expect(settings).toContain("mailto:${supportEmail}");
