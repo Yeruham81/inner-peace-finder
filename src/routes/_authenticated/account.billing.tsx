@@ -72,12 +72,22 @@ function AccountBillingPage() {
     setNotifyOnExhaustion(budget.data.notify_on_exhaustion);
   }, [budget.data]);
 
+  const spent = budget.data?.spent_agorot ?? 0;
+  const reserved = budget.data?.reserved_agorot ?? 0;
+  const minimumBudgetAgorot = spent + reserved;
+  const minimumBudgetShekels = Math.max(minimumBudgetAgorot, 1) / 100;
+
   const budgetMutation = useMutation({
     mutationFn: () => {
       const amount = Number(monthlyLimit);
       const agorot = hasMonthlyLimit ? Math.round(amount * 100) : null;
       if (hasMonthlyLimit && (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(agorot))) {
         throw new Error("יש להזין תקציב חודשי תקין וגדול מאפס.");
+      }
+      if (hasMonthlyLimit && agorot !== null && agorot < minimumBudgetAgorot) {
+        throw new Error(
+          `לא ניתן להגדיר תקרה נמוכה מהחיובים שכבר נצברו או נשמרו בתקופה הנוכחית. הסכום המינימלי שניתן להגדיר כעת הוא ${formatAgorot(minimumBudgetAgorot)}.`,
+        );
       }
       return updateMonthlyBudgetFn({
         data: { monthlyLimitAgorot: agorot, notifyOnExhaustion },
@@ -101,7 +111,6 @@ function AccountBillingPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את מצב הבדיקה."),
   });
 
-  const spent = budget.data?.spent_agorot ?? 0;
   const limit = budget.data?.monthly_limit_agorot ?? null;
   const usagePercent = limit ? Math.min(100, (spent / limit) * 100) : 0;
   const chargedLeads = billingHistory.data?.charged_leads ?? 0;
@@ -212,7 +221,7 @@ function AccountBillingPage() {
                         dir="ltr"
                         inputMode="decimal"
                         type="number"
-                        min="1"
+                        min={minimumBudgetShekels}
                         step="0.01"
                         value={monthlyLimit}
                         onChange={(event) => setMonthlyLimit(event.target.value)}
@@ -220,6 +229,13 @@ function AccountBillingPage() {
                         placeholder="500"
                       />
                     </div>
+                    {minimumBudgetAgorot > 0 && (
+                      <span className="mt-2 block max-w-xl text-xs leading-5 text-muted-foreground">
+                        לא ניתן להגדיר תקרה נמוכה מהחיובים שכבר נצברו
+                        {reserved > 0 ? " או נשמרו עבור פניות פעילות" : ""} בתקופה הנוכחית. התקרה המינימלית כעת היא{" "}
+                        {formatAgorot(minimumBudgetAgorot)}.
+                      </span>
+                    )}
                   </label>
                 )}
 
