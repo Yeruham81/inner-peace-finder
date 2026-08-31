@@ -1,5 +1,3 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
-
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -2264,6 +2262,7 @@ export type Database = {
       };
       assert_account_deletion_ready: { Args: { _actor: string }; Returns: Json };
       account_outstanding_balance_agorot: { Args: { _account_id: string }; Returns: number };
+
       is_contact_email_suppressed: {
         Args: { _email: string };
         Returns: boolean;
