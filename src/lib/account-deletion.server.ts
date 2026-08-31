@@ -1,5 +1,3 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
 export const ACCOUNT_DELETION_SUPPORT_EMAIL = "admin@tipulinks.co.il";
 
 export type AccountDeletionStatus =
@@ -141,7 +139,12 @@ export async function settleOwnedAccountDeletionBalance(authUserId: string, requ
   const idempotencyKey = String(claim.idempotency_key ?? "");
   const paymentMethodKind = claim.payment_method_kind;
 
-  if (!paymentAttemptId || !idempotencyKey || amountAgorot <= 0 || (paymentMethodKind !== "real" && paymentMethodKind !== "test")) {
+  if (
+    !paymentAttemptId ||
+    !idempotencyKey ||
+    amountAgorot <= 0 ||
+    (paymentMethodKind !== "real" && paymentMethodKind !== "test")
+  ) {
     throw new Error("לא ניתן להתחיל את החיוב המיידי. יש לנסות שוב.");
   }
 
