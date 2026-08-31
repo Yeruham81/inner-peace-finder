@@ -22,6 +22,9 @@ export type AdminTherapistRow = {
   firstContactSentAt: string | null;
   ownerReviewedAt: string | null;
   doNotRepublish: boolean;
+  contactPolicyViolationCount: number;
+  contactPolicyLastViolationAt: string | null;
+  contactPolicyLastViolationTypes: string[];
 };
 
 function hasAdminClaim(claims: unknown): boolean {
@@ -29,8 +32,8 @@ function hasAdminClaim(claims: unknown): boolean {
   const appMetadata = (claims as { app_metadata?: unknown }).app_metadata;
   return Boolean(
     appMetadata &&
-      typeof appMetadata === "object" &&
-      (appMetadata as { tipulinks_role?: unknown }).tipulinks_role === "admin",
+    typeof appMetadata === "object" &&
+    (appMetadata as { tipulinks_role?: unknown }).tipulinks_role === "admin",
   );
 }
 
@@ -51,26 +54,54 @@ export const listAdminTherapists = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      fullName: row.full_name,
-      professionalTitle: row.professional_title,
-      email: row.email,
-      phone: row.phone,
-      city: row.city,
-      createdAt: row.created_at,
-      profileStatus: row.profile_status,
-      visibility: row.visibility,
-      isActive: row.is_active,
-      verified: Boolean(row.verified),
-      profileOrigin: row.profile_origin === "admin_public_info" ? "admin_public_info" : "self_created",
-      ownerAccountId: row.owner_account_id,
-      profileClaimed: Boolean(row.profile_claimed),
-      firstContactSentAt: row.first_contact_sent_at,
-      ownerReviewedAt: row.owner_reviewed_at,
-      doNotRepublish: Boolean(row.do_not_republish),
-    }));
+    const ownerAccountIds = [
+      ...new Set((data ?? []).map((row) => row.owner_account_id).filter((id): id is string => Boolean(id))),
+    ];
+    const accountStats = new Map<string, { count: number; lastAt: string | null; lastTypes: string[] }>();
+
+    if (ownerAccountIds.length > 0) {
+      const { data: accounts, error: accountsError } = await supabaseAdmin
+        .from("therapist_accounts")
+        .select(
+          "id, contact_policy_violation_count, contact_policy_last_violation_at, contact_policy_last_violation_types",
+        )
+        .in("id", ownerAccountIds);
+      if (accountsError) throw new Error(accountsError.message);
+      for (const account of accounts ?? []) {
+        accountStats.set(account.id, {
+          count: account.contact_policy_violation_count ?? 0,
+          lastAt: account.contact_policy_last_violation_at ?? null,
+          lastTypes: account.contact_policy_last_violation_types ?? [],
+        });
+      }
+    }
+
+    return (data ?? []).map((row) => {
+      const stats = row.owner_account_id ? accountStats.get(row.owner_account_id) : undefined;
+      return {
+        id: row.id,
+        slug: row.slug,
+        fullName: row.full_name,
+        professionalTitle: row.professional_title,
+        email: row.email,
+        phone: row.phone,
+        city: row.city,
+        createdAt: row.created_at,
+        profileStatus: row.profile_status,
+        visibility: row.visibility,
+        isActive: row.is_active,
+        verified: Boolean(row.verified),
+        profileOrigin: row.profile_origin === "admin_public_info" ? "admin_public_info" : "self_created",
+        ownerAccountId: row.owner_account_id,
+        profileClaimed: Boolean(row.profile_claimed),
+        firstContactSentAt: row.first_contact_sent_at,
+        ownerReviewedAt: row.owner_reviewed_at,
+        doNotRepublish: Boolean(row.do_not_republish),
+        contactPolicyViolationCount: stats?.count ?? 0,
+        contactPolicyLastViolationAt: stats?.lastAt ?? null,
+        contactPolicyLastViolationTypes: stats?.lastTypes ?? [],
+      };
+    });
   });
 
 const DeleteAdminProfileSchema = z.object({ therapist_id: z.string().uuid() });
@@ -103,10 +134,10 @@ export const deleteAdminManagedTherapist = createServerFn({ method: "POST" })
     // Storage cleanup can therefore be retried safely if a transient error occurs.
     await removeImageFolder(data.therapist_id);
 
-    const { data: deleted, error: finalizeError } = await supabaseAdmin.rpc(
-      "finalize_admin_public_profile_deletion",
-      { _actor: context.userId, _therapist_id: data.therapist_id },
-    );
+    const { data: deleted, error: finalizeError } = await supabaseAdmin.rpc("finalize_admin_public_profile_deletion", {
+      _actor: context.userId,
+      _therapist_id: data.therapist_id,
+    });
     if (finalizeError) throw new Error(finalizeError.message);
     if (!deleted) throw new Error("מחיקת הפרופיל לא הושלמה.");
     return { deleted: true as const, therapist_id: deleted };
