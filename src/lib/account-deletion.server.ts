@@ -1,3 +1,5 @@
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
 export const ACCOUNT_DELETION_SUPPORT_EMAIL = "admin@tipulinks.co.il";
 
 export type AccountDeletionStatus =
