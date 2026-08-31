@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalDocumentPage, type LegalDocumentBlock } from "@/components/legal-document-page";
+import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl } from "@/lib/seo";
 
 const TITLE = "תנאי השימוש של טיפולינקס";
@@ -1333,6 +1334,7 @@ export const Route = createFileRoute("/terms-of-use")({
         { property: "og:description", content: DESCRIPTION },
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
+        seoRobotsMeta("/terms-of-use"),
       ],
       links: [{ rel: "canonical", href: canonical }],
     };

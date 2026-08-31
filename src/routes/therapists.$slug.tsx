@@ -8,6 +8,7 @@ import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { PublicRouteError } from "@/components/public-route-error";
 import { track } from "@/lib/analytics";
 import { readRememberedResultsReturn, resultsReturnLinkOptions } from "@/lib/search-return";
+import { seoRobotsMeta, therapistSeoEligible } from "@/lib/seo-indexing";
 import { absoluteUrl, encodePathSegment, serializeJsonLd, SITE_ORIGIN } from "@/lib/seo";
 
 function therapistQuery(slug: string) {
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/therapists/$slug")({
       { property: "og:description", content: desc },
       { property: "og:type", content: "profile" },
       { property: "og:url", content: canonical },
+      seoRobotsMeta(`/therapists/${encodePathSegment(loaderData.slug)}`, therapistSeoEligible(loaderData)),
     ];
     if (loaderData.image_url) {
       meta.push({ property: "og:image", content: loaderData.image_url });

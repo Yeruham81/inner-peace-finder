@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalDocumentPage, type LegalDocumentBlock } from "@/components/legal-document-page";
+import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl } from "@/lib/seo";
 
 const TITLE = "מדיניות הפרטיות של טיפולינקס";
@@ -913,6 +914,7 @@ export const Route = createFileRoute("/privacy-policy")({
         { property: "og:description", content: DESCRIPTION },
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
+        seoRobotsMeta("/privacy-policy"),
       ],
       links: [{ rel: "canonical", href: canonical }],
     };

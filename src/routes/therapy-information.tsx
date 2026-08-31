@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicRouteError } from "@/components/public-route-error";
 import { listPublishedProblemSeoContent, PROBLEM_SEO_GROUPS } from "@/lib/problem-seo-content";
 import { toPublicProblemSlug } from "@/lib/problem-public-url";
+import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl, encodePathSegment, serializeJsonLd, SITE_ORIGIN } from "@/lib/seo";
 import { listProblems } from "@/lib/therapists.functions";
 
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/therapy-information")({
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
         { name: "twitter:card", content: "summary" },
+        seoRobotsMeta("/therapy-information"),
       ],
       links: [{ rel: "canonical", href: canonical }],
       scripts: [

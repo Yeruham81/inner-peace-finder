@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { initializeDisplayPreferences } from "../lib/display-preferences";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { indexingBootstrapScript, robotsDirective } from "@/lib/seo-indexing";
 
 function NotFoundComponent() {
   return (
@@ -91,6 +92,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      // Fail-closed sitewide default. Intentional public SEO routes override
+      // this with the centralized policy result in their own head().
+      { name: "robots", content: robotsDirective({ indexingAllowed: false, routeEligible: false }) },
     ],
     links: [
       {
@@ -127,9 +131,10 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="he" dir="rtl">
       <head>
+        {/* Server-decided indexing state, so hydration reproduces the exact
+            robots directive crawlers received. */}
+        <script dangerouslySetInnerHTML={{ __html: indexingBootstrapScript() }} />
         <HeadContent />
-        {/* Temporary pre-launch safeguard: keep every route out of search indexes while remaining crawlable. */}
-        <meta name="robots" content="noindex,follow" />
       </head>
       <body>
         {children}

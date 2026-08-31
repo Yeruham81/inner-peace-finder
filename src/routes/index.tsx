@@ -6,6 +6,7 @@ import { SearchForm } from "@/components/search-form";
 import { homepageProblemSlugs } from "@/lib/homepage-problem-map";
 import { HOMEPAGE_SEARCH_PRESETS, type HomepageSearchPreset } from "@/lib/homepage-search-presets";
 import { serializeMultiValue } from "@/lib/search-contract";
+import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl, serializeJsonLd, SITE_NAME, SITE_ORIGIN } from "@/lib/seo";
 
 const filterOptionsQuery = queryOptions({
@@ -308,6 +309,7 @@ export const Route = createFileRoute("/")({
         },
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
+        seoRobotsMeta("/"),
       ],
       links: [{ rel: "canonical", href: canonical }],
       scripts: [
