@@ -32,7 +32,7 @@ describe("public legal pages", () => {
     const terms = readSource("routes/terms-of-use.tsx");
 
     expect(privacy).toContain("OpenAI");
-    expect(privacy).toContain("משה ברק הוא בעל השליטה במאגר המידע");
+    expect(privacy).toContain("ברק משה הוא בעל השליטה במאגר המידע");
     expect(terms).toContain("החיוב יתבצע רק כאשר הודעת הפנייה סומנה כנמסרה (Delivered)");
     expect(terms).toContain("1,000 ₪");
   });

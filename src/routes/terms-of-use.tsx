@@ -1290,7 +1290,7 @@ const termsBlocks: LegalDocumentBlock[] = [
   },
   {
     type: "p",
-    text: "טיפולינקס מופעלת על ידי משה ברק.",
+    text: "טיפולינקס מופעלת על ידי ברק משה.",
   },
   {
     type: "p",
