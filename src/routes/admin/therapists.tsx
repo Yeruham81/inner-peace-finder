@@ -60,6 +60,17 @@ function originStatus(row: AdminTherapistRow): string {
   return row.profileOrigin === "admin_public_info" ? "נוצר ע״י Tipulinks" : "נוצר ע״י המטפל";
 }
 
+const CONTACT_POLICY_TYPE_LABELS: Record<string, string> = {
+  phone: "טלפון",
+  email: "אימייל",
+  website: "אתר/קישור",
+  social: "רשת חברתית/ערוץ תקשורת",
+};
+
+function contactPolicyTypesLabel(types: string[]): string {
+  return types.map((type) => CONTACT_POLICY_TYPE_LABELS[type] ?? type).join(", ");
+}
+
 function canAdminEdit(row: AdminTherapistRow): boolean {
   return row.profileOrigin === "admin_public_info" && !row.ownerAccountId && !row.profileClaimed && !row.doNotRepublish;
 }
@@ -158,6 +169,17 @@ function TherapistsPage() {
       header: "אימייל",
       hideOnNarrow: true,
       render: (row) => <span dir="ltr">{row.email || "—"}</span>,
+    },
+    {
+      key: "contactPolicyViolations",
+      header: "ניסיונות עקיפת קשר",
+      hideOnNarrow: true,
+      render: (row) =>
+        row.contactPolicyViolationCount > 0 ? (
+          <span className="font-semibold text-destructive">{row.contactPolicyViolationCount}</span>
+        ) : (
+          <span className="text-muted-foreground">0</span>
+        ),
     },
     {
       key: "createdAt",
@@ -270,6 +292,11 @@ function TherapistsPage() {
               <AdminStatusBadge status={ownershipStatus(row)} />
               <AdminStatusBadge status={originStatus(row)} />
             </div>
+            {row.contactPolicyViolationCount > 0 ? (
+              <p className="text-xs font-semibold text-destructive">
+                ניסיונות עקיפת קשר: {row.contactPolicyViolationCount}
+              </p>
+            ) : null}
           </div>
         )}
       />
@@ -316,6 +343,27 @@ function TherapistsPage() {
               <AdminDetailRow
                 label="אימות מקצועי"
                 value={<AdminStatusBadge status={selected.verified ? "מאומת" : "ללא אימות"} />}
+              />
+            </AdminDetailSection>
+            <AdminDetailSection title="ניטור עקיפת קשר">
+              <AdminDetailRow label="ניסיונות חסומים" value={String(selected.contactPolicyViolationCount)} />
+              <AdminDetailRow
+                label="ניסיון אחרון"
+                value={
+                  selected.contactPolicyLastViolationAt ? (
+                    <span dir="ltr">{formatAdminDateTime(selected.contactPolicyLastViolationAt)}</span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+              <AdminDetailRow
+                label="סוגים בניסיון האחרון"
+                value={
+                  selected.contactPolicyLastViolationTypes.length > 0
+                    ? contactPolicyTypesLabel(selected.contactPolicyLastViolationTypes)
+                    : "—"
+                }
               />
             </AdminDetailSection>
             <AdminDetailSection title="פרטים">
