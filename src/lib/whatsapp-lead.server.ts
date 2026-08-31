@@ -53,9 +53,8 @@ export function sanitizeWhatsAppTemplateVariable(value: string): string {
 export function whatsappContentVariables(payload: WhatsAppLeadMessage): string {
   return JSON.stringify({
     "1": sanitizeWhatsAppTemplateVariable(payload.visitorName),
-    "2": payload.visitorPhone,
-    "3": sanitizeWhatsAppTemplateVariable(payload.message),
-    "4": whatsappDirectChatUrl(payload.visitorPhone),
+    "2": sanitizeWhatsAppTemplateVariable(payload.message),
+    "3": whatsappDirectChatUrl(payload.visitorPhone),
   });
 }
 

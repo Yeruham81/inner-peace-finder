@@ -76,9 +76,8 @@ describe("message rendering", () => {
   it("maps template variables in a stable order", () => {
     expect(JSON.parse(whatsappContentVariables(payload))).toEqual({
       "1": "יוסי לוי",
-      "2": "+972501234567",
-      "3": "אשמח לתאם פגישה",
-      "4": "https://wa.me/972501234567",
+      "2": "אשמח לתאם פגישה",
+      "3": "https://wa.me/972501234567",
     });
   });
 
@@ -93,7 +92,9 @@ describe("message rendering", () => {
       }),
     );
     expect(variables["1"]).toBe("יוסי לוי");
-    expect(variables["3"]).toBe("שלום! אשמח לתאם פגישה. 🙂");
+    expect(variables["2"]).toBe("שלום! אשמח לתאם פגישה. 🙂");
+    expect(variables["3"]).toBe("https://wa.me/972501234567");
+    expect(variables["4"]).toBeUndefined();
   });
 
   it("builds the direct WhatsApp link from E.164 without the leading plus", () => {
