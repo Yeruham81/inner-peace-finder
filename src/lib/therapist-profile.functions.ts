@@ -1,4 +1,4 @@
-
+import { createServerFn } from "@tanstack/react-start";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -1069,3 +1069,7 @@ export const getSemanticFeedback = createServerFn({ method: "POST" })
 
     // Semantic extraction stays untouched; its results are only *validated*
     // against the active catalog + strict explicit evidence.
+    const semantic = await SemanticEngine.extractProfile(desc, context.supabase);
+
+    return { domains: combineFeedbackDomains(desc, catalog, semantic) };
+  });
