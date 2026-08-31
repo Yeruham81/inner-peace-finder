@@ -24,6 +24,11 @@ import { TherapistCredentialPanel } from "@/components/therapist-credential-pane
 import { TherapistProfileView } from "@/components/therapist-profile-view";
 import { buildPreviewViewData } from "@/lib/profile-preview-adapter";
 import { looksLikeEmailAddress } from "@/lib/contact-validation";
+import {
+  contactPolicyWarningText,
+  scanProfileContactPolicy,
+  type ContactBypassType,
+} from "@/lib/profile-contact-policy";
 import { orderCanonicalLanguages } from "@/lib/language-options";
 import { PRODUCT_REGIONS } from "@/lib/locality-options";
 import { MODALITY_GROUPS, modalityGroupForSlug } from "@/lib/modality-options";
@@ -385,6 +390,15 @@ function fromProfile(p: ProfileEditorData, editorOptions: EditorOptions, default
   };
 }
 
+function ContactPolicyWarning({ types }: { types: readonly ContactBypassType[] }) {
+  if (types.length === 0) return null;
+  return (
+    <p className="mt-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs leading-5 text-destructive">
+      {contactPolicyWarningText(types)}
+    </p>
+  );
+}
+
 function resolveEditorContactPreferences(form: FormState, defaultEmail: string) {
   const email = form.email.trim() || defaultEmail.trim();
   const phone = form.phone.trim();
@@ -466,6 +480,12 @@ export function EditorPage({
   const formSnapshot = useMemo(() => JSON.stringify(form), [form]);
   const hasUnsavedChanges = initialized && savedFormSnapshot !== null && formSnapshot !== savedFormSnapshot;
   hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const contactPolicyScan = useMemo(
+    () => (isAdmin ? { findings: [], fieldKeys: [], types: [] } : scanProfileContactPolicy(form)),
+    [form, isAdmin],
+  );
+  const contactPolicyTypesFor = (fieldKey: string) =>
+    contactPolicyScan.findings.find((finding) => finding.fieldKey === fieldKey)?.types ?? [];
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -924,6 +944,7 @@ export function EditorPage({
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   placeholder="לדוגמא: אני עובד סוציאלי קליני בעל ניסיון בטיפול במבוגרים ובמתבגרים. אני מסייע לאנשים המתמודדים עם חרדה וחרדה חברתית, קשיי שינה על רקע לחץ, טראומה, פרידה ומשברי חיים, וכן עם קשיים בוויסות רגשי ובתפקוד בעבודה או במערכות יחסים. אני עובד בגישה אינטגרטיבית ומאמין בקשר טיפולי בטוח שמאפשר התבוננות, התמודדות ושינוי."
                 />
+                <ContactPolicyWarning types={contactPolicyTypesFor("full_description")} />
                 <div className="mt-1 flex items-start justify-between gap-3 text-xs">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-muted-foreground">נדרש תחום טיפול אחד לפחות שהמערכת מזהה בתיאור</span>
@@ -969,6 +990,7 @@ export function EditorPage({
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   placeholder="לדוגמה: תואר שני בעבודה סוציאלית קלינית מאוניברסיטת תל אביב והכשרה בטיפול דינמי."
                 />
+                <ContactPolicyWarning types={contactPolicyTypesFor("education_training")} />
                 {isAdmin ? (
                   <div className="rounded-xl border border-brand/20 bg-brand-soft/25 p-4 text-sm leading-6 text-muted-foreground">
                     אימות הסמכות מקצועיות יתבצע על ידי המטפל/ת לאחר לקיחת הבעלות על הפרופיל.
@@ -994,6 +1016,7 @@ export function EditorPage({
                   className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm leading-relaxed transition-colors focus:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                   placeholder="לדוגמה: ניסיון של 8 שנים במרפאה ציבורית ובקליניקה פרטית, בעבודה עם מבוגרים ומתבגרים."
                 />
+                <ContactPolicyWarning types={contactPolicyTypesFor("professional_experience")} />
               </Section>
 
               <Section title="איגודים מקצועיים">
@@ -1520,23 +1543,25 @@ function StringListEditor({
       <h3 className="mb-2 text-sm font-medium text-foreground">{title}</h3>
       <div className="space-y-2">
         {items.map((item, index) => (
-          <div key={index} className="flex gap-2">
-            <Input
-              value={item}
-              maxLength={160}
-              placeholder={placeholder}
-              onChange={(e) =>
-                onChange(items.map((value, itemIndex) => (itemIndex === index ? e.target.value : value)))
-              }
-              className="bg-white"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
-            >
-              הסרה
-            </Button>
+          <div key={index}>
+            <div className="flex gap-2">
+              <Input
+                value={item}
+                maxLength={160}
+                placeholder={placeholder}
+                onChange={(e) =>
+                  onChange(items.map((value, itemIndex) => (itemIndex === index ? e.target.value : value)))
+                }
+                className="bg-white"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+              >
+                הסרה
+              </Button>
+            </div>
           </div>
         ))}
         <Button type="button" variant="outline" onClick={() => onChange([...items, ""])}>
