@@ -120,16 +120,19 @@ const SPOKEN_NUMBER_WORD_PATTERN = new RegExp(
 const PHONE_CONTEXT_PATTERN =
   /(טלפון|נייד|מספר\s*(?:ה)?טלפון|חייג|חייגו|וואטסאפ|ווטסאפ|whats\s*app|phone|mobile|call\s+me)/iu;
 
-const EMAIL_PATTERN = /(?:[a-z0-9_%+\-]\s*){1,64}(?:\.\s*(?:[a-z0-9_%+\-]\s*)+)*@\s*(?:[a-z0-9-]\s*){1,63}(?:\.\s*(?:[a-z0-9-]\s*){2,63})+/giu;
-const ISRAELI_PHONE_CANDIDATE_PATTERN =
-  /(?:\+\s*9\s*7\s*2|0\s*0\s*9\s*7\s*2|9\s*7\s*2|0)(?:[\s().\-–—_/\\|]*\d){8,9}/g;
+const EMAIL_PATTERN =
+  /(?:[a-z0-9_%+\-]\s*){1,64}(?:\.\s*(?:[a-z0-9_%+\-]\s*)+)*@\s*(?:[a-z0-9-]\s*){1,63}(?:\.\s*(?:[a-z0-9-]\s*){2,63})+/giu;
+const ISRAELI_PHONE_CANDIDATE_PATTERN = /(?:\+\s*9\s*7\s*2|0\s*0\s*9\s*7\s*2|9\s*7\s*2|0)(?:[\s().\-–—_/\\|]*\d){8,9}/g;
 const PHONE_CANDIDATE_PATTERN = /(?:\+|00)?\s*(?:\d[\s().\-–—_/\\|]*){8,15}/g;
 const DIRECT_URL_PATTERN = /(?:h\s*t\s*t\s*p\s*s?\s*:\s*\/\s*\/|w\s*w\s*w\s*\.)/iu;
-const DOMAIN_PATTERN = /(?:[a-z0-9](?:\s*[a-z0-9-]){1,62})\s*\.\s*(?:c\s*o\s*\.\s*i\s*l|o\s*r\s*g\s*\.\s*i\s*l|a\s*c\s*\.\s*i\s*l|c\s*o\s*m|o\s*r\s*g|n\s*e\s*t|i\s*n\s*f\s*o|b\s*i\s*z|i\s*o|m\s*e|i\s*l|s\s*i\s*t\s*e|c\s*l\s*i\s*n\s*i\s*c|h\s*e\s*a\s*l\s*t\s*h|c\s*a\s*r\s*e|o\s*n\s*l\s*i\s*n\s*e|a\s*p\s*p|l\s*i\s*n\s*k|p\s*r\s*o|l\s*y)(?![a-z])/iu;
+const DOMAIN_PATTERN =
+  /(?:[a-z0-9](?:\s*[a-z0-9-]){1,62})\s*\.\s*(?:c\s*o\s*\.\s*i\s*l|o\s*r\s*g\s*\.\s*i\s*l|a\s*c\s*\.\s*i\s*l|c\s*o\s*m|o\s*r\s*g|n\s*e\s*t|i\s*n\s*f\s*o|b\s*i\s*z|i\s*o|m\s*e|i\s*l|s\s*i\s*t\s*e|c\s*l\s*i\s*n\s*i\s*c|h\s*e\s*a\s*l\s*t\s*h|c\s*a\s*r\s*e|o\s*n\s*l\s*i\s*n\s*e|a\s*p\s*p|l\s*i\s*n\s*k|p\s*r\s*o|l\s*y)(?![a-z])/iu;
 const SOCIAL_HANDLE_PATTERN = /(^|[^\p{L}\p{N}])@[a-z0-9][a-z0-9._-]{2,}/iu;
 const SPACED_SOCIAL_HANDLE_PATTERN = /(^|[^\p{L}\p{N}])@\s*(?:[a-z0-9._-]\s*){3,}/iu;
-const SOCIAL_PLATFORM_PATTERN = /(וואטסאפ|ווטסאפ|whats\s*app|telegram|טלגרם|instagram|אינסטגרם|facebook|פייסבוק|messenger|מסנג['׳’]?ר|linkedin|לינקדאין|tiktok|טיקטוק|signal|סיגנל|skype|סקייפ|viber|וייבר|discord|דיסקורד|twitter|טוויטר|wechat|ווי\s*צ['׳’]?אט|zoom|זום|google\s*meet)/iu;
-const CONTACT_ACTION_PATTERN = /(צרו\s*קשר|צור\s*קשר|פנו\s*אל|פנה\s*אל|כתבו\s*לי|כתבו\s*אל|שלחו\s*לי|שלחו\s*הודעה|חפשו\s*אותי|מצאו\s*אותי|דברו\s*איתי|חייגו|dm\b|message\s+me|contact\s+me|reach\s+me)/iu;
+const SOCIAL_PLATFORM_PATTERN =
+  /(וואטסאפ|ווטסאפ|whats\s*app|telegram|טלגרם|instagram|אינסטגרם|facebook|פייסבוק|messenger|מסנג['׳’]?ר|linkedin|לינקדאין|tiktok|טיקטוק|signal|סיגנל|skype|סקייפ|viber|וייבר|discord|דיסקורד|twitter|טוויטר|wechat|ווי\s*צ['׳’]?אט|zoom|זום|google\s*meet)/iu;
+const CONTACT_ACTION_PATTERN =
+  /(צרו\s*קשר|צור\s*קשר|פנו\s*אל|פנה\s*אל|כתבו\s*לי|כתבו\s*אל|שלחו\s*לי|שלחו\s*הודעה|חפשו\s*אותי|מצאו\s*אותי|דברו\s*איתי|חייגו|dm\b|message\s+me|contact\s+me|reach\s+me)/iu;
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -160,10 +163,7 @@ function deobfuscateAddressSeparators(value: string): string {
       /(?<![\p{L}\p{N}])(?:[([{}]\s*)?(?:ש\s*ט\s*ר\s*ו\s*ד\s*ל|כרוכית|a\s*t)(?:\s*[)\]}])?(?![\p{L}\p{N}])/giu,
       " @ ",
     )
-    .replace(
-      /(?<![\p{L}\p{N}])(?:[([{}]\s*)?(?:נ\s*ק\s*ו\s*ד\s*ה|d\s*o\s*t)(?:\s*[)\]}])?(?![\p{L}\p{N}])/giu,
-      " . ",
-    )
+    .replace(/(?<![\p{L}\p{N}])(?:[([{}]\s*)?(?:נ\s*ק\s*ו\s*ד\s*ה|d\s*o\s*t)(?:\s*[)\]}])?(?![\p{L}\p{N}])/giu, " . ")
     .replace(/(?<![\p{L}\p{N}])ב\s*[-־]?\s*ג\s*[׳'’]?\s*י\s*מ\s*י\s*י\s*ל(?![\p{L}\p{N}])/giu, " @ gmail.com ")
     .replace(/(?<![\p{L}\p{N}])ג\s*[׳'’]?\s*י\s*מ\s*י\s*י\s*ל(?![\p{L}\p{N}])/giu, " gmail.com ")
     .replace(/(?<![\p{L}\p{N}])ב\s*[-־]?\s*אאוטלוק(?![\p{L}\p{N}])/giu, " @ outlook.com ")
@@ -293,7 +293,6 @@ export function scanProfileContactPolicy(input: ProfileContactPolicyInput): Cont
   ]);
 }
 
-export function contactPolicyWarningText(types: readonly ContactBypassType[]): string {
-  const labels = [...new Set(types)].map((type) => CONTACT_BYPASS_LABELS[type]);
-  return `נמצאו פרטי קשר ישירים או מוסווים (${labels.join(", ")}). יש להסיר אותם ולהשתמש בדרכי ההתקשרות המובנות של Tipulinks. הוספת פרטי קשר כאלה מנוגדת לתנאי השימוש. ניסיונות כאלה נרשמים ועשויים להוביל להשעיה ולחסימת הפרופיל.`;
+export function contactPolicyWarningText(_types: readonly ContactBypassType[]): string {
+  return "נמצאו פרטי קשר ישירים או מוסווים (מספר טלפון, כתובת אתר או קישור) המפרים את תנאי השימוש. יש להסיר אותם ולהשתמש בדרכי ההתקשרות המובנות של טיפולינקס. ניסיונות חוזרים נרשמים ועשויים להוביל להשעיה ולחסימת הפרופיל.";
 }
