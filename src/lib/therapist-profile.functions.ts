@@ -10,6 +10,7 @@ import type { CredentialStatus } from "./credential-workflow";
 import { CANONICAL_LANGUAGE_CODES, orderCanonicalLanguages } from "./language-options";
 import { therapistSlugBase } from "./therapist-slug";
 import { looksLikeEmailAddress } from "./contact-validation";
+import { CONTACT_POLICY_SAVE_ERROR, scanProfileContactPolicy } from "./profile-contact-policy";
 import { looksLikeIsraeliPhone } from "./phone-il";
 import {
   PRODUCT_REGIONS,
@@ -646,8 +647,34 @@ async function saveProfileForActor(args: {
 }): Promise<SaveResult> {
   const { data, supabase, userId, saveMode, targetTherapistId = null } = args;
   const ownerAccountId = saveMode === "self" ? await resolveAccount(supabase, userId) : null;
-  const resolvedLocations = await resolvePhysicalLocations(data.locations);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const existingProfileQuery =
+    saveMode === "self"
+      ? supabaseAdmin
+          .from("therapists")
+          .select("id, profile_status")
+          .eq("owner_account_id", ownerAccountId!)
+          .maybeSingle()
+      : targetTherapistId
+        ? supabaseAdmin.from("therapists").select("id, profile_status").eq("id", targetTherapistId).maybeSingle()
+        : Promise.resolve({ data: null, error: null });
+  const { data: existingProfile, error: existingProfileError } = await existingProfileQuery;
+  if (existingProfileError) throw new Error(existingProfileError.message);
+
+  const contactPolicyScan = saveMode === "self" ? scanProfileContactPolicy(data) : null;
+  if (contactPolicyScan && contactPolicyScan.findings.length > 0) {
+    const { error: violationError } = await supabaseAdmin.rpc("record_profile_contact_policy_violation", {
+      _actor: userId,
+      _therapist_id: existingProfile?.id ?? null,
+      _violation_types: contactPolicyScan.types,
+      _field_names: contactPolicyScan.fieldKeys,
+    });
+    if (violationError) console.error("[profile-contact-policy] failed to record blocked save", violationError);
+    throw new Error(CONTACT_POLICY_SAVE_ERROR);
+  }
+
+  const resolvedLocations = await resolvePhysicalLocations(data.locations);
 
   if (saveMode === "admin_public_info" && data.email?.trim()) {
     const { data: suppressed, error: suppressionError } = await supabaseAdmin.rpc("is_contact_email_suppressed", {
@@ -668,14 +695,6 @@ async function saveProfileForActor(args: {
     return { therapist_id: "", profile_status: "draft", missing: readinessMissing };
   }
 
-  const existingProfileQuery =
-    saveMode === "self"
-      ? supabaseAdmin.from("therapists").select("profile_status").eq("owner_account_id", ownerAccountId!).maybeSingle()
-      : targetTherapistId
-        ? supabaseAdmin.from("therapists").select("profile_status").eq("id", targetTherapistId).maybeSingle()
-        : Promise.resolve({ data: null, error: null });
-  const { data: existingProfile, error: existingProfileError } = await existingProfileQuery;
-  if (existingProfileError) throw new Error(existingProfileError.message);
   const preservePublishedStatus = existingProfile?.profile_status === "published" && readinessMissing.length === 0;
 
   const nextStatus: ProfileStatus = data.publish
