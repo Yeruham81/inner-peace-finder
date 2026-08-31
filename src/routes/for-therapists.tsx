@@ -23,6 +23,7 @@ import {
   UsersRound,
   WalletCards,
 } from "lucide-react";
+import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl } from "@/lib/seo";
 import { getTherapistRegistrationAvailability } from "@/lib/therapist-registration-settings.functions";
 
@@ -58,6 +59,7 @@ export const Route = createFileRoute("/for-therapists")({
           name: "twitter:card",
           content: "summary",
         },
+        seoRobotsMeta("/for-therapists"),
       ],
       links: [{ rel: "canonical", href: canonical }],
     };

@@ -6,6 +6,7 @@ import { TherapistCard } from "@/components/therapist-card";
 import { PublicRouteError } from "@/components/public-route-error";
 import { getPublishedProblemSeoContent, type ProblemSeoContent } from "@/lib/problem-seo-content";
 import { toInternalProblemSlug, toPublicProblemSlug } from "@/lib/problem-public-url";
+import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl, encodePathSegment, serializeJsonLd } from "@/lib/seo";
 
 function problemQuery(slug: string) {
@@ -52,7 +53,10 @@ export const Route = createFileRoute("/problems/$slug")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: canonical },
     ];
+    // Draft/incomplete problem pages stay noindex; published ones follow the
+    // central launch policy.
     if (!seoContent) meta.push({ name: "robots", content: "noindex,follow" });
+    else meta.push(seoRobotsMeta(`/problems/${encodePathSegment(toPublicProblemSlug(loaderData.slug))}`, true));
 
     return {
       meta,
