@@ -698,8 +698,8 @@ export function SearchForm({
           onChange={(e) => setQ(e.target.value)}
           placeholder={
             isHero
-              ? "לדוגמה: אני חש שחיקה בעבודה, אני סובל ממשבר ביחסים עם אשתי, מחפש מטפל רגשי בחיפה וכד'"
-              : "מה תרצו למצוא? למשל: טיפול בחרדה"
+              ? "לדוגמה: אני חש שחיקה בעבודה, יש לי משבר ביחסים עם אשתי, מחפש מטפל רגשי בחיפה וכד'"
+              : "מה תרצו למצוא? למשל: פסיכולוג דובר רוסית ברעננה"
           }
           autoComplete="off"
           className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/80 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
