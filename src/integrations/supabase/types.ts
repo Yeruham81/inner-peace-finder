@@ -2217,6 +2217,18 @@ export type Database = {
         Args: { _actor: string };
         Returns: Json;
       };
+      finish_account_deletion_payment: {
+        Args: {
+          _actor: string;
+          _error?: string | null;
+          _payment_attempt_id: string;
+          _provider?: string | null;
+          _provider_reference?: string | null;
+          _request_id: string;
+          _success: boolean;
+        };
+        Returns: Json;
+      };
       finish_account_notification: {
         Args: {
           _account_id: string;
@@ -2245,6 +2257,13 @@ export type Database = {
         }[];
       };
       get_my_support_requests: { Args: never; Returns: Json };
+      prepare_account_deletion: { Args: { _actor: string }; Returns: Json };
+      claim_account_deletion_payment: {
+        Args: { _actor: string; _request_id: string };
+        Returns: Json;
+      };
+      assert_account_deletion_ready: { Args: { _actor: string }; Returns: Json };
+      account_outstanding_balance_agorot: { Args: { _account_id: string }; Returns: number };
       is_contact_email_suppressed: {
         Args: { _email: string };
         Returns: boolean;

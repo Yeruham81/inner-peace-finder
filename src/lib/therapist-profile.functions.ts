@@ -932,6 +932,32 @@ export const deleteMyAccountPermanently = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ confirmation: z.literal("מחיקת החשבון לצמיתות") }).parse(input))
   .handler(async ({ context }) => {
     await resolveAccount(context.supabase, context.userId);
+    const { beginOwnedAccountDeletion } = await import("./account-deletion.server");
+    const prepared = await beginOwnedAccountDeletion(context.userId);
+
+    if (prepared.status !== "ready_to_delete") return prepared;
+
+    const { permanentlyDeleteOwnedAccount } = await import("./profile-management.server");
+    return permanentlyDeleteOwnedAccount(context.userId);
+  });
+
+export const settleAndDeleteMyAccountPermanently = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        confirmation: z.literal("מחיקת החשבון לצמיתות"),
+        requestId: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await resolveAccount(context.supabase, context.userId);
+    const { settleOwnedAccountDeletionBalance } = await import("./account-deletion.server");
+    const settlement = await settleOwnedAccountDeletionBalance(context.userId, data.requestId);
+
+    if (settlement.status !== "ready_to_delete") return settlement;
+
     const { permanentlyDeleteOwnedAccount } = await import("./profile-management.server");
     return permanentlyDeleteOwnedAccount(context.userId);
   });

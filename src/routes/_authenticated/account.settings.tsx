@@ -22,7 +22,7 @@ import {
   type NotificationPreferences,
 } from "@/lib/account-settings.functions";
 import { getDisplayPreferences, saveDisplayPreferences, type DisplayPreferences } from "@/lib/display-preferences";
-import { deleteMyAccountPermanently } from "@/lib/therapist-profile.functions";
+import { deleteMyAccountPermanently, settleAndDeleteMyAccountPermanently } from "@/lib/therapist-profile.functions";
 
 export const Route = createFileRoute("/_authenticated/account/settings")({
   head: () => ({
@@ -32,6 +32,22 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
 });
 
 type SupportCategory = "bug" | "complaint" | "suggestion" | "other";
+
+type AccountDeletionState = {
+  deleted: false;
+  request_id: string;
+  status:
+    | "blocked_pending_leads"
+    | "payment_method_required"
+    | "payment_required"
+    | "payment_processing"
+    | "payment_failed"
+    | "ready_to_delete";
+  outstanding_agorot: number;
+  pending_reservations: number;
+  profile_frozen: true;
+  support_email: string;
+};
 
 function loginProviders(user: { app_metadata?: Record<string, unknown>; identities?: { provider?: string }[] | null }) {
   const providers = new Set<string>();
@@ -63,6 +79,7 @@ function AccountSettingsPage() {
   const socialProvider = externalProviderLabel(providers);
   const queryClient = useQueryClient();
   const deleteAccountFn = useServerFn(deleteMyAccountPermanently);
+  const settleDeleteAccountFn = useServerFn(settleAndDeleteMyAccountPermanently);
   const submitSupportFn = useServerFn(submitMySupportRequest);
   const getSupportRequestsFn = useServerFn(getMySupportRequests);
   const getNotificationPreferencesFn = useServerFn(getMyNotificationPreferences);
@@ -76,6 +93,8 @@ function AccountSettingsPage() {
   const [supportCategory, setSupportCategory] = useState<SupportCategory>("bug");
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
+  const [accountDeletionState, setAccountDeletionState] = useState<AccountDeletionState | null>(null);
+  const [accountDeletionError, setAccountDeletionError] = useState<string | null>(null);
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
     notify_new_leads: true,
     notify_account_updates: true,
@@ -169,14 +188,52 @@ function AccountSettingsPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן לשלוח את הפנייה."),
   });
 
+  async function finishDeletedAccount() {
+    queryClient.clear();
+    await supabase.auth.signOut({ scope: "local" });
+    window.location.assign("/");
+  }
+
   const deleteAccountMutation = useMutation({
     mutationFn: () => deleteAccountFn({ data: { confirmation: "מחיקת החשבון לצמיתות" } }),
-    onSuccess: async () => {
-      queryClient.clear();
-      await supabase.auth.signOut({ scope: "local" });
-      window.location.assign("/");
+    onSuccess: async (result) => {
+      setAccountDeletionError(null);
+      if (result.deleted) {
+        await finishDeletedAccount();
+        return;
+      }
+      setAccountDeletionState(result as AccountDeletionState);
     },
-    onError: (error: Error) => toast.error(error.message || "לא ניתן למחוק את החשבון."),
+    onError: (error: Error) => {
+      const message = error.message || "לא ניתן להתחיל את מחיקת החשבון.";
+      setAccountDeletionError(message);
+      toast.error(message);
+    },
+  });
+
+  const settleDeleteAccountMutation = useMutation({
+    mutationFn: () => {
+      if (!accountDeletionState?.request_id) throw new Error("בקשת המחיקה אינה זמינה. יש לנסות שוב.");
+      return settleDeleteAccountFn({
+        data: {
+          confirmation: "מחיקת החשבון לצמיתות",
+          requestId: accountDeletionState.request_id,
+        },
+      });
+    },
+    onSuccess: async (result) => {
+      setAccountDeletionError(null);
+      if (result.deleted) {
+        await finishDeletedAccount();
+        return;
+      }
+      setAccountDeletionState(result as AccountDeletionState);
+    },
+    onError: (error: Error) => {
+      const message = error.message || "לא ניתן להשלים את החיוב ואת מחיקת החשבון.";
+      setAccountDeletionError(message);
+      toast.error(message);
+    },
   });
 
   const normalizedLoginEmail = loginEmail.trim().toLowerCase();
@@ -440,8 +497,12 @@ function AccountSettingsPage() {
         </AccountSectionCard>
 
         <DeleteAccountPanel
-          pending={deleteAccountMutation.isPending}
+          pending={deleteAccountMutation.isPending || settleDeleteAccountMutation.isPending}
+          settlementPending={settleDeleteAccountMutation.isPending}
+          state={accountDeletionState}
+          errorMessage={accountDeletionError}
           onConfirm={() => deleteAccountMutation.mutate()}
+          onSettle={() => settleDeleteAccountMutation.mutate()}
         />
       </div>
     </>
@@ -586,7 +647,30 @@ function NotificationSetting({
   );
 }
 
-function DeleteAccountPanel({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
+function formatDeletionBalance(agorot: number) {
+  return new Intl.NumberFormat("he-IL", {
+    style: "currency",
+    currency: "ILS",
+    minimumFractionDigits: agorot % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(agorot / 100);
+}
+
+function DeleteAccountPanel({
+  pending,
+  settlementPending,
+  state,
+  errorMessage,
+  onConfirm,
+  onSettle,
+}: {
+  pending: boolean;
+  settlementPending: boolean;
+  state: AccountDeletionState | null;
+  errorMessage: string | null;
+  onConfirm: () => void;
+  onSettle: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirmation, setConfirmation] = useState("");
@@ -594,11 +678,15 @@ function DeleteAccountPanel({ pending, onConfirm }: { pending: boolean; onConfir
 
   function close(nextOpen: boolean) {
     setOpen(nextOpen);
-    if (!nextOpen && !pending) {
+    if (!nextOpen && !pending && !state) {
       setAcknowledged(false);
       setConfirmation("");
     }
   }
+
+  const frozen = Boolean(state?.profile_frozen);
+  const balance = state?.outstanding_agorot ?? 0;
+  const supportEmail = state?.support_email || "admin@tipulinks.co.il";
 
   return (
     <section className="rounded-2xl border border-destructive/25 bg-surface-elevated shadow-card lg:col-span-2">
@@ -622,8 +710,13 @@ function DeleteAccountPanel({ pending, onConfirm }: { pending: boolean; onConfir
             כדי לכבד את בקשת אי־הפנייה ולמנוע יצירת פרופיל חדש בטעות, כתובות האימייל של החשבון והפרופיל יישמרו בלבד
             ברשימת אי־פנייה מוגנת. לא יישמרו בה שם, טלפון או תוכן הפרופיל.
           </p>
+          {frozen ? (
+            <p className="mt-3 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+              בקשת המחיקה נמצאת בתהליך. הפרופיל הוקפא ואינו מקבל פניות חדשות, כדי שלא יצטברו חיובים נוספים.
+            </p>
+          ) : null}
           <Button type="button" variant="destructive" className="mt-4" onClick={() => setOpen(true)}>
-            מחיקת החשבון
+            {frozen ? "המשך תהליך מחיקת החשבון" : "מחיקת החשבון"}
           </Button>
         </div>
       </details>
@@ -632,37 +725,125 @@ function DeleteAccountPanel({ pending, onConfirm }: { pending: boolean; onConfir
         <DialogContent dir="rtl" className="max-w-lg">
           <DialogHeader>
             <DialogTitle>אישור מחיקת החשבון</DialogTitle>
-            <DialogDescription>לאחר המחיקה לא תהיה אפשרות לשחזר את החשבון או את הפרופיל.</DialogDescription>
+            <DialogDescription>
+              {state
+                ? "הפרופיל הוקפא ולא יקבל פניות חדשות עד להשלמת תהליך המחיקה."
+                : "לאחר המחיקה לא תהיה אפשרות לשחזר את החשבון או את הפרופיל."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-              <Checkbox checked={acknowledged} onCheckedChange={(value) => setAcknowledged(value === true)} />
-              <span className="text-sm text-foreground">
-                ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את החשבון או את הפרופיל.
-              </span>
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-foreground">כדי לאשר, הקלידו: {phrase}</span>
-              <Input
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                autoComplete="off"
-              />
-            </label>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <Button type="button" variant="outline" disabled={pending} onClick={() => close(false)}>
-                ביטול
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={pending || !acknowledged || confirmation !== phrase}
-                onClick={onConfirm}
-              >
-                {pending ? "החשבון נמחק…" : "כן, מחיקת החשבון לצמיתות"}
-              </Button>
+
+          {!state ? (
+            <div className="space-y-4">
+              <label className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                <Checkbox checked={acknowledged} onCheckedChange={(value) => setAcknowledged(value === true)} />
+                <span className="text-sm text-foreground">
+                  ברור לי שהמחיקה היא לצמיתות ולא ניתן לשחזר את החשבון או את הפרופיל.
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">כדי לאשר, הקלידו: {phrase}</span>
+                <Input
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              {errorMessage ? (
+                <p className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm leading-6 text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button type="button" variant="outline" disabled={pending} onClick={() => close(false)}>
+                  ביטול
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={pending || !acknowledged || confirmation !== phrase}
+                  onClick={onConfirm}
+                >
+                  {pending ? "מקפיא ובודק את החשבון…" : "כן, המשך למחיקת החשבון"}
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : null}
+
+          {state?.status === "payment_required" || state?.status === "payment_failed" ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border bg-surface p-4">
+                <p className="text-sm font-semibold text-foreground">קיימת יתרה שטרם חויבה</p>
+                <p className="mt-2 text-2xl font-bold text-foreground" dir="ltr">
+                  {formatDeletionBalance(balance)}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  מחיקת החשבון תושלם רק לאחר סילוק היתרה. באישור הפעולה יתבצע חיוב מיידי באמצעי התשלום השמור.
+                </p>
+              </div>
+              {errorMessage ? (
+                <p className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm leading-6 text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button type="button" variant="outline" disabled={pending} onClick={() => close(false)}>
+                  סגירה
+                </Button>
+                <Button type="button" variant="destructive" disabled={pending} onClick={onSettle}>
+                  {settlementPending
+                    ? "מחייב ומוחק את החשבון…"
+                    : `אישור חיוב ${formatDeletionBalance(balance)} ומחיקת החשבון`}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {state?.status === "payment_method_required" ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <p className="font-semibold">לא ניתן להשלים את המחיקה ללא אמצעי תשלום פעיל.</p>
+                <p className="mt-1">
+                  היתרה הפתוחה היא <strong>{formatDeletionBalance(balance)}</strong>. הפרופיל נשאר מוקפא ואינו מקבל
+                  פניות חדשות.
+                </p>
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button type="button" variant="outline" onClick={() => close(false)}>
+                  סגירה
+                </Button>
+                <Button type="button" asChild>
+                  <a href="/account/billing">לעדכון אמצעי התשלום</a>
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {state?.status === "blocked_pending_leads" ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <p className="font-semibold">מחיקת החשבון אינה אפשרית כרגע.</p>
+                <p className="mt-1">
+                  קיימת פנייה שעדיין נמצאת בתהליך ולכן לא ניתן לקבוע בבטחה את היתרה הסופית. הפרופיל נשאר מוקפא ולא יקבל
+                  פניות חדשות.
+                </p>
+                <p className="mt-2">
+                  אם המצב אינו משתנה, יש לפנות לתמיכה ב־
+                  <a className="font-semibold underline" href={`mailto:${supportEmail}`} dir="ltr">
+                    {supportEmail}
+                  </a>
+                  .
+                </p>
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button type="button" variant="outline" onClick={() => close(false)}>
+                  סגירה
+                </Button>
+                <Button type="button" disabled={pending} onClick={onConfirm}>
+                  {pending ? "בודק שוב…" : "בדיקה חוזרת"}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </section>

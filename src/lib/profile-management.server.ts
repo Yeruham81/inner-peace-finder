@@ -153,6 +153,9 @@ export async function permanentlyDeleteOwnedProfile(authUserId: string) {
  * so the user can safely try again.
  */
 export async function permanentlyDeleteOwnedAccount(authUserId: string) {
+  const { assertOwnedAccountDeletionReady } = await import("./account-deletion.server");
+  await assertOwnedAccountDeletionReady(authUserId);
+
   const [{ data: authData, error: authError }, { data: account, error: accountError }] = await Promise.all([
     supabaseAdmin.auth.admin.getUserById(authUserId),
     supabaseAdmin.from("therapist_accounts").select("id").eq("auth_user_id", authUserId).maybeSingle(),
@@ -181,6 +184,17 @@ export async function permanentlyDeleteOwnedAccount(authUserId: string) {
   }
 
   await permanentlyDeleteOwnedProfile(authUserId);
+
+  // The deletion-aware DB finalizer preserves this suspension. Reassert it here
+  // as defense in depth so an Auth deletion failure can never leave a reusable
+  // active account after the professional profile has already been removed.
+  await withRetry("לא ניתן לשמור את הקפאת החשבון", async () => {
+    const { error } = await supabaseAdmin
+      .from("therapist_accounts")
+      .update({ account_status: "suspended" })
+      .eq("id", account.id);
+    if (error) throw new Error(error.message);
+  });
 
   await withRetry("לא ניתן למחוק את חשבון ההתחברות", async () => {
     const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
