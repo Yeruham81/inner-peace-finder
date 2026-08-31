@@ -1,3 +1,5 @@
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
 type ProfileStorageBucket = "therapist-credentials" | "therapist-images";
 
 async function withRetry<T>(label: string, work: () => Promise<T>, attempts = 3): Promise<T> {
