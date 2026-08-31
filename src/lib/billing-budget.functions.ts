@@ -46,7 +46,20 @@ export const updateMyMonthlyBudget = createServerFn({ method: "POST" })
       _monthly_limit_agorot: data.monthlyLimitAgorot as unknown as number,
       _notify_on_exhaustion: data.notifyOnExhaustion,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const minimumMatch = error.message.match(/monthly_budget_below_current_usage:(\d+)/);
+      if (minimumMatch) {
+        const minimumAgorot = Number(minimumMatch[1]);
+        const minimumShekels = (minimumAgorot / 100).toLocaleString("he-IL", {
+          minimumFractionDigits: minimumAgorot % 100 === 0 ? 0 : 2,
+          maximumFractionDigits: 2,
+        });
+        throw new Error(
+          `לא ניתן להגדיר תקרת תקציב הנמוכה מהחיובים שכבר נצברו או נשמרו בתקופה הנוכחית. הסכום המינימלי שניתן להגדיר כעת הוא ${minimumShekels} ₪.`,
+        );
+      }
+      throw new Error(error.message);
+    }
     const snapshot = monthlyBudgetSnapshot(updated);
 
     if (snapshot.notification_pending && snapshot.therapist_id) {
