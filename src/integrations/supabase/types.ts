@@ -1688,6 +1688,185 @@ export type Database = {
           },
         ];
       };
+      therapist_recruitment_import_batches: {
+        Row: {
+          already_invited_rows: number;
+          already_registered_rows: number;
+          channel: string;
+          created_at: string;
+          created_by: string;
+          duplicate_rows: number;
+          eligible_rows: number;
+          existing_profile_rows: number;
+          id: string;
+          imported_rows: number;
+          invalid_rows: number;
+          source_filename: string | null;
+          suppressed_rows: number;
+          total_rows: number;
+        };
+        Insert: {
+          already_invited_rows?: number;
+          already_registered_rows?: number;
+          channel: string;
+          created_at?: string;
+          created_by: string;
+          duplicate_rows?: number;
+          eligible_rows?: number;
+          existing_profile_rows?: number;
+          id?: string;
+          imported_rows?: number;
+          invalid_rows?: number;
+          source_filename?: string | null;
+          suppressed_rows?: number;
+          total_rows?: number;
+        };
+        Update: {
+          already_invited_rows?: number;
+          already_registered_rows?: number;
+          channel?: string;
+          created_at?: string;
+          created_by?: string;
+          duplicate_rows?: number;
+          eligible_rows?: number;
+          existing_profile_rows?: number;
+          id?: string;
+          imported_rows?: number;
+          invalid_rows?: number;
+          source_filename?: string | null;
+          suppressed_rows?: number;
+          total_rows?: number;
+        };
+        Relationships: [];
+      };
+      therapist_recruitment_invitations: {
+        Row: {
+          bounced_at: string | null;
+          channel: string;
+          created_at: string;
+          decline_source: string | null;
+          declined_at: string | null;
+          delivered_at: string | null;
+          destination_normalized: string;
+          failure_code: string | null;
+          failure_reason: string | null;
+          first_name: string | null;
+          id: string;
+          import_batch_id: string | null;
+          last_name: string | null;
+          provider: string | null;
+          provider_message_id: string | null;
+          registered_account_id: string | null;
+          registered_at: string | null;
+          registered_therapist_id: string | null;
+          search_text: string;
+          status: string;
+          submission_started_at: string | null;
+          submitted_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          bounced_at?: string | null;
+          channel: string;
+          created_at?: string;
+          decline_source?: string | null;
+          declined_at?: string | null;
+          delivered_at?: string | null;
+          destination_normalized: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          first_name?: string | null;
+          id?: string;
+          import_batch_id?: string | null;
+          last_name?: string | null;
+          provider?: string | null;
+          provider_message_id?: string | null;
+          registered_account_id?: string | null;
+          registered_at?: string | null;
+          registered_therapist_id?: string | null;
+          status?: string;
+          submission_started_at?: string | null;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          bounced_at?: string | null;
+          channel?: string;
+          created_at?: string;
+          decline_source?: string | null;
+          declined_at?: string | null;
+          delivered_at?: string | null;
+          destination_normalized?: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          first_name?: string | null;
+          id?: string;
+          import_batch_id?: string | null;
+          last_name?: string | null;
+          provider?: string | null;
+          provider_message_id?: string | null;
+          registered_account_id?: string | null;
+          registered_at?: string | null;
+          registered_therapist_id?: string | null;
+          status?: string;
+          submission_started_at?: string | null;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "therapist_recruitment_invitations_import_batch_id_fkey";
+            columns: ["import_batch_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_recruitment_import_batches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "therapist_recruitment_invitations_registered_account_id_fkey";
+            columns: ["registered_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "therapist_recruitment_invitations_registered_therapist_id_fkey";
+            columns: ["registered_therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      therapist_recruitment_suppressions: {
+        Row: {
+          channel: string;
+          created_at: string;
+          destination_normalized: string;
+          id: string;
+          reason: string | null;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          channel: string;
+          created_at?: string;
+          destination_normalized: string;
+          id?: string;
+          reason?: string | null;
+          source: string;
+          updated_at?: string;
+        };
+        Update: {
+          channel?: string;
+          created_at?: string;
+          destination_normalized?: string;
+          id?: string;
+          reason?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       therapist_registration_settings: {
         Row: {
           created_at: string;
@@ -2372,6 +2551,15 @@ export type Database = {
       fail_whatsapp_lead_delivery: {
         Args: { _delivery_id: string; _error_code: string };
         Returns: undefined;
+      };
+      get_recruitment_email_conflicts: {
+        Args: { _emails: string[] };
+        Returns: {
+          already_registered: boolean;
+          email_normalized: string;
+          existing_profile: boolean;
+          globally_suppressed: boolean;
+        }[];
       };
       finalize_admin_public_profile_deletion: {
         Args: { _actor: string; _therapist_id: string };
