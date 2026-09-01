@@ -217,7 +217,6 @@ async function createBrevoCampaign(input: { listId: number; sendBatchId: string 
       previewText: RECRUITMENT_EMAIL_PREVIEW,
       templateId,
       recipients: { listIds: [input.listId] },
-      tag: "tipulinks_therapist_recruitment",
       replyTo: senderEmail,
     }),
   });
