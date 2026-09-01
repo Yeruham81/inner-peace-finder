@@ -60,7 +60,7 @@ export function AdminSelectFilter({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: Array<string | { value: string; label: string }>;
   allLabel?: string;
 }) {
   return (
@@ -74,11 +74,15 @@ export function AdminSelectFilter({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">{allLabel}</SelectItem>
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
+          {options.map((option) => {
+            const value = typeof option === "string" ? option : option.value;
+            const label = typeof option === "string" ? option : option.label;
+            return (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>
