@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { zodValidator } from "@tanstack/zod-adapter";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
 import { AdminDetailDrawer, AdminDetailRow, AdminDetailSection } from "@/components/admin/admin-detail-drawer";
@@ -28,6 +30,7 @@ import {
 } from "@/lib/admin-therapists.functions";
 
 export const Route = createFileRoute("/admin/therapists")({
+  validateSearch: zodValidator(z.object({ therapistId: z.string().uuid().optional() })),
   head: () => ({
     meta: [
       { title: "מטפלים | ניהול טיפולינקס" },
@@ -81,6 +84,8 @@ function canAdminDelete(row: AdminTherapistRow): boolean {
 
 function TherapistsPage() {
   const queryClient = useQueryClient();
+  const routeSearch = Route.useSearch();
+  const navigate = Route.useNavigate();
   const listFn = useServerFn(listAdminTherapists);
   const deleteFn = useServerFn(deleteAdminManagedTherapist);
   const [search, setSearch] = useState("");
@@ -96,6 +101,12 @@ function TherapistsPage() {
     queryKey: ["admin-therapists"],
     queryFn: () => listFn(),
   });
+
+  useEffect(() => {
+    if (!routeSearch.therapistId || !therapists.data || selected?.id === routeSearch.therapistId) return;
+    const requested = therapists.data.find((row) => row.id === routeSearch.therapistId);
+    if (requested) setSelected(requested);
+  }, [routeSearch.therapistId, selected?.id, therapists.data]);
   const publishedCount = (therapists.data ?? []).filter((row) => publicationStatus(row) === "פורסם").length;
 
   const deleteMutation = useMutation({
@@ -304,7 +315,12 @@ function TherapistsPage() {
       <AdminDetailDrawer
         open={selected !== null}
         onOpenChange={(open) => {
-          if (!open) setSelected(null);
+          if (!open) {
+            setSelected(null);
+            if (routeSearch.therapistId) {
+              void navigate({ search: { therapistId: undefined }, replace: true });
+            }
+          }
         }}
         title={selected?.fullName ?? ""}
         description={selected ? `/${selected.slug}` : undefined}
