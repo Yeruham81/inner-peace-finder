@@ -1,4 +1,3 @@
-import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -94,6 +93,16 @@ describe("therapist recruitment import", () => {
     expect(route).toContain("sendAdminRecruitmentEmailInvitations");
     expect(functions).toContain("deliverRecruitmentEmailBatch");
     expect(functions).not.toContain("TWILIO_");
+  });
+
+  it("routes manual email entry through the exact same CSV preview and import pipeline", () => {
+    expect(route).toContain('const MANUAL_IMPORT_FILENAME = "manual-entry.csv"');
+    expect(route).toContain("manualEmailAsCsv");
+    expect(route).toContain("await previewFn({");
+    expect(route).toContain("data: { csvText: manualCsvText, fileName: MANUAL_IMPORT_FILENAME }");
+    expect(route).toContain("await importFn({");
+    expect(route).toContain("הכתובת תעבור בדיוק את אותן בדיקות ואותו מסלול ייבוא כמו כתובת מתוך קובץ CSV");
+    expect(route).not.toContain("addAdminRecruitmentManual");
   });
 
   it("adds the recruitment screen to the admin navigation", () => {
