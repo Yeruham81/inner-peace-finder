@@ -4,10 +4,12 @@ import { join } from "node:path";
 import { SITE_ORIGIN } from "./seo";
 import {
   evaluateIndexingPolicy,
+  isCanonicalProductionRequestUrl,
   isPermanentlyNoindexPath,
   isSeoEligibleRoutePath,
   parseIndexingFlag,
   isTrustedProductionOrigin,
+  responseRobotsHeader,
   robotsDirective,
   seoRobotsMeta,
   therapistSeoEligible,
@@ -36,13 +38,26 @@ const publishedTherapist = {
 };
 
 describe("central launch/indexing policy", () => {
-  it("fails closed when the launch switch is missing, invalid or false", () => {
-    for (const flag of [undefined, null, "", "1", "yes", "TRUE ", "false", "False", "maybe"]) {
-      const expected = typeof flag === "string" && flag.trim().toLowerCase() === "true";
-      expect(evaluateIndexingPolicy({ flag, origin: PROD }), String(flag)).toBe(expected);
+  it("fails closed unless the launch switch is the exact literal true", () => {
+    expect(evaluateIndexingPolicy({ flag: "true", origin: PROD })).toBe(true);
+    for (const flag of [
+      undefined,
+      null,
+      "",
+      "1",
+      "yes",
+      "TRUE",
+      "TRUE ",
+      " true",
+      "true ",
+      "false",
+      "False",
+      "maybe",
+    ]) {
+      expect(evaluateIndexingPolicy({ flag, origin: PROD }), String(flag)).toBe(false);
+      expect(parseIndexingFlag(flag), String(flag)).toBe(false);
     }
     expect(parseIndexingFlag("true")).toBe(true);
-    expect(parseIndexingFlag(undefined)).toBe(false);
     expect(SEO_INDEXING_ENV_VAR).toBe("TIPULINKS_SEARCH_INDEXING_ENABLED");
   });
 
@@ -66,13 +81,55 @@ describe("central launch/indexing policy", () => {
     expect(SITE_ORIGIN).toBe(PROD);
   });
 
+  it("uses the actual request URL as an independent response-level production safeguard", () => {
+    // This reproduces the important failure mode: preview receives the same
+    // canonical origin + indexing flag as production. Configuration alone says
+    // indexing is enabled, but the ACTUAL preview request must still be blocked.
+    const productionLikeConfig = evaluateIndexingPolicy({ flag: "true", origin: PROD });
+    expect(productionLikeConfig).toBe(true);
+
+    expect(isCanonicalProductionRequestUrl(`${PROD}/therapists/dana-levi`)).toBe(true);
+    expect(isCanonicalProductionRequestUrl(`${PREVIEW}/therapists/dana-levi`)).toBe(false);
+    expect(isCanonicalProductionRequestUrl("http://localhost:3000/")).toBe(false);
+    expect(isCanonicalProductionRequestUrl("not-a-url")).toBe(false);
+
+    expect(
+      responseRobotsHeader({
+        requestUrl: `${PREVIEW}/therapists/dana-levi`,
+        indexingAllowed: productionLikeConfig,
+      }),
+    ).toBe("noindex, nofollow");
+
+    expect(
+      responseRobotsHeader({
+        requestUrl: `${PROD}/therapists/dana-levi`,
+        indexingAllowed: productionLikeConfig,
+      }),
+    ).toBeNull();
+
+    expect(
+      responseRobotsHeader({
+        requestUrl: `${PROD}/therapists/dana-levi`,
+        indexingAllowed: false,
+      }),
+    ).toBe("noindex, follow");
+  });
+
+  it("always sends an X-Robots-compatible noindex policy for API URLs", () => {
+    for (const requestUrl of [
+      `${PROD}/api/public/voice/answer`,
+      `${PROD}/api/public/whatsapp/lead-status`,
+      `${PREVIEW}/api/public/email/lead-status`,
+    ]) {
+      expect(responseRobotsHeader({ requestUrl, indexingAllowed: true }), requestUrl).toBe("noindex, nofollow");
+    }
+  });
+
   it("combines all four inputs and resolves ambiguity to noindex", () => {
     expect(robotsDirective({ indexingAllowed: true, routeEligible: true, pageEligible: true })).toBe("index,follow");
     expect(robotsDirective({ indexingAllowed: false, routeEligible: true })).toBe("noindex,follow");
     expect(robotsDirective({ indexingAllowed: true, routeEligible: false })).toBe("noindex,follow");
-    expect(robotsDirective({ indexingAllowed: true, routeEligible: true, pageEligible: false })).toBe(
-      "noindex,follow",
-    );
+    expect(robotsDirective({ indexingAllowed: true, routeEligible: true, pageEligible: false })).toBe("noindex,follow");
   });
 
   it("keeps private, application-only and search routes permanently noindex", () => {
@@ -180,9 +237,7 @@ describe("central launch/indexing policy", () => {
     expect(readSource("routes/_authenticated/account.tsx")).toContain(
       '{ name: "robots", content: "noindex,nofollow" }',
     );
-    expect(readSource("routes/_authenticated/claim.tsx")).toContain(
-      '{ name: "robots", content: "noindex,nofollow" }',
-    );
+    expect(readSource("routes/_authenticated/claim.tsx")).toContain('{ name: "robots", content: "noindex,nofollow" }');
     expect(readSource("routes/auth.tsx")).toContain('{ name: "robots", content: "noindex,nofollow" }');
   });
 
@@ -202,6 +257,14 @@ describe("central launch/indexing policy", () => {
       expect(source, route).not.toContain("lovable.app");
       expect(source, route).not.toContain("localhost");
     }
+  });
+
+  it("applies the response-level SEO safety gate from the server entry", () => {
+    const server = readSource("server.ts");
+    expect(server).toContain("responseRobotsHeader");
+    expect(server).toContain("requestUrl: request.url");
+    expect(server).toContain('headers.set("X-Robots-Tag", robots)');
+    expect(server).toContain("applySeoResponsePolicy(request, normalized)");
   });
 
   it("gates the sitemap on the same policy and keeps robots.txt crawlable", () => {
