@@ -11,7 +11,7 @@ const functions = read("src/lib/admin-recruitment.functions.ts");
 const migration = read("supabase/migrations/20260901095500_therapist_recruitment_imports.sql");
 const nav = read("src/components/admin/admin-nav.ts");
 
- describe("therapist recruitment import", () => {
+describe("therapist recruitment import", () => {
   it("normalizes emails and rejects malformed values", () => {
     expect(normalizeRecruitmentEmail("  Person@Example.COM ")).toBe("person@example.com");
     expect(normalizeRecruitmentEmail("person@example")).toBeNull();
@@ -33,7 +33,11 @@ const nav = read("src/components/admin/admin-nav.ts");
     expect(parsed.rows[2].normalizedEmail).toBe("two@example.com");
 
     const semicolon = parseRecruitmentCsv("email;first_name;last_name\nthree@example.com;Tal;Levi\n");
-    expect(semicolon.rows[0]).toMatchObject({ normalizedEmail: "three@example.com", firstName: "Tal", lastName: "Levi" });
+    expect(semicolon.rows[0]).toMatchObject({
+      normalizedEmail: "three@example.com",
+      firstName: "Tal",
+      lastName: "Levi",
+    });
   });
 
   it("keeps phone normalization infrastructure explicit without enabling phone import", () => {
@@ -75,20 +79,21 @@ const nav = read("src/components/admin/admin-nav.ts");
   });
 
   it("keeps all import and list operations behind server-side admin authorization", () => {
-    expect(functions.match(/\.middleware\(\[requireSupabaseAuth\]\)/g)?.length).toBe(3);
-    expect(functions.match(/requireTipulinksAdmin\(context\.claims/g)?.length).toBe(3);
-    expect(migration).toContain("REVOKE ALL ON TABLE public.therapist_recruitment_invitations FROM PUBLIC, anon, authenticated");
+    expect(functions.match(/\.middleware\(\[requireSupabaseAuth\]\)/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(functions.match(/requireTipulinksAdmin\(context\.claims/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(migration).toContain(
+      "REVOKE ALL ON TABLE public.therapist_recruitment_invitations FROM PUBLIC, anon, authenticated",
+    );
     expect(migration).toContain("GRANT ALL ON TABLE public.therapist_recruitment_invitations TO service_role");
     expect(migration).toContain("REVOKE ALL ON FUNCTION public.get_recruitment_email_conflicts(text[])");
   });
 
-  it("provides preview/import UI but intentionally performs no real delivery in phase one", () => {
+  it("keeps import separate from the explicit Brevo send action", () => {
     expect(route).toContain("תצוגה מקדימה");
-    expect(route).toContain("לא נשלחה עדיין אף הודעה");
-    expect(route).toContain("בשלב זה המערכת אינה שולחת הודעות בפועל");
-    expect(functions).not.toContain("Brevo");
+    expect(route).toContain("הייבוא עצמו אינו שולח הודעות");
+    expect(route).toContain("sendAdminRecruitmentEmailInvitations");
+    expect(functions).toContain("deliverRecruitmentEmailBatch");
     expect(functions).not.toContain("TWILIO_");
-    expect(functions).not.toContain("sendTransacEmail");
   });
 
   it("adds the recruitment screen to the admin navigation", () => {
