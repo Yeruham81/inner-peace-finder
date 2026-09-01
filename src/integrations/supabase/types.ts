@@ -1756,6 +1756,11 @@ export type Database = {
           last_name: string | null;
           provider: string | null;
           provider_message_id: string | null;
+          provider_campaign_id: number | null;
+          provider_list_id: number | null;
+          invite_token_hash: string | null;
+          send_batch_id: string | null;
+          send_quota_date: string | null;
           registered_account_id: string | null;
           registered_at: string | null;
           registered_therapist_id: string | null;
@@ -1781,6 +1786,11 @@ export type Database = {
           last_name?: string | null;
           provider?: string | null;
           provider_message_id?: string | null;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          invite_token_hash?: string | null;
+          send_batch_id?: string | null;
+          send_quota_date?: string | null;
           registered_account_id?: string | null;
           registered_at?: string | null;
           registered_therapist_id?: string | null;
@@ -1805,6 +1815,11 @@ export type Database = {
           last_name?: string | null;
           provider?: string | null;
           provider_message_id?: string | null;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          invite_token_hash?: string | null;
+          send_batch_id?: string | null;
+          send_quota_date?: string | null;
           registered_account_id?: string | null;
           registered_at?: string | null;
           registered_therapist_id?: string | null;
@@ -1822,6 +1837,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "therapist_recruitment_invitations_send_batch_id_fkey";
+            columns: ["send_batch_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_recruitment_send_batches";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "therapist_recruitment_invitations_registered_account_id_fkey";
             columns: ["registered_account_id"];
             isOneToOne: false;
@@ -1836,6 +1858,57 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      therapist_recruitment_send_batches: {
+        Row: {
+          channel: string;
+          created_at: string;
+          created_by: string;
+          failure_code: string | null;
+          failure_reason: string | null;
+          id: string;
+          provider: string;
+          provider_campaign_id: number | null;
+          provider_list_id: number | null;
+          provider_list_deleted_at: string | null;
+          recipient_count: number;
+          status: string;
+          submitted_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          channel: string;
+          created_at?: string;
+          created_by: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          id?: string;
+          provider: string;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          provider_list_deleted_at?: string | null;
+          recipient_count?: number;
+          status?: string;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          channel?: string;
+          created_at?: string;
+          created_by?: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          id?: string;
+          provider?: string;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          provider_list_deleted_at?: string | null;
+          recipient_count?: number;
+          status?: string;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       therapist_recruitment_suppressions: {
         Row: {
@@ -2559,6 +2632,64 @@ export type Database = {
           email_normalized: string;
           existing_profile: boolean;
           globally_suppressed: boolean;
+        }[];
+      };
+      get_recruitment_email_daily_capacity: {
+        Args: never;
+        Returns: {
+          daily_limit: number;
+          remaining_count: number;
+          send_date: string;
+          used_count: number;
+        }[];
+      };
+      reserve_recruitment_email_invitations: {
+        Args: { _created_by: string; _reservations: Json };
+        Returns: {
+          destination_normalized: string;
+          first_name: string | null;
+          invitation_id: string;
+          last_name: string | null;
+          remaining_after_reservation: number;
+          send_batch_id: string;
+        }[];
+      };
+      attach_recruitment_email_provider_list: {
+        Args: { _provider_list_id: number; _send_batch_id: string };
+        Returns: undefined;
+      };
+      attach_recruitment_email_provider_batch: {
+        Args: { _provider_campaign_id: number; _provider_list_id: number; _send_batch_id: string };
+        Returns: undefined;
+      };
+      mark_recruitment_provider_list_deleted: {
+        Args: { _provider_list_id: number; _send_batch_id: string };
+        Returns: undefined;
+      };
+      finish_recruitment_email_send_batch: {
+        Args: {
+          _failure_code?: string | null;
+          _failure_reason?: string | null;
+          _outcome: string;
+          _send_batch_id: string;
+        };
+        Returns: undefined;
+      };
+      apply_recruitment_email_event: {
+        Args: {
+          _email: string;
+          _event: string;
+          _event_at?: string | null;
+          _provider_campaign_id: number;
+        };
+        Returns: string;
+      };
+      claim_recruitment_invite: {
+        Args: { _token_hash: string };
+        Returns: {
+          account_id: string;
+          created_account: boolean;
+          invitation_id: string;
         }[];
       };
       finalize_admin_public_profile_deletion: {
