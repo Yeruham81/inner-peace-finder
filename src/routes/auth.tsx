@@ -253,26 +253,17 @@ function AuthPage() {
     });
     const redirectUrl = `${window.location.origin}/auth?${redirectSearch.toString()}`;
 
-    // Google uses the same Supabase Auth client as email/password. This keeps
-    // the recruitment token on the callback URL so a valid invite can authorize
-    // account creation even while the global registration switch is closed.
-    if (provider === "google") {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: redirectUrl },
-      });
-      if (error) {
-        setMsg({ kind: "err", text: "כניסה דרך Google נכשלה." });
-        setLoading(false);
-      }
-      return;
-    }
-
-    const res = await lovable.auth.signInWithOAuth("apple", {
+    // OAuth is managed by Lovable Cloud. Keep the recruitment context on the
+    // callback URL so a valid invite can authorize account creation even while
+    // the global registration switch is closed.
+    const res = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: redirectUrl,
     });
     if (res.error) {
-      setMsg({ kind: "err", text: "כניסה דרך Apple נכשלה." });
+      setMsg({
+        kind: "err",
+        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
+      });
       setLoading(false);
       return;
     }
