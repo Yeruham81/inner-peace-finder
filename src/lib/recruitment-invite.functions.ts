@@ -25,7 +25,7 @@ export const getRecruitmentInvitePublicState = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => InviteInputSchema.parse(input))
   .handler(async ({ data }): Promise<RecruitmentInvitePublicState> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const hash = recruitmentTokenHash(data.token);
+    const hash = await recruitmentTokenHash(data.token);
     const result = await supabaseAdmin
       .from("therapist_recruitment_invitations")
       .select("destination_normalized, status, submitted_at, bounced_at, declined_at, registered_at")
@@ -55,7 +55,7 @@ export const completeRecruitmentInviteRegistration = createServerFn({ method: "P
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InviteInputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const hash = recruitmentTokenHash(data.token);
+    const hash = await recruitmentTokenHash(data.token);
     const result = await context.supabase.rpc("claim_recruitment_invite", { _token_hash: hash });
     if (result.error) throw new Error(result.error.message);
     const row = Array.isArray(result.data) ? result.data[0] : null;
