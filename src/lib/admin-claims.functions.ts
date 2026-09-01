@@ -2,12 +2,38 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireTipulinksAdmin } from "./admin-permissions";
+
+export type AdminClaimKind = "invite" | "claim_request" | "removal_request";
+export type AdminClaimStatus =
+  | "invite_pending"
+  | "invite_sent"
+  | "invite_failed"
+  | "invite_accepted"
+  | "invite_expired"
+  | "invite_revoked"
+  | "request_pending"
+  | "request_verification_pending"
+  | "request_approved"
+  | "request_rejected"
+  | "request_cancelled";
+export type AdminOwnershipVerificationCategory = "email" | "phone" | "manual_review" | "unverified";
+export type AdminClaimSortKey =
+  | "priority"
+  | "therapistName"
+  | "requesterEmail"
+  | "verificationMethod"
+  | "createdAt"
+  | "status"
+  | "resolvedAt"
+  | "kind";
 
 export type AdminClaimRow = {
   id: string;
-  kind: "invite" | "claim_request" | "removal_request";
+  kind: AdminClaimKind;
   therapistId: string;
   therapistName: string;
+  therapistSlug: string | null;
   professionalTitle: string | null;
   profileEmail: string | null;
   requesterName: string | null;
@@ -15,148 +41,327 @@ export type AdminClaimRow = {
   requesterPhone: string | null;
   requestNote: string | null;
   reviewNote: string | null;
-  status:
-    | "invite_pending"
-    | "invite_sent"
-    | "invite_failed"
-    | "invite_accepted"
-    | "invite_expired"
-    | "invite_revoked"
-    | "request_pending"
-    | "request_approved"
-    | "request_rejected";
+  reviewedBy: string | null;
+  status: AdminClaimStatus;
   createdAt: string;
+  resolvedAt: string | null;
   sentAt: string | null;
   acceptedAt: string | null;
   expiresAt: string | null;
+  revokedAt: string | null;
   sourceLeadId: string | null;
   providerMessageId: string | null;
   lastDeliveryError: string | null;
   verificationMethod: string | null;
+  verificationCategory: AdminOwnershipVerificationCategory;
+  ownerAccountId: string | null;
+  profileClaimed: boolean;
+  profileStatus: string;
+  visibility: string;
+  isActive: boolean;
+  doNotRepublish: boolean;
+  profileOwnershipVerificationMethod: string | null;
+  profileOwnershipVerifiedAt: string | null;
+  activeProfileInvite: boolean;
 };
 
-function hasAdminClaim(claims: unknown): boolean {
-  if (!claims || typeof claims !== "object") return false;
-  const appMetadata = (claims as { app_metadata?: unknown }).app_metadata;
-  return Boolean(
-    appMetadata &&
-    typeof appMetadata === "object" &&
-    (appMetadata as { tipulinks_role?: unknown }).tipulinks_role === "admin",
-  );
-}
-
-function requireAdmin(claims: unknown): void {
-  if (!hasAdminClaim(claims)) throw new Error("אין הרשאת מנהל לניהול בקשות בעלות.");
-}
-
-type TherapistJoin = {
-  full_name?: string | null;
-  professional_title?: string | null;
-  email?: string | null;
+export type AdminClaimsPage = {
+  rows: AdminClaimRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
 };
 
-function joinedTherapist(value: unknown): TherapistJoin {
-  if (Array.isArray(value)) return (value[0] ?? {}) as TherapistJoin;
-  return (value ?? {}) as TherapistJoin;
+const CLAIM_STATUSES = [
+  "invite_pending",
+  "invite_sent",
+  "invite_failed",
+  "invite_accepted",
+  "invite_expired",
+  "invite_revoked",
+  "request_pending",
+  "request_verification_pending",
+  "request_approved",
+  "request_rejected",
+  "request_cancelled",
+] as const;
+
+const ListAdminClaimsSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  pageSize: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]).default(25),
+  search: z.string().trim().max(200).default(""),
+  kind: z.enum(["invite", "claim_request", "removal_request"]).nullable().optional(),
+  status: z.enum(CLAIM_STATUSES).nullable().optional(),
+  verificationCategory: z.enum(["email", "phone", "manual_review", "unverified"]).nullable().optional(),
+  ageDays: z
+    .union([z.literal(7), z.literal(30), z.literal(90)])
+    .nullable()
+    .optional(),
+  sortKey: z
+    .enum([
+      "priority",
+      "therapistName",
+      "requesterEmail",
+      "verificationMethod",
+      "createdAt",
+      "status",
+      "resolvedAt",
+      "kind",
+    ])
+    .default("priority"),
+  sortDirection: z.enum(["asc", "desc"]).default("asc"),
+});
+
+const SORT_COLUMNS: Record<AdminClaimSortKey, string> = {
+  priority: "attention_rank",
+  therapistName: "therapist_name",
+  requesterEmail: "requester_email",
+  verificationMethod: "verification_category",
+  createdAt: "created_at",
+  status: "status",
+  resolvedAt: "resolved_at",
+  kind: "kind",
+};
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+function asKind(value: string | null): AdminClaimKind {
+  if (value === "invite" || value === "claim_request" || value === "removal_request") return value;
+  throw new Error("סוג בקשה לא מוכר התקבל מהשרת.");
+}
+
+function asStatus(value: string | null): AdminClaimStatus {
+  if (value && (CLAIM_STATUSES as readonly string[]).includes(value)) return value as AdminClaimStatus;
+  throw new Error("סטטוס בקשה לא מוכר התקבל מהשרת.");
+}
+
+function asVerificationCategory(value: string | null): AdminOwnershipVerificationCategory {
+  if (value === "email" || value === "phone" || value === "manual_review" || value === "unverified") return value;
+  return "unverified";
+}
+
+function requiredString(value: string | null, field: string): string {
+  if (!value) throw new Error(`חסר שדה חובה ברשומת בקשה: ${field}`);
+  return value;
 }
 
 export const listAdminClaims = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<AdminClaimRow[]> => {
-    requireAdmin(context.claims);
+  .inputValidator((input: unknown) => ListAdminClaimsSchema.parse(input))
+  .handler(async ({ data, context }): Promise<AdminClaimsPage> => {
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לצפייה בבקשות בעלות.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [inviteResult, requestResult] = await Promise.all([
-      supabaseAdmin
+
+    let query = supabaseAdmin
+      .from("admin_profile_claims")
+      .select(
+        "id, kind, therapist_id, therapist_name, therapist_slug, professional_title, profile_email, requester_name, requester_email, requester_phone, request_note, review_note, reviewed_by, status, created_at, resolved_at, sent_at, accepted_at, expires_at, revoked_at, source_lead_id, provider_message_id, last_delivery_error, verification_method, verification_category, owner_account_id, profile_claimed, profile_status, visibility, is_active, do_not_republish, profile_ownership_verification_method, profile_ownership_verified_at",
+        { count: "exact" },
+      );
+
+    if (data.search) {
+      query = query.ilike("search_text", `%${escapeLikePattern(data.search)}%`);
+    }
+    if (data.kind) query = query.eq("kind", data.kind);
+    if (data.status) query = query.eq("status", data.status);
+    if (data.verificationCategory) query = query.eq("verification_category", data.verificationCategory);
+    if (data.ageDays) {
+      const createdAfter = new Date(Date.now() - data.ageDays * 24 * 60 * 60 * 1000).toISOString();
+      query = query.gte("created_at", createdAfter);
+    }
+
+    const sortColumn = SORT_COLUMNS[data.sortKey];
+    const ascending = data.sortDirection === "asc";
+    const from = (data.page - 1) * data.pageSize;
+    const to = from + data.pageSize - 1;
+
+    let orderedQuery = query.order(sortColumn, { ascending, nullsFirst: false });
+    if (data.sortKey === "priority") {
+      orderedQuery = orderedQuery.order("created_at", { ascending: true }).order("id", { ascending: true });
+    } else {
+      orderedQuery = orderedQuery.order("id", { ascending: true });
+    }
+
+    const result = await orderedQuery.range(from, to);
+    if (result.error) throw new Error(result.error.message);
+
+    const rawRows = result.data ?? [];
+    const therapistIds = [
+      ...new Set(
+        rawRows
+          .filter(
+            (row) =>
+              row.kind === "claim_request" &&
+              (row.status === "request_pending" || row.status === "request_verification_pending"),
+          )
+          .map((row) => row.therapist_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const activeInviteTherapistIds = new Set<string>();
+    if (therapistIds.length > 0) {
+      const { data: activeInvites, error: inviteError } = await supabaseAdmin
         .from("therapist_claim_invites")
-        .select(
-          "id, therapist_id, email, status, expires_at, sent_at, accepted_at, created_at, source_lead_id, delivery_status, provider_message_id, last_delivery_error, therapists:therapist_id(full_name, professional_title, email)",
-        )
-        .order("created_at", { ascending: false }),
-      supabaseAdmin
+        .select("therapist_id")
+        .in("therapist_id", therapistIds)
+        .eq("status", "pending")
+        .eq("delivery_status", "sent")
+        .gt("expires_at", new Date().toISOString());
+      if (inviteError) throw new Error(inviteError.message);
+      for (const invite of activeInvites ?? []) activeInviteTherapistIds.add(invite.therapist_id);
+    }
+
+    const rows: AdminClaimRow[] = rawRows.map((row) => ({
+      id: requiredString(row.id, "id"),
+      kind: asKind(row.kind),
+      therapistId: requiredString(row.therapist_id, "therapist_id"),
+      therapistName: row.therapist_name ?? "מטפל/ת",
+      therapistSlug: row.therapist_slug,
+      professionalTitle: row.professional_title,
+      profileEmail: row.profile_email,
+      requesterName: row.requester_name,
+      requesterEmail: row.requester_email,
+      requesterPhone: row.requester_phone,
+      requestNote: row.request_note,
+      reviewNote: row.review_note,
+      reviewedBy: row.reviewed_by,
+      status: asStatus(row.status),
+      createdAt: requiredString(row.created_at, "created_at"),
+      resolvedAt: row.resolved_at,
+      sentAt: row.sent_at,
+      acceptedAt: row.accepted_at,
+      expiresAt: row.expires_at,
+      revokedAt: row.revoked_at,
+      sourceLeadId: row.source_lead_id,
+      providerMessageId: row.provider_message_id,
+      lastDeliveryError: row.last_delivery_error,
+      verificationMethod: row.verification_method,
+      verificationCategory: asVerificationCategory(row.verification_category),
+      ownerAccountId: row.owner_account_id,
+      profileClaimed: Boolean(row.profile_claimed),
+      profileStatus: row.profile_status ?? "draft",
+      visibility: row.visibility ?? "",
+      isActive: Boolean(row.is_active),
+      doNotRepublish: Boolean(row.do_not_republish),
+      profileOwnershipVerificationMethod: row.profile_ownership_verification_method,
+      profileOwnershipVerifiedAt: row.profile_ownership_verified_at,
+      activeProfileInvite:
+        row.kind === "claim_request" && row.therapist_id ? activeInviteTherapistIds.has(row.therapist_id) : false,
+    }));
+
+    const total = result.count ?? 0;
+    return {
+      rows,
+      total,
+      page: data.page,
+      pageSize: data.pageSize,
+      pageCount: Math.max(1, Math.ceil(total / data.pageSize)),
+    };
+  });
+
+const ClaimRequestIdSchema = z.object({ requestId: z.string().uuid() });
+
+/**
+ * Admin approval never transfers ownership directly. It authorizes the
+ * canonical professional-email invitation; ownership is transferred only when
+ * the invite is accepted by an account with the verified matching email.
+ */
+export const approveAdminClaimRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ClaimRequestIdSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לאישור בקשות בעלות.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: request, error } = await supabaseAdmin
+      .from("therapist_profile_requests")
+      .update({ reviewed_by: context.userId })
+      .eq("id", data.requestId)
+      .eq("request_type", "claim_profile")
+      .eq("status", "pending")
+      .is("reviewed_by", null)
+      .select("id, therapist_id, request_type, status")
+      .maybeSingle();
+    if (error?.code === "23505") {
+      throw new Error("קיימת כבר בקשת בעלות אחרת לפרופיל שנמצאת בתהליך אימות.");
+    }
+    if (error) throw new Error(error.message);
+    if (!request) throw new Error("בקשת הבעלות אינה ממתינה לבדיקה או שכבר נמצאת בתהליך אימות.");
+
+    const releaseReviewReservation = async () => {
+      await supabaseAdmin
         .from("therapist_profile_requests")
-        .select(
-          "id, therapist_id, request_type, requester_name, requester_email, requester_phone, note, review_note, status, verification_method, created_at, therapists:therapist_id(full_name, professional_title, email)",
-        )
-        .order("created_at", { ascending: false }),
-    ]);
-    if (inviteResult.error) throw new Error(inviteResult.error.message);
-    if (requestResult.error) throw new Error(requestResult.error.message);
+        .update({ reviewed_by: null })
+        .eq("id", request.id)
+        .eq("status", "pending")
+        .eq("reviewed_by", context.userId);
+    };
 
-    const now = Date.now();
-    const invites: AdminClaimRow[] = (inviteResult.data ?? []).map((raw) => {
-      const row = raw as typeof raw & { therapists?: unknown };
-      const therapist = joinedTherapist(row.therapists);
-      const expired = row.status === "pending" && new Date(row.expires_at).getTime() <= now;
-      const status: AdminClaimRow["status"] =
-        row.status === "accepted"
-          ? "invite_accepted"
-          : expired || row.status === "expired"
-            ? "invite_expired"
-            : row.delivery_status === "failed"
-              ? "invite_failed"
-              : row.status === "revoked"
-                ? "invite_revoked"
-                : row.delivery_status === "sent"
-                  ? "invite_sent"
-                  : "invite_pending";
+    let newlySentInviteId: string | null = null;
+    try {
+      const { data: activeInvite, error: activeInviteError } = await supabaseAdmin
+        .from("therapist_claim_invites")
+        .select("id")
+        .eq("therapist_id", request.therapist_id)
+        .eq("status", "pending")
+        .eq("delivery_status", "sent")
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (activeInviteError) throw new Error(activeInviteError.message);
+
+      const { sendClaimInvitation } = await import("./profile-claim-v2.server");
+      const result = activeInvite
+        ? { status: "already_pending" as const, inviteId: activeInvite.id, providerMessageId: null }
+        : await sendClaimInvitation({
+            therapistId: request.therapist_id,
+            creatorUserId: context.userId,
+            inviteSource: "profile_request",
+            // No delivered invite exists. Replacing a stale/failed/unsent
+            // pending row is safe and avoids treating it as active verification.
+            replaceExisting: true,
+          });
+
+      if (result.status === "failed") {
+        throw new Error(`שליחת הזמנת האימות נכשלה: ${result.error}`);
+      }
+      if (result.status === "sent") newlySentInviteId = result.inviteId;
+
+      // Re-check the reservation after external email delivery. If another
+      // admin finalized/rejected the request while Brevo was being called,
+      // revoke the newly-created token before returning so it cannot be used.
+      const { data: stillReserved, error: reservationError } = await supabaseAdmin
+        .from("therapist_profile_requests")
+        .select("id")
+        .eq("id", request.id)
+        .eq("status", "pending")
+        .eq("reviewed_by", context.userId)
+        .maybeSingle();
+      if (reservationError) throw new Error(reservationError.message);
+      if (!stillReserved) throw new Error("בקשת הבעלות טופלה במקביל על ידי מנהל אחר.");
+
+      // Keep reviewed_by set for both a newly-sent invite and a pre-existing
+      // valid invite. That marks this specific public request as explicitly
+      // advanced by an admin; invite acceptance can then approve this request
+      // without falsely approving unrelated pending requests for the profile.
+      newlySentInviteId = null;
       return {
-        id: row.id,
-        kind: "invite",
-        therapistId: row.therapist_id,
-        therapistName: therapist.full_name ?? "מטפל/ת",
-        professionalTitle: therapist.professional_title ?? null,
-        profileEmail: therapist.email ?? row.email,
-        requesterName: null,
-        requesterEmail: null,
-        requesterPhone: null,
-        requestNote: null,
-        reviewNote: null,
-        status,
-        createdAt: row.created_at,
-        sentAt: row.sent_at,
-        acceptedAt: row.accepted_at,
-        expiresAt: row.expires_at,
-        sourceLeadId: row.source_lead_id,
-        providerMessageId: row.provider_message_id,
-        lastDeliveryError: row.last_delivery_error,
-        verificationMethod: null,
+        ok: true as const,
+        invitationStatus: result.status,
+        inviteId: result.inviteId,
       };
-    });
-
-    const requests: AdminClaimRow[] = (requestResult.data ?? []).map((raw) => {
-      const row = raw as typeof raw & { therapists?: unknown };
-      const therapist = joinedTherapist(row.therapists);
-      const status: AdminClaimRow["status"] =
-        row.status === "approved"
-          ? "request_approved"
-          : row.status === "rejected"
-            ? "request_rejected"
-            : "request_pending";
-      return {
-        id: row.id,
-        kind: row.request_type === "remove_profile" ? "removal_request" : "claim_request",
-        therapistId: row.therapist_id,
-        therapistName: therapist.full_name ?? "מטפל/ת",
-        professionalTitle: therapist.professional_title ?? null,
-        profileEmail: therapist.email ?? null,
-        requesterName: row.requester_name,
-        requesterEmail: row.requester_email,
-        requesterPhone: row.requester_phone,
-        requestNote: row.note,
-        reviewNote: row.review_note,
-        status,
-        createdAt: row.created_at,
-        sentAt: null,
-        acceptedAt: null,
-        expiresAt: null,
-        sourceLeadId: null,
-        providerMessageId: null,
-        lastDeliveryError: null,
-        verificationMethod: row.verification_method,
-      };
-    });
-
-    return [...invites, ...requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    } catch (error) {
+      if (newlySentInviteId) {
+        await supabaseAdmin
+          .from("therapist_claim_invites")
+          .update({ status: "revoked", revoked_at: new Date().toISOString() })
+          .eq("id", newlySentInviteId)
+          .eq("status", "pending");
+      }
+      await releaseReviewReservation();
+      throw error;
+    }
   });
 
 const SendInviteSchema = z.object({
@@ -168,7 +373,7 @@ export const resendAdminClaimInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SendInviteSchema.parse(input))
   .handler(async ({ data, context }) => {
-    requireAdmin(context.claims);
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לשליחת הזמנות בעלות.");
     const { sendClaimInvitation } = await import("./profile-claim-v2.server");
     const result = await sendClaimInvitation({
       therapistId: data.therapistId,
@@ -182,27 +387,22 @@ export const resendAdminClaimInvite = createServerFn({ method: "POST" })
     return result;
   });
 
-const ReviewRequestSchema = z.object({
+const ReviewRemovalSchema = z.object({
   requestId: z.string().uuid(),
-  verificationMethod: z
-    .enum(["existing_email", "existing_phone", "manual_review"])
-    .default("manual_review"),
+  verificationMethod: z.enum(["existing_email", "existing_phone", "manual_review"]).default("manual_review"),
 });
 
 export const approveAdminRemovalRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => ReviewRequestSchema.parse(input))
+  .inputValidator((input: unknown) => ReviewRemovalSchema.parse(input))
   .handler(async ({ data, context }) => {
-    requireAdmin(context.claims);
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לאישור בקשות הסרה.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: therapistId, error } = await supabaseAdmin.rpc(
-      "approve_therapist_profile_removal",
-      {
-        _request_id: data.requestId,
-        _reviewer: context.userId,
-        _verification_method: data.verificationMethod,
-      },
-    );
+    const { data: therapistId, error } = await supabaseAdmin.rpc("approve_therapist_profile_removal", {
+      _request_id: data.requestId,
+      _reviewer: context.userId,
+      _verification_method: data.verificationMethod,
+    });
     if (error) throw new Error(error.message);
     return { ok: true as const, therapistId };
   });
@@ -216,8 +416,26 @@ export const rejectAdminProfileRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => RejectRequestSchema.parse(input))
   .handler(async ({ data, context }) => {
-    requireAdmin(context.claims);
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לדחיית בקשות פרופיל.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: request, error: readError } = await supabaseAdmin
+      .from("therapist_profile_requests")
+      .select("id, therapist_id, request_type, status, reviewed_by")
+      .eq("id", data.requestId)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    if (!request || request.status !== "pending") throw new Error("הבקשה אינה ממתינה לבדיקה.");
+
+    if (request.request_type === "claim_profile" && request.reviewed_by) {
+      const { error: revokeError } = await supabaseAdmin
+        .from("therapist_claim_invites")
+        .update({ status: "revoked", revoked_at: new Date().toISOString() })
+        .eq("therapist_id", request.therapist_id)
+        .eq("status", "pending")
+        .in("invite_source", ["profile_request", "admin_resend"]);
+      if (revokeError) throw new Error(revokeError.message);
+    }
+
     const { data: row, error } = await supabaseAdmin
       .from("therapist_profile_requests")
       .update({
@@ -231,6 +449,6 @@ export const rejectAdminProfileRequest = createServerFn({ method: "POST" })
       .select("id")
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!row) throw new Error("הבקשה אינה ממתינה לבדיקה.");
+    if (!row) throw new Error("הבקשה כבר טופלה על ידי פעולה אחרת.");
     return { ok: true as const };
   });
