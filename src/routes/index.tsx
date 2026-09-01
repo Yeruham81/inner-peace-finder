@@ -293,7 +293,7 @@ export const Route = createFileRoute("/")({
     const canonical = absoluteUrl("/");
     return {
       meta: [
-        { title: "טיפולינקס — חיפוש חכם של מטפלים ואנשי מקצוע בתחומי הטיפול" },
+        { title: "טיפולינקס — חיפוש חכם של אנשי מקצוע בתחומי הטיפול" },
         {
           name: "description",
           content:
@@ -372,7 +372,7 @@ function Index() {
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand/10 bg-surface-elevated px-4 py-1.5 text-xs font-medium text-primary shadow-card">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              חיפוש חכם של מטפלים ואנשי מקצוע בתחומי הטיפול
+              חיפוש חכם של אנשי מקצוע בתחומי הטיפול
             </span>
 
             <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
