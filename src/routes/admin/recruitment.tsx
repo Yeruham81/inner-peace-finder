@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { FileUp, MailPlus, UploadCloud } from "lucide-react";
+import { CheckSquare, FileUp, MailPlus, Send, UploadCloud } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -12,10 +12,23 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  getAdminRecruitmentEmailCapacity,
   importAdminRecruitmentCsv,
   listAdminRecruitmentInvitations,
   previewAdminRecruitmentCsv,
+  sendAdminRecruitmentEmailInvitations,
   type AdminRecruitmentInvitationRow,
   type AdminRecruitmentPreview,
   type AdminRecruitmentPreviewRow,
@@ -61,6 +74,8 @@ function RecruitmentPage() {
   const previewFn = useServerFn(previewAdminRecruitmentCsv);
   const importFn = useServerFn(importAdminRecruitmentCsv);
   const listFn = useServerFn(listAdminRecruitmentInvitations);
+  const capacityFn = useServerFn(getAdminRecruitmentEmailCapacity);
+  const sendFn = useServerFn(sendAdminRecruitmentEmailInvitations);
 
   const [fileName, setFileName] = useState("");
   const [csvText, setCsvText] = useState("");
@@ -73,13 +88,27 @@ function RecruitmentPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   useEffect(() => {
     const handle = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(handle);
   }, [search]);
 
-  useEffect(() => setPage(1), [debouncedSearch, status, channel, pageSize]);
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [debouncedSearch, status, channel, pageSize]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page]);
+
+  const capacity = useQuery({
+    queryKey: ["admin-recruitment-email-capacity"],
+    queryFn: () => capacityFn(),
+  });
 
   const invitations = useQuery({
     queryKey: ["admin-recruitment", page, pageSize, debouncedSearch, status, channel, sortKey, sortDirection],
@@ -125,6 +154,26 @@ function RecruitmentPage() {
     onError: (error: Error) => toast.error(error.message || "לא ניתן לייבא את הרשימה."),
   });
 
+  const sendMutation = useMutation({
+    mutationFn: () => sendFn({ data: { invitationIds: [...selectedIds] } }),
+    onSuccess: async (result) => {
+      setSelectedIds(new Set());
+      setSendDialogOpen(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-recruitment"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-recruitment-email-capacity"] }),
+      ]);
+      if (result.outcome === "submitted") {
+        toast.success(`${result.submittedCount} הזמנות נמסרו ל-Brevo לעיבוד.`);
+      } else if (result.outcome === "submission_failed") {
+        toast.error("Brevo לא קיבלה את ההודעות לעיבוד. ניתן לנסות שוב לאחר בדיקת השגיאה.");
+      } else {
+        toast.error("תוצאת השליחה אינה ודאית. המערכת חסמה ניסיון חוזר אוטומטי כדי למנוע שליחה כפולה.");
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לשלוח את ההזמנות."),
+  });
+
   async function handleFile(file: File | undefined) {
     setPreview(null);
     if (!file) {
@@ -148,6 +197,7 @@ function RecruitmentPage() {
   }
 
   function handleSortChange(key: string) {
+    setSelectedIds(new Set());
     const nextKey = key as typeof sortKey;
     if (nextKey === sortKey) setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
     else {
@@ -163,7 +213,11 @@ function RecruitmentPage() {
       {
         key: "email",
         header: "אימייל",
-        render: (row) => <span dir="ltr" className="break-all">{row.email || "—"}</span>,
+        render: (row) => (
+          <span dir="ltr" className="break-all">
+            {row.email || "—"}
+          </span>
+        ),
       },
       {
         key: "name",
@@ -181,10 +235,26 @@ function RecruitmentPage() {
 
   const invitationColumns: AdminColumn<AdminRecruitmentInvitationRow>[] = [
     {
+      key: "select",
+      header: "בחירה",
+      render: (row) => (
+        <Checkbox
+          aria-label={`בחירת הזמנה עבור ${row.destination}`}
+          checked={selectedIds.has(row.id)}
+          disabled={!isSendable(row) || sendMutation.isPending}
+          onCheckedChange={(value) => toggleInvitation(row.id, value === true)}
+        />
+      ),
+    },
+    {
       key: "destination",
       header: "יעד",
       sortable: true,
-      render: (row) => <span dir="ltr" className="break-all">{row.destination}</span>,
+      render: (row) => (
+        <span dir="ltr" className="break-all">
+          {row.destination}
+        </span>
+      ),
     },
     {
       key: "name",
@@ -212,13 +282,32 @@ function RecruitmentPage() {
   ];
 
   const listRows = invitations.data?.rows ?? [];
-  const readyCount = listRows.filter((row) => row.status === "ready").length;
+  const isSendable = (row: AdminRecruitmentInvitationRow) =>
+    row.channel === "email" && (row.status === "ready" || row.status === "submission_failed");
+  const sendableRows = listRows.filter(isSendable);
+  const readyCount = sendableRows.length;
+  const selectedCount = selectedIds.size;
+  const remainingToday = capacity.data?.remaining ?? 0;
+
+  function toggleInvitation(id: string, checked: boolean) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function selectSendablePageRows() {
+    const limit = Math.max(0, Math.min(remainingToday, 100));
+    setSelectedIds(new Set(sendableRows.slice(0, limit).map((row) => row.id)));
+  }
 
   return (
     <div>
       <AdminPageHeader
         title="הזמנות מטפלים"
-        subtitle="ייבוא רשימות והכנת הזמנות הצטרפות. בשלב זה המערכת אינה שולחת הודעות בפועל."
+        subtitle="ייבוא רשימות, בחירת נמענים ושליחת הזמנות הצטרפות דרך Brevo."
         breadcrumb="הזמנות מטפלים"
       />
 
@@ -230,10 +319,19 @@ function RecruitmentPage() {
               ייבוא קובץ CSV
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              עמודת <span dir="ltr" className="font-mono">email</span> היא חובה. אפשר להוסיף
-              <span dir="ltr" className="mx-1 font-mono">first_name</span> ו-
-              <span dir="ltr" className="font-mono">last_name</span>. המודל כבר מוכן לערוצי טלפון עתידיים,
-              אך בשלב זה לא מיובאים ולא נשמרים מספרי טלפון.
+              עמודת{" "}
+              <span dir="ltr" className="font-mono">
+                email
+              </span>{" "}
+              היא חובה. אפשר להוסיף
+              <span dir="ltr" className="mx-1 font-mono">
+                first_name
+              </span>{" "}
+              ו-
+              <span dir="ltr" className="font-mono">
+                last_name
+              </span>
+              . המודל כבר מוכן לערוצי טלפון עתידיים, אך בשלב זה לא מיובאים ולא נשמרים מספרי טלפון.
             </p>
           </div>
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
@@ -250,7 +348,9 @@ function RecruitmentPage() {
 
         {fileName ? (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md bg-secondary/30 p-3 text-sm">
-            <span>נבחר: <strong dir="ltr">{fileName}</strong></span>
+            <span>
+              נבחר: <strong dir="ltr">{fileName}</strong>
+            </span>
             <Button
               size="sm"
               onClick={() => previewMutation.mutate()}
@@ -269,7 +369,9 @@ function RecruitmentPage() {
             <AdminStatCard label="מוכנות לייבוא" value={preview.summary.eligible} />
             <AdminStatCard
               label="כבר קיימות"
-              value={preview.summary.alreadyInvited + preview.summary.alreadyRegistered + preview.summary.existingProfile}
+              value={
+                preview.summary.alreadyInvited + preview.summary.alreadyRegistered + preview.summary.existingProfile
+              }
               hint="הזמנה, חשבון או פרופיל קיימים"
             />
             <AdminStatCard
@@ -283,7 +385,7 @@ function RecruitmentPage() {
             <div>
               <h2 className="font-semibold text-foreground">תצוגה מקדימה</h2>
               <p className="text-xs text-muted-foreground">
-                הייבוא אינו שולח הודעות. כתובת שכבר קיימת במאגר הזמנות לא תיווצר שוב.
+                הייבוא עצמו אינו שולח הודעות. לאחר הייבוא ניתן לבחור כתובות ממאגר ההזמנות ולשלוח אותן דרך Brevo.
               </p>
             </div>
             <Button
@@ -309,12 +411,50 @@ function RecruitmentPage() {
           <div>
             <h2 className="font-semibold text-foreground">מאגר ההזמנות</h2>
             <p className="text-xs text-muted-foreground">
-              הרשומות כאן הן תשתית ההזמנה. בשלב הבא נחבר שליחה דרך Brevo ונעדכן סטטוסים באמצעות callbacks/webhooks.
+              ניתן לשלוח כתובות במצב „מוכנה לשליחה” או לנסות שוב רק לאחר כשל שבו Brevo לא קיבלה את ההודעה לעיבוד.
             </p>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {invitations.isLoading ? "טוען…" : `${invitations.data?.total ?? 0} יעדים · ${readyCount} מוכנים בעמוד הנוכחי`}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span>
+              {invitations.isLoading
+                ? "טוען…"
+                : `${invitations.data?.total ?? 0} יעדים · ${readyCount} זמינים לשליחה בעמוד`}
+            </span>
+            <span>·</span>
+            <span>
+              {capacity.isLoading
+                ? "מכסה יומית…"
+                : `נותרו ${remainingToday} מתוך ${capacity.data?.dailyLimit ?? 100} הזמנות היום`}
+            </span>
+          </div>
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={selectSendablePageRows}
+            disabled={sendableRows.length === 0 || remainingToday === 0 || sendMutation.isPending}
+          >
+            <CheckSquare className="me-2 h-4 w-4" aria-hidden="true" />
+            בחירת זמינות בעמוד
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+            disabled={selectedCount === 0 || sendMutation.isPending}
+          >
+            ניקוי בחירה
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setSendDialogOpen(true)}
+            disabled={selectedCount === 0 || selectedCount > remainingToday || sendMutation.isPending}
+          >
+            <Send className="me-2 h-4 w-4" aria-hidden="true" />
+            שליחת {selectedCount || ""} הזמנות
+          </Button>
         </div>
 
         <AdminFilterBar>
@@ -375,17 +515,44 @@ function RecruitmentPage() {
           mobileRow={(row) => (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <span dir="ltr" className="break-all font-medium">{row.destination}</span>
+                <span dir="ltr" className="break-all font-medium">
+                  {row.destination}
+                </span>
                 <AdminStatusBadge status={INVITATION_LABELS[row.status]} />
               </div>
               <p className="text-xs text-muted-foreground">
-                {row.channel === "email" ? "אימייל" : row.channel === "sms" ? "SMS" : "WhatsApp"} · יובא {formatAdminDate(row.createdAt)}
+                {row.channel === "email" ? "אימייל" : row.channel === "sms" ? "SMS" : "WhatsApp"} · יובא{" "}
+                {formatAdminDate(row.createdAt)}
               </p>
             </div>
           )}
           emptyTitle={invitations.isLoading ? "טוען…" : "אין הזמנות מתאימות"}
         />
       </section>
+
+      <AlertDialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>שליחת {selectedCount} הזמנות הצטרפות?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ההודעות יישלחו באמצעות קמפיין Brevo. מרגע ש-Brevo מקבלת קמפיין לעיבוד, כל כתובת נחשבת כמי שקיבלה את ההזמנה
+              היחידה שלה גם אם ההודעה תחזור לאחר מכן כ-Bounce.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sendMutation.isPending}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={sendMutation.isPending || selectedCount === 0 || selectedCount > remainingToday}
+              onClick={(event) => {
+                event.preventDefault();
+                sendMutation.mutate();
+              }}
+            >
+              {sendMutation.isPending ? "שולח…" : "אישור ושליחה"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
