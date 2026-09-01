@@ -35,8 +35,8 @@ describe("therapist recruitment delivery", () => {
     expect(route).toContain("מצב שליחה לא ידוע");
   });
 
-  it("stores only a SHA-256 hash of a high-entropy invitation token locally", () => {
-    expect(recruitmentTokenHash("example-secret")).toMatch(/^[0-9a-f]{64}$/);
+  it("stores only a SHA-256 hash of a high-entropy invitation token locally", async () => {
+    expect(await recruitmentTokenHash("example-secret")).toMatch(/^[0-9a-f]{64}$/);
     expect(delivery).toContain('randomBytes(32).toString("base64url")');
     expect(migration).toContain("invite_token_hash text");
     expect(migration).not.toContain("invite_token text");
@@ -68,7 +68,9 @@ describe("therapist recruitment delivery", () => {
   it("records unsubscribe as recruitment-only suppression without blocking transactional email", () => {
     expect(migration).toContain("public.therapist_recruitment_suppressions");
     expect(migration).toContain("'recipient_opt_out'");
-    const eventFn = migration.slice(migration.indexOf("CREATE OR REPLACE FUNCTION public.apply_recruitment_email_event"));
+    const eventFn = migration.slice(
+      migration.indexOf("CREATE OR REPLACE FUNCTION public.apply_recruitment_email_event"),
+    );
     expect(eventFn).not.toContain("INSERT INTO public.contact_email_suppressions");
   });
 
@@ -101,6 +103,8 @@ describe("therapist recruitment delivery", () => {
       deliverBody.indexOf("const result = await sendBrevoCampaignNow"),
     );
     expect(migration).toContain("provider_campaign_id = _provider_campaign_id");
-    expect(migration).toContain("status = CASE WHEN status IN ('submitting', 'submitted', 'submission_failed', 'submission_unknown') THEN 'delivered' ELSE status END");
+    expect(migration).toContain(
+      "status = CASE WHEN status IN ('submitting', 'submitted', 'submission_failed', 'submission_unknown') THEN 'delivered' ELSE status END",
+    );
   });
 });
