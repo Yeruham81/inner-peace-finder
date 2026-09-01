@@ -4,16 +4,17 @@
  * A page may only become indexable when ALL of the following hold:
  *  1. the server-controlled launch switch `TIPULINKS_SEARCH_INDEXING_ENABLED`
  *     is exactly `"true"`;
- *  2. the configured, validated production origin (`TIPULINKS_PUBLIC_ORIGIN`)
- *     is the canonical production site (`https://tipulinks.co.il`) — preview,
- *     staging, localhost and unknown hosts can never be indexable;
+ *  2. the configured, validated canonical origin (`TIPULINKS_PUBLIC_ORIGIN`)
+ *     is the production site (`https://tipulinks.co.il`);
  *  3. the route itself is an intentional public SEO route;
  *  4. the page data is publicly eligible (published problem page, eligible
  *     published therapist, ...).
  *
+ * A second response-level safety gate in `src/server.ts` also verifies the
+ * actual request URL observed by the server. This keeps preview/staging hosts
+ * non-indexable even if they receive production-like environment values.
+ *
  * Every ambiguous, missing, invalid or error state resolves to `noindex`.
- * Request headers (`Host`, `X-Forwarded-Host`, `Origin`, ...) are never
- * consulted, so a spoofed header cannot enable indexing.
  */
 
 import { SITE_ORIGIN } from "./seo";
@@ -28,7 +29,7 @@ export type RobotsDirective = "index,follow" | "noindex,follow" | "noindex,nofol
 
 /** Only the literal string `true` enables indexing. Anything else fails closed. */
 export function parseIndexingFlag(raw: string | null | undefined): boolean {
-  return typeof raw === "string" && raw.trim().toLowerCase() === "true";
+  return raw === "true";
 }
 
 /**
@@ -47,6 +48,59 @@ export function isTrustedProductionOrigin(raw: string | null | undefined): boole
   } catch {
     return false;
   }
+}
+
+/**
+ * True only when the request itself is being served from the canonical
+ * production origin. This is deliberately independent of
+ * `TIPULINKS_PUBLIC_ORIGIN`: a Lovable preview may legitimately be configured
+ * with the production canonical origin, but that must never make the preview
+ * deployment indexable.
+ */
+export function isCanonicalProductionRequestUrl(raw: string | null | undefined): boolean {
+  if (typeof raw !== "string" || raw === "") return false;
+  try {
+    return new URL(raw).origin === SITE_ORIGIN;
+  } catch {
+    return false;
+  }
+}
+
+export type ResponseRobotsHeader = "noindex, follow" | "noindex, nofollow";
+
+/**
+ * Response-level safety gate applied by the server entry.
+ *
+ * This complements route-level meta tags. It makes effective indexing depend
+ * on the ACTUAL request URL as observed by the server, not merely on the
+ * configured canonical origin. Therefore a preview/staging deployment stays
+ * non-indexable even if it receives production-like environment values.
+ *
+ * API endpoints are always `noindex, nofollow` because they do not render the
+ * HTML root/meta layer.
+ */
+export function responseRobotsHeader(input: {
+  requestUrl: string | null | undefined;
+  indexingAllowed: boolean;
+}): ResponseRobotsHeader | null {
+  let url: URL;
+  try {
+    if (!input.requestUrl) return "noindex, nofollow";
+    url = new URL(input.requestUrl);
+  } catch {
+    return "noindex, nofollow";
+  }
+
+  if (!isCanonicalProductionRequestUrl(url.toString())) return "noindex, nofollow";
+
+  const pathname = url.pathname;
+  if (pathname === "/api" || pathname.startsWith("/api/")) return "noindex, nofollow";
+
+  if (input.indexingAllowed !== true) return "noindex, follow";
+
+  // Production + global indexing enabled: route/page meta remains authoritative
+  // for the final per-page eligibility decision.
+  return null;
 }
 
 /** Combine the launch switch with the trusted-production-origin requirement. */
@@ -102,9 +156,7 @@ function normalizePath(path: string): string | null {
 export function isPermanentlyNoindexPath(path: string): boolean {
   const pathname = normalizePath(path);
   if (pathname === null) return true;
-  return PERMANENT_NOINDEX_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  return PERMANENT_NOINDEX_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export function isSeoEligibleRoutePath(path: string): boolean {
@@ -183,8 +235,7 @@ export function therapistSeoEligible(
       },
 ): boolean {
   if (!row || typeof row.slug !== "string" || row.slug.trim() === "") return false;
-  const exposesStatus =
-    row.is_active !== undefined || row.profile_status !== undefined || row.visibility !== undefined;
+  const exposesStatus = row.is_active !== undefined || row.profile_status !== undefined || row.visibility !== undefined;
   // Trusted public reads already filter by eligibility; when the row carries
   // status fields we re-verify them so a draft/inactive row can never index.
   return exposesStatus ? isEligibleRow(row) : true;
