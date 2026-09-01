@@ -69,6 +69,12 @@ const INVITATION_LABELS: Record<RecruitmentInvitationStatus, string> = {
   submission_unknown: "מצב שליחה לא ידוע",
 };
 
+const MANUAL_IMPORT_FILENAME = "manual-entry.csv";
+
+function manualEmailAsCsv(value: string): string {
+  return `email\n"${value.trim().replace(/"/g, '""')}"\n`;
+}
+
 function RecruitmentPage() {
   const queryClient = useQueryClient();
   const previewFn = useServerFn(previewAdminRecruitmentCsv);
@@ -79,6 +85,7 @@ function RecruitmentPage() {
 
   const [fileName, setFileName] = useState("");
   const [csvText, setCsvText] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
   const [preview, setPreview] = useState<AdminRecruitmentPreview | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -152,6 +159,41 @@ function RecruitmentPage() {
       setPreview(refreshed);
     },
     onError: (error: Error) => toast.error(error.message || "לא ניתן לייבא את הרשימה."),
+  });
+
+  const manualImportMutation = useMutation({
+    mutationFn: async () => {
+      const email = manualEmail.trim();
+      if (!email) throw new Error("נא להזין כתובת אימייל.");
+
+      const manualCsvText = manualEmailAsCsv(email);
+      const previewResult = await previewFn({
+        data: { csvText: manualCsvText, fileName: MANUAL_IMPORT_FILENAME },
+      });
+
+      if (previewResult.summary.eligible !== 1) {
+        return { importedCount: 0, preview: previewResult };
+      }
+
+      const importResult = await importFn({
+        data: { csvText: manualCsvText, fileName: MANUAL_IMPORT_FILENAME },
+      });
+      return { importedCount: importResult.importedCount, preview: importResult.preview };
+    },
+    onSuccess: async (result) => {
+      const row = result.preview.rows[0];
+
+      if (result.importedCount > 0) {
+        setManualEmail("");
+        toast.success("כתובת האימייל נוספה למאגר ההזמנות. ניתן לבחור אותה למטה ולשלוח את ההזמנה.");
+        await queryClient.invalidateQueries({ queryKey: ["admin-recruitment"] });
+        return;
+      }
+
+      const reason = row ? PREVIEW_LABELS[row.status] : "לא ניתן להוסיף את הכתובת";
+      toast.error(`הכתובת לא נוספה: ${reason}.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן להוסיף את כתובת האימייל."),
   });
 
   const sendMutation = useMutation({
@@ -360,6 +402,50 @@ function RecruitmentPage() {
             </Button>
           </div>
         ) : null}
+      </div>
+
+      <div className="mb-5 rounded-lg border border-border bg-surface-elevated p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[260px] flex-1">
+            <label htmlFor="manual-recruitment-email" className="block text-sm font-semibold text-foreground">
+              הוספת כתובת אימייל ידנית
+            </label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              הכתובת תעבור בדיוק את אותן בדיקות ואותו מסלול ייבוא כמו כתובת מתוך קובץ CSV. ההוספה אינה שולחת הודעה; לאחר
+              מכן ניתן לבחור את הכתובת במאגר ההזמנות ולשלוח אותה כרגיל.
+            </p>
+            <input
+              id="manual-recruitment-email"
+              type="email"
+              dir="ltr"
+              autoComplete="off"
+              inputMode="email"
+              placeholder="therapist@example.com"
+              value={manualEmail}
+              onChange={(event) => setManualEmail(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && manualEmail.trim() && !manualImportMutation.isPending) {
+                  event.preventDefault();
+                  manualImportMutation.mutate();
+                }
+              }}
+              className="mt-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => manualImportMutation.mutate()}
+            disabled={
+              !manualEmail.trim() ||
+              manualImportMutation.isPending ||
+              importMutation.isPending ||
+              previewMutation.isPending
+            }
+          >
+            <MailPlus className="me-2 h-4 w-4" aria-hidden="true" />
+            {manualImportMutation.isPending ? "בודק ומוסיף…" : "בדיקה והוספה למאגר"}
+          </Button>
+        </div>
       </div>
 
       {preview ? (
