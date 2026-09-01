@@ -12,6 +12,13 @@ const HUB_DESCRIPTION =
 
 const publishedContent = listPublishedProblemSeoContent();
 
+type TherapyInformationPageItem = {
+  slug: string;
+  name: string;
+  group: (typeof publishedContent)[number]["group"];
+  summary: string;
+};
+
 export const Route = createFileRoute("/therapy-information")({
   loader: async () => {
     const activeProblems = new Map((await listProblems()).map((problem) => [problem.slug, problem] as const));
@@ -105,7 +112,7 @@ export const Route = createFileRoute("/therapy-information")({
 });
 
 function TherapyInformationPage() {
-  const pages = Route.useLoaderData();
+  const pages = Route.useLoaderData() as TherapyInformationPageItem[];
   const groups = PROBLEM_SEO_GROUPS.map((group) => ({
     ...group,
     pages: pages.filter((page) => page.group === group.id),
