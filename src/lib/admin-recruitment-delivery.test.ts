@@ -62,6 +62,18 @@ describe("therapist recruitment delivery", () => {
     expect(delivery).toContain("recipients: { listIds: [input.listId] }");
   });
 
+  it("uses a recruitment-only sender instead of the shared system-message sender", () => {
+    const campaignBody = delivery.slice(
+      delivery.indexOf("async function createBrevoCampaign"),
+      delivery.indexOf("async function deleteBrevoDraftCampaign"),
+    );
+    expect(campaignBody).toContain("BREVO_RECRUITMENT_FROM_ADDRESS");
+    expect(campaignBody).toContain("BREVO_RECRUITMENT_FROM_ADDRESS_not_configured");
+    expect(campaignBody).not.toContain("EMAIL_FROM_ADDRESS");
+    expect(campaignBody).not.toContain("notifications@tipulinks.co.il");
+    expect(campaignBody).not.toContain("messages@tipulinks.co.il");
+  });
+
   it("lets authoritative provider events resolve an earlier unknown or contradictory send outcome", () => {
     expect(migration).toContain("'submission_unknown') THEN 'delivered'");
     expect(migration).toContain("'submission_unknown') THEN 'bounced'");
