@@ -1,6 +1,9 @@
-import { randomBytes, webcrypto } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { recruitmentTokenHash } from "./recruitment-token";
+
+export { recruitmentTokenHash } from "./recruitment-token";
 
 const BREVO_BASE_URL = "https://api.brevo.com/v3";
 export const RECRUITMENT_INVITE_ATTRIBUTE = "TIPULINKS_INVITE_URL";
@@ -35,11 +38,6 @@ function recruitmentOrigin(): string {
   }
   if (parsed.pathname !== "/" && parsed.pathname !== "") throw new Error("TIPULINKS_PUBLIC_ORIGIN_invalid");
   return parsed.origin;
-}
-
-export async function recruitmentTokenHash(token: string): Promise<string> {
-  const digest = await webcrypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function recruitmentInviteUrl(token: string): string {
