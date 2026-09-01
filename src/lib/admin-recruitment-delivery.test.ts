@@ -13,6 +13,7 @@ const root = resolve(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 const migration = read("supabase/migrations/20260901131500_therapist_recruitment_delivery.sql");
 const ambiguityFixMigration = read("supabase/migrations/20260901131600_fix_recruitment_invitation_id_ambiguity.sql");
+const flexibleInviteMigration = read("supabase/migrations/20260901170000_allow_recruitment_invite_any_email.sql");
 const adminFunctions = read("src/lib/admin-recruitment.functions.ts");
 const route = read("src/routes/admin/recruitment.tsx");
 const auth = read("src/routes/auth.tsx");
@@ -62,13 +63,20 @@ describe("therapist recruitment delivery", () => {
     expect(recruitmentTemplate).toContain('style="text-align:center;margin:30px 0;"');
   });
 
-  it("opens valid recruitment invites on signup and preserves the invite through Google OAuth", () => {
+  it("opens valid recruitment invites on signup and establishes Lovable OAuth session before claiming", () => {
     expect(auth).toContain('invite ? "signup" : (mode ?? "signin")');
     expect(auth).toContain("if (!recruitmentInviteValid) return;");
-    expect(auth).toContain('provider: "google"');
-    expect(auth).toContain("options: { redirectTo: redirectUrl }");
+    expect(auth).toContain("lovable.auth.signInWithOAuth(provider");
+    expect(auth).not.toContain("supabase.auth.signInWithOAuth");
     expect(auth).toContain("...(invite ? { invite } : {})");
     expect(auth).toContain("mode: oauthMode");
+    expect(auth).toContain("supabase.auth.setSession(res.tokens)");
+
+    const oauthBody = auth.slice(auth.indexOf("async function handleOAuth"));
+    expect(oauthBody.indexOf("supabase.auth.setSession(res.tokens)")).toBeGreaterThan(-1);
+    expect(oauthBody.indexOf("supabase.auth.setSession(res.tokens)")).toBeLessThan(
+      oauthBody.indexOf("await ensureAccountForCurrentContext()"),
+    );
   });
   it("uses a Brevo marketing campaign template and personalized invitation URL attribute", () => {
     expect(RECRUITMENT_INVITE_ATTRIBUTE).toBe("TIPULINKS_INVITE_URL");
@@ -114,13 +122,20 @@ describe("therapist recruitment delivery", () => {
     expect(eventFn).not.toContain("INSERT INTO public.contact_email_suppressions");
   });
 
-  it("allows a valid invite to create an account while global registration is closed only after verified email match", () => {
-    expect(migration).toContain("auth_user.email_confirmed_at");
-    expect(migration).toContain("v_invitation.destination_normalized <> v_email");
-    expect(migration).toContain("INSERT INTO public.therapist_accounts (auth_user_id)");
-    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.claim_recruitment_invite(text) TO authenticated");
+  it("allows a valid invite to create an account with any verified login email while global registration is closed", () => {
+    expect(flexibleInviteMigration).toContain("auth_user.email_confirmed_at");
+    expect(flexibleInviteMigration).not.toContain("v_invitation.destination_normalized <> v_email");
+    expect(flexibleInviteMigration).not.toContain("recruitment_invite_email_mismatch");
+    expect(flexibleInviteMigration).toContain("INSERT INTO public.therapist_accounts (auth_user_id)");
+    expect(flexibleInviteMigration).toContain("recruitment_invite_already_used");
+    expect(flexibleInviteMigration).toContain("recruitment_invite_not_available");
+    expect(flexibleInviteMigration).toContain(
+      "GRANT EXECUTE ON FUNCTION public.claim_recruitment_invite(text) TO authenticated",
+    );
     expect(auth).toContain("registrationEnabled || recruitmentInviteValid");
     expect(auth).toContain("completeRecruitmentInviteRegistration");
+    expect(auth).not.toContain("email_mismatch");
+    expect(auth).not.toContain("inviteStateQuery.data?.emailHint");
     expect(inviteFunctions).toContain('context.supabase.rpc("claim_recruitment_invite"');
   });
 
