@@ -19,6 +19,7 @@ const auth = read("src/routes/auth.tsx");
 const webhook = read("src/routes/api/public/email/recruitment-status.ts");
 const inviteFunctions = read("src/lib/recruitment-invite.functions.ts");
 const delivery = read("src/lib/recruitment-delivery.server.ts");
+const recruitmentTemplate = read("docs/brevo/therapist-recruitment-template.html");
 
 describe("therapist recruitment delivery", () => {
   it("uses a 100-per-day database-enforced reservation boundary", () => {
@@ -54,6 +55,21 @@ describe("therapist recruitment delivery", () => {
     expect(inviteFunctions).not.toContain('from "./recruitment-delivery.server"');
   });
 
+  it("renders the Hebrew recruitment template explicitly right-to-left", () => {
+    expect(recruitmentTemplate).toContain('<html lang="he" dir="rtl">');
+    expect(recruitmentTemplate).toContain('<body dir="rtl"');
+    expect(recruitmentTemplate).toContain("direction:rtl;text-align:right");
+    expect(recruitmentTemplate).toContain('style="text-align:center;margin:30px 0;"');
+  });
+
+  it("opens valid recruitment invites on signup and preserves the invite through Google OAuth", () => {
+    expect(auth).toContain('invite ? "signup" : (mode ?? "signin")');
+    expect(auth).toContain("if (!recruitmentInviteValid) return;");
+    expect(auth).toContain('provider: "google"');
+    expect(auth).toContain("options: { redirectTo: redirectUrl }");
+    expect(auth).toContain("...(invite ? { invite } : {})");
+    expect(auth).toContain("mode: oauthMode");
+  });
   it("uses a Brevo marketing campaign template and personalized invitation URL attribute", () => {
     expect(RECRUITMENT_INVITE_ATTRIBUTE).toBe("TIPULINKS_INVITE_URL");
     expect(delivery).toContain("BREVO_RECRUITMENT_TEMPLATE_ID");
