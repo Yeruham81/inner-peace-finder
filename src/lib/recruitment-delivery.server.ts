@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes, webcrypto } from "node:crypto";
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -6,8 +6,7 @@ const BREVO_BASE_URL = "https://api.brevo.com/v3";
 export const RECRUITMENT_INVITE_ATTRIBUTE = "TIPULINKS_INVITE_URL";
 export const RECRUITMENT_EMAIL_DAILY_LIMIT = 100;
 export const RECRUITMENT_EMAIL_SUBJECT = "הכירו את טיפולינקס – דרך חדשה להגיע למטופלים";
-export const RECRUITMENT_EMAIL_PREVIEW =
-  "פרופיל מקצועי בחינם ותשלום רק עבור פניות ממטופלים שבחרו ליצור איתכם קשר.";
+export const RECRUITMENT_EMAIL_PREVIEW = "פרופיל מקצועי בחינם ותשלום רק עבור פניות ממטופלים שבחרו ליצור איתכם קשר.";
 
 export type ReservedRecruitmentInvitation = {
   sendBatchId: string;
@@ -38,8 +37,9 @@ function recruitmentOrigin(): string {
   return parsed.origin;
 }
 
-export function recruitmentTokenHash(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex");
+export async function recruitmentTokenHash(token: string): Promise<string> {
+  const digest = await webcrypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function recruitmentInviteUrl(token: string): string {
@@ -89,7 +89,11 @@ async function ensureRecruitmentInviteAttribute(): Promise<void> {
     if (createResponse.status !== 400) throw new Error(body?.message ?? `brevo_attribute_${createResponse.status}`);
     const retry = await brevoRequest("/contacts/attributes", { method: "GET" });
     const retryBody = await brevoJson(retry);
-    if (!retry.ok || !Array.isArray(retryBody?.attributes) || !retryBody.attributes.some((row: any) => row?.name === RECRUITMENT_INVITE_ATTRIBUTE)) {
+    if (
+      !retry.ok ||
+      !Array.isArray(retryBody?.attributes) ||
+      !retryBody.attributes.some((row: any) => row?.name === RECRUITMENT_INVITE_ATTRIBUTE)
+    ) {
       throw new Error(body?.message ?? "brevo_recruitment_attribute_missing");
     }
   }
@@ -166,11 +170,7 @@ async function cleanupOldBrevoRecruitmentLists(): Promise<void> {
   }
 }
 
-async function upsertBrevoContact(input: {
-  email: string;
-  listId: number;
-  inviteUrl: string;
-}): Promise<void> {
+async function upsertBrevoContact(input: { email: string; listId: number; inviteUrl: string }): Promise<void> {
   const response = await brevoRequest("/contacts", {
     method: "POST",
     body: JSON.stringify({
@@ -223,7 +223,8 @@ async function createBrevoCampaign(input: { listId: number; sendBatchId: string 
     }),
   });
   const body = await brevoJson(response);
-  if (!response.ok || !Number.isInteger(body?.id)) throw new Error(body?.message ?? `brevo_campaign_${response.status}`);
+  if (!response.ok || !Number.isInteger(body?.id))
+    throw new Error(body?.message ?? `brevo_campaign_${response.status}`);
   return body.id;
 }
 
@@ -246,7 +247,9 @@ async function deleteBrevoDraftCampaign(campaignId: number): Promise<void> {
   }
 }
 
-async function sendBrevoCampaignNow(campaignId: number): Promise<{ ok: boolean; definiteFailure: boolean; error?: string }> {
+async function sendBrevoCampaignNow(
+  campaignId: number,
+): Promise<{ ok: boolean; definiteFailure: boolean; error?: string }> {
   try {
     const response = await brevoRequest(`/emailCampaigns/${campaignId}/sendNow`, {
       method: "POST",
@@ -268,10 +271,12 @@ export async function reserveRecruitmentEmailInvitations(
   invitationIds: string[],
   adminUserId: string,
 ): Promise<ReservedRecruitmentInvitation[]> {
-  const tokenRows = invitationIds.map((id) => {
-    const rawToken = newRecruitmentToken();
-    return { id, rawToken, tokenHash: recruitmentTokenHash(rawToken) };
-  });
+  const tokenRows = await Promise.all(
+    invitationIds.map(async (id) => {
+      const rawToken = newRecruitmentToken();
+      return { id, rawToken, tokenHash: await recruitmentTokenHash(rawToken) };
+    }),
+  );
   const { data, error } = await supabaseAdmin.rpc("reserve_recruitment_email_invitations", {
     _reservations: tokenRows.map((row) => ({ id: row.id, token_hash: row.tokenHash })),
     _created_by: adminUserId,
@@ -364,12 +369,16 @@ export async function deliverRecruitmentEmailBatch(rows: ReservedRecruitmentInvi
     _failure_code: result.definiteFailure ? "provider_rejected" : "provider_result_unknown",
     _failure_reason: result.error ?? null,
   });
-  if (finish.error) console.error("[recruitment] failed to persist provider outcome", { sendBatchId, code: finish.error.code });
+  if (finish.error)
+    console.error("[recruitment] failed to persist provider outcome", { sendBatchId, code: finish.error.code });
   return { sendBatchId, submittedCount: 0, remainingToday, outcome, error: result.error };
 }
 
 export function normalizeRecruitmentBrevoEvent(value: unknown): string {
-  const raw = String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const raw = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
   if (raw === "hardbounce" || raw === "hard_bounce" || raw === "hard_bounced") return "hard_bounce";
   if (raw === "softbounce" || raw === "soft_bounce" || raw === "soft_bounced") return "soft_bounce";
   if (raw === "unsubscribed" || raw === "unsubscribe") return "unsubscribed";
@@ -388,7 +397,16 @@ export async function applyRecruitmentBrevoWebhook(payload: any): Promise<void> 
   const email = typeof payload?.email === "string" ? payload.email : "";
   const event = normalizeRecruitmentBrevoEvent(payload?.event);
   if (!Number.isInteger(campaignId) || campaignId <= 0 || !email) return;
-  const relevant = new Set(["delivered", "hard_bounce", "soft_bounce", "bounce", "invalid_email", "blocked", "unsubscribed", "spam"]);
+  const relevant = new Set([
+    "delivered",
+    "hard_bounce",
+    "soft_bounce",
+    "bounce",
+    "invalid_email",
+    "blocked",
+    "unsubscribed",
+    "spam",
+  ]);
   if (!relevant.has(event)) return;
   const { error } = await supabaseAdmin.rpc("apply_recruitment_email_event", {
     _provider_campaign_id: campaignId,
