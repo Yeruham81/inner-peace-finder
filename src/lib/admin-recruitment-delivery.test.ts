@@ -12,6 +12,7 @@ import {
 const root = resolve(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 const migration = read("supabase/migrations/20260901131500_therapist_recruitment_delivery.sql");
+const ambiguityFixMigration = read("supabase/migrations/20260901131600_fix_recruitment_invitation_id_ambiguity.sql");
 const adminFunctions = read("src/lib/admin-recruitment.functions.ts");
 const route = read("src/routes/admin/recruitment.tsx");
 const auth = read("src/routes/auth.tsx");
@@ -26,6 +27,12 @@ describe("therapist recruitment delivery", () => {
     expect(migration).toContain("v_used + v_requested_count > 100");
     expect(migration).toContain("AT TIME ZONE 'Asia/Jerusalem'");
     expect(adminFunctions).toContain("reserveRecruitmentEmailInvitations");
+  });
+
+  it("qualifies recruitment invitation ids inside the PL/pgSQL reserve function", () => {
+    expect(ambiguityFixMigration).toContain("count(DISTINCT requested.invitation_id)");
+    expect(ambiguityFixMigration).toContain("count(DISTINCT requested.token_hash)");
+    expect(ambiguityFixMigration).not.toContain("count(DISTINCT invitation_id)");
   });
 
   it("only allows retries after a definite pre-acceptance failure", () => {
