@@ -12,10 +12,15 @@ import { Label } from "@/components/ui/label";
 import { ensureTherapistAccount } from "@/lib/therapist-accounts.functions";
 import { getTherapistRegistrationAvailability } from "@/lib/therapist-registration-settings.functions";
 import { THERAPIST_REGISTRATION_CLOSED_MESSAGE } from "@/lib/therapist-registration-settings";
+import {
+  completeRecruitmentInviteRegistration,
+  getRecruitmentInvitePublicState,
+} from "@/lib/recruitment-invite.functions";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).optional(),
   next: z.string().optional(),
+  invite: z.string().trim().min(20).max(500).optional(),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -42,15 +47,26 @@ function isRegistrationClosedError(error: unknown): boolean {
 }
 
 function AuthPage() {
-  const { mode, next } = useSearch({ from: "/auth" });
+  const { mode, next, invite } = useSearch({ from: "/auth" });
   const navigate = useNavigate();
   const getRegistrationFn = useServerFn(getTherapistRegistrationAvailability);
+  const getInviteStateFn = useServerFn(getRecruitmentInvitePublicState);
+  const completeInviteFn = useServerFn(completeRecruitmentInviteRegistration);
   const registrationQuery = useQuery({
     queryKey: ["therapist-registration-availability"],
     queryFn: () => getRegistrationFn(),
     staleTime: 30_000,
   });
+  const inviteStateQuery = useQuery({
+    queryKey: ["recruitment-invite-public-state", invite ?? null],
+    queryFn: () => getInviteStateFn({ data: { token: invite! } }),
+    enabled: Boolean(invite),
+    staleTime: 30_000,
+  });
   const registrationEnabled = registrationQuery.data?.enabled === true;
+  const recruitmentInviteValid = Boolean(invite && inviteStateQuery.data?.valid);
+  const registrationAllowed = registrationEnabled || recruitmentInviteValid;
+  const registrationDecisionReady = registrationQuery.isSuccess && (!invite || inviteStateQuery.isSuccess);
   const [tab, setTab] = useState<"signin" | "signup" | "forgot">(mode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,21 +76,47 @@ function AuthPage() {
   const dest = safeNext(next);
 
   useEffect(() => {
-    if (!registrationQuery.isSuccess || registrationEnabled || tab !== "signup") return;
+    if (!registrationDecisionReady || registrationAllowed || tab !== "signup") return;
     setTab("signin");
     setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
-  }, [registrationEnabled, registrationQuery.isSuccess, tab]);
+  }, [registrationAllowed, registrationDecisionReady, tab]);
+
+  async function ensureAccountForCurrentContext() {
+    if (recruitmentInviteValid && invite) {
+      return completeInviteFn({ data: { token: invite } });
+    }
+    return ensureTherapistAccount();
+  }
+
+  function inviteErrorText(error: unknown): string {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("email_mismatch")) return "יש להיכנס באמצעות כתובת האימייל שאליה נשלחה ההזמנה.";
+    if (message.includes("verified_email_required")) return "יש לאמת את כתובת האימייל לפני השלמת ההצטרפות.";
+    if (message.includes("already_used")) return "ההזמנה כבר נוצלה.";
+    if (message.includes("not_available") || message.includes("invalid_recruitment_invite"))
+      return "ההזמנה אינה זמינה עוד.";
+    return "לא ניתן להשלים את ההצטרפות באמצעות ההזמנה.";
+  }
 
   // If already signed in, ensure account row exists and redirect. Existing
   // therapist accounts keep working while new-account creation is disabled.
   useEffect(() => {
+    if (!registrationDecisionReady) return;
     let cancelled = false;
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!cancelled && data.session) {
         try {
-          await ensureTherapistAccount();
+          await ensureAccountForCurrentContext();
         } catch (error) {
+          if (recruitmentInviteValid) {
+            await supabase.auth.signOut({ scope: "local" });
+            if (!cancelled) {
+              setTab("signin");
+              setMsg({ kind: "err", text: inviteErrorText(error) });
+            }
+            return;
+          }
           if (isRegistrationClosedError(error)) {
             await supabase.auth.signOut({ scope: "local" });
             if (!cancelled) {
@@ -92,7 +134,7 @@ function AuthPage() {
     return () => {
       cancelled = true;
     };
-  }, [dest, navigate]);
+  }, [dest, navigate, recruitmentInviteValid, invite, registrationDecisionReady]);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -105,8 +147,14 @@ function AuthPage() {
       return;
     }
     try {
-      await ensureTherapistAccount();
+      await ensureAccountForCurrentContext();
     } catch (accountError) {
+      if (recruitmentInviteValid) {
+        await supabase.auth.signOut({ scope: "local" });
+        setMsg({ kind: "err", text: inviteErrorText(accountError) });
+        setLoading(false);
+        return;
+      }
       if (isRegistrationClosedError(accountError)) {
         await supabase.auth.signOut({ scope: "local" });
         setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
@@ -120,7 +168,7 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!registrationEnabled) {
+    if (!registrationAllowed) {
       setTab("signin");
       setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
       return;
@@ -133,7 +181,7 @@ function AuthPage() {
       options: {
         // Preserve invitation and other protected return targets across the
         // email-confirmation round trip. `dest` has already passed safeNext().
-        emailRedirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(dest)}`,
+        emailRedirectTo: `${window.location.origin}/auth?mode=signup&next=${encodeURIComponent(dest)}${invite ? `&invite=${encodeURIComponent(invite)}` : ""}`,
         data: { full_name: fullName },
       },
     });
@@ -144,8 +192,15 @@ function AuthPage() {
     }
     if (data.session) {
       try {
-        await ensureTherapistAccount();
+        await ensureAccountForCurrentContext();
       } catch (accountError) {
+        if (recruitmentInviteValid) {
+          await supabase.auth.signOut({ scope: "local" });
+          setTab("signin");
+          setMsg({ kind: "err", text: inviteErrorText(accountError) });
+          setLoading(false);
+          return;
+        }
         if (isRegistrationClosedError(accountError)) {
           await supabase.auth.signOut({ scope: "local" });
           setTab("signin");
@@ -181,7 +236,7 @@ function AuthPage() {
     setLoading(true);
     setMsg(null);
     const res = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: `${window.location.origin}/auth${next ? `?next=${encodeURIComponent(next)}` : ""}`,
+      redirect_uri: `${window.location.origin}/auth?${new URLSearchParams({ ...(next ? { next } : {}), ...(invite ? { invite } : {}) }).toString()}`,
     });
     if (res.error) {
       setMsg({
@@ -195,8 +250,15 @@ function AuthPage() {
     // Popup flow: session set, ensure account and redirect. A new OAuth
     // identity cannot become a therapist account while registration is off.
     try {
-      await ensureTherapistAccount();
+      await ensureAccountForCurrentContext();
     } catch (accountError) {
+      if (recruitmentInviteValid) {
+        await supabase.auth.signOut({ scope: "local" });
+        setTab("signin");
+        setMsg({ kind: "err", text: inviteErrorText(accountError) });
+        setLoading(false);
+        return;
+      }
       if (isRegistrationClosedError(accountError)) {
         await supabase.auth.signOut({ scope: "local" });
         setTab("signin");
@@ -215,9 +277,11 @@ function AuthPage() {
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-foreground">{tab === "forgot" ? "שחזור סיסמה" : "כניסת מטפלים"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {registrationEnabled
-              ? "הצטרפו לפלטפורמה, נהלו את הפרופיל שלכם וקבלו פניות ממטופלים."
-              : "הכניסה לחשבונות קיימים זמינה. הרשמת מטפלים חדשים סגורה כרגע."}
+            {recruitmentInviteValid
+              ? `הזמנה אישית להצטרפות לטיפולינקס${inviteStateQuery.data?.emailHint ? ` עבור ${inviteStateQuery.data.emailHint}` : ""}.`
+              : registrationEnabled
+                ? "הצטרפו לפלטפורמה, נהלו את הפרופיל שלכם וקבלו פניות ממטופלים."
+                : "הכניסה לחשבונות קיימים זמינה. הרשמת מטפלים חדשים סגורה כרגע."}
           </p>
         </div>
 
@@ -233,7 +297,7 @@ function AuthPage() {
             >
               כניסה
             </button>
-            {registrationEnabled && (
+            {registrationAllowed && (
               <button
                 type="button"
                 onClick={() => {
@@ -303,7 +367,7 @@ function AuthPage() {
           </form>
         )}
 
-        {tab === "signup" && registrationEnabled && (
+        {tab === "signup" && registrationAllowed && (
           <form onSubmit={handleSignUp} className="grid gap-3">
             <div>
               <Label htmlFor="full_name">שם מלא</Label>
@@ -368,7 +432,7 @@ function AuthPage() {
           </form>
         )}
 
-        {!registrationEnabled && !registrationQuery.isLoading && tab !== "forgot" && !msg && (
+        {!registrationAllowed && registrationDecisionReady && tab !== "forgot" && !msg && (
           <div className="mt-4 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
             {THERAPIST_REGISTRATION_CLOSED_MESSAGE}
           </div>
