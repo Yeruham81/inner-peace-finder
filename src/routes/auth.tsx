@@ -67,7 +67,7 @@ function AuthPage() {
   const recruitmentInviteValid = Boolean(invite && inviteStateQuery.data?.valid);
   const registrationAllowed = registrationEnabled || recruitmentInviteValid;
   const registrationDecisionReady = registrationQuery.isSuccess && (!invite || inviteStateQuery.isSuccess);
-  const [tab, setTab] = useState<"signin" | "signup" | "forgot">(mode ?? "signin");
+  const [tab, setTab] = useState<"signin" | "signup" | "forgot">(invite ? "signup" : (mode ?? "signin"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -80,6 +80,15 @@ function AuthPage() {
     setTab("signin");
     setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
   }, [registrationAllowed, registrationDecisionReady, tab]);
+
+  // A valid recruitment invitation is an explicit registration path even while
+  // general therapist registration is closed. Prefer the signup tab once the
+  // invitation has been validated, while still allowing the user to switch to
+  // sign in manually afterwards if they already have an account.
+  useEffect(() => {
+    if (!recruitmentInviteValid) return;
+    setTab((current) => (current === "forgot" ? current : "signup"));
+  }, [recruitmentInviteValid]);
 
   async function ensureAccountForCurrentContext() {
     if (recruitmentInviteValid && invite) {
@@ -235,20 +244,43 @@ function AuthPage() {
   async function handleOAuth(provider: "google" | "apple") {
     setLoading(true);
     setMsg(null);
-    const res = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: `${window.location.origin}/auth?${new URLSearchParams({ ...(next ? { next } : {}), ...(invite ? { invite } : {}) }).toString()}`,
+
+    const oauthMode = invite || tab === "signup" ? "signup" : "signin";
+    const redirectSearch = new URLSearchParams({
+      mode: oauthMode,
+      ...(next ? { next } : {}),
+      ...(invite ? { invite } : {}),
+    });
+    const redirectUrl = `${window.location.origin}/auth?${redirectSearch.toString()}`;
+
+    // Google uses the same Supabase Auth client as email/password. This keeps
+    // the recruitment token on the callback URL so a valid invite can authorize
+    // account creation even while the global registration switch is closed.
+    if (provider === "google") {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectUrl },
+      });
+      if (error) {
+        setMsg({ kind: "err", text: "כניסה דרך Google נכשלה." });
+        setLoading(false);
+      }
+      return;
+    }
+
+    const res = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: redirectUrl,
     });
     if (res.error) {
-      setMsg({
-        kind: "err",
-        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
-      });
+      setMsg({ kind: "err", text: "כניסה דרך Apple נכשלה." });
       setLoading(false);
       return;
     }
     if (res.redirected) return;
+
     // Popup flow: session set, ensure account and redirect. A new OAuth
-    // identity cannot become a therapist account while registration is off.
+    // identity cannot become a therapist account while registration is off
+    // unless a valid recruitment invitation authorizes it.
     try {
       await ensureAccountForCurrentContext();
     } catch (accountError) {
