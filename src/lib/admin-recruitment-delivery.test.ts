@@ -42,6 +42,11 @@ describe("therapist recruitment delivery", () => {
     expect(migration).not.toContain("invite_token text");
   });
 
+  it("keeps invitation token hashing in a client-safe neutral helper", () => {
+    expect(inviteFunctions).toContain('from "./recruitment-token"');
+    expect(inviteFunctions).not.toContain('from "./recruitment-delivery.server"');
+  });
+
   it("uses a Brevo marketing campaign template and personalized invitation URL attribute", () => {
     expect(RECRUITMENT_INVITE_ATTRIBUTE).toBe("TIPULINKS_INVITE_URL");
     expect(delivery).toContain("BREVO_RECRUITMENT_TEMPLATE_ID");
