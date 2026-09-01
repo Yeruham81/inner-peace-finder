@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { recruitmentTokenHash } from "./recruitment-delivery.server";
+import { recruitmentTokenHash } from "./recruitment-token";
 
 const InviteInputSchema = z.object({
   token: z.string().trim().min(20).max(500),
