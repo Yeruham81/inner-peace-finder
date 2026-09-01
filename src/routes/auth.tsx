@@ -99,7 +99,6 @@ function AuthPage() {
 
   function inviteErrorText(error: unknown): string {
     const message = error instanceof Error ? error.message : "";
-    if (message.includes("email_mismatch")) return "יש להיכנס באמצעות כתובת האימייל שאליה נשלחה ההזמנה.";
     if (message.includes("verified_email_required")) return "יש לאמת את כתובת האימייל לפני השלמת ההצטרפות.";
     if (message.includes("already_used")) return "ההזמנה כבר נוצלה.";
     if (message.includes("not_available") || message.includes("invalid_recruitment_invite"))
@@ -268,10 +267,28 @@ function AuthPage() {
       return;
     }
     if (res.redirected) return;
+    if (!res.tokens) {
+      setMsg({
+        kind: "err",
+        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
+      });
+      setLoading(false);
+      return;
+    }
 
-    // Popup flow: session set, ensure account and redirect. A new OAuth
-    // identity cannot become a therapist account while registration is off
-    // unless a valid recruitment invitation authorizes it.
+    // Lovable's popup flow returns OAuth tokens but does not install them in
+    // this app's Supabase client. Establish the authenticated session first;
+    // only then may an invitation be claimed or a therapist account ensured.
+    const { data: sessionData, error: sessionError } = await supabase.auth.setSession(res.tokens);
+    if (sessionError || !sessionData.session?.user) {
+      setMsg({
+        kind: "err",
+        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       await ensureAccountForCurrentContext();
     } catch (accountError) {
@@ -301,7 +318,7 @@ function AuthPage() {
           <h1 className="text-2xl font-bold text-foreground">{tab === "forgot" ? "שחזור סיסמה" : "כניסת מטפלים"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {recruitmentInviteValid
-              ? `הזמנה אישית להצטרפות לטיפולינקס${inviteStateQuery.data?.emailHint ? ` עבור ${inviteStateQuery.data.emailHint}` : ""}.`
+              ? "הזמנה אישית להצטרפות לטיפולינקס. ניתן להירשם או להתחבר באמצעות הכתובת הנוחה לכם."
               : registrationEnabled
                 ? "הצטרפו לפלטפורמה, נהלו את הפרופיל שלכם וקבלו פניות ממטופלים."
                 : "הכניסה לחשבונות קיימים זמינה. הרשמת מטפלים חדשים סגורה כרגע."}
