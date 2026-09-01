@@ -373,3 +373,64 @@ export const listAdminRecruitmentInvitations = createServerFn({ method: "GET" })
       pageCount: Math.max(1, Math.ceil(total / data.pageSize)),
     };
   });
+
+const SendRecruitmentInputSchema = z.object({
+  invitationIds: z.array(z.string().uuid()).min(1).max(100),
+});
+
+export type AdminRecruitmentEmailCapacity = {
+  sendDate: string;
+  used: number;
+  remaining: number;
+  dailyLimit: number;
+};
+
+export const getAdminRecruitmentEmailCapacity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminRecruitmentEmailCapacity> => {
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לצפייה במכסת שליחת ההזמנות.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const result = await supabaseAdmin.rpc("get_recruitment_email_daily_capacity");
+    if (result.error) throw new Error(result.error.message);
+    const row = Array.isArray(result.data) ? result.data[0] : null;
+    return {
+      sendDate: row?.send_date ?? new Date().toISOString().slice(0, 10),
+      used: Number(row?.used_count ?? 0),
+      remaining: Number(row?.remaining_count ?? 0),
+      dailyLimit: Number(row?.daily_limit ?? 100),
+    };
+  });
+
+export const sendAdminRecruitmentEmailInvitations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => SendRecruitmentInputSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל לשליחת הזמנות מטפלים.");
+    const adminUserId = context.userId;
+    if (!adminUserId) throw new Error("לא ניתן לזהות את חשבון המנהל.");
+
+    const uniqueIds = [...new Set(data.invitationIds)];
+    if (uniqueIds.length !== data.invitationIds.length) throw new Error("רשימת ההזמנות כוללת כפילויות.");
+
+    const { reserveRecruitmentEmailInvitations, deliverRecruitmentEmailBatch } =
+      await import("./recruitment-delivery.server");
+    let reserved;
+    try {
+      reserved = await reserveRecruitmentEmailInvitations(uniqueIds, adminUserId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("recruitment_daily_limit_exceeded")) {
+        throw new Error("השליחה חורגת ממכסת 100 ההזמנות היומית.");
+      }
+      if (message.includes("recruitment_selection_no_longer_eligible")) {
+        throw new Error("חלק מהכתובות שנבחרו אינן זמינות עוד לשליחה. רעננו את הרשימה ונסו שוב.");
+      }
+      throw error;
+    }
+
+    const result = await deliverRecruitmentEmailBatch(reserved);
+    return {
+      ...result,
+      selectedCount: uniqueIds.length,
+    };
+  });
