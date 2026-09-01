@@ -205,7 +205,8 @@ async function upsertBrevoContactsForBatch(rows: ReservedRecruitmentInvitation[]
 
 async function createBrevoCampaign(input: { listId: number; sendBatchId: string }): Promise<number> {
   const templateId = requirePositiveIntegerEnv("BREVO_RECRUITMENT_TEMPLATE_ID");
-  const senderEmail = process.env.EMAIL_FROM_ADDRESS?.trim() || "notifications@tipulinks.co.il";
+  const senderEmail = process.env.BREVO_RECRUITMENT_FROM_ADDRESS?.trim();
+  if (!senderEmail) throw new Error("BREVO_RECRUITMENT_FROM_ADDRESS_not_configured");
   const senderName = process.env.EMAIL_FROM_NAME?.trim() || "Tipulinks";
   const response = await brevoRequest("/emailCampaigns", {
     method: "POST",
