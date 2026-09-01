@@ -666,7 +666,8 @@ async function saveProfileForActor(args: {
   if (contactPolicyScan && contactPolicyScan.findings.length > 0) {
     const { error: violationError } = await supabaseAdmin.rpc("record_profile_contact_policy_violation", {
       _actor: userId,
-      _therapist_id: existingProfile?.id ?? null,
+      // Generated RPC arg types omit the SQL DEFAULT NULL nullability.
+      _therapist_id: (existingProfile?.id ?? null) as unknown as string,
       _violation_types: contactPolicyScan.types,
       _field_names: contactPolicyScan.fieldKeys,
     });
