@@ -37,9 +37,10 @@ describe("technical SEO foundation", () => {
     expect(robots).toContain("Sitemap: https://tipulinks.co.il/sitemap.xml");
   });
 
-  it("temporarily keeps the entire site out of search indexes without blocking crawlers", () => {
+  it("keeps the site out of search indexes pre-launch without blocking crawlers", () => {
     const root = readSource("routes/__root.tsx");
-    expect(root).toContain('<meta name="robots" content="noindex,follow" />');
+    // Sitewide fail-closed default now comes from the central policy module.
+    expect(root).toContain('{ name: "robots", content: robotsDirective({ indexingAllowed: false');
 
     const robots = readFileSync(join(PROJECT, "public/robots.txt"), "utf8");
     expect(robots).toContain("Allow: /");

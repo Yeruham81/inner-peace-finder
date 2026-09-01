@@ -165,7 +165,8 @@ export async function settleOwnedAccountDeletionBalance(authUserId: string, requ
       _success: true,
       _provider: charge.provider,
       _provider_reference: charge.providerReference,
-      _error: null,
+      // Generated RPC arg types omit the SQL DEFAULT NULL nullability.
+      _error: null as unknown as string,
     });
     if (finishError) throw new Error(finishError.message);
 
@@ -179,8 +180,8 @@ export async function settleOwnedAccountDeletionBalance(authUserId: string, requ
         _request_id: requestId,
         _payment_attempt_id: paymentAttemptId,
         _success: false,
-        _provider: paymentMethodKind === "test" ? "tipulinks-test" : null,
-        _provider_reference: null,
+        _provider: (paymentMethodKind === "test" ? "tipulinks-test" : null) as unknown as string,
+        _provider_reference: null as unknown as string,
         _error: message,
       });
     } catch {

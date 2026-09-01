@@ -16,6 +16,9 @@ export const Route = createFileRoute("/_authenticated/claim")({
       token: fallback(z.string(), "").default(""),
     }),
   ),
+  head: () => ({
+    meta: [{ title: "אימות הזמנה | Tipulinks" }, { name: "robots", content: "noindex,nofollow" }],
+  }),
   component: ClaimInvitePage,
 });
 
