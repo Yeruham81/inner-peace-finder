@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-type AccountNotificationKind = "new_lead" | "credential_status" | "support_status";
+type AccountNotificationKind = "credential_status";
 
 type NotificationContent = {
   accountId: string;
@@ -17,11 +17,7 @@ type NotificationContent = {
 function publicOrigin(): string {
   const configured = process.env.TIPULINKS_PUBLIC_ORIGIN || "https://tipulinks.co.il";
   const parsed = new URL(configured);
-  if (
-    parsed.protocol !== "https:" &&
-    parsed.hostname !== "localhost" &&
-    parsed.hostname !== "127.0.0.1"
-  ) {
+  if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
     throw new Error("TIPULINKS_PUBLIC_ORIGIN must use https");
   }
   return parsed.origin;
@@ -39,9 +35,7 @@ function escapeHtml(value: string): string {
 function notificationHtml(content: NotificationContent): string {
   const name = escapeHtml(content.recipientName?.trim() || "שלום");
   const title = escapeHtml(content.title);
-  const paragraphs = content.paragraphs
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-    .join("");
+  const paragraphs = content.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
   const actionUrl = escapeHtml(`${publicOrigin()}${content.actionPath}`);
   const actionLabel = escapeHtml(content.actionLabel);
   return `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#18302b;line-height:1.75">
@@ -55,14 +49,11 @@ function notificationHtml(content: NotificationContent): string {
 }
 
 async function sendAccountNotification(content: NotificationContent): Promise<boolean> {
-  const { data: claimed, error: claimError } = await supabaseAdmin.rpc(
-    "claim_account_notification",
-    {
-      _account_id: content.accountId,
-      _notification_kind: content.kind,
-      _entity_key: content.entityKey,
-    },
-  );
+  const { data: claimed, error: claimError } = await supabaseAdmin.rpc("claim_account_notification", {
+    _account_id: content.accountId,
+    _notification_kind: content.kind,
+    _entity_key: content.entityKey,
+  });
   if (claimError) throw new Error(claimError.message);
   if (!claimed) return false;
 
@@ -75,9 +66,7 @@ async function sendAccountNotification(content: NotificationContent): Promise<bo
     if (accountError) throw new Error(accountError.message);
     if (!account) throw new Error("account_not_found");
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(
-      account.auth_user_id,
-    );
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(account.auth_user_id);
     if (authError) throw new Error(authError.message);
     const email = authData.user?.email;
     if (!email) throw new Error("account_email_missing");
@@ -129,58 +118,6 @@ async function sendAccountNotification(content: NotificationContent): Promise<bo
   }
 }
 
-export async function sendNewLeadAccountNotification(
-  therapistId: string,
-  leadId: string,
-): Promise<boolean> {
-  const [{ data: therapist, error: therapistError }, { data: lead, error: leadError }] =
-    await Promise.all([
-      supabaseAdmin
-        .from("therapists")
-        .select("full_name, email, owner_account_id")
-        .eq("id", therapistId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("lead_events")
-        .select("delivery_channel")
-        .eq("id", leadId)
-        .eq("therapist_id", therapistId)
-        .maybeSingle(),
-    ]);
-  if (therapistError) throw new Error(therapistError.message);
-  if (leadError) throw new Error(leadError.message);
-  if (!therapist?.owner_account_id || !lead) return false;
-
-  // Avoid a duplicate email when the written lead itself was already delivered
-  // to the same address used for account notifications.
-  if (lead.delivery_channel === "email" && therapist.email) {
-    const { data: account } = await supabaseAdmin
-      .from("therapist_accounts")
-      .select("auth_user_id")
-      .eq("id", therapist.owner_account_id)
-      .maybeSingle();
-    if (account) {
-      const { data: authData } = await supabaseAdmin.auth.admin.getUserById(account.auth_user_id);
-      if (authData.user?.email?.trim().toLowerCase() === therapist.email.trim().toLowerCase())
-        return false;
-    }
-  }
-
-  return sendAccountNotification({
-    accountId: therapist.owner_account_id,
-    entityKey: leadId,
-    kind: "new_lead",
-    recipientName: therapist.full_name,
-    subject: "התקבלה פנייה חדשה בטיפולינקס",
-    title: "התקבלה פנייה חדשה",
-    paragraphs: [
-      "פנייה חדשה נרשמה עבור הפרופיל שלך. הפרטים המלאים זמינים באופן מאובטח באזור המטפל.",
-    ],
-    actionLabel: "לצפייה בפנייה",
-    actionPath: "/account/leads",
-  });
-}
-
 export async function sendCredentialStatusNotification(args: {
   accountId: string;
   credentialId: string;
@@ -206,28 +143,5 @@ export async function sendCredentialStatusNotification(args: {
     paragraphs,
     actionLabel: "לצפייה בהסמכות",
     actionPath: "/account/credentials",
-  });
-}
-
-export async function sendSupportStatusNotification(args: {
-  accountId: string;
-  requestId: string;
-  notificationKey: string;
-  subject: string;
-  statusLabel: string;
-  staffResponse?: string | null;
-}): Promise<boolean> {
-  return sendAccountNotification({
-    accountId: args.accountId,
-    entityKey: `${args.requestId}:${args.notificationKey}`,
-    kind: "support_status",
-    subject: `עדכון לפנייה שלך: ${args.subject}`,
-    title: "התקבל עדכון מצוות טיפולינקס",
-    paragraphs: [
-      `סטטוס הפנייה „${args.subject}” עודכן ל„${args.statusLabel}”.`,
-      ...(args.staffResponse ? [args.staffResponse] : []),
-    ],
-    actionLabel: "לצפייה בפנייה",
-    actionPath: "/account/settings",
   });
 }

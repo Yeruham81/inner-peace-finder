@@ -248,17 +248,6 @@ export const createLead = createServerFn({ method: "POST" })
       }
     }
 
-    try {
-      const { sendNewLeadAccountNotification } = await import("./account-notifications.server");
-      await sendNewLeadAccountNotification(data.therapistId, leadId);
-    } catch (notificationError) {
-      console.error("[account-notification] new lead failed", {
-        leadId,
-        therapistId: data.therapistId,
-        error: notificationError instanceof Error ? notificationError.message : "unknown_error",
-      });
-    }
-
     return {
       ok: true as const,
       leadId,
