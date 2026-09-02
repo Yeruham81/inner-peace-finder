@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Eye, KeyRound, LifeBuoy, Mail, Palette, Send, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Eye, KeyRound, LifeBuoy, Palette, Send, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AccountPageHeader } from "@/components/account/account-page-header";
@@ -12,15 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { getMySupportRequests, submitMySupportRequest, type MySupportRequest } from "@/lib/account-support.functions";
-import {
-  getMyNotificationPreferences,
-  updateMyNotificationPreferences,
-  type NotificationPreferences,
-} from "@/lib/account-settings.functions";
 import { getDisplayPreferences, saveDisplayPreferences, type DisplayPreferences } from "@/lib/display-preferences";
 import { deleteMyAccountPermanently, settleAndDeleteMyAccountPermanently } from "@/lib/therapist-profile.functions";
 
@@ -82,8 +76,6 @@ function AccountSettingsPage() {
   const settleDeleteAccountFn = useServerFn(settleAndDeleteMyAccountPermanently);
   const submitSupportFn = useServerFn(submitMySupportRequest);
   const getSupportRequestsFn = useServerFn(getMySupportRequests);
-  const getNotificationPreferencesFn = useServerFn(getMyNotificationPreferences);
-  const updateNotificationPreferencesFn = useServerFn(updateMyNotificationPreferences);
   const [loginEmail, setLoginEmail] = useState(user.email ?? "");
   const [loginEmailRequestSent, setLoginEmailRequestSent] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -95,39 +87,9 @@ function AccountSettingsPage() {
   const [supportMessage, setSupportMessage] = useState("");
   const [accountDeletionState, setAccountDeletionState] = useState<AccountDeletionState | null>(null);
   const [accountDeletionError, setAccountDeletionError] = useState<string | null>(null);
-  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
-    notify_new_leads: true,
-    notify_account_updates: true,
-  });
-
-  const notificationPreferencesQuery = useQuery({
-    queryKey: ["my-notification-preferences"],
-    queryFn: () => getNotificationPreferencesFn(),
-  });
   const supportRequestsQuery = useQuery({
     queryKey: ["my-support-requests"],
     queryFn: () => getSupportRequestsFn(),
-  });
-
-  useEffect(() => {
-    if (notificationPreferencesQuery.data) {
-      setNotificationPreferences(notificationPreferencesQuery.data);
-    }
-  }, [notificationPreferencesQuery.data]);
-
-  const notificationPreferencesMutation = useMutation({
-    mutationFn: (preferences: NotificationPreferences) => updateNotificationPreferencesFn({ data: preferences }),
-    onSuccess: (preferences) => {
-      setNotificationPreferences(preferences);
-      queryClient.setQueryData(["my-notification-preferences"], preferences);
-      toast.success("העדפות ההתראות נשמרו.");
-    },
-    onError: (error: Error) => {
-      if (notificationPreferencesQuery.data) {
-        setNotificationPreferences(notificationPreferencesQuery.data);
-      }
-      toast.error(error.message || "לא ניתן לעדכן את העדפות ההתראות.");
-    },
   });
 
   const loginEmailMutation = useMutation({
@@ -256,12 +218,6 @@ function AccountSettingsPage() {
     const next = { ...displayPreferences, [key]: value };
     setDisplayPreferences(next);
     saveDisplayPreferences(next);
-  }
-
-  function updateNotificationPreference(key: keyof NotificationPreferences, enabled: boolean) {
-    const next = { ...notificationPreferences, [key]: enabled };
-    setNotificationPreferences(next);
-    notificationPreferencesMutation.mutate(next);
   }
 
   return (
@@ -422,30 +378,6 @@ function AccountSettingsPage() {
           </div>
         </AccountSectionCard>
 
-        <AccountSectionCard title="התראות" description="עדכונים על פעילות בפרופיל ובחשבון.">
-          <div className="space-y-3">
-            <NotificationSetting
-              icon={Mail}
-              title="פנייה חדשה"
-              description="אימייל לחשבון כאשר מתקבלת פנייה חדשה. ההגדרה אינה משנה את מסירת הפנייה בערוץ שנבחר."
-              checked={notificationPreferences.notify_new_leads}
-              disabled={notificationPreferencesQuery.isLoading || notificationPreferencesMutation.isPending}
-              onCheckedChange={(checked) => updateNotificationPreference("notify_new_leads", checked)}
-            />
-            <NotificationSetting
-              icon={Bell}
-              title="עדכוני חשבון"
-              description="אימייל על אימות מסמכים ועדכון פניות לצוות."
-              checked={notificationPreferences.notify_account_updates}
-              disabled={notificationPreferencesQuery.isLoading || notificationPreferencesMutation.isPending}
-              onCheckedChange={(checked) => updateNotificationPreference("notify_account_updates", checked)}
-            />
-          </div>
-          {notificationPreferencesQuery.isError && (
-            <p className="mt-3 text-xs leading-5 text-destructive">לא הצלחנו לטעון את העדפות ההתראות.</p>
-          )}
-        </AccountSectionCard>
-
         <AccountSectionCard title="יצירת קשר עם הצוות" description="דיווח על תקלה, תלונה, הצעה לשיפור או עניין אחר.">
           <div className="space-y-3">
             <label className="block">
@@ -477,7 +409,7 @@ function AccountSettingsPage() {
               <Textarea
                 value={supportMessage}
                 onChange={(event) => setSupportMessage(event.target.value)}
-                rows={4}
+                rows={5}
                 maxLength={4000}
                 disabled={supportMutation.isPending}
                 className="resize-y bg-white"
@@ -487,13 +419,19 @@ function AccountSettingsPage() {
               {supportMutation.isPending ? <LifeBuoy className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {supportMutation.isPending ? "שולח…" : "שליחת הפנייה"}
             </Button>
-            <SupportRequestHistory
-              requests={supportRequestsQuery.data ?? []}
-              loading={supportRequestsQuery.isLoading}
-              error={supportRequestsQuery.isError}
-              onRetry={() => void supportRequestsQuery.refetch()}
-            />
+            <p className="text-xs leading-5 text-muted-foreground">
+              לאחר שהצוות יענה, המשך ההתכתבות יתבצע באימייל של החשבון. כאן יוצג סטטוס הפנייה בלבד.
+            </p>
           </div>
+        </AccountSectionCard>
+
+        <AccountSectionCard title="פניות אחרונות לצוות" description="עד 10 הפניות אחרונות שנשלחו דרך טיפולינקס.">
+          <SupportRequestHistory
+            requests={supportRequestsQuery.data ?? []}
+            loading={supportRequestsQuery.isLoading}
+            error={supportRequestsQuery.isError}
+            onRetry={() => void supportRequestsQuery.refetch()}
+          />
         </AccountSectionCard>
 
         <DeleteAccountPanel
@@ -534,10 +472,10 @@ function SupportRequestHistory({
   error: boolean;
   onRetry: () => void;
 }) {
-  if (loading) return <p className="border-t border-border pt-3 text-xs text-muted-foreground">טוען פניות קודמות…</p>;
+  if (loading) return <p className="text-xs text-muted-foreground">טוען פניות קודמות…</p>;
   if (error) {
     return (
-      <div className="border-t border-border pt-3">
+      <div>
         <p className="text-xs text-destructive">לא הצלחנו לטעון את הפניות הקודמות.</p>
         <Button type="button" variant="outline" size="sm" className="mt-2" onClick={onRetry}>
           ניסיון חוזר
@@ -545,41 +483,32 @@ function SupportRequestHistory({
       </div>
     );
   }
-  if (!requests.length) return null;
+  if (!requests.length) {
+    return <p className="text-sm leading-6 text-muted-foreground">עדיין לא נשלחו פניות לצוות מתוך החשבון.</p>;
+  }
   return (
-    <div className="border-t border-border pt-4">
-      <h3 className="text-sm font-semibold text-foreground">הפניות שלי לצוות</h3>
-      <ul className="mt-3 space-y-3">
-        {requests.map((request) => (
-          <li key={request.id} className="rounded-xl border border-border bg-surface p-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{request.subject}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {SUPPORT_CATEGORY_LABELS[request.category]} ·{" "}
-                  {new Intl.DateTimeFormat("he-IL", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  }).format(new Date(request.created_at))}
-                </p>
-              </div>
-              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-foreground">
-                {SUPPORT_STATUS_LABELS[request.status]}
-              </span>
+    <ul className="space-y-2.5">
+      {requests.slice(0, 10).map((request) => (
+        <li key={request.id} className="rounded-xl border border-border bg-surface p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">{request.subject}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {SUPPORT_CATEGORY_LABELS[request.category]} ·{" "}
+                {new Intl.DateTimeFormat("he-IL", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                }).format(new Date(request.created_at))}
+              </p>
             </div>
-            {request.staff_response ? (
-              <div className="mt-3 rounded-lg border border-brand/20 bg-brand-soft/30 p-3">
-                <p className="text-xs font-semibold text-foreground">תגובת הצוות</p>
-                <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
-                  {request.staff_response}
-                </p>
-              </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </div>
+            <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-foreground">
+              {SUPPORT_STATUS_LABELS[request.status]}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -615,35 +544,6 @@ function DisplaySelect({
         </SelectContent>
       </Select>
     </label>
-  );
-}
-
-function NotificationSetting({
-  icon: Icon,
-  title,
-  description,
-  checked,
-  disabled,
-  onCheckedChange,
-}: {
-  icon: typeof Mail;
-  title: string;
-  description: string;
-  checked: boolean;
-  disabled: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
-      </div>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={title} />
-    </div>
   );
 }
 
