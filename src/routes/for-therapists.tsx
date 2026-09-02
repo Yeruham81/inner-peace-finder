@@ -357,10 +357,11 @@ function HowItWorksSection() {
           </div>
         </div>
 
-        <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-6 text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-[70ch] text-pretty text-center text-xs leading-6 text-muted-foreground">
           מנוע החיפוש של טיפולינקס לא מאבחן ולא מתיימר להחליף ייעוץ מקצועי. הוא מסייע למקד את החיפוש על בסיס המידע
           שהמשתמש מסר והפרטים המופיעים בפרופילי המטפלים.
         </p>
+
       </div>
     </section>
   );
