@@ -176,7 +176,7 @@ export async function listRecentZohoIncomingMessages(): Promise<ZohoIncomingMess
         fromAddress: row.fromAddress.trim().toLowerCase(),
         senderName: row.sender?.trim() || null,
         subject: row.subject?.trim() || "ללא נושא",
-        receivedAt: asIsoDate(row.receivedtime ?? row.sentDateInGMT),
+        receivedAt: asIsoDate(row.receivedTime ?? row.receivedtime ?? row.sentDateInGMT),
         hasAttachment: row.hasAttachment === true || row.hasAttachment === 1 || row.hasAttachment === "1",
       };
     })
