@@ -393,18 +393,21 @@ function SearchUserCard() {
 
 function TipulinksEngineCard() {
   return (
-    <article className="rounded-3xl border border-primary/20 bg-primary/10 p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+    <article className="flex flex-col rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-card sm:p-6">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
         <BrainCircuit className="h-6 w-6" />
       </div>
 
       <p className="mt-5 text-sm font-semibold text-primary">2. טיפולינקס מבינה את הצורך</p>
 
-      <h3 className="mt-1 text-xl font-bold text-foreground">מתרגמת את התיאור לחיפוש מקצועי</h3>
+      <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">
+        מתרגמת את התיאור לחיפוש מקצועי
+      </h3>
 
-      <p className="mt-4 text-sm leading-7 text-muted-foreground">
+      <p className="mt-4 text-pretty text-sm leading-7 text-muted-foreground">
         המערכת מזהה מתוך התיאור את הקשיים והמאפיינים הרלוונטיים ומחפשת אותם מול המידע המקצועי שהוגדר בפרופילי המטפלים.
       </p>
+
 
       <div className="mt-5 flex flex-wrap gap-2">
         {["טיפול רגשי לילדים", "חרדה", "קשיים חברתיים", "הדרכת הורים"].map((item) => (
