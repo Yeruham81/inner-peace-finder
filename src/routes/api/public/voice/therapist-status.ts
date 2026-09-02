@@ -55,18 +55,6 @@ export const Route = createFileRoute("/api/public/voice/therapist-status")({
                 error: notificationError instanceof Error ? notificationError.message : "unknown_error",
               });
             }
-            if (session.lead_id) {
-              try {
-                const { sendNewLeadAccountNotification } = await import("@/lib/account-notifications.server");
-                await sendNewLeadAccountNotification(session.therapist_id, session.lead_id);
-              } catch (notificationError) {
-                console.error("[account-notification] voice lead failed", {
-                  therapistId: session.therapist_id,
-                  leadId: session.lead_id,
-                  error: notificationError instanceof Error ? notificationError.message : "unknown_error",
-                });
-              }
-            }
           }
         }
 
