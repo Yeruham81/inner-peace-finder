@@ -37,7 +37,11 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
-function applySeoResponsePolicy(request: Request, response: Response, indexingAllowed: boolean): Response {
+function applySeoResponsePolicy(
+  request: Request,
+  response: Response,
+  indexingAllowed = searchIndexingAllowed(),
+): Response {
   const robots = responseRobotsHeader({
     requestUrl: request.url,
     indexingAllowed,
@@ -104,6 +108,9 @@ export default {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
+      if (runtimeSettings.searchIndexingEnabled) {
+        return applySeoResponsePolicy(request, normalized);
+      }
       return applySeoResponsePolicy(request, normalized, effectiveIndexing);
     } catch (error) {
       console.error(error);
