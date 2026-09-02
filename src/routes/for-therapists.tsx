@@ -346,9 +346,10 @@ function HowItWorksSection() {
                     className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-primary/10 bg-surface-elevated p-4 text-center shadow-card"
                   >
 
-                    <Icon className="h-5 w-5 text-primary" />
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
 
-                    <span className="mt-3 text-sm font-medium text-foreground">{parameter.label}</span>
+                    <span className="text-pretty text-sm font-medium leading-6 text-foreground">{parameter.label}</span>
+
                   </div>
                 );
               })}
