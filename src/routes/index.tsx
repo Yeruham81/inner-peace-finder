@@ -6,7 +6,6 @@ import { SearchForm } from "@/components/search-form";
 import { homepageProblemSlugs } from "@/lib/homepage-problem-map";
 import { HOMEPAGE_SEARCH_PRESETS, type HomepageSearchPreset } from "@/lib/homepage-search-presets";
 import { serializeMultiValue } from "@/lib/search-contract";
-import { seoRobotsMeta } from "@/lib/seo-indexing";
 import { absoluteUrl, serializeJsonLd, SITE_NAME, SITE_ORIGIN } from "@/lib/seo";
 
 const filterOptionsQuery = queryOptions({
@@ -293,7 +292,7 @@ export const Route = createFileRoute("/")({
     const canonical = absoluteUrl("/");
     return {
       meta: [
-        { title: "טיפולינקס — חיפוש חכם של אנשי מקצוע בתחומי הטיפול" },
+        { title: "טיפולינקס — חיפוש חכם של מטפלים ואנשי מקצוע" },
         {
           name: "description",
           content:
@@ -309,7 +308,6 @@ export const Route = createFileRoute("/")({
         },
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
-        seoRobotsMeta("/"),
       ],
       links: [{ rel: "canonical", href: canonical }],
       scripts: [
@@ -372,7 +370,7 @@ function Index() {
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand/10 bg-surface-elevated px-4 py-1.5 text-xs font-medium text-primary shadow-card">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              חיפוש חכם של אנשי מקצוע בתחומי הטיפול
+              חיפוש חכם של מטפלים ואנשי מקצוע
             </span>
 
             <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
@@ -486,15 +484,15 @@ function HowItWorks() {
 const trustItems = [
   {
     title: "מידע ברור ומפורט",
-    description: "סננו את תוצאות החיפוש לפי מגוון רחב של פרמטרים כדי למצוא את המטפלים המתאימים לכם ביותר.\u00a0",
+    description: "סננו לפי מגוון רחב של פרמטרים כדי למצוא את המטפלים המתאימים לכם ביותר.\u00a0",
   },
   {
     title: "שקיפות מקצועית",
-    description: 'חפשו את הסימון "מאומת" בפרופילים של מטפלים שהסמכתם המקצועית אומתה ע"י צוות האתר.\u00a0',
+    description: 'חפשו את הסימון "מאומת" בפרופילים של מטפלים שהסמכתם אומתה ע"י צוות האתר.\u00a0',
   },
   {
     title: "חיפוש ללא התחייבות",
-    description: "עיינו בפרופילים והחליטו עם איזה מטפלים אתם מעוניינים ליצור קשר ולתאם טיפול.",
+    description: "עיינו בפרופילים והחליטו עם איזה מטפלים אתם מעוניינים ליצור קשר.",
   },
 ];
 
@@ -947,7 +945,7 @@ function ExplorerProblemPanel({ item, onClose }: { item: ExplorerItem; onClose: 
             key={problem}
             type="button"
             onClick={() => startSearch(problem)}
-            className="flex min-h-14 cursor-pointer items-center justify-center rounded-2xl border border-border bg-surface-elevated px-4 py-3 text-center text-base font-semibold leading-6 text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/60 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+            className="flex min-h-14 cursor-pointer items-center justify-center rounded-2xl border border-border bg-surface-elevated px-4 py-3 text-center text-sm font-semibold leading-5 text-foreground sm:text-base sm:leading-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft/60 hover:text-primary hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
           >
             {problem}
           </button>
