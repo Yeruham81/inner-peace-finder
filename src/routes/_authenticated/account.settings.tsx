@@ -488,7 +488,7 @@ function SupportRequestHistory({
   }
   return (
     <ul className="space-y-2.5">
-      {requests.slice(0, 10).map((request) => (
+      {requests.slice(0, 5).map((request) => (
         <li key={request.id} className="rounded-xl border border-border bg-surface p-3">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
