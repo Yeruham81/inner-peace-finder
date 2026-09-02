@@ -12,6 +12,7 @@ import { getContactChannelAvailability } from "@/lib/contact-channel-settings.fu
 import { DEFAULT_CONTACT_CHANNEL_AVAILABILITY } from "@/lib/contact-channel-settings";
 import { looksLikeIsraeliPhone } from "@/lib/phone-il";
 import { getMyProfile, updateMyContactPreferences, type ContactMethod } from "@/lib/therapist-profile.functions";
+import { getPublicInteractionSettings } from "@/lib/system-settings.functions";
 
 const CONTACT_METHOD_OPTIONS: readonly {
   id: ContactMethod;
@@ -36,12 +37,19 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
   const getProfileFn = useServerFn(getMyProfile);
   const updateContactFn = useServerFn(updateMyContactPreferences);
   const getAvailabilityFn = useServerFn(getContactChannelAvailability);
+  const getInteractionSettingsFn = useServerFn(getPublicInteractionSettings);
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
   const availabilityQuery = useQuery({
     queryKey: ["contact-channel-availability"],
     queryFn: () => getAvailabilityFn(),
   });
+  const interactionSettingsQuery = useQuery({
+    queryKey: ["public-interaction-settings"],
+    queryFn: () => getInteractionSettingsFn(),
+    staleTime: 60_000,
+  });
   const availability = availabilityQuery.data ?? DEFAULT_CONTACT_CHANNEL_AVAILABILITY;
+  const maxContactMethods = interactionSettingsQuery.data?.maxContactMethods ?? 3;
   const [preferences, setPreferences] = useState<ContactPreferencesState>({
     email: defaultEmail,
     phone: "",
@@ -108,7 +116,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
       const nextMethods = selected
         ? current.contact_methods.filter((item) => item !== method)
         : [...current.contact_methods, method];
-      if (nextMethods.length === 0) return current;
+      if (nextMethods.length === 0 || nextMethods.length > maxContactMethods) return current;
       return {
         ...current,
         contact_methods: nextMethods,
@@ -123,9 +131,9 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
   return (
     <AccountSectionCard
       title="דרכי קבלת פניות"
-      description="בחרו באילו ערוצים לקבל פניות ומהו הערוץ המועדף. לפחות ערוץ אחד חייב להישאר פעיל."
+      description={`בחרו באילו ערוצים לקבל פניות ומהו הערוץ המועדף. ניתן לבחור עד ${maxContactMethods} ערוצים. ערוץ שהושבת זמנית על ידי המערכת יישאר שמור אך לא יהיה זמין לקבלת פניות.`}
     >
-      {profile.isLoading || availabilityQuery.isLoading || !initialized ? (
+      {profile.isLoading || availabilityQuery.isLoading || interactionSettingsQuery.isLoading || !initialized ? (
         <p className="text-sm text-muted-foreground">טוען את דרכי ההתקשרות…</p>
       ) : profile.isError ? (
         <p className="text-sm text-destructive">לא הצלחנו לטעון את דרכי ההתקשרות.</p>
@@ -167,7 +175,7 @@ export function ContactPreferencesPanel({ defaultEmail }: { defaultEmail: string
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-foreground">{option.label}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {!available ? "לא זמין כרגע" : selected ? "פעיל" : option.description}
+                        {!available ? "זמנית לא פעיל" : selected ? "פעיל" : option.description}
                       </span>
                     </span>
                   </button>
