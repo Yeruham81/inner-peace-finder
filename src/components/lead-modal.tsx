@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLead } from "@/lib/lead.functions";
 import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
 import { track } from "@/lib/analytics";
 import { looksLikeIsraeliPhone } from "@/lib/phone-il";
 import { readRememberedResultsReturn, sanitizeSearchReturn } from "@/lib/search-return";
+import { getPublicInteractionSettings } from "@/lib/system-settings.functions";
 
 /** Server-issued challenge. The expected answer never reaches the browser. */
 type Challenge = { id: string; prompt: string };
@@ -62,6 +63,12 @@ export function LeadModal({
   unclaimedProfile?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const interactionSettings = useQuery({
+    queryKey: ["public-interaction-settings"],
+    queryFn: () => getPublicInteractionSettings(),
+    staleTime: 60_000,
+  });
+  const maxMessageLength = interactionSettings.data?.leadMessageMaxLength ?? 2000;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState(() => defaultMessage(problemName, populationName));
@@ -177,7 +184,7 @@ export function LeadModal({
 
   const phoneOk = looksLikeIsraeliPhone(phone);
   const nameOk = name.trim().length >= 2;
-  const messageOk = message.trim().length >= 2;
+  const messageOk = message.trim().length >= 2 && message.length <= maxMessageLength;
   const canSubmit = nameOk && phoneOk && messageOk && challengeOk && !submitting;
 
   const titleId = useMemo(() => `lead-modal-${therapistId}`, [therapistId]);
@@ -362,9 +369,16 @@ export function LeadModal({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
+                minLength={2}
+                maxLength={maxMessageLength}
                 required
+                aria-describedby="lead-msg-limit"
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-brand focus:outline-none"
               />
+              <p id="lead-msg-limit" className="mt-1 text-xs text-muted-foreground">
+                עד {maxMessageLength.toLocaleString("he-IL")} תווים · {message.length.toLocaleString("he-IL")}/
+                {maxMessageLength.toLocaleString("he-IL")}
+              </p>
             </div>
 
             <div>

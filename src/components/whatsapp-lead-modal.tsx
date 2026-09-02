@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
 
 import { createWhatsAppLead } from "@/lib/whatsapp-lead.functions";
 import { issueLeadChallenge } from "@/lib/lead-challenge.functions";
@@ -7,6 +8,7 @@ import { track } from "@/lib/analytics";
 import { looksLikeIsraeliPhone } from "@/lib/phone-il";
 import { WHATSAPP_LEAD_MESSAGE_MAX_LENGTH, WHATSAPP_LEAD_MESSAGE_MIN_LENGTH } from "@/lib/whatsapp-lead.shared";
 import { CHALLENGE_ERROR_MESSAGES } from "@/components/lead-modal";
+import { getPublicInteractionSettings } from "@/lib/system-settings.functions";
 
 type Challenge = { id: string; prompt: string };
 
@@ -73,6 +75,15 @@ export function WhatsAppLeadModal({
   populationName?: string | null;
   pageSource?: string | null;
 }) {
+  const interactionSettings = useQuery({
+    queryKey: ["public-interaction-settings"],
+    queryFn: () => getPublicInteractionSettings(),
+    staleTime: 60_000,
+  });
+  const maxMessageLength = Math.min(
+    WHATSAPP_LEAD_MESSAGE_MAX_LENGTH,
+    interactionSettings.data?.leadMessageMaxLength ?? WHATSAPP_LEAD_MESSAGE_MAX_LENGTH,
+  );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState(() => defaultMessage(problemName, populationName));
@@ -154,8 +165,7 @@ export function WhatsAppLeadModal({
 
   const phoneOk = looksLikeIsraeliPhone(phone);
   const nameOk = name.trim().length >= 2;
-  const messageOk =
-    message.trim().length >= WHATSAPP_LEAD_MESSAGE_MIN_LENGTH && message.length <= WHATSAPP_LEAD_MESSAGE_MAX_LENGTH;
+  const messageOk = message.trim().length >= WHATSAPP_LEAD_MESSAGE_MIN_LENGTH && message.length <= maxMessageLength;
   const canSubmit = nameOk && phoneOk && messageOk && challengeOk && !submitting;
 
   const titleId = useMemo(() => `whatsapp-lead-modal-${therapistId}`, [therapistId]);
@@ -321,14 +331,14 @@ export function WhatsAppLeadModal({
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
                 minLength={WHATSAPP_LEAD_MESSAGE_MIN_LENGTH}
-                maxLength={WHATSAPP_LEAD_MESSAGE_MAX_LENGTH}
+                maxLength={maxMessageLength}
                 required
                 aria-describedby="wa-lead-msg-limit"
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-brand focus:outline-none"
               />
               <p id="wa-lead-msg-limit" className="mt-1 text-xs text-muted-foreground">
-                עד {WHATSAPP_LEAD_MESSAGE_MAX_LENGTH.toLocaleString("he-IL")} תווים ·{" "}
-                {message.length.toLocaleString("he-IL")}/{WHATSAPP_LEAD_MESSAGE_MAX_LENGTH.toLocaleString("he-IL")}
+                עד {maxMessageLength.toLocaleString("he-IL")} תווים · {message.length.toLocaleString("he-IL")}/
+                {maxMessageLength.toLocaleString("he-IL")}
               </p>
             </div>
 
