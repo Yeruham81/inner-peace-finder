@@ -194,21 +194,27 @@ function ForTherapistsPage() {
 
 function VisionSection() {
   return (
-    <section id="smart-search" className="scroll-mt-6 border-b border-border">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:px-8 lg:py-24">
+    <section id="smart-search" className="relative scroll-mt-24 border-b border-border">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(65%_100%_at_82%_0%,color-mix(in_oklab,var(--brand)_14%,transparent),transparent_72%)]"
+      />
+
+      <div className="relative mx-auto grid max-w-6xl items-start gap-10 px-4 py-12 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14 lg:px-8 lg:py-24">
         <nav aria-label="ניווט מהיר בעמוד" className="lg:col-span-2">
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {quickLinks.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/15 bg-background/80 px-3.5 py-2 text-sm font-medium text-muted-foreground shadow-sm transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/15 bg-background/80 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm backdrop-blur transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {item.label}
               </a>
             ))}
           </div>
         </nav>
+
 
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium text-primary shadow-sm">
