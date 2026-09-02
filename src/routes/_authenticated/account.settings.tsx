@@ -425,7 +425,7 @@ function AccountSettingsPage() {
           </div>
         </AccountSectionCard>
 
-        <AccountSectionCard title="פניות אחרונות לצוות" description="עד 10 הפניות אחרונות שנשלחו דרך טיפולינקס.">
+        <AccountSectionCard title="פניות אחרונות לצוות" description="5 הפניות אחרונות שנשלחו דרך טיפולינקס">
           <SupportRequestHistory
             requests={supportRequestsQuery.data ?? []}
             loading={supportRequestsQuery.isLoading}
