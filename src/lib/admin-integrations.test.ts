@@ -37,14 +37,30 @@ describe("admin integrations health", () => {
     }
   });
 
-  it("uses read-only provider checks and never sends probe messages", () => {
+  it("uses non-delivering provider checks and never sends probe messages or calls", () => {
     expect(server).toContain("https://api.openai.com/v1/models/");
     expect(server).toContain("https://api.brevo.com/v3/account");
     expect(server).toContain("/ApprovalRequests");
     expect(server).toContain("datastore_search");
+    expect(server).toContain("/Calls.json");
+    expect(server).toContain('body: ""');
     expect(server).not.toContain("/v1/responses");
     expect(server).not.toContain("/Messages.json");
-    expect(server).not.toContain("/Calls.json");
+  });
+
+  it("validates the live Voice key and WhatsApp Sender without weakening production credentials", () => {
+    expect(server).toContain("basicAuth(config.apiKeySid, config.apiKeySecret)");
+    expect(server).toContain("Calls — Create");
+    expect(server).toContain("https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=1000");
+    expect(server).toContain('senderStatus === "ONLINE"');
+  });
+
+  it("treats interactive OAuth checks as neutral rather than permanent warnings", () => {
+    expect(server).toContain('label: "Google OAuth"');
+    expect(server).toContain('label: "Apple OAuth"');
+    expect(server).toContain('state: "unchecked"');
+    expect(route).toContain('unchecked: "לא נבדק"');
+    expect(badge).toContain('"לא נבדק": "neutral"');
   });
 
   it("supports the shared healthy warning error and planned badge vocabulary", () => {
