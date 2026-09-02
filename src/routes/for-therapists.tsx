@@ -413,12 +413,13 @@ function TipulinksEngineCard() {
         {["טיפול רגשי לילדים", "חרדה", "קשיים חברתיים", "הדרכת הורים"].map((item) => (
           <span
             key={item}
-            className="rounded-full border border-primary/15 bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground"
+            className="rounded-full border border-primary/15 bg-surface-elevated/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm"
           >
             {item}
           </span>
         ))}
       </div>
+
     </article>
   );
 }
