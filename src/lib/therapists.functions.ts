@@ -29,7 +29,9 @@ export const listProblems = createServerFn({ method: "GET" }).handler(async () =
 });
 
 export const listFilterOptions = createServerFn({ method: "GET" }).handler(async () => {
-  return listEligibleFilterOptions(await publicClient());
+  const { readSystemSettings } = await import("./system-settings.server");
+  const settings = await readSystemSettings();
+  return listEligibleFilterOptions(await publicClient(), settings.hideUnclaimedAfterFirstLead);
 });
 
 export const getProblemBySlug = createServerFn({ method: "GET" })
@@ -57,12 +59,23 @@ export const getProblemBySlug = createServerFn({ method: "GET" })
 export const getTherapistBySlug = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(120) }).parse(input))
   .handler(async ({ data }) => {
-    const profile = await fetchPublicTherapistBySlug(await publicClient(), data.slug);
+    const [{ readContactChannelAvailability }, { readSystemSettings }] = await Promise.all([
+      import("./contact-channel-settings.server"),
+      import("./system-settings.server"),
+    ]);
+    const [availability, systemSettings] = await Promise.all([readContactChannelAvailability(), readSystemSettings()]);
+    const profile = await fetchPublicTherapistBySlug(
+      await publicClient(),
+      data.slug,
+      systemSettings.hideUnclaimedAfterFirstLead,
+    );
     if (!profile) return null;
 
-    const { readContactChannelAvailability } = await import("./contact-channel-settings.server");
-    const availability = await readContactChannelAvailability();
-    const contactMethods = filterAvailableContactMethods(profile.contact_methods, availability);
+    const contactMethods = filterAvailableContactMethods(
+      profile.contact_methods,
+      availability,
+      systemSettings.maxContactMethods,
+    );
 
     return {
       ...profile,
@@ -75,7 +88,9 @@ export const getTherapistBySlug = createServerFn({ method: "GET" })
   });
 
 export const listAllTherapistSlugs = createServerFn({ method: "GET" }).handler(async () => {
-  return listEligibleTherapistSlugs(await publicClient());
+  const { readSystemSettings } = await import("./system-settings.server");
+  const settings = await readSystemSettings();
+  return listEligibleTherapistSlugs(await publicClient(), settings.hideUnclaimedAfterFirstLead);
 });
 
 const CtaSchema = z.object({
@@ -120,10 +135,25 @@ export const recordCtaClick = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
+    if (!(await isContactChannelEnabled("phone"))) {
+      return {
+        ok: false as const,
+        reason: "therapist_unavailable" as const,
+        phone: null,
+        billable: false as const,
+        alreadyExists: false as const,
+      };
+    }
+
     // Eligibility gate: only publicly eligible therapists may release contact
     // data or create a billable CTA event.
+    const { readSystemSettings } = await import("./system-settings.server");
+    const settings = await readSystemSettings();
     const { data: therapist, error: tErr } = await applyEligibility(
       supabaseAdmin.from("therapists").select("phone").eq("id", data.therapistId),
+      "therapists",
+      { hideUnclaimedAfterFirstLead: settings.hideUnclaimedAfterFirstLead },
     ).maybeSingle();
     if (tErr) throw new Error(tErr.message);
     if (!therapist) {
