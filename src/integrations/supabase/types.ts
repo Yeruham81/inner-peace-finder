@@ -2017,6 +2017,78 @@ export type Database = {
         };
         Relationships: [];
       };
+      system_settings: {
+        Row: {
+          ai_fallback_enabled: boolean;
+          ai_search_enabled: boolean;
+          created_at: string;
+          lead_antispam_enabled: boolean;
+          lead_challenge_ttl_minutes: number;
+          hide_unclaimed_after_first_lead: boolean;
+          lead_message_max_length: number;
+          maintenance_enabled: boolean;
+          max_contact_methods: number;
+          require_contact_method_for_publish: boolean;
+          require_payment_method_for_publish: boolean;
+          require_verified_credential_for_publish: boolean;
+          search_indexing_enabled: boolean;
+          search_results_limit: number;
+          show_unverified_therapists: boolean;
+          singleton: boolean;
+          support_email: string;
+          system_emails_enabled: boolean;
+          therapist_notifications_enabled: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          ai_fallback_enabled?: boolean;
+          ai_search_enabled?: boolean;
+          created_at?: string;
+          lead_antispam_enabled?: boolean;
+          lead_challenge_ttl_minutes?: number;
+          hide_unclaimed_after_first_lead?: boolean;
+          lead_message_max_length?: number;
+          maintenance_enabled?: boolean;
+          max_contact_methods?: number;
+          require_contact_method_for_publish?: boolean;
+          require_payment_method_for_publish?: boolean;
+          require_verified_credential_for_publish?: boolean;
+          search_indexing_enabled?: boolean;
+          search_results_limit?: number;
+          show_unverified_therapists?: boolean;
+          singleton?: boolean;
+          support_email?: string;
+          system_emails_enabled?: boolean;
+          therapist_notifications_enabled?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          ai_fallback_enabled?: boolean;
+          ai_search_enabled?: boolean;
+          created_at?: string;
+          lead_antispam_enabled?: boolean;
+          lead_challenge_ttl_minutes?: number;
+          hide_unclaimed_after_first_lead?: boolean;
+          lead_message_max_length?: number;
+          maintenance_enabled?: boolean;
+          max_contact_methods?: number;
+          require_contact_method_for_publish?: boolean;
+          require_payment_method_for_publish?: boolean;
+          require_verified_credential_for_publish?: boolean;
+          search_indexing_enabled?: boolean;
+          search_results_limit?: number;
+          show_unverified_therapists?: boolean;
+          singleton?: boolean;
+          support_email?: string;
+          system_emails_enabled?: boolean;
+          therapist_notifications_enabled?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       therapist_registration_settings: {
         Row: {
           created_at: string;
