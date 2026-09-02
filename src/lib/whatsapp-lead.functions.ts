@@ -22,6 +22,7 @@ export type WhatsAppLeadResult =
       ok: false;
       reason:
         | "invalid_phone"
+        | "invalid_message"
         | "rate_limit_exceeded"
         | "challenge_failed"
         | "challenge_expired"
@@ -42,6 +43,17 @@ export type WhatsAppLeadResult =
 export const createWhatsAppLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => WhatsAppLeadSchema.parse(input))
   .handler(async ({ data }): Promise<WhatsAppLeadResult> => {
+    const { readSystemSettings } = await import("./system-settings.server");
+    const systemSettings = await readSystemSettings();
+    const effectiveMaxLength = Math.min(WHATSAPP_LEAD_MESSAGE_MAX_LENGTH, systemSettings.leadMessageMaxLength);
+    if (data.message.length > effectiveMaxLength) {
+      return {
+        ok: false,
+        reason: "invalid_message",
+        message: `ההודעה ארוכה מדי. ניתן להזין עד ${effectiveMaxLength} תווים.`,
+      };
+    }
+
     const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
     if (!(await isContactChannelEnabled("whatsapp"))) {
       return {
