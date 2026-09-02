@@ -705,17 +705,20 @@ async function saveProfileForActor(args: {
   // extraction failure must abort the save/publish instead of persisting an
   // outdated (or silently emptied) semantic_profile.
   const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
-  const readinessMissing = validateForPublish(
-    data,
-    semanticProfile,
-    saveMode,
-    systemSettings
-      ? {
-          requireContactMethod: systemSettings.requireContactMethodForPublish,
-          maxContactMethods: systemSettings.maxContactMethods,
-        }
-      : { requireContactMethod: true, maxContactMethods: 3 },
-  );
+  const readinessMissing = validateForPublish(data, semanticProfile, saveMode);
+
+  if (systemSettings) {
+    const defaultMissingContact = readinessMissing.indexOf("דרכי התקשרות");
+    if (!systemSettings.requireContactMethodForPublish && defaultMissingContact >= 0) {
+      readinessMissing.splice(defaultMissingContact, 1);
+    }
+
+    const defaultTooManyContacts = readinessMissing.indexOf("עד 3 דרכי התקשרות");
+    if (defaultTooManyContacts >= 0) readinessMissing.splice(defaultTooManyContacts, 1);
+    if (data.contact_methods.length > systemSettings.maxContactMethods) {
+      readinessMissing.push(`עד ${systemSettings.maxContactMethods} דרכי התקשרות`);
+    }
+  }
 
   if (data.publish && saveMode === "self" && systemSettings) {
     if (systemSettings.requirePaymentMethodForPublish) {
@@ -732,15 +735,13 @@ async function saveProfileForActor(args: {
       if (!existingProfile?.id) {
         readinessMissing.push("אימות הסמכה");
       } else {
-        const { data: verifiedCredential, error: credentialError } = await supabaseAdmin
+        const { count: verifiedCredentialCount, error: credentialError } = await supabaseAdmin
           .from("therapist_credentials")
-          .select("id")
+          .select("id", { count: "exact", head: true })
           .eq("therapist_id", existingProfile.id)
-          .eq("verification_status", "verified")
-          .limit(1)
-          .maybeSingle();
+          .eq("verification_status", "verified");
         if (credentialError) throw new Error(credentialError.message);
-        if (!verifiedCredential) readinessMissing.push("אימות הסמכה");
+        if ((verifiedCredentialCount ?? 0) < 1) readinessMissing.push("אימות הסמכה");
       }
     }
   }
