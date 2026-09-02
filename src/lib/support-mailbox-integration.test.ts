@@ -20,7 +20,7 @@ describe("unified support mailbox", () => {
   it("keeps therapist support history compact and separate from lead notifications", () => {
     expect(settingsRoute).toContain('title="יצירת קשר עם הצוות"');
     expect(settingsRoute).toContain('title="פניות אחרונות לצוות"');
-    expect(settingsRoute).toContain("requests.slice(0, 10)");
+    expect(settingsRoute).toContain("requests.slice(0, 5)");
     expect(settingsRoute).not.toContain('title="התראות"');
     expect(settingsRoute).not.toContain("notify_new_leads");
     expect(settingsRoute).not.toContain("staff_response");
