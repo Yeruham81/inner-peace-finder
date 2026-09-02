@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 import type {
   ActiveSiteAnnouncement,
   AdminBroadcastCampaignRow,
@@ -120,9 +121,7 @@ function metadataDisplayName(metadata: Record<string, unknown> | undefined): str
 export async function resolveBroadcastAudience(audience: BroadcastAudience): Promise<ResolvedAudience> {
   const [authUsers, accountsResult, therapistsResult, credentialsResult] = await Promise.all([
     listAllAuthUsers(),
-    supabaseAdmin
-      .from("therapist_accounts")
-      .select("id, auth_user_id, onboarding_completed, payment_method_status"),
+    supabaseAdmin.from("therapist_accounts").select("id, auth_user_id, onboarding_completed, payment_method_status"),
     supabaseAdmin.from("therapists").select("id, owner_account_id, full_name, profile_status, verified"),
     supabaseAdmin.from("therapist_credentials").select("therapist_id, verification_status"),
   ]);
@@ -151,7 +150,7 @@ export async function resolveBroadcastAudience(audience: BroadcastAudience): Pro
     if (!email) continue;
     const account = accountsByUser.get(user.id) ?? null;
     if (audience.scope === "therapists" && !account) continue;
-    const ownedTherapists = account ? therapistsByAccount.get(account.id) ?? [] : [];
+    const ownedTherapists = account ? (therapistsByAccount.get(account.id) ?? []) : [];
 
     if (audience.profileStatuses.length > 0) {
       if (!ownedTherapists.some((row) => audience.profileStatuses.includes(row.profile_status))) continue;
@@ -161,9 +160,7 @@ export async function resolveBroadcastAudience(audience: BroadcastAudience): Pro
       if (row.verified) return true;
       return credentialStatusesByTherapist.get(row.id)?.has("verified") ?? false;
     });
-    const hasPending = ownedTherapists.some((row) =>
-      credentialStatusesByTherapist.get(row.id)?.has("pending_review"),
-    );
+    const hasPending = ownedTherapists.some((row) => credentialStatusesByTherapist.get(row.id)?.has("pending_review"));
     if (audience.verification === "verified" && !hasVerified) continue;
     if (audience.verification === "pending" && !hasPending) continue;
     if (audience.verification === "not_verified" && hasVerified) continue;
@@ -180,7 +177,8 @@ export async function resolveBroadcastAudience(audience: BroadcastAudience): Pro
       if (audience.payment === "missing" && active) continue;
     }
 
-    const primaryTherapist = ownedTherapists.find((row) => row.profile_status === "published") ?? ownedTherapists[0] ?? null;
+    const primaryTherapist =
+      ownedTherapists.find((row) => row.profile_status === "published") ?? ownedTherapists[0] ?? null;
     recipients.push({
       authUserId: user.id,
       accountId: account?.id ?? null,
@@ -273,16 +271,23 @@ async function sendBrevoCampaign(
         })),
       }),
     });
-    const payload = (await response.json().catch(() => null)) as
-      | { messageId?: string; messageIds?: string[]; message?: string }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      messageId?: string;
+      messageIds?: string[];
+      message?: string;
+    } | null;
     if (!response.ok) {
       const message = payload?.message ?? `brevo_${response.status}`;
       lastError = message;
       failed += recipientChunk.length;
       const { error } = await supabaseAdmin
         .from("admin_broadcast_recipients")
-        .update({ status: "failed", failed_at: new Date().toISOString(), error: message, updated_at: new Date().toISOString() })
+        .update({
+          status: "failed",
+          failed_at: new Date().toISOString(),
+          error: message,
+          updated_at: new Date().toISOString(),
+        })
         .eq("campaign_id", campaignId)
         .eq("channel", "email")
         .in(
@@ -297,7 +302,12 @@ async function sendBrevoCampaign(
     const submittedAt = new Date().toISOString();
     for (let index = 0; index < recipientChunk.length; index += 1) {
       const recipient = recipientChunk[index]!;
-      const providerId = ids.length === recipientChunk.length ? ids[index] : ids.length === 1 && recipientChunk.length === 1 ? ids[0] : null;
+      const providerId =
+        ids.length === recipientChunk.length
+          ? ids[index]
+          : ids.length === 1 && recipientChunk.length === 1
+            ? ids[0]
+            : null;
       const { error } = await supabaseAdmin
         .from("admin_broadcast_recipients")
         .update({
@@ -317,7 +327,6 @@ async function sendBrevoCampaign(
 
   return { submitted, failed, error: lastError };
 }
-
 
 function brevoApiKey(): string {
   const apiKey = process.env.BREVO_API_KEY?.trim();
@@ -370,7 +379,12 @@ async function deleteBrevoBroadcastList(campaignId: string, listId: number): Pro
     const response = await brevoRequest(`/contacts/lists/${listId}`, { method: "DELETE" });
     if (!response.ok && response.status !== 404) {
       const body = await brevoJson(response);
-      console.warn("[broadcast] Brevo list cleanup failed", { campaignId, listId, status: response.status, message: body?.message });
+      console.warn("[broadcast] Brevo list cleanup failed", {
+        campaignId,
+        listId,
+        status: response.status,
+        message: body?.message,
+      });
       return false;
     }
     const { error } = await supabaseAdmin
@@ -378,7 +392,8 @@ async function deleteBrevoBroadcastList(campaignId: string, listId: number): Pro
       .update({ brevo_list_deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", campaignId)
       .eq("brevo_list_id", listId);
-    if (error) console.warn("[broadcast] failed to persist Brevo list cleanup", { campaignId, listId, code: error.code });
+    if (error)
+      console.warn("[broadcast] failed to persist Brevo list cleanup", { campaignId, listId, code: error.code });
     return true;
   } catch (error) {
     console.warn("[broadcast] Brevo list cleanup failed", {
@@ -427,7 +442,9 @@ async function upsertBrevoBroadcastContact(recipient: BroadcastAudienceRecipient
 async function upsertBrevoBroadcastContacts(recipients: ResolvedAudience, listId: number): Promise<void> {
   const concurrency = 5;
   for (let offset = 0; offset < recipients.length; offset += concurrency) {
-    await Promise.all(recipients.slice(offset, offset + concurrency).map((recipient) => upsertBrevoBroadcastContact(recipient, listId)));
+    await Promise.all(
+      recipients.slice(offset, offset + concurrency).map((recipient) => upsertBrevoBroadcastContact(recipient, listId)),
+    );
   }
 }
 
@@ -454,7 +471,8 @@ async function createBrevoMarketingCampaign(input: {
     }),
   });
   const body = await brevoJson(response);
-  if (!response.ok || !Number.isInteger(body?.id)) throw new Error(body?.message ?? `brevo_campaign_${response.status}`);
+  if (!response.ok || !Number.isInteger(body?.id))
+    throw new Error(body?.message ?? `brevo_campaign_${response.status}`);
   return body.id;
 }
 
@@ -593,7 +611,12 @@ export async function createBroadcastCampaign(args: CreateBroadcastArgs, adminUs
   const scheduledTime = args.scheduledAt ? Date.parse(args.scheduledAt) : NaN;
   const isScheduled = Number.isFinite(scheduledTime) && scheduledTime > now + 60_000;
   const effectiveScheduledAt = isScheduled ? new Date(scheduledTime).toISOString() : null;
-  if (args.channels.includes("email") && args.category === "operational" && effectiveScheduledAt && scheduledTime - now > BREVO_SCHEDULE_LIMIT_MS) {
+  if (
+    args.channels.includes("email") &&
+    args.category === "operational" &&
+    effectiveScheduledAt &&
+    scheduledTime - now > BREVO_SCHEDULE_LIMIT_MS
+  ) {
     throw new Error("ניתן לתזמן שליחת אימייל דרך Brevo עד 72 שעות מראש.");
   }
   if (args.siteDisplayType === "banner" && !args.expiresAt) {
@@ -602,7 +625,8 @@ export async function createBroadcastCampaign(args: CreateBroadcastArgs, adminUs
   if (args.expiresAt) {
     const expiry = Date.parse(args.expiresAt);
     const start = effectiveScheduledAt ? Date.parse(effectiveScheduledAt) : now;
-    if (!Number.isFinite(expiry) || expiry <= start) throw new Error("מועד התפוגה חייב להיות מאוחר ממועד תחילת ההודעה.");
+    if (!Number.isFinite(expiry) || expiry <= start)
+      throw new Error("מועד התפוגה חייב להיות מאוחר ממועד תחילת ההודעה.");
   }
 
   normalizedActionUrl(args.ctaUrl);
@@ -711,7 +735,8 @@ export async function sendBroadcastTest(content: BroadcastContent, adminUserId: 
   // The real marketing send goes through Marketing Campaigns, where Brevo
   // resolves {{ unsubscribe }}. The private admin test uses transactional mail
   // only as a preview, so omit that provider placeholder from the test copy.
-  const testContent: BroadcastContent = content.category !== "operational" ? { ...content, category: "operational" } : content;
+  const testContent: BroadcastContent =
+    content.category !== "operational" ? { ...content, category: "operational" } : content;
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: { accept: "application/json", "api-key": apiKey, "Content-Type": "application/json" },
@@ -831,17 +856,18 @@ export async function listActiveSiteAnnouncements(authUserId: string): Promise<A
   const campaignIds = [...new Set((recipientRows ?? []).map((row) => row.campaign_id))];
   if (campaignIds.length === 0) return [];
 
-  const [{ data: announcements, error: announcementsError }, { data: dismissals, error: dismissalsError }] = await Promise.all([
-    supabaseAdmin
-      .from("site_announcements")
-      .select("id, campaign_id, display_type, category, title, body, cta_label, cta_url, starts_at, expires_at")
-      .in("campaign_id", campaignIds)
-      .is("cancelled_at", null)
-      .lte("starts_at", now)
-      .or(`expires_at.is.null,expires_at.gt.${now}`)
-      .order("starts_at", { ascending: false }),
-    supabaseAdmin.from("user_announcement_dismissals").select("announcement_id").eq("auth_user_id", authUserId),
-  ]);
+  const [{ data: announcements, error: announcementsError }, { data: dismissals, error: dismissalsError }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("site_announcements")
+        .select("id, campaign_id, display_type, category, title, body, cta_label, cta_url, starts_at, expires_at")
+        .in("campaign_id", campaignIds)
+        .is("cancelled_at", null)
+        .lte("starts_at", now)
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
+        .order("starts_at", { ascending: false }),
+      supabaseAdmin.from("user_announcement_dismissals").select("announcement_id").eq("auth_user_id", authUserId),
+    ]);
   if (announcementsError) throw new Error(announcementsError.message);
   if (dismissalsError) throw new Error(dismissalsError.message);
   const dismissed = new Set((dismissals ?? []).map((row) => row.announcement_id));
@@ -963,7 +989,7 @@ export async function applyBroadcastBrevoWebhook(payload: unknown): Promise<bool
   if (!recipient) return true;
 
   const now = new Date().toISOString();
-  const update: Record<string, string | null> = { updated_at: now };
+  const update: Database["public"]["Tables"]["admin_broadcast_recipients"]["Update"] = { updated_at: now };
   if (["opened", "unique_opened", "proxy_open", "unique_proxy_open", "click", "clicked"].includes(status)) {
     update.status = "opened";
     update.opened_at = now;
@@ -971,14 +997,21 @@ export async function applyBroadcastBrevoWebhook(payload: unknown): Promise<bool
   } else if (status === "delivered") {
     if (recipient.status !== "opened") update.status = "delivered";
     update.delivered_at = now;
-  } else if (["hard_bounce", "soft_bounce", "blocked", "invalid_email", "error", "spam", "unsubscribe", "unsubscribed"].includes(status)) {
+  } else if (
+    ["hard_bounce", "soft_bounce", "blocked", "invalid_email", "error", "spam", "unsubscribe", "unsubscribed"].includes(
+      status,
+    )
+  ) {
     update.status = "failed";
     update.failed_at = now;
     update.error = typeof event.reason === "string" ? event.reason : status;
   } else if (["sent", "request", "deferred"].includes(status)) {
     if (!["delivered", "opened"].includes(recipient.status)) update.status = "submitted";
   }
-  const { error: updateError } = await supabaseAdmin.from("admin_broadcast_recipients").update(update).eq("id", recipient.id);
+  const { error: updateError } = await supabaseAdmin
+    .from("admin_broadcast_recipients")
+    .update(update)
+    .eq("id", recipient.id);
   if (updateError) throw new Error(updateError.message);
   await refreshCampaignCounts(campaignId);
   return true;
