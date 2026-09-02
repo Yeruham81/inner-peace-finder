@@ -33,9 +33,12 @@ function unwrap<T>(res: { data: T | null; error: unknown }): T | null {
 export async function fetchPublicTherapistBySlug(
   sb: PublicReadClient,
   slug: string,
+  hideUnclaimedAfterFirstLead = true,
 ): Promise<PublicTherapistProfile | null> {
   const res = await applyEligibility(
     sb.from("therapists").select(PUBLIC_THERAPIST_SELECT).eq("slug", slug),
+    "therapists",
+    { hideUnclaimedAfterFirstLead },
   ).maybeSingle();
   const t = unwrap(res) as Record<string, any> | null;
   if (!t) return null;
@@ -190,8 +193,13 @@ export async function fetchPublicTherapistBySlug(
 }
 
 /** Sitemap slugs — eligible profiles only. */
-export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<string[]> {
-  const rows = unwrap(await applyEligibility(sb.from("therapists").select("slug"))) as Array<{
+export async function listEligibleTherapistSlugs(
+  sb: PublicReadClient,
+  hideUnclaimedAfterFirstLead = true,
+): Promise<string[]> {
+  const rows = unwrap(
+    await applyEligibility(sb.from("therapists").select("slug"), "therapists", { hideUnclaimedAfterFirstLead }),
+  ) as Array<{
     slug: string;
   }> | null;
   return (rows ?? []).map((r) => r.slug).filter(Boolean);
@@ -199,8 +207,11 @@ export async function listEligibleTherapistSlugs(sb: PublicReadClient): Promise<
 
 async function listEligibleClinicCities(
   sb: PublicReadClient,
+  hideUnclaimedAfterFirstLead: boolean,
 ): Promise<{ cities: string[]; cityRegions: Record<string, string[]> }> {
-  const eligibleTherapists = unwrap(await applyEligibility(sb.from("therapists").select("id"))) as Array<{
+  const eligibleTherapists = unwrap(
+    await applyEligibility(sb.from("therapists").select("id"), "therapists", { hideUnclaimedAfterFirstLead }),
+  ) as Array<{
     id: string;
   }> | null;
   const eligibleIds = (eligibleTherapists ?? []).map((row) => row.id);
@@ -235,9 +246,9 @@ async function listEligibleClinicCities(
 }
 
 /** Filter options. Cities come from every active clinic of eligible profiles. */
-export async function listEligibleFilterOptions(sb: PublicReadClient) {
+export async function listEligibleFilterOptions(sb: PublicReadClient, hideUnclaimedAfterFirstLead = true) {
   const [clinicCities, populations, languages, professions, modalities, therapyFormats] = await Promise.all([
-    listEligibleClinicCities(sb),
+    listEligibleClinicCities(sb, hideUnclaimedAfterFirstLead),
     sb.from("population_groups").select("slug, name").order("sort_order"),
     sb.from("languages").select("code, name").order("name"),
     sb.from("professions").select("slug, name:name_he").eq("is_active", true).order("sort_order"),

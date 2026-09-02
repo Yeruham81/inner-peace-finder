@@ -10,7 +10,7 @@ import { buildSearchCatalog, CITY_ALIASES } from "./catalog-builder";
 import type { Catalog } from "./query-interpreter.types";
 
 const TTL_MS = 60_000;
-let cache: { at: number; catalog: Catalog } | null = null;
+let cache: { at: number; catalog: Catalog; hideUnclaimedAfterFirstLead: boolean } | null = null;
 
 export { CITY_ALIASES };
 
@@ -25,9 +25,15 @@ async function serverClient(): Promise<SupabaseClient<Database>> {
  * tests. Production callers pass the request-scoped server client so the
  * catalog and the search share one connection.
  */
-export async function loadSearchCatalog(client?: SupabaseClient<Database>): Promise<Catalog> {
+export async function loadSearchCatalog(
+  client?: SupabaseClient<Database>,
+  options: { hideUnclaimedAfterFirstLead?: boolean } = {},
+): Promise<Catalog> {
   const now = Date.now();
-  if (cache && now - cache.at < TTL_MS) return cache.catalog;
+  const hideUnclaimedAfterFirstLead = options.hideUnclaimedAfterFirstLead ?? true;
+  if (cache && cache.hideUnclaimedAfterFirstLead === hideUnclaimedAfterFirstLead && now - cache.at < TTL_MS) {
+    return cache.catalog;
+  }
 
   const sb = client ?? (await serverClient());
 
@@ -37,8 +43,11 @@ export async function loadSearchCatalog(client?: SupabaseClient<Database>): Prom
       .select("city, therapists!inner(id, is_active, profile_status, visibility)")
       .eq("is_active", true),
     "therapists!inner",
+    { hideUnclaimedAfterFirstLead },
   );
-  const nameQ = applyEligibility(sb.from("therapists").select("id, full_name"));
+  const nameQ = applyEligibility(sb.from("therapists").select("id, full_name"), "therapists", {
+    hideUnclaimedAfterFirstLead,
+  });
 
   const [profRes, modRes, popRes, langRes, cityRes, nameRes] = await Promise.all([
     sb.from("professions").select("id, slug, name_he, name_en").eq("is_active", true),
@@ -66,7 +75,7 @@ export async function loadSearchCatalog(client?: SupabaseClient<Database>): Prom
     cities: (cityRes.data ?? []) as Array<{ city: string | null }>,
     therapistNames: (nameRes.data ?? []) as Array<{ id: string; full_name: string }>,
   });
-  cache = { at: now, catalog };
+  cache = { at: now, catalog, hideUnclaimedAfterFirstLead };
   return catalog;
 }
 
