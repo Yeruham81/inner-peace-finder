@@ -277,7 +277,7 @@ function VisionSection() {
             ))}
           </div>
 
-          <div className="mt-6 rounded-2xl bg-primary/10 p-5">
+          <div className="mt-6 rounded-2xl border border-primary/15 bg-primary/10 p-5">
             <p className="text-sm font-semibold text-primary">דוגמה פשוטה</p>
 
             <p className="mt-2 text-base font-medium leading-7 text-foreground">
