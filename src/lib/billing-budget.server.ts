@@ -12,11 +12,7 @@ type ClaimedBudgetNotification = {
 function publicOrigin(): string {
   const configured = process.env.TIPULINKS_PUBLIC_ORIGIN || "https://tipulinks.co.il";
   const parsed = new URL(configured);
-  if (
-    parsed.protocol !== "https:" &&
-    parsed.hostname !== "localhost" &&
-    parsed.hostname !== "127.0.0.1"
-  ) {
+  if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
     throw new Error("TIPULINKS_PUBLIC_ORIGIN must use https");
   }
   return parsed.origin;
@@ -57,6 +53,10 @@ function notificationHtml(notification: ClaimedBudgetNotification, billingUrl: s
 }
 
 export async function sendBudgetExhaustedNotification(therapistId: string): Promise<boolean> {
+  const { readSystemSettings } = await import("./system-settings.server");
+  const settings = await readSystemSettings();
+  if (!settings.systemEmailsEnabled || !settings.therapistNotificationsEnabled) return false;
+
   const { data, error } = await supabaseAdmin.rpc("claim_monthly_budget_notification", {
     _therapist_id: therapistId,
   });
@@ -65,9 +65,7 @@ export async function sendBudgetExhaustedNotification(therapistId: string): Prom
   const notification = data as unknown as ClaimedBudgetNotification;
 
   try {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(
-      notification.auth_user_id,
-    );
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(notification.auth_user_id);
     if (authError) throw new Error(authError.message);
     const email = authData.user?.email;
     if (!email) throw new Error("account_email_missing");

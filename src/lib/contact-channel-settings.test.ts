@@ -12,12 +12,7 @@ function read(...parts: string[]): string {
   return readFileSync(join(import.meta.dir, "..", ...parts), "utf8");
 }
 
-const migration = read(
-  "..",
-  "supabase",
-  "migrations",
-  "20260827060000_contact_channel_availability.sql",
-);
+const migration = read("..", "supabase", "migrations", "20260827060000_contact_channel_availability.sql");
 const adminRoute = read("routes", "admin", "settings.tsx");
 const accountPanel = read("components", "account", "contact-preferences-panel.tsx");
 const therapistFunctions = read("lib", "therapists.functions.ts");
@@ -53,13 +48,14 @@ describe("global contact channel availability", () => {
   it("wires the admin switches to persisted server settings", () => {
     expect(adminRoute).toContain("getAdminContactChannelAvailability");
     expect(adminRoute).toContain("updateAdminContactChannelAvailability");
-    expect(adminRoute).toContain("ערוץ כבוי מוסתר מהציבור ונחסם בצד השרת");
+    expect(adminRoute).toContain("כיבוי ערוץ מסיר מיד את הלחצן שלו גם מפרופילים קיימים");
   });
 
   it("keeps disabled channels visible to therapists as unavailable", () => {
     expect(accountPanel).toContain("getContactChannelAvailability");
-    expect(accountPanel).toContain('!available ? "לא זמין כרגע"');
+    expect(accountPanel).toContain('!available ? "זמנית לא פעיל"');
     expect(accountPanel).toContain("disabled={!available || mutation.isPending}");
+    expect(accountPanel).toContain("יישאר שמור אך לא יהיה זמין לקבלת פניות");
   });
 
   it("filters the public profile and enforces every channel server-side", () => {
