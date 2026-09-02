@@ -34,6 +34,7 @@ type ZohoMessageListRow = {
   fromAddress?: string;
   sender?: string;
   subject?: string;
+  receivedTime?: string | number;
   receivedtime?: string | number;
   sentDateInGMT?: string | number;
   hasAttachment?: string | number | boolean;
@@ -190,8 +191,8 @@ export async function listRecentZohoIncomingMessages(): Promise<ZohoIncomingMess
             : String(row.threadId),
         fromAddress: row.fromAddress.trim().toLowerCase(),
         senderName: row.sender?.trim() || null,
-        subject: row.subject?.trim() || "ללא נושא",
-        receivedAt: asIsoDate(row.receivedtime ?? row.sentDateInGMT),
+        subject: decodeHtmlEntitiesFully(row.subject?.trim() || "ללא נושא"),
+        receivedAt: asIsoDate(row.receivedTime ?? row.receivedtime ?? row.sentDateInGMT),
         hasAttachment: row.hasAttachment === true || row.hasAttachment === 1 || row.hasAttachment === "1",
       };
     })
@@ -222,6 +223,16 @@ function decodeHtmlEntities(value: string): string {
   });
 }
 
+function decodeHtmlEntitiesFully(value: string): string {
+  let decoded = value;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = decodeHtmlEntities(decoded);
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
+}
+
 export function htmlEmailToText(html: string): string {
   const withoutUnsafeBlocks = html
     .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, " ")
@@ -247,7 +258,7 @@ export async function getZohoMessageText(message: ZohoIncomingMessage): Promise<
 }
 
 export function supportTicketSubject(subject: string, ticketCode: string): string {
-  const clean = subject
+  const clean = decodeHtmlEntitiesFully(subject)
     .replace(/\s*\[TL-[A-F0-9]{10}\]\s*/gi, " ")
     .replace(/^(?:re:\s*)+/i, "")
     .trim();
