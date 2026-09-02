@@ -369,16 +369,17 @@ function HowItWorksSection() {
 
 function SearchUserCard() {
   return (
-    <article className="rounded-3xl border border-primary/10 bg-primary/5 p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+    <article className="flex flex-col rounded-3xl border border-primary/10 bg-primary/5 p-5 shadow-card sm:p-6">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
         <UserRoundSearch className="h-6 w-6" />
       </div>
 
       <p className="mt-5 text-sm font-semibold text-primary">1. המשתמש מתאר את הקושי</p>
 
-      <h3 className="mt-1 text-xl font-bold text-foreground">כותב במילים שלו</h3>
+      <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">כותב במילים שלו</h3>
 
-      <div className="mt-5 rounded-2xl border border-primary/10 bg-background/90 p-4">
+      <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-elevated/90 p-4">
+
         <MessageCircleMore className="h-5 w-5 text-primary" />
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
