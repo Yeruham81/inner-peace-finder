@@ -194,15 +194,20 @@ function ForTherapistsPage() {
 
 function VisionSection() {
   return (
-    <section id="smart-search" className="scroll-mt-6 border-b border-border">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:px-8 lg:py-24">
+    <section id="smart-search" className="relative scroll-mt-24 border-b border-border">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(65%_100%_at_82%_0%,color-mix(in_oklab,var(--brand)_14%,transparent),transparent_72%)]"
+      />
+
+      <div className="relative mx-auto grid max-w-6xl items-start gap-10 px-4 py-12 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14 lg:px-8 lg:py-24">
         <nav aria-label="ניווט מהיר בעמוד" className="lg:col-span-2">
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {quickLinks.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/15 bg-background/80 px-3.5 py-2 text-sm font-medium text-muted-foreground shadow-sm transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/15 bg-background/80 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm backdrop-blur transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {item.label}
               </a>
@@ -210,27 +215,29 @@ function VisionSection() {
           </div>
         </nav>
 
-        <div>
+
+        <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium text-primary shadow-sm">
             <Sparkles className="h-4 w-4" />
             דרך פשוטה יותר למצוא טיפול
           </div>
 
-          <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl sm:leading-tight">
+          <h1 className="mt-6 max-w-[22ch] text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.12]">
             המטופל לא צריך לדעת מראש איזה מטפל לחפש
           </h1>
 
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
+          <p className="mt-6 max-w-[58ch] text-pretty text-base leading-8 text-muted-foreground sm:text-lg sm:leading-9">
             אדם שמתמודד עם חרדה, קשיי שינה, משבר בזוגיות או קושי אצל הילד יודע בדרך כלל מה מפריע לו — אבל לא בהכרח יודע
             אם הוא צריך פסיכולוג, פסיכותרפיסט או איש מקצוע אחר.
           </p>
 
-          <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground">
+          <p className="mt-4 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
             הוא גם לא אמור לבחור מטפל לפי שיטת טיפול שמעולם לא שמע עליה. בטיפולינקס מתחילים מהקושי עצמו: המשתמש מתאר
             במילים שלו מה עובר עליו, והמנוע מחפש עבורו מטפלים רלוונטיים שמציעים טיפול בתחום המתאים.
           </p>
 
-          <div className="mt-7 rounded-2xl border-r-4 border-primary bg-background p-5 shadow-sm">
+          <div className="mt-8 max-w-[62ch] rounded-2xl border border-border border-r-4 border-r-primary bg-surface-elevated p-5 shadow-card sm:p-6">
+
             <p className="text-base font-semibold leading-8 text-foreground">
               במקום לשאול את המשתמש "איזה מטפל אתה מחפש?" — טיפולינקס מתחילה בשאלה "במה אפשר לעזור?"
             </p>
@@ -242,18 +249,21 @@ function VisionSection() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-border bg-background p-6 shadow-lg shadow-foreground/5 sm:p-8">
+        <div className="min-w-0 rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-8">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary">
               <UserRoundSearch className="h-6 w-6" />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-primary">למה החיפוש הרגיל מקשה?</p>
 
-              <h2 className="mt-1 text-xl font-bold text-foreground">הוא מצפה מהאדם לדעת את התשובה מראש</h2>
+              <h2 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">
+                הוא מצפה מהאדם לדעת את התשובה מראש
+              </h2>
             </div>
           </div>
+
 
           <div className="mt-6 space-y-3">
             {commonSearchProblems.map((problem) => (
@@ -267,7 +277,7 @@ function VisionSection() {
             ))}
           </div>
 
-          <div className="mt-6 rounded-2xl bg-primary/10 p-5">
+          <div className="mt-6 rounded-2xl border border-primary/15 bg-primary/10 p-5">
             <p className="text-sm font-semibold text-primary">דוגמה פשוטה</p>
 
             <p className="mt-2 text-base font-medium leading-7 text-foreground">
@@ -287,22 +297,22 @@ function VisionSection() {
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="scroll-mt-6 border-b border-border bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section id="how-it-works" className="scroll-mt-24 border-b border-border bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">איך זה עובד?</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">איך זה עובד?</p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
             מהתיאור החופשי — לרשימת מטפלים רלוונטיים
           </h2>
 
-          <p className="mt-5 text-base leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
             מנוע החיפוש של טיפולינקס מבין את המשמעות של הבקשה, מזהה את הצרכים הרלוונטיים ומשווה אותם למידע המקצועי
             בפרופילי המטפלים.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-4 md:grid-cols-[1fr_auto_1.15fr_auto_1fr] md:items-stretch">
+        <div className="mt-10 grid gap-4 sm:mt-12 lg:grid-cols-[1fr_auto_1.15fr_auto_1fr] lg:items-stretch lg:gap-3">
           <SearchUserCard />
 
           <DesktopArrow />
@@ -314,16 +324,17 @@ function HowItWorksSection() {
           <MatchedTherapistCard />
         </div>
 
-        <div className="mt-10 rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
-          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <div>
-              <h3 className="text-xl font-bold text-foreground">ההתאמה אינה מבוססת על גורם אחד</h3>
+        <div className="mt-8 rounded-3xl border border-primary/15 bg-primary/5 p-5 shadow-sm sm:mt-10 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:gap-10">
+            <div className="min-w-0">
+              <h3 className="text-pretty text-lg font-bold text-foreground sm:text-xl">ההתאמה אינה מבוססת על גורם אחד</h3>
 
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              <p className="mt-3 max-w-[52ch] text-pretty text-sm leading-7 text-muted-foreground">
                 המערכת מזהה את תחומי הטיפול הרלוונטיים ומשלבת אותם עם העדפות וצרכים נוספים שהמשתמש הגדיר כדי לצמצם את
                 החיפוש.
               </p>
             </div>
+
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {matchingParameters.map((parameter) => {
@@ -332,11 +343,13 @@ function HowItWorksSection() {
                 return (
                   <div
                     key={parameter.label}
-                    className="flex min-h-24 flex-col items-center justify-center rounded-2xl border border-primary/10 bg-background p-4 text-center shadow-sm"
+                    className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-primary/10 bg-surface-elevated p-4 text-center shadow-card"
                   >
-                    <Icon className="h-5 w-5 text-primary" />
 
-                    <span className="mt-3 text-sm font-medium text-foreground">{parameter.label}</span>
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
+
+                    <span className="text-pretty text-sm font-medium leading-6 text-foreground">{parameter.label}</span>
+
                   </div>
                 );
               })}
@@ -344,10 +357,11 @@ function HowItWorksSection() {
           </div>
         </div>
 
-        <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-6 text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-[70ch] text-pretty text-center text-xs leading-6 text-muted-foreground">
           מנוע החיפוש של טיפולינקס לא מאבחן ולא מתיימר להחליף ייעוץ מקצועי. הוא מסייע למקד את החיפוש על בסיס המידע
           שהמשתמש מסר והפרטים המופיעים בפרופילי המטפלים.
         </p>
+
       </div>
     </section>
   );
@@ -355,16 +369,17 @@ function HowItWorksSection() {
 
 function SearchUserCard() {
   return (
-    <article className="rounded-3xl border border-primary/10 bg-primary/5 p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+    <article className="flex flex-col rounded-3xl border border-primary/10 bg-primary/5 p-5 shadow-card sm:p-6">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
         <UserRoundSearch className="h-6 w-6" />
       </div>
 
       <p className="mt-5 text-sm font-semibold text-primary">1. המשתמש מתאר את הקושי</p>
 
-      <h3 className="mt-1 text-xl font-bold text-foreground">כותב במילים שלו</h3>
+      <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">כותב במילים שלו</h3>
 
-      <div className="mt-5 rounded-2xl border border-primary/10 bg-background/90 p-4">
+      <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-elevated/90 p-4">
+
         <MessageCircleMore className="h-5 w-5 text-primary" />
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
@@ -378,49 +393,56 @@ function SearchUserCard() {
 
 function TipulinksEngineCard() {
   return (
-    <article className="rounded-3xl border border-primary/20 bg-primary/10 p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+    <article className="flex flex-col rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-card sm:p-6">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
         <BrainCircuit className="h-6 w-6" />
       </div>
 
       <p className="mt-5 text-sm font-semibold text-primary">2. טיפולינקס מבינה את הצורך</p>
 
-      <h3 className="mt-1 text-xl font-bold text-foreground">מתרגמת את התיאור לחיפוש מקצועי</h3>
+      <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">
+        מתרגמת את התיאור לחיפוש מקצועי
+      </h3>
 
-      <p className="mt-4 text-sm leading-7 text-muted-foreground">
+      <p className="mt-4 text-pretty text-sm leading-7 text-muted-foreground">
         המערכת מזהה מתוך התיאור את הקשיים והמאפיינים הרלוונטיים ומחפשת אותם מול המידע המקצועי שהוגדר בפרופילי המטפלים.
       </p>
+
 
       <div className="mt-5 flex flex-wrap gap-2">
         {["טיפול רגשי לילדים", "חרדה", "קשיים חברתיים", "הדרכת הורים"].map((item) => (
           <span
             key={item}
-            className="rounded-full border border-primary/15 bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground"
+            className="rounded-full border border-primary/15 bg-surface-elevated/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm"
           >
             {item}
           </span>
         ))}
       </div>
+
     </article>
   );
 }
 
 function MatchedTherapistCard() {
   return (
-    <article className="rounded-3xl border border-primary/30 bg-primary/20 p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+    <article className="flex flex-col rounded-3xl border border-primary/30 bg-primary/20 p-5 shadow-card sm:p-6">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
         <BadgeCheck className="h-6 w-6" />
       </div>
 
       <p className="mt-5 text-sm font-semibold text-primary">3. מתקבלת רשימה ממוקדת</p>
 
-      <h3 className="mt-1 text-xl font-bold text-foreground">מטפלים רלוונטיים לצורך שתואר</h3>
+      <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">
+        מטפלים רלוונטיים לצורך שתואר
+      </h3>
 
-      <p className="mt-4 text-sm leading-7 text-foreground/80">
+      <p className="mt-4 text-pretty text-sm leading-7 text-foreground/80">
         טיפולינקס בוחנת אילו פרופילים מתאימים לתחומי הטיפול ולמאפיינים שנמצאו ומציגה למשתמש רשימה רלוונטית יותר.
       </p>
 
-      <div className="mt-5 rounded-2xl border border-primary/20 bg-background/90 p-4">
+      <div className="mt-5 rounded-2xl border border-primary/20 bg-surface-elevated/90 p-4">
+
         <div className="flex items-start gap-3">
           <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
 
@@ -435,67 +457,72 @@ function MatchedTherapistCard() {
 
 function DesktopArrow() {
   return (
-    <div className="hidden items-center justify-center md:flex">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-background text-primary shadow-sm">
+    <div className="hidden items-center justify-center lg:flex">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-surface-elevated text-primary shadow-sm">
         <ArrowLeft className="h-5 w-5" />
       </div>
     </div>
   );
 }
 
+
 function TherapistBenefitsSection() {
   return (
-    <section id="therapist-benefits" className="scroll-mt-6 border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section id="therapist-benefits" className="scroll-mt-24 border-b border-border bg-brand-soft/25">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">מה יוצא לכם מזה?</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">מה יוצא לכם מזה?</p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
             יותר פניות ממטופלים בפחות כסף
           </h2>
 
-          <p className="mt-5 text-base leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[58ch] text-pretty text-base leading-8 text-muted-foreground">
             טיפולינקס עוזרת לכם להגיע למטופלים חדשים — בלי לשלם דמי מנוי קבועים
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {therapistAdvantages.map((advantage) => {
             const Icon = advantage.icon;
 
             return (
               <article
                 key={advantage.title}
-                className="group rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition hover:border-primary/20 hover:bg-brand-soft/30 hover:-translate-y-0.5 hover:shadow-md"
+                className="group flex h-full flex-col rounded-3xl border border-border bg-surface-elevated p-5 shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft sm:p-6"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary transition group-hover:bg-brand-soft">
                   <Icon className="h-6 w-6" />
                 </div>
 
-                <h3 className="mt-5 text-lg font-bold leading-7 text-foreground">{advantage.title}</h3>
+                <h3 className="mt-5 text-pretty text-base font-bold leading-7 text-foreground sm:text-lg">
+                  {advantage.title}
+                </h3>
 
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{advantage.description}</p>
+                <p className="mt-3 text-pretty text-sm leading-7 text-muted-foreground">{advantage.description}</p>
               </article>
             );
           })}
         </div>
-        <div className="mt-10 rounded-3xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
-          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div>
+
+        <div className="mt-8 rounded-3xl border border-primary/20 bg-primary/5 p-5 shadow-sm sm:mt-10 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10">
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-primary">למה זה משנה?</p>
 
-              <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+              <h3 className="mt-2 text-pretty text-xl font-bold leading-8 tracking-tight text-foreground sm:text-2xl">
                 גם מי שלא חיפש את המקצוע שלכם יכול להגיע אליכם
               </h3>
             </div>
 
-            <p className="text-sm leading-7 text-muted-foreground">
+            <p className="max-w-[68ch] text-pretty text-sm leading-7 text-muted-foreground">
               אדם שמחפש עזרה לא תמיד יודע איך נקרא המקצוע שמתאים לו. כשהפרופיל שלכם מתאר באופן מדויק במה אתם מטפלים ולמי
               אתם מסייעים, מנוע החיפוש יכול לזהות את הרלוונטיות מתוך הצורך שהמשתמש תיאר — ולא רק מתוך מילת מקצוע שחיפש
               מראש.
             </p>
           </div>
         </div>
+
       </div>
     </section>
   );
@@ -503,45 +530,47 @@ function TherapistBenefitsSection() {
 
 function ProfileManagementSection() {
   return (
-    <section id="profile-management" className="scroll-mt-6 border-b border-border bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section id="profile-management" className="scroll-mt-24 border-b border-border bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">ממשק ניהול מתקדם</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">ממשק ניהול מתקדם</p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
             כל הכלים לניהול הפרופיל במקום אחד
           </h2>
 
-          <p className="mt-5 text-base leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
             אזור אישי עם כל מה שצריך כדי לנהל, לעדכן ולעקוב אחר הפרופיל שלכם באופן עצמאי
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {profileManagementFeatures.map((feature) => {
             const Icon = feature.icon;
 
             return (
               <article
                 key={feature.title}
-                className="group rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition hover:border-primary/20 hover:bg-brand-soft/30"
+                className="group flex h-full flex-col rounded-3xl border border-border bg-surface-elevated p-5 shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft sm:p-6"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary transition group-hover:bg-primary/15">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary transition group-hover:bg-primary/15">
                   <Icon className="h-5 w-5" />
                 </div>
 
-                <h3 className="mt-5 text-lg font-bold leading-7 text-foreground">{feature.title}</h3>
+                <h3 className="mt-5 text-pretty text-base font-bold leading-7 text-foreground sm:text-lg">
+                  {feature.title}
+                </h3>
 
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{feature.description}</p>
+                <p className="mt-3 text-pretty text-sm leading-7 text-muted-foreground">{feature.description}</p>
               </article>
             );
           })}
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 rounded-3xl border border-border bg-brand-soft/40 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-          <div>
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-3xl border border-border bg-brand-soft/40 p-5 shadow-sm sm:mt-10 sm:gap-8 sm:p-8">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-primary">הפרופיל נשאר בשליטה שלכם</p>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-muted-foreground">
+            <p className="mt-2 max-w-[70ch] text-pretty text-sm leading-7 text-muted-foreground">
               אין צורך לפנות לצוות האתר בכל שינוי. תוכלו לעדכן מידע מקצועי, להתאים את דרכי הקשר, לשנות את מסגרת התקציב
               או להקפיא את הפרופיל בהתאם לצורך.
             </p>
@@ -549,6 +578,7 @@ function ProfileManagementSection() {
 
           <ShieldCheck className="hidden h-10 w-10 shrink-0 text-primary sm:block" />
         </div>
+
       </div>
     </section>
   );
@@ -556,43 +586,51 @@ function ProfileManagementSection() {
 
 function JoinSection({ registrationEnabled }: { registrationEnabled: boolean }) {
   return (
-    <section id="join" className="scroll-mt-6 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="mx-auto max-w-5xl rounded-[2rem] border border-primary/20 bg-primary/10 px-6 py-12 text-center shadow-sm sm:px-10 sm:py-16">
-        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm">
-          <Sparkles className="h-4 w-4" />
-          {registrationEnabled ? "הטבות למצטרפים חדשים" : "ההרשמה תיפתח בהמשך"}
-        </div>
+    <section id="join" className="scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-b from-brand-soft/70 via-primary/10 to-primary/15 px-5 py-10 text-center shadow-soft sm:px-10 sm:py-16">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-24 h-48 bg-[radial-gradient(50%_100%_at_50%_100%,color-mix(in_oklab,var(--brand)_18%,transparent),transparent_75%)]"
+        />
 
-        <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          תנו למטופלים למצוא אתכם
-        </h2>
+        <div className="relative">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            {registrationEnabled ? "הטבות למצטרפים חדשים" : "ההרשמה תיפתח בהמשך"}
+          </div>
 
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-          {registrationEnabled
-            ? "הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות"
-            : "בשלב זה ההרשמה למטפלים חדשים סגורה זמנית. חשבונות קיימים ממשיכים לפעול כרגיל."}
-        </p>
+          <h2 className="mx-auto mt-6 max-w-[22ch] text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
+            תנו למטופלים למצוא אתכם
+          </h2>
 
-        <div className="mt-8">
-          {registrationEnabled ? (
-            <Link
-              to={THERAPIST_SIGNUP_URL}
-              search={{ mode: "signup" as const }}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-base font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              פתיחת פרופיל מטפל בחינם
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          ) : (
-            <div className="mx-auto max-w-xl rounded-2xl border border-primary/15 bg-background/80 px-5 py-4">
-              <p className="text-sm font-semibold text-foreground">ההרשמה למטפלים חדשים אינה זמינה כרגע</p>
-              <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                ניתן יהיה לפתוח פרופיל חדש כאשר ההרשמה תופעל מחדש.
-              </p>
-            </div>
-          )}
+          <p className="mx-auto mt-5 max-w-[52ch] text-pretty text-base leading-8 text-muted-foreground">
+            {registrationEnabled
+              ? "הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות"
+              : "בשלב זה ההרשמה למטפלים חדשים סגורה זמנית. חשבונות קיימים ממשיכים לפעול כרגיל."}
+          </p>
+
+          <div className="mt-8">
+            {registrationEnabled ? (
+              <Link
+                to={THERAPIST_SIGNUP_URL}
+                search={{ mode: "signup" as const }}
+                className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-soft transition hover:bg-primary/90 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto sm:text-lg"
+              >
+                פתיחת פרופיל מטפל בחינם
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            ) : (
+              <div className="mx-auto max-w-xl rounded-2xl border border-primary/15 bg-surface-elevated/85 px-5 py-4 shadow-sm backdrop-blur">
+                <p className="text-sm font-semibold text-foreground">ההרשמה למטפלים חדשים אינה זמינה כרגע</p>
+                <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                  ניתן יהיה לפתוח פרופיל חדש כאשר ההרשמה תופעל מחדש.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
   );
 }
+
