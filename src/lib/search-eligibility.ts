@@ -29,7 +29,15 @@ export const THERAPIST_ELIGIBILITY = {
  * generated `.eq` signatures require literal-type column names, which cannot
  * be expressed generically here.
  */
-export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapists"): Q {
+export type TherapistEligibilityOptions = {
+  hideUnclaimedAfterFirstLead?: boolean;
+};
+
+export function applyEligibility<Q>(
+  builder: Q,
+  path: TherapistPath = "therapists",
+  options: TherapistEligibilityOptions = {},
+): Q {
   const prefix = path === "therapists" ? "" : "therapists.";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const b = builder as any;
@@ -38,10 +46,14 @@ export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapist
     .eq(`${prefix}profile_status`, THERAPIST_ELIGIBILITY.profileStatus)
     .in(`${prefix}visibility`, THERAPIST_ELIGIBILITY.visibilities);
   const automaticBudgetReset = `or(budget_hold_until.is.null,budget_hold_until.lte.${new Date().toISOString()})`;
-  const claimLifecycle =
-    "or(profile_origin.neq.admin_public_info," +
-    "and(owner_account_id.is.null,first_contact_reserved_at.is.null,first_contact_sent_at.is.null)," +
-    "and(owner_account_id.not.is.null,owner_reviewed_at.not.is.null))";
+  const hideUnclaimedAfterFirstLead = options.hideUnclaimedAfterFirstLead ?? true;
+  const claimLifecycle = hideUnclaimedAfterFirstLead
+    ? "or(profile_origin.neq.admin_public_info," +
+      "and(owner_account_id.is.null,first_contact_reserved_at.is.null,first_contact_sent_at.is.null)," +
+      "and(owner_account_id.not.is.null,owner_reviewed_at.not.is.null))"
+    : "or(profile_origin.neq.admin_public_info," +
+      "owner_account_id.is.null," +
+      "and(owner_account_id.not.is.null,owner_reviewed_at.not.is.null))";
   const publicAvailability = `and(${automaticBudgetReset},do_not_republish.eq.false,${claimLifecycle})`;
   return (
     path === "therapists"
@@ -50,23 +62,27 @@ export function applyEligibility<Q>(builder: Q, path: TherapistPath = "therapist
   ) as Q;
 }
 
-export function isEligibleRow(row: {
-  is_active?: boolean | null;
-  profile_status?: string | null;
-  visibility?: string | null;
-  budget_hold_until?: string | null;
-  do_not_republish?: boolean | null;
-  profile_origin?: string | null;
-  owner_account_id?: string | null;
-  first_contact_reserved_at?: string | null;
-  first_contact_sent_at?: string | null;
-  owner_reviewed_at?: string | null;
-}): boolean {
+export function isEligibleRow(
+  row: {
+    is_active?: boolean | null;
+    profile_status?: string | null;
+    visibility?: string | null;
+    budget_hold_until?: string | null;
+    do_not_republish?: boolean | null;
+    profile_origin?: string | null;
+    owner_account_id?: string | null;
+    first_contact_reserved_at?: string | null;
+    first_contact_sent_at?: string | null;
+    owner_reviewed_at?: string | null;
+  },
+  options: TherapistEligibilityOptions = {},
+): boolean {
+  const hideUnclaimedAfterFirstLead = options.hideUnclaimedAfterFirstLead ?? true;
   const claimLifecycleEligible =
     row.profile_origin !== "admin_public_info" ||
     (row.owner_account_id
       ? Boolean(row.owner_reviewed_at)
-      : !row.first_contact_reserved_at && !row.first_contact_sent_at);
+      : !hideUnclaimedAfterFirstLead || (!row.first_contact_reserved_at && !row.first_contact_sent_at));
 
   return (
     row.is_active === true &&
