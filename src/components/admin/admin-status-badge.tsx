@@ -59,6 +59,7 @@ const STATUS_TONES: Record<string, Tone> = {
   אזהרה: "pending",
   שגיאה: "negative",
   מתוכנן: "neutral",
+  "לא נבדק": "neutral",
   // admin task urgency
   דחוף: "negative",
   לבדיקה: "neutral",
