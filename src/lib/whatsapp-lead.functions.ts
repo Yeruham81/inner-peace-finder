@@ -156,15 +156,5 @@ export const createWhatsAppLead = createServerFn({ method: "POST" })
       console.error("[whatsapp-lead] message id attach failed", { leadId, code: attachErr.code });
     }
 
-    try {
-      const { sendNewLeadAccountNotification } = await import("./account-notifications.server");
-      await sendNewLeadAccountNotification(data.therapistId, leadId);
-    } catch (notificationError) {
-      console.error("[account-notification] whatsapp lead failed", {
-        leadId,
-        error: notificationError instanceof Error ? notificationError.message : "unknown_error",
-      });
-    }
-
     return { ok: true, leadId, deliveryStatus: "queued" };
   });
