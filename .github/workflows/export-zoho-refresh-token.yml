@@ -1,0 +1,57 @@
+name: Export Zoho Refresh Token
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-refresh-token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Exchange grant code
+        env:
+          ZOHO_CLIENT_ID: ${{ secrets.ZOHO_CLIENT_ID }}
+          ZOHO_CLIENT_SECRET: ${{ secrets.ZOHO_CLIENT_SECRET }}
+          ZOHO_GRANT_CODE: ${{ secrets.ZOHO_GRANT_CODE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for name in ZOHO_CLIENT_ID ZOHO_CLIENT_SECRET ZOHO_GRANT_CODE; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::$name is not configured as a GitHub Actions secret."
+              exit 1
+            fi
+          done
+
+          curl -sS \
+            -o /tmp/zoho-token.json \
+            -X POST "https://accounts.zoho.com/oauth/v2/token" \
+            --data-urlencode "client_id=${ZOHO_CLIENT_ID}" \
+            --data-urlencode "client_secret=${ZOHO_CLIENT_SECRET}" \
+            --data-urlencode "grant_type=authorization_code" \
+            --data-urlencode "code=${ZOHO_GRANT_CODE}"
+
+          refresh_token="$(jq -r '.refresh_token // empty' /tmp/zoho-token.json)"
+          if [[ -z "$refresh_token" ]]; then
+            error_name="$(jq -r '.error // "refresh_token_missing"' /tmp/zoho-token.json)"
+            echo "::error::Zoho did not issue a refresh token (${error_name}). Generate a fresh grant code and run again."
+            exit 1
+          fi
+
+          # Never print the token to the Actions log. Put it in a one-day private artifact instead.
+          printf '%s' "$refresh_token" > /tmp/ZOHO_REFRESH_TOKEN.txt
+          chmod 600 /tmp/ZOHO_REFRESH_TOKEN.txt
+          echo "Refresh token created successfully. Download the artifact from this workflow run."
+
+      - name: Upload refresh token artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zoho-refresh-token
+          path: /tmp/ZOHO_REFRESH_TOKEN.txt
+          retention-days: 1
+          if-no-files-found: error
