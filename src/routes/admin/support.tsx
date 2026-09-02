@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Mail, RefreshCw, Send } from "lucide-react";
+import { Mail, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -12,11 +12,23 @@ import { formatAdminDateTime } from "@/components/admin/admin-formatters";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  deleteAdminSupportRequest,
   getAdminSupportConversation,
   listAdminSupportRequests,
   replyAdminSupportRequest,
@@ -61,6 +73,7 @@ function AdminSupportPage() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listAdminSupportRequests);
   const conversationFn = useServerFn(getAdminSupportConversation);
+  const deleteFn = useServerFn(deleteAdminSupportRequest);
   const statusFn = useServerFn(updateAdminSupportStatus);
   const replyFn = useServerFn(replyAdminSupportRequest);
   const syncFn = useServerFn(syncAdminSupportMailbox);
@@ -152,6 +165,18 @@ function AdminSupportPage() {
       ]);
     },
     onError: (error: Error) => toast.error(error.message || "לא ניתן לשלוח את התשובה."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteFn({ data: { requestId: selected!.id } }),
+    onSuccess: async () => {
+      const deletedId = selectedId;
+      closeDrawer();
+      toast.success("הפנייה נמחקה מטיפולינקס והועברה לאשפה ב-Zoho Mail.");
+      await queryClient.invalidateQueries({ queryKey: ["admin-support-requests"] });
+      if (deletedId) queryClient.removeQueries({ queryKey: ["admin-support-conversation", deletedId] });
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן למחוק את הפנייה."),
   });
 
   function openDrawer(request: AdminSupportRequest) {
@@ -375,6 +400,36 @@ function AdminSupportPage() {
                     {statusMutation.isPending ? "שומר…" : "שמירה"}
                   </Button>
                 </div>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" size="sm" variant="destructive" disabled={deleteMutation.isPending}>
+                      <Trash2 className="h-4 w-4" />
+                      מחיקת פנייה
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent dir="rtl" className="text-right">
+                    <AlertDialogHeader className="text-right sm:text-right">
+                      <AlertDialogTitle>למחוק את הפנייה?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-right">
+                        הפנייה וכל ההתכתבות שלה יימחקו מטיפולינקס. הודעות האימייל של השיחה יועברו לאשפה ב-Zoho Mail. לא
+                        ניתן לשחזר את הפנייה מתוך טיפולינקס.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="sm:justify-start sm:space-x-0 sm:gap-2">
+                      <AlertDialogCancel disabled={deleteMutation.isPending}>ביטול</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => deleteMutation.mutate()}
+                      >
+                        {deleteMutation.isPending ? "מוחק…" : "מחיקה"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           ) : null
