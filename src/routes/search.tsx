@@ -69,7 +69,6 @@ export function unifiedResultsQuery(p: UnifiedParams) {
           lgbtqAffirming: p.lgbtqAffirming,
           freeIntro: p.freeIntro,
           excludedCriteria: [...(p.excludedCriteria ?? [])],
-          limit: 20,
         },
       }),
     staleTime: 5 * 60 * 1000,
