@@ -55,6 +55,10 @@ const STATUS_TONES: Record<string, Tone> = {
   // catalogs / integrations
   "לא פעיל": "neutral",
   "טרם חובר": "pending",
+  תקין: "positive",
+  אזהרה: "pending",
+  שגיאה: "negative",
+  מתוכנן: "neutral",
   // admin task urgency
   דחוף: "negative",
   לבדיקה: "neutral",
