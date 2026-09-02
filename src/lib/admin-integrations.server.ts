@@ -1,6 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-import { envFromRecord, loadProviderConfigFromEnv } from "./llm-provider-config";
 import { getTwilioConfig } from "./twilio-voice.server";
 import { getZohoMailboxAddress, verifyZohoMailConnection } from "./zoho-mail.server";
 import { whatsappContentSid, whatsappSender } from "./whatsapp-lead.server";
@@ -169,16 +168,11 @@ async function probeSupabase(checkedAt: string): Promise<AdminIntegrationStatus>
 
 async function probeOpenAI(checkedAt: string): Promise<AdminIntegrationStatus> {
   const checks: AdminIntegrationCheck[] = [];
-  let model: string;
-  let apiKey: string;
+  const missing = missingEnv(["OPENAI_API_KEY", "OPENAI_MODEL"]);
+  const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
+  const model = process.env.OPENAI_MODEL?.trim() ?? "";
 
-  try {
-    const config = loadProviderConfigFromEnv(envFromRecord(process.env));
-    model = config.model;
-    apiKey = config.apiKey;
-    checks.push({ label: "תצורה", state: "healthy", detail: `מודל פעיל: ${model}` });
-  } catch {
-    const missing = missingEnv(["OPENAI_API_KEY", "OPENAI_MODEL"]);
+  if (missing.length > 0 || !apiKey || !model) {
     checks.push({
       label: "תצורה",
       state: "error",
@@ -196,6 +190,8 @@ async function probeOpenAI(checkedAt: string): Promise<AdminIntegrationStatus> {
       checks,
     };
   }
+
+  checks.push({ label: "תצורה", state: "healthy", detail: `מודל פעיל: ${model}` });
 
   try {
     const response = await fetchWithTimeout(`https://api.openai.com/v1/models/${encodeURIComponent(model)}`, {
@@ -239,7 +235,11 @@ async function probeTwilio(
 
   try {
     config = getTwilioConfig();
-    checks.push({ label: "Voice configuration", state: "healthy", detail: "Account, restricted API key ומספר טלפון מוגדרים" });
+    checks.push({
+      label: "Voice configuration",
+      state: "healthy",
+      detail: "Account, restricted API key ומספר טלפון מוגדרים",
+    });
   } catch {
     const missing = missingEnv([
       "TWILIO_ACCOUNT_SID",
@@ -331,7 +331,11 @@ async function probeMetaWhatsApp(
   try {
     config = getTwilioConfig();
   } catch {
-    checks.push({ label: "Twilio credentials", state: "error", detail: "לא ניתן לבדוק את סטטוס התבנית ללא תצורת Twilio" });
+    checks.push({
+      label: "Twilio credentials",
+      state: "error",
+      detail: "לא ניתן לבדוק את סטטוס התבנית ללא תצורת Twilio",
+    });
   }
 
   if (config && contentSid) {
@@ -344,7 +348,11 @@ async function probeMetaWhatsApp(
         },
       );
       if (!response.ok) {
-        checks.push({ label: "אישור Meta", state: "error", detail: `Twilio Content API החזיר HTTP ${response.status}` });
+        checks.push({
+          label: "אישור Meta",
+          state: "error",
+          detail: `Twilio Content API החזיר HTTP ${response.status}`,
+        });
       } else {
         const approval = (await response.json().catch(() => null)) as WhatsAppApproval | null;
         const status = approval?.whatsapp?.status?.toLowerCase() || "unknown";
@@ -364,7 +372,12 @@ async function probeMetaWhatsApp(
 
   checks.push(
     operational.whatsappDeliveredAt
-      ? { label: "מסירה אחרונה", state: "healthy", detail: "נרשמה הודעת WhatsApp שנמסרה", at: operational.whatsappDeliveredAt }
+      ? {
+          label: "מסירה אחרונה",
+          state: "healthy",
+          detail: "נרשמה הודעת WhatsApp שנמסרה",
+          at: operational.whatsappDeliveredAt,
+        }
       : { label: "מסירה אחרונה", state: "warning", detail: "לא נמצאה מסירת WhatsApp מוצלחת" },
   );
 
@@ -425,7 +438,12 @@ async function probeBrevo(
 
   checks.push(
     operational.emailDeliveredAt
-      ? { label: "מסירת אימייל אחרונה", state: "healthy", detail: "נרשמה מסירת אימייל מוצלחת", at: operational.emailDeliveredAt }
+      ? {
+          label: "מסירת אימייל אחרונה",
+          state: "healthy",
+          detail: "נרשמה מסירת אימייל מוצלחת",
+          at: operational.emailDeliveredAt,
+        }
       : { label: "מסירת אימייל אחרונה", state: "warning", detail: "לא נמצאה מסירת אימייל מוצלחת" },
   );
 
@@ -453,7 +471,11 @@ async function probeZoho(checkedAt: string): Promise<AdminIntegrationStatus> {
       await withTimeout(verifyZohoMailConnection());
       checks.push({ label: "OAuth", state: "healthy", detail: "Refresh token תקף" });
       checks.push({ label: "Zoho Mail API", state: "healthy", detail: `התיבה ${getZohoMailboxAddress()} נגישה` });
-      checks.push({ label: "קריאה ו-Reply", state: "healthy", detail: "מופעלים דרך אותו חיבור OAuth; לא נשלחת הודעת בדיקה" });
+      checks.push({
+        label: "קריאה ו-Reply",
+        state: "healthy",
+        detail: "מופעלים דרך אותו חיבור OAuth; לא נשלחת הודעת בדיקה",
+      });
     } catch {
       checks.push({ label: "OAuth / Mail API", state: "error", detail: "לא ניתן לאמת את התיבה דרך Zoho Mail API" });
     }
@@ -514,7 +536,8 @@ async function probeLovable(checkedAt: string): Promise<AdminIntegrationStatus> 
   if (origin) {
     try {
       const parsed = new URL(origin);
-      originHealthy = parsed.protocol === "https:" && !parsed.username && !parsed.password && !parsed.search && !parsed.hash;
+      originHealthy =
+        parsed.protocol === "https:" && !parsed.username && !parsed.password && !parsed.search && !parsed.hash;
     } catch {
       originHealthy = false;
     }
@@ -575,7 +598,9 @@ function plannedIntegration(
   };
 }
 
-export async function getAdminIntegrationStatusesServer(input: { force?: boolean } = {}): Promise<AdminIntegrationStatus[]> {
+export async function getAdminIntegrationStatusesServer(
+  input: { force?: boolean } = {},
+): Promise<AdminIntegrationStatus[]> {
   const now = Date.now();
   if (!input.force && healthCache && healthCache.expiresAt > now) return healthCache.items;
 
@@ -593,14 +618,29 @@ export async function getAdminIntegrationStatusesServer(input: { force?: boolean
   ]);
 
   const fallbackMetadata: Array<Pick<AdminIntegrationStatus, "key" | "provider" | "description" | "uses">> = [
-    { key: "supabase", provider: "Supabase", description: "Database, Auth ו-Storage.", uses: ["Database", "Authentication", "Storage"] },
+    {
+      key: "supabase",
+      provider: "Supabase",
+      description: "Database, Auth ו-Storage.",
+      uses: ["Database", "Authentication", "Storage"],
+    },
     { key: "openai", provider: "OpenAI", description: "חיפוש סמנטי וניתוח טקסט.", uses: ["Semantic search"] },
     { key: "twilio", provider: "Twilio", description: "Voice ותשתית תקשורת.", uses: ["Voice", "WhatsApp transport"] },
-    { key: "meta-whatsapp", provider: "Meta / WhatsApp Business", description: "WABA ותבניות WhatsApp.", uses: ["Template approval"] },
+    {
+      key: "meta-whatsapp",
+      provider: "Meta / WhatsApp Business",
+      description: "WABA ותבניות WhatsApp.",
+      uses: ["Template approval"],
+    },
     { key: "brevo", provider: "Brevo", description: "אימיילים מערכתיים.", uses: ["Transactional Email"] },
     { key: "zoho", provider: "Zoho Mail", description: "תיבת פניות הצוות.", uses: ["Mail API"] },
     { key: "data-gov", provider: "data.gov.il", description: "מקור היישובים.", uses: ["Localities"] },
-    { key: "lovable", provider: "Lovable Cloud / Auth", description: "Runtime ו-OAuth.", uses: ["Cloud runtime", "OAuth"] },
+    {
+      key: "lovable",
+      provider: "Lovable Cloud / Auth",
+      description: "Runtime ו-OAuth.",
+      uses: ["Cloud runtime", "OAuth"],
+    },
   ];
 
   const items = settled.map((result, index): AdminIntegrationStatus => {
