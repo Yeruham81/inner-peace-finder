@@ -34,6 +34,7 @@ type ZohoMessageListRow = {
   fromAddress?: string;
   sender?: string;
   subject?: string;
+  receivedTime?: string | number;
   receivedtime?: string | number;
   sentDateInGMT?: string | number;
   hasAttachment?: string | number | boolean;
