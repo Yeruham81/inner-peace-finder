@@ -108,45 +108,122 @@ export type Database = {
           },
         ];
       };
+      account_support_messages: {
+        Row: {
+          body: string;
+          channel: string;
+          created_at: string;
+          direction: string;
+          has_attachment: boolean;
+          id: string;
+          occurred_at: string;
+          recipient_email: string | null;
+          request_id: string;
+          sender_email: string | null;
+          sender_name: string | null;
+          zoho_message_id: string | null;
+          zoho_thread_id: string | null;
+        };
+        Insert: {
+          body: string;
+          channel: string;
+          created_at?: string;
+          direction: string;
+          has_attachment?: boolean;
+          id?: string;
+          occurred_at?: string;
+          recipient_email?: string | null;
+          request_id: string;
+          sender_email?: string | null;
+          sender_name?: string | null;
+          zoho_message_id?: string | null;
+          zoho_thread_id?: string | null;
+        };
+        Update: {
+          body?: string;
+          channel?: string;
+          created_at?: string;
+          direction?: string;
+          has_attachment?: boolean;
+          id?: string;
+          occurred_at?: string;
+          recipient_email?: string | null;
+          request_id?: string;
+          sender_email?: string | null;
+          sender_name?: string | null;
+          zoho_message_id?: string | null;
+          zoho_thread_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "account_support_messages_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "account_support_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       account_support_requests: {
         Row: {
-          account_id: string;
+          account_id: string | null;
           category: string;
           created_at: string;
           id: string;
+          last_message_at: string;
+          last_zoho_message_id: string | null;
           message: string;
+          requester_email: string | null;
+          requester_name: string | null;
           reviewed_at: string | null;
           reviewed_by: string | null;
+          source: string;
           staff_response: string | null;
           status: string;
           subject: string;
+          ticket_code: string;
           updated_at: string;
+          zoho_thread_id: string | null;
         };
         Insert: {
-          account_id: string;
+          account_id?: string | null;
           category: string;
           created_at?: string;
           id?: string;
+          last_message_at?: string;
+          last_zoho_message_id?: string | null;
           message: string;
+          requester_email?: string | null;
+          requester_name?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
+          source?: string;
           staff_response?: string | null;
           status?: string;
           subject: string;
+          ticket_code?: string;
           updated_at?: string;
+          zoho_thread_id?: string | null;
         };
         Update: {
-          account_id?: string;
+          account_id?: string | null;
           category?: string;
           created_at?: string;
           id?: string;
+          last_message_at?: string;
+          last_zoho_message_id?: string | null;
           message?: string;
+          requester_email?: string | null;
+          requester_name?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
+          source?: string;
           staff_response?: string | null;
           status?: string;
           subject?: string;
+          ticket_code?: string;
           updated_at?: string;
+          zoho_thread_id?: string | null;
         };
         Relationships: [
           {
@@ -2732,6 +2809,7 @@ export type Database = {
       get_my_account_leads: { Args: { _limit?: number }; Returns: Json };
       get_my_billing_transactions: { Args: { _limit?: number }; Returns: Json };
       get_my_monthly_budget: { Args: never; Returns: Json };
+      get_my_account_update_notification_preference: { Args: never; Returns: boolean };
       get_my_notification_preferences: {
         Args: never;
         Returns: {
@@ -2994,6 +3072,10 @@ export type Database = {
           _workflow_status: string;
         };
         Returns: Json;
+      };
+      update_my_account_update_notification_preference: {
+        Args: { _notify_account_updates: boolean };
+        Returns: boolean;
       };
       update_my_notification_preferences: {
         Args: { _notify_account_updates: boolean; _notify_new_leads: boolean };
