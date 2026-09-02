@@ -23,11 +23,7 @@ import {
 } from "./canonical-semantic-evidence";
 import { classifySemanticRemainder, type LlmLogger } from "./llm-classify-service";
 import { createOpenAiTransport, type LlmTransport } from "./llm-gateway-transport";
-import {
-  loadProviderConfigFromEnv,
-  type LlmProviderConfig,
-  type ServerEnv,
-} from "./llm-provider-config";
+import { loadProviderConfigFromEnv, type LlmProviderConfig, type ServerEnv } from "./llm-provider-config";
 import { toSemanticSignals } from "./llm-semantic-contract";
 import { SemanticEngine, type CanonicalProblemEntry } from "./semantic-engine";
 import type { SemanticSignal } from "./query-interpreter.types";
@@ -47,6 +43,8 @@ export type UnifiedSemanticClassifierDeps = {
   transport?: LlmTransport;
   logger?: LlmLogger;
   fallbackClassify?: (input: string) => Promise<SemanticSignal[]>;
+  llmEnabled?: boolean;
+  fallbackEnabled?: boolean;
 };
 
 function processEnv(): ServerEnv {
@@ -91,6 +89,21 @@ export async function classifyUnifiedSemanticRemainder(
     return { signals: exactSignals, source: "deterministic_exact", fallbackUsed: false };
   }
 
+  const fallbackEnabled = deps.fallbackEnabled !== false;
+  if (deps.llmEnabled === false) {
+    if (!fallbackEnabled) {
+      return { signals: exactSignals, source: "deterministic_exact", fallbackUsed: false };
+    }
+    const fallback = deps.fallbackClassify
+      ? await deps.fallbackClassify(semanticRemainder)
+      : await SemanticEngine.classify(semanticRemainder, sb);
+    return {
+      signals: mergeAuthoritativeSemanticSignals(exactSignals, canonicalOnly(fallback, catalog)),
+      source: "deterministic_fallback",
+      fallbackUsed: true,
+    };
+  }
+
   try {
     const config = deps.config ?? loadProviderConfigFromEnv(deps.env ?? processEnv());
     const transport = deps.transport ?? createOpenAiTransport();
@@ -110,6 +123,9 @@ export async function classifyUnifiedSemanticRemainder(
       fallbackUsed: false,
     };
   } catch {
+    if (!fallbackEnabled) {
+      return { signals: exactSignals, source: "deterministic_exact", fallbackUsed: false };
+    }
     // TEMPORARY migration bridge. This is intentionally the only normal-search
     // route that may still depend on problem_intents via SemanticEngine.classify.
     const fallback = deps.fallbackClassify
