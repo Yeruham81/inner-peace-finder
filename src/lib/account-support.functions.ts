@@ -37,7 +37,7 @@ export const getMySupportRequests = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase.rpc("get_my_support_requests");
     if (error) throw new Error(error.message);
     if (!Array.isArray(data)) return [];
-    return data.slice(0, 10).map((value) => {
+    return data.slice(0, 5).map((value) => {
       const row = value as Record<string, unknown>;
       const category: MySupportRequest["category"] =
         row.category === "complaint" || row.category === "suggestion" || row.category === "other"
