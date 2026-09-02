@@ -328,10 +328,10 @@ export function WhatsAppLeadModal({
               <textarea
                 id="wa-lead-msg"
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => setMessage(e.target.value.slice(0, maxMessageLength))}
                 rows={4}
                 minLength={WHATSAPP_LEAD_MESSAGE_MIN_LENGTH}
-                maxLength={maxMessageLength}
+                maxLength={WHATSAPP_LEAD_MESSAGE_MAX_LENGTH}
                 required
                 aria-describedby="wa-lead-msg-limit"
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-brand focus:outline-none"
