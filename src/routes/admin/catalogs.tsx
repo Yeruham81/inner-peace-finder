@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 
 import { AdminDataTable, type AdminColumn } from "@/components/admin/admin-data-table";
-import { formatAdminDate } from "@/components/admin/admin-formatters";
-import { MOCK_CATALOGS, type MockCatalogItem } from "@/components/admin/admin-mock-data";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { listAdminCatalogs, type AdminCatalog, type AdminCatalogItem } from "@/lib/admin-catalogs.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/catalogs")({
@@ -16,112 +15,108 @@ export const Route = createFileRoute("/admin/catalogs")({
     meta: [
       { title: "קטלוגים | ניהול טיפולינקס" },
       { name: "robots", content: "noindex" },
-      { name: "description", content: "מבנה ניהול הקטלוגים של המערכת" },
+      { name: "description", content: "צפייה בקטלוגים של המערכת" },
     ],
   }),
   component: CatalogsPage,
 });
 
-type LocalItems = Record<string, MockCatalogItem[]>;
+const columns: AdminColumn<AdminCatalogItem>[] = [
+  { key: "name", header: "שם", render: (row) => <span className="font-medium">{row.name}</span> },
+  {
+    key: "slug",
+    header: "slug / קוד",
+    render: (row) => (
+      <span dir="ltr" className="text-xs text-muted-foreground">
+        {row.slug}
+      </span>
+    ),
+  },
+  {
+    key: "status",
+    header: "סטטוס",
+    render: (row) => <AdminStatusBadge status={row.active ? "פעיל" : "לא פעיל"} />,
+  },
+  { key: "order", header: "סדר תצוגה", hideOnNarrow: true, render: (row) => row.order },
+];
 
 function CatalogsPage() {
-  const [items, setItems] = useState<LocalItems>(() =>
-    Object.fromEntries(MOCK_CATALOGS.map((catalog) => [catalog.key, catalog.items])),
-  );
-
-  function toggleItem(catalogKey: string, slug: string) {
-    setItems((current) => ({
-      ...current,
-      [catalogKey]: (current[catalogKey] ?? []).map((item) =>
-        item.slug === slug ? { ...item, active: !item.active } : item,
-      ),
-    }));
-  }
-
-  const columns = (catalogKey: string): AdminColumn<MockCatalogItem>[] => [
-    { key: "name", header: "שם", render: (row) => <span className="font-medium">{row.name}</span> },
-    {
-      key: "slug",
-      header: "slug",
-      render: (row) => (
-        <span dir="ltr" className="text-xs text-muted-foreground">
-          {row.slug}
-        </span>
-      ),
-    },
-    { key: "status", header: "סטטוס", render: (row) => <AdminStatusBadge status={row.active ? "פעיל" : "לא פעיל"} /> },
-    { key: "order", header: "סדר תצוגה", hideOnNarrow: true, render: (row) => row.order },
-    {
-      key: "actions",
-      header: "פעולות",
-      render: (row) => (
-        <div className="flex justify-end gap-1.5">
-          <Button variant="outline" size="sm" disabled>
-            עריכה
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => toggleItem(catalogKey, row.slug)}>
-            {row.active ? "השבתה" : "הפעלה"}
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const listFn = useServerFn(listAdminCatalogs);
+  const catalogs = useQuery({ queryKey: ["admin-catalogs"], queryFn: () => listFn() });
+  const rows = catalogs.data ?? [];
 
   return (
     <div>
       <AdminPageHeader
         title="קטלוגים"
-        subtitle="מבנה ניהול הקטלוגים (נתוני הדגמה — הקטלוגים האמיתיים אינם משתנים)"
+        subtitle={catalogs.isLoading ? "טוען קטלוגים…" : "צפייה בנתוני הקטלוגים האמיתיים של המערכת"}
         breadcrumb="קטלוגים"
       />
 
+      {catalogs.isError ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          לא ניתן לטעון את הקטלוגים.
+        </div>
+      ) : null}
+
       <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {MOCK_CATALOGS.map((catalog) => (
-          <Card key={catalog.key} className="shadow-card">
-            <CardContent className="p-4">
-              <p className="text-sm font-semibold text-foreground">{catalog.label}</p>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                <Stat label="פריטים" value={catalog.total} />
-                <Stat label="פעילים" value={catalog.active} />
-                <Stat label="לא פעילים" value={catalog.inactive} />
-              </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                עדכון אחרון: <span dir="ltr">{formatAdminDate(catalog.updatedAt)}</span>
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {rows.map((catalog) => {
+          const active = catalog.items.filter((item) => item.active).length;
+          const inactive = catalog.items.length - active;
+          return (
+            <Card key={catalog.key} className="shadow-card">
+              <CardContent className="p-4">
+                <p className="text-sm font-semibold text-foreground">{catalog.label}</p>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                  <Stat label="פריטים" value={catalog.items.length} />
+                  <Stat label="פעילים" value={active} />
+                  <Stat label="לא פעילים" value={inactive} />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      <Tabs defaultValue={MOCK_CATALOGS[0]!.key} dir="rtl">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-            {MOCK_CATALOGS.map((catalog) => (
-              <TabsTrigger key={catalog.key} value={catalog.key} className="text-xs">
-                {catalog.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          <Button size="sm" disabled>
-            הוספת פריט
-          </Button>
-        </div>
+      {rows.length > 0 ? (
+        <Tabs defaultValue={rows[0]!.key} dir="rtl">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <TabsList className="flex h-auto flex-wrap justify-start gap-1">
+              {rows.map((catalog) => (
+                <TabsTrigger key={catalog.key} value={catalog.key} className="text-xs">
+                  {catalog.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <span className="text-xs text-muted-foreground">מצב צפייה בלבד</span>
+          </div>
 
-        {MOCK_CATALOGS.map((catalog) => (
-          <TabsContent key={catalog.key} value={catalog.key}>
-            <AdminDataTable
-              columns={columns(catalog.key)}
-              rows={items[catalog.key] ?? []}
-              getRowId={(row) => row.slug}
-              emptyTitle="אין פריטים להצגה"
-            />
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              רשימת דוגמה בלבד. חיבור לקטלוגים האמיתיים יתבצע בשלב הבא.
-            </p>
-          </TabsContent>
-        ))}
-      </Tabs>
+          {rows.map((catalog) => (
+            <CatalogTab key={catalog.key} catalog={catalog} />
+          ))}
+        </Tabs>
+      ) : catalogs.isLoading ? null : (
+        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
+          אין קטלוגים להצגה.
+        </div>
+      )}
     </div>
+  );
+}
+
+function CatalogTab({ catalog }: { catalog: AdminCatalog }) {
+  return (
+    <TabsContent value={catalog.key}>
+      <AdminDataTable
+        columns={columns}
+        rows={catalog.items}
+        getRowId={(row) => row.slug}
+        emptyTitle="אין פריטים להצגה"
+      />
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        הנתונים מוצגים ממקור האמת של המערכת. בשלב זה אין אפשרות לבצע שינויים דרך מסך האדמין.
+      </p>
+    </TabsContent>
   );
 }
 
