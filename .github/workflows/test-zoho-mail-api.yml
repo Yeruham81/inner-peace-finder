@@ -1,0 +1,280 @@
+name: Test Zoho Mail API
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_reply:
+        description: "Also send a real reply to a test email"
+        required: true
+        default: false
+        type: boolean
+      test_sender_email:
+        description: "Sender address of the test email (required only when test_reply=true)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  zoho-mail-api-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      ZOHO_ACCOUNTS_BASE: https://accounts.zoho.com
+      ZOHO_MAIL_BASE: https://mail.zoho.com
+      ZOHO_MAIL_ADDRESS: admin@tipulinks.co.il
+
+    steps:
+      - name: Check required secrets
+        env:
+          ZOHO_CLIENT_ID: ${{ secrets.ZOHO_CLIENT_ID }}
+          ZOHO_CLIENT_SECRET: ${{ secrets.ZOHO_CLIENT_SECRET }}
+          ZOHO_GRANT_CODE: ${{ secrets.ZOHO_GRANT_CODE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for name in ZOHO_CLIENT_ID ZOHO_CLIENT_SECRET ZOHO_GRANT_CODE; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::$name is not configured as a GitHub Actions secret."
+              missing=1
+            fi
+          done
+
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
+          echo "Secrets: OK"
+
+      - name: Exchange authorization code for OAuth tokens
+        env:
+          ZOHO_CLIENT_ID: ${{ secrets.ZOHO_CLIENT_ID }}
+          ZOHO_CLIENT_SECRET: ${{ secrets.ZOHO_CLIENT_SECRET }}
+          ZOHO_GRANT_CODE: ${{ secrets.ZOHO_GRANT_CODE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          http_code="$(
+            curl -sS \
+              -o /tmp/zoho-token.json \
+              -w "%{http_code}" \
+              -X POST "${ZOHO_ACCOUNTS_BASE}/oauth/v2/token" \
+              --data-urlencode "client_id=${ZOHO_CLIENT_ID}" \
+              --data-urlencode "client_secret=${ZOHO_CLIENT_SECRET}" \
+              --data-urlencode "grant_type=authorization_code" \
+              --data-urlencode "code=${ZOHO_GRANT_CODE}"
+          )"
+
+          access_token="$(jq -r '.access_token // empty' /tmp/zoho-token.json)"
+          refresh_token="$(jq -r '.refresh_token // empty' /tmp/zoho-token.json)"
+
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 || -z "$access_token" ]]; then
+            error_name="$(jq -r '.error // .errorCode // "unknown_error"' /tmp/zoho-token.json)"
+            echo "::error::OAuth: FAILED (${error_name}, HTTP ${http_code})"
+            exit 1
+          fi
+
+          echo "::add-mask::$access_token"
+          if [[ -n "$refresh_token" ]]; then
+            echo "::add-mask::$refresh_token"
+            echo "Refresh token issued: YES"
+          else
+            echo "Refresh token issued: NO"
+          fi
+
+          {
+            echo "ZOHO_ACCESS_TOKEN=$access_token"
+          } >> "$GITHUB_ENV"
+
+          echo "OAuth: OK"
+
+      - name: Test Accounts API
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          http_code="$(
+            curl -sS \
+              -o /tmp/zoho-accounts.json \
+              -w "%{http_code}" \
+              -H "Accept: application/json" \
+              -H "Authorization: Zoho-oauthtoken ${ZOHO_ACCESS_TOKEN}" \
+              "${ZOHO_MAIL_BASE}/api/accounts"
+          )"
+
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+            description="$(jq -r '.status.description // .message // "request_failed"' /tmp/zoho-accounts.json 2>/dev/null || true)"
+            echo "::error::Accounts API: FAILED (${description}, HTTP ${http_code})"
+            exit 1
+          fi
+
+          account_id="$(
+            jq -r --arg address "$ZOHO_MAIL_ADDRESS" '
+              .data[]
+              | select(
+                  .primaryEmailAddress == $address
+                  or .mailboxAddress == $address
+                  or ([.emailAddress[]?.mailId] | index($address))
+                )
+              | .accountId
+            ' /tmp/zoho-accounts.json | head -n 1
+          )"
+
+          if [[ -z "$account_id" || "$account_id" == "null" ]]; then
+            echo "::error::Accounts API worked, but ${ZOHO_MAIL_ADDRESS} was not found in the authenticated Zoho account."
+            exit 1
+          fi
+
+          echo "ZOHO_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
+          echo "Accounts API: OK"
+          echo "Target mailbox found: YES"
+
+      - name: Test Messages READ API
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          http_code="$(
+            curl -sS \
+              -o /tmp/zoho-messages.json \
+              -w "%{http_code}" \
+              -H "Accept: application/json" \
+              -H "Authorization: Zoho-oauthtoken ${ZOHO_ACCESS_TOKEN}" \
+              "${ZOHO_MAIL_BASE}/api/accounts/${ZOHO_ACCOUNT_ID}/messages/view?start=1&limit=1&status=all"
+          )"
+
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+            description="$(jq -r '.status.description // .message // "request_failed"' /tmp/zoho-messages.json 2>/dev/null || true)"
+            echo "::error::Messages READ: FAILED (${description}, HTTP ${http_code})"
+            exit 1
+          fi
+
+          echo "Messages list READ: OK"
+
+          message_id="$(jq -r '.data[0].messageId // empty' /tmp/zoho-messages.json)"
+          folder_id="$(jq -r '.data[0].folderId // empty' /tmp/zoho-messages.json)"
+
+          if [[ -z "$message_id" || -z "$folder_id" ]]; then
+            echo "Message content READ: SKIPPED (mailbox returned no message to inspect)"
+            exit 0
+          fi
+
+          content_http="$(
+            curl -sS \
+              -o /tmp/zoho-message-content.json \
+              -w "%{http_code}" \
+              -H "Accept: application/json" \
+              -H "Authorization: Zoho-oauthtoken ${ZOHO_ACCESS_TOKEN}" \
+              "${ZOHO_MAIL_BASE}/api/accounts/${ZOHO_ACCOUNT_ID}/folders/${folder_id}/messages/${message_id}/content"
+          )"
+
+          if [[ "$content_http" -lt 200 || "$content_http" -ge 300 ]]; then
+            description="$(jq -r '.status.description // .message // "request_failed"' /tmp/zoho-message-content.json 2>/dev/null || true)"
+            echo "::error::Message content READ: FAILED (${description}, HTTP ${content_http})"
+            exit 1
+          fi
+
+          echo "Message content READ: OK"
+
+      - name: Optional real Reply test
+        if: ${{ inputs.test_reply }}
+        env:
+          TEST_SENDER_EMAIL: ${{ inputs.test_sender_email }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${TEST_SENDER_EMAIL:-}" ]]; then
+            echo "::error::test_sender_email is required when test_reply=true."
+            exit 1
+          fi
+
+          now_ms="$(date +%s%3N)"
+          search_key="sender:${TEST_SENDER_EMAIL}"
+
+          search_http="$(
+            curl -sS \
+              -o /tmp/zoho-reply-target.json \
+              -w "%{http_code}" \
+              -G \
+              -H "Accept: application/json" \
+              -H "Authorization: Zoho-oauthtoken ${ZOHO_ACCESS_TOKEN}" \
+              --data-urlencode "searchKey=${search_key}" \
+              --data-urlencode "receivedTime=${now_ms}" \
+              --data-urlencode "start=1" \
+              --data-urlencode "limit=1" \
+              "${ZOHO_MAIL_BASE}/api/accounts/${ZOHO_ACCOUNT_ID}/messages/search"
+          )"
+
+          if [[ "$search_http" -lt 200 || "$search_http" -ge 300 ]]; then
+            description="$(jq -r '.status.description // .message // "request_failed"' /tmp/zoho-reply-target.json 2>/dev/null || true)"
+            echo "::error::Reply target search: FAILED (${description}, HTTP ${search_http})"
+            exit 1
+          fi
+
+          message_id="$(jq -r '.data[0].messageId // empty' /tmp/zoho-reply-target.json)"
+          recipient="$(jq -r '.data[0].fromAddress // empty' /tmp/zoho-reply-target.json)"
+          original_subject="$(jq -r '.data[0].subject // "Zoho API test"' /tmp/zoho-reply-target.json)"
+
+          if [[ -z "$message_id" || -z "$recipient" ]]; then
+            echo "::error::No email from ${TEST_SENDER_EMAIL} was found. Send a fresh test email to ${ZOHO_MAIL_ADDRESS} and run the workflow again with a new grant code."
+            exit 1
+          fi
+
+          payload="$(
+            jq -n \
+              --arg from "$ZOHO_MAIL_ADDRESS" \
+              --arg to "$recipient" \
+              --arg subject "Re: $original_subject" \
+              --arg content "בדיקת Zoho Mail API של Tipulinks. אם קיבלת הודעה זו, פעולת Reply דרך ה-API עובדת." \
+              '{
+                fromAddress: $from,
+                toAddress: $to,
+                subject: $subject,
+                content: $content,
+                mailFormat: "plaintext",
+                action: "reply"
+              }'
+          )"
+
+          reply_http="$(
+            curl -sS \
+              -o /tmp/zoho-reply-result.json \
+              -w "%{http_code}" \
+              -X POST \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Zoho-oauthtoken ${ZOHO_ACCESS_TOKEN}" \
+              --data "$payload" \
+              "${ZOHO_MAIL_BASE}/api/accounts/${ZOHO_ACCOUNT_ID}/messages/${message_id}"
+          )"
+
+          if [[ "$reply_http" -lt 200 || "$reply_http" -ge 300 ]]; then
+            description="$(jq -r '.status.description // .message // "request_failed"' /tmp/zoho-reply-result.json 2>/dev/null || true)"
+            echo "::error::Messages CREATE / Reply: FAILED (${description}, HTTP ${reply_http})"
+            exit 1
+          fi
+
+          echo "Messages CREATE / Reply: OK"
+          echo "A real reply was sent to the test sender."
+
+      - name: Summary
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          echo "========================================"
+          echo "Zoho Mail API test completed successfully"
+          echo "OAuth: OK"
+          echo "Accounts API: OK"
+          echo "Messages READ: OK"
+          if [[ "${{ inputs.test_reply }}" == "true" ]]; then
+            echo "Messages CREATE / Reply: OK"
+          else
+            echo "Messages CREATE / Reply: NOT TESTED"
+          fi
+          echo "========================================"
