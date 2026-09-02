@@ -34,6 +34,33 @@ function firstJoin<T>(value: unknown): T {
   return (Array.isArray(value) ? value[0] : (value ?? {})) as T;
 }
 
+async function cleanupVerifiedCredentialDocument(credentialId: string, documentPath: string): Promise<boolean> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error: removeError } = await supabaseAdmin.storage.from("therapist-credentials").remove([documentPath]);
+  if (removeError) {
+    console.error("[credential-review] verified document cleanup failed", {
+      credentialId,
+      error: removeError.message,
+    });
+    return false;
+  }
+
+  const { error: clearError } = await supabaseAdmin
+    .from("therapist_credentials")
+    .update({ document_url: null })
+    .eq("id", credentialId)
+    .eq("verification_status", "verified")
+    .eq("document_url", documentPath);
+  if (clearError) {
+    console.error("[credential-review] verified document reference cleanup failed", {
+      credentialId,
+      error: clearError.message,
+    });
+    return false;
+  }
+  return true;
+}
+
 export const listAdminCredentials = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AdminCredentialRow[]> => {
@@ -46,6 +73,16 @@ export const listAdminCredentials = createServerFn({ method: "GET" })
       )
       .order("submitted_at", { ascending: false, nullsFirst: false });
     if (error) throw new Error(error.message);
+
+    // Retry privacy cleanup for any previously verified credential whose
+    // storage deletion failed transiently. Verified documents are never
+    // exposed by this endpoint while the cleanup is pending.
+    const verifiedDocumentsPendingCleanup = (data ?? []).filter(
+      (row) => row.verification_status === "verified" && Boolean(row.document_url),
+    );
+    await Promise.all(
+      verifiedDocumentsPendingCleanup.map((row) => cleanupVerifiedCredentialDocument(row.id, row.document_url!)),
+    );
 
     return (data ?? []).map((raw) => {
       const row = raw as typeof raw & { therapists?: unknown; professions?: unknown };
@@ -66,7 +103,7 @@ export const listAdminCredentials = createServerFn({ method: "GET" })
         rejectionReason: row.rejection_reason,
         submittedAt: row.submitted_at,
         reviewedAt: row.reviewed_at,
-        documentAvailable: Boolean(row.document_url),
+        documentAvailable: row.verification_status !== "verified" && Boolean(row.document_url),
       };
     });
   });
@@ -81,10 +118,13 @@ export const getAdminCredentialDocumentUrl = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: credential, error } = await supabaseAdmin
       .from("therapist_credentials")
-      .select("document_url")
+      .select("document_url, verification_status")
       .eq("id", data.credentialId)
       .maybeSingle();
     if (error) throw new Error(error.message);
+    if (credential?.verification_status === "verified") {
+      throw new Error("מסמך של הסמכה שכבר אומתה אינו זמין לצפייה.");
+    }
     if (!credential?.document_url) throw new Error("לא צורף מסמך להסמכה.");
 
     const { data: signed, error: signedError } = await supabaseAdmin.storage
@@ -119,7 +159,7 @@ export const reviewAdminCredential = createServerFn({ method: "POST" })
     const { data: current, error: currentError } = await supabaseAdmin
       .from("therapist_credentials")
       .select(
-        "id, credential_type, verification_status, therapists:therapist_id(full_name, owner_account_id)",
+        "id, credential_type, document_url, verification_status, therapists:therapist_id(full_name, owner_account_id)",
       )
       .eq("id", data.credentialId)
       .maybeSingle();
@@ -129,7 +169,12 @@ export const reviewAdminCredential = createServerFn({ method: "POST" })
     }
 
     const approved = data.decision === "approve";
+    if (approved && !current.document_url) {
+      throw new Error("לא ניתן לאשר הסמכה ללא מסמך מצורף.");
+    }
+
     const now = new Date().toISOString();
+    const documentPath = current.document_url;
     const { data: updated, error } = await supabaseAdmin
       .from("therapist_credentials")
       .update({
@@ -147,9 +192,16 @@ export const reviewAdminCredential = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!updated) throw new Error("הבקשה כבר טופלה על ידי מנהל אחר.");
 
-    const therapist = firstJoin<JoinedTherapist>(
-      (current as typeof current & { therapists?: unknown }).therapists,
-    );
+    // The status update above wins the pending-review race first. Only after
+    // approval is committed do we delete the evidence object, so a concurrent
+    // rejection can never lose its document. The path is cleared only after a
+    // successful storage deletion; if storage fails transiently, the next admin
+    // list load retries the cleanup while verified documents remain inaccessible.
+    if (approved && documentPath) {
+      await cleanupVerifiedCredentialDocument(current.id, documentPath);
+    }
+
+    const therapist = firstJoin<JoinedTherapist>((current as typeof current & { therapists?: unknown }).therapists);
     if (therapist.owner_account_id) {
       try {
         const { sendCredentialStatusNotification } = await import("./account-notifications.server");
