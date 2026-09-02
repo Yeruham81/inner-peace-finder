@@ -20,7 +20,11 @@ export const Route = createFileRoute("/api/public/email/recruitment-status")({
 
         const events = Array.isArray(body) ? body : [body];
         try {
-          for (const event of events) await applyRecruitmentBrevoWebhook(event);
+          for (const event of events) {
+            const { applyBroadcastBrevoWebhook } = await import("@/lib/admin-broadcast.server");
+            if (await applyBroadcastBrevoWebhook(event)) continue;
+            await applyRecruitmentBrevoWebhook(event);
+          }
         } catch (error) {
           console.error("[recruitment] Brevo webhook failed", {
             error: error instanceof Error ? error.message : "unknown",
