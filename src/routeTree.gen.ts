@@ -33,6 +33,7 @@ import { Route as AdminIntegrationsRouteImport } from './routes/admin/integratio
 import { Route as AdminCredentialsRouteImport } from './routes/admin/credentials'
 import { Route as AdminClaimsRouteImport } from './routes/admin/claims'
 import { Route as AdminCatalogsRouteImport } from './routes/admin/catalogs'
+import { Route as AdminBroadcastsRouteImport } from './routes/admin/broadcasts'
 import { Route as AdminBillingRouteImport } from './routes/admin/billing'
 import { Route as AuthenticatedNewProfileRouteImport } from './routes/_authenticated/new-profile'
 import { Route as AuthenticatedClaimRouteImport } from './routes/_authenticated/claim'
@@ -170,6 +171,11 @@ const AdminCatalogsRoute = AdminCatalogsRouteImport.update({
   path: '/catalogs',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminBroadcastsRoute = AdminBroadcastsRouteImport.update({
+  id: '/broadcasts',
+  path: '/broadcasts',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminBillingRoute = AdminBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/claim': typeof AuthenticatedClaimRoute
   '/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
+  '/admin/broadcasts': typeof AdminBroadcastsRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
   '/admin/credentials': typeof AdminCredentialsRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/claim': typeof AuthenticatedClaimRoute
   '/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
+  '/admin/broadcasts': typeof AdminBroadcastsRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
   '/admin/credentials': typeof AdminCredentialsRoute
@@ -368,6 +376,7 @@ export interface FileRoutesById {
   '/_authenticated/claim': typeof AuthenticatedClaimRoute
   '/_authenticated/new-profile': typeof AuthenticatedNewProfileRoute
   '/admin/billing': typeof AdminBillingRoute
+  '/admin/broadcasts': typeof AdminBroadcastsRoute
   '/admin/catalogs': typeof AdminCatalogsRoute
   '/admin/claims': typeof AdminClaimsRoute
   '/admin/credentials': typeof AdminCredentialsRoute
@@ -412,6 +421,7 @@ export interface FileRouteTypes {
     | '/claim'
     | '/new-profile'
     | '/admin/billing'
+    | '/admin/broadcasts'
     | '/admin/catalogs'
     | '/admin/claims'
     | '/admin/credentials'
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/claim'
     | '/new-profile'
     | '/admin/billing'
+    | '/admin/broadcasts'
     | '/admin/catalogs'
     | '/admin/claims'
     | '/admin/credentials'
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/_authenticated/claim'
     | '/_authenticated/new-profile'
     | '/admin/billing'
+    | '/admin/broadcasts'
     | '/admin/catalogs'
     | '/admin/claims'
     | '/admin/credentials'
@@ -716,6 +728,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCatalogsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/broadcasts': {
+      id: '/admin/broadcasts'
+      path: '/broadcasts'
+      fullPath: '/admin/broadcasts'
+      preLoaderRoute: typeof AdminBroadcastsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/billing': {
       id: '/admin/billing'
       path: '/billing'
@@ -876,6 +895,7 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AdminRouteRouteChildren {
   AdminBillingRoute: typeof AdminBillingRoute
+  AdminBroadcastsRoute: typeof AdminBroadcastsRoute
   AdminCatalogsRoute: typeof AdminCatalogsRoute
   AdminClaimsRoute: typeof AdminClaimsRoute
   AdminCredentialsRoute: typeof AdminCredentialsRoute
@@ -890,6 +910,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminBillingRoute: AdminBillingRoute,
+  AdminBroadcastsRoute: AdminBroadcastsRoute,
   AdminCatalogsRoute: AdminCatalogsRoute,
   AdminClaimsRoute: AdminClaimsRoute,
   AdminCredentialsRoute: AdminCredentialsRoute,

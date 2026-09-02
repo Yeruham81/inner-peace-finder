@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   MessageSquare,
   MailPlus,
+  Megaphone,
   Plug,
   Settings,
   UserRoundCheck,
@@ -31,5 +32,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { to: "/admin/catalogs", label: "קטלוגים", icon: Library },
   { to: "/admin/integrations", label: "אינטגרציות", icon: Plug },
   { to: "/admin/billing", label: "חיובים", icon: CreditCard },
+  { to: "/admin/broadcasts", label: "הודעות ועדכונים", icon: Megaphone },
   { to: "/admin/settings", label: "הגדרות מערכת", icon: Settings },
 ];
