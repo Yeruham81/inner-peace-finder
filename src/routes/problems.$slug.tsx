@@ -18,7 +18,7 @@ function problemQuery(slug: string) {
 function problemTherapistsQuery(slug: string) {
   return queryOptions({
     queryKey: ["unified-problem-therapists", slug],
-    queryFn: () => searchProblemResults({ data: { problemSlug: slug, limit: 20 } }),
+    queryFn: () => searchProblemResults({ data: { problemSlug: slug } }),
   });
 }
 
