@@ -586,43 +586,51 @@ function ProfileManagementSection() {
 
 function JoinSection({ registrationEnabled }: { registrationEnabled: boolean }) {
   return (
-    <section id="join" className="scroll-mt-6 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="mx-auto max-w-5xl rounded-[2rem] border border-primary/20 bg-primary/10 px-6 py-12 text-center shadow-sm sm:px-10 sm:py-16">
-        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm">
-          <Sparkles className="h-4 w-4" />
-          {registrationEnabled ? "הטבות למצטרפים חדשים" : "ההרשמה תיפתח בהמשך"}
-        </div>
+    <section id="join" className="scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-b from-brand-soft/70 via-primary/10 to-primary/15 px-5 py-10 text-center shadow-soft sm:px-10 sm:py-16">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-24 h-48 bg-[radial-gradient(50%_100%_at_50%_100%,color-mix(in_oklab,var(--brand)_18%,transparent),transparent_75%)]"
+        />
 
-        <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          תנו למטופלים למצוא אתכם
-        </h2>
+        <div className="relative">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            {registrationEnabled ? "הטבות למצטרפים חדשים" : "ההרשמה תיפתח בהמשך"}
+          </div>
 
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-          {registrationEnabled
-            ? "הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות"
-            : "בשלב זה ההרשמה למטפלים חדשים סגורה זמנית. חשבונות קיימים ממשיכים לפעול כרגיל."}
-        </p>
+          <h2 className="mx-auto mt-6 max-w-[22ch] text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
+            תנו למטופלים למצוא אתכם
+          </h2>
 
-        <div className="mt-8">
-          {registrationEnabled ? (
-            <Link
-              to={THERAPIST_SIGNUP_URL}
-              search={{ mode: "signup" as const }}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-base font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              פתיחת פרופיל מטפל בחינם
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          ) : (
-            <div className="mx-auto max-w-xl rounded-2xl border border-primary/15 bg-background/80 px-5 py-4">
-              <p className="text-sm font-semibold text-foreground">ההרשמה למטפלים חדשים אינה זמינה כרגע</p>
-              <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                ניתן יהיה לפתוח פרופיל חדש כאשר ההרשמה תופעל מחדש.
-              </p>
-            </div>
-          )}
+          <p className="mx-auto mt-5 max-w-[52ch] text-pretty text-base leading-8 text-muted-foreground">
+            {registrationEnabled
+              ? "הצטרפו לטיפולינקס והתחילו לקבל פניות רלוונטיות"
+              : "בשלב זה ההרשמה למטפלים חדשים סגורה זמנית. חשבונות קיימים ממשיכים לפעול כרגיל."}
+          </p>
+
+          <div className="mt-8">
+            {registrationEnabled ? (
+              <Link
+                to={THERAPIST_SIGNUP_URL}
+                search={{ mode: "signup" as const }}
+                className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-soft transition hover:bg-primary/90 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto sm:text-lg"
+              >
+                פתיחת פרופיל מטפל בחינם
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            ) : (
+              <div className="mx-auto max-w-xl rounded-2xl border border-primary/15 bg-surface-elevated/85 px-5 py-4 shadow-sm backdrop-blur">
+                <p className="text-sm font-semibold text-foreground">ההרשמה למטפלים חדשים אינה זמינה כרגע</p>
+                <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                  ניתן יהיה לפתוח פרופיל חדש כאשר ההרשמה תופעל מחדש.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
   );
 }
+
