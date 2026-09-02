@@ -1,4 +1,4 @@
-export type IntegrationHealth = "healthy" | "warning" | "error" | "planned";
+export type IntegrationHealth = "healthy" | "warning" | "error" | "planned" | "unchecked";
 
 export type AdminIntegrationKey =
   | "supabase"
