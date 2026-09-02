@@ -530,45 +530,47 @@ function TherapistBenefitsSection() {
 
 function ProfileManagementSection() {
   return (
-    <section id="profile-management" className="scroll-mt-6 border-b border-border bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section id="profile-management" className="scroll-mt-24 border-b border-border bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">ממשק ניהול מתקדם</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">ממשק ניהול מתקדם</p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
             כל הכלים לניהול הפרופיל במקום אחד
           </h2>
 
-          <p className="mt-5 text-base leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
             אזור אישי עם כל מה שצריך כדי לנהל, לעדכן ולעקוב אחר הפרופיל שלכם באופן עצמאי
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {profileManagementFeatures.map((feature) => {
             const Icon = feature.icon;
 
             return (
               <article
                 key={feature.title}
-                className="group rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition hover:border-primary/20 hover:bg-brand-soft/30"
+                className="group flex h-full flex-col rounded-3xl border border-border bg-surface-elevated p-5 shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft sm:p-6"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary transition group-hover:bg-primary/15">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary transition group-hover:bg-primary/15">
                   <Icon className="h-5 w-5" />
                 </div>
 
-                <h3 className="mt-5 text-lg font-bold leading-7 text-foreground">{feature.title}</h3>
+                <h3 className="mt-5 text-pretty text-base font-bold leading-7 text-foreground sm:text-lg">
+                  {feature.title}
+                </h3>
 
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{feature.description}</p>
+                <p className="mt-3 text-pretty text-sm leading-7 text-muted-foreground">{feature.description}</p>
               </article>
             );
           })}
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 rounded-3xl border border-border bg-brand-soft/40 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-          <div>
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-3xl border border-border bg-brand-soft/40 p-5 shadow-sm sm:mt-10 sm:gap-8 sm:p-8">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-primary">הפרופיל נשאר בשליטה שלכם</p>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-muted-foreground">
+            <p className="mt-2 max-w-[70ch] text-pretty text-sm leading-7 text-muted-foreground">
               אין צורך לפנות לצוות האתר בכל שינוי. תוכלו לעדכן מידע מקצועי, להתאים את דרכי הקשר, לשנות את מסגרת התקציב
               או להקפיא את הפרופיל בהתאם לצורך.
             </p>
@@ -576,6 +578,7 @@ function ProfileManagementSection() {
 
           <ShieldCheck className="hidden h-10 w-10 shrink-0 text-primary sm:block" />
         </div>
+
       </div>
     </section>
   );
