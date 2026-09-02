@@ -10,4 +10,4 @@ export const DEFAULT_THERAPIST_REGISTRATION_AVAILABILITY: TherapistRegistrationA
 };
 
 export const THERAPIST_REGISTRATION_CLOSED_MESSAGE =
-  "הרשמת מטפלים חדשים אינה זמינה כרגע. ניתן יהיה להירשם עם פתיחת השירות.";
+  "הרשמת מטפלים חדשים אינה זמינה כרגע. ניתן יהיה להירשם עם פתיחת ההרשמה מחדש.";
