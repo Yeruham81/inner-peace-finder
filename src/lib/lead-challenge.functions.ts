@@ -12,10 +12,8 @@ export type IssuedChallenge =
 export const issueLeadChallenge = createServerFn({ method: "POST" }).handler(async (): Promise<IssuedChallenge> => {
   const { deriveRequestIdentity, generateChallenge, CHALLENGE_ISSUE_LIMIT, CHALLENGE_ISSUE_WINDOW_MS } =
     await import("./lead-challenge.server");
-  const [{ supabaseAdmin }, { readSystemSettings }] = await Promise.all([
-    import("@/integrations/supabase/client.server"),
-    import("./system-settings.server"),
-  ]);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { readSystemSettings } = await import("./system-settings.server");
   const systemSettings = await readSystemSettings();
 
   const { ipHash } = deriveRequestIdentity(getRequest()?.headers);
