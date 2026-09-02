@@ -57,8 +57,9 @@ function overallState(checks: AdminIntegrationCheck[]): IntegrationHealth {
 
 function statusSummary(state: IntegrationHealth): string {
   if (state === "healthy") return "כל הבדיקות הזמינות עברו בהצלחה.";
-  if (state === "warning") return "החיבור פעיל, אך יש רכיב שדורש תשומת לב או שאינו ניתן לבדיקה מלאה.";
+  if (state === "warning") return "החיבור פעיל, אך יש רכיב שדורש תשומת לב.";
   if (state === "error") return "אחת הבדיקות הקריטיות נכשלה.";
+  if (state === "unchecked") return "הבדיקה אינה ניתנת להרצה אוטומטית.";
   return "האינטגרציה טרם הופעלה.";
 }
 
@@ -238,7 +239,7 @@ async function probeTwilio(
     checks.push({
       label: "Voice configuration",
       state: "healthy",
-      detail: "Account, restricted API key ומספר טלפון מוגדרים",
+      detail: "Account, restricted API key, Auth Token ומספר טלפון מוגדרים",
     });
   } catch {
     const missing = missingEnv([
@@ -257,6 +258,51 @@ async function probeTwilio(
 
   if (config) {
     try {
+      // Use the exact credentials and permission used by production Voice calls.
+      // The intentionally incomplete payload is rejected by Twilio before any
+      // Call resource can be created, so this verifies auth + Calls/Create
+      // permission without dialing a phone number.
+      const voiceResponse = await fetchWithTimeout(
+        `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.accountSid)}/Calls.json`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: basicAuth(config.apiKeySid, config.apiKeySecret),
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "",
+        },
+      );
+
+      if (voiceResponse.status === 400) {
+        checks.push({
+          label: "Voice restricted API key",
+          state: "healthy",
+          detail: "המפתח וההרשאה Calls — Create אומתו ללא יצירת שיחה",
+        });
+      } else if (voiceResponse.status === 401 || voiceResponse.status === 403) {
+        checks.push({
+          label: "Voice restricted API key",
+          state: "error",
+          detail: "Twilio דחה את מפתח ה-Voice או שאין לו הרשאת Calls — Create",
+        });
+      } else {
+        checks.push({
+          label: "Voice restricted API key",
+          state: "error",
+          detail: `בדיקת מפתח ה-Voice החזירה HTTP ${voiceResponse.status} במקום שגיאת אימות-קלט צפויה`,
+        });
+      }
+    } catch {
+      checks.push({
+        label: "Voice restricted API key",
+        state: "error",
+        detail: "לא ניתן להשלים את בדיקת מפתח ה-Voice",
+      });
+    }
+
+    try {
       const response = await fetchWithTimeout(
         `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.accountSid)}.json`,
         {
@@ -265,18 +311,26 @@ async function probeTwilio(
         },
       );
       if (!response.ok) {
-        checks.push({ label: "Twilio REST API", state: "error", detail: `Twilio החזיר HTTP ${response.status}` });
+        checks.push({
+          label: "Twilio Account / Auth Token",
+          state: "error",
+          detail: `Twilio החזיר HTTP ${response.status}`,
+        });
       } else {
         const body = (await response.json().catch(() => null)) as { status?: string } | null;
         const accountStatus = body?.status?.toLowerCase();
         checks.push({
-          label: "Twilio REST API",
+          label: "Twilio Account / Auth Token",
           state: accountStatus === "active" ? "healthy" : "error",
           detail: accountStatus === "active" ? "החשבון פעיל וה-Auth Token תקף" : "חשבון Twilio אינו במצב active",
         });
       }
     } catch {
-      checks.push({ label: "Twilio REST API", state: "error", detail: "לא ניתן להשלים את בדיקת החשבון" });
+      checks.push({
+        label: "Twilio Account / Auth Token",
+        state: "error",
+        detail: "לא ניתן להשלים את בדיקת החשבון",
+      });
     }
   }
 
@@ -317,9 +371,9 @@ async function probeMetaWhatsApp(
   const contentSid = whatsappContentSid();
 
   checks.push({
-    label: "WhatsApp Sender",
+    label: "WhatsApp Sender configuration",
     state: sender ? "healthy" : "error",
-    detail: sender ? "מספר השולח מוגדר ב-Twilio" : "TWILIO_WHATSAPP_FROM אינו מוגדר",
+    detail: sender ? "TWILIO_WHATSAPP_FROM מוגדר" : "TWILIO_WHATSAPP_FROM אינו מוגדר",
   });
   checks.push({
     label: "Content Template",
@@ -334,8 +388,68 @@ async function probeMetaWhatsApp(
     checks.push({
       label: "Twilio credentials",
       state: "error",
-      detail: "לא ניתן לבדוק את סטטוס התבנית ללא תצורת Twilio",
+      detail: "לא ניתן לבדוק את WhatsApp ללא תצורת Twilio",
     });
+  }
+
+  if (config && sender) {
+    try {
+      const response = await fetchWithTimeout(
+        "https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=1000",
+        {
+          method: "GET",
+          headers: { Authorization: basicAuth(config.accountSid, config.authToken), Accept: "application/json" },
+        },
+      );
+
+      if (!response.ok) {
+        checks.push({
+          label: "WhatsApp Sender ב-Twilio",
+          state: "error",
+          detail: `Twilio Senders API v2 החזיר HTTP ${response.status}`,
+        });
+      } else {
+        const body = (await response.json().catch(() => null)) as {
+          senders?: Array<{ sender_id?: string; senderId?: string; status?: string }>;
+        } | null;
+        const configuredSender = sender.toLowerCase();
+        const match = body?.senders?.find(
+          (item) => (item.sender_id ?? item.senderId ?? "").toLowerCase() === configuredSender,
+        );
+
+        if (!match) {
+          checks.push({
+            label: "WhatsApp Sender ב-Twilio",
+            state: "error",
+            detail: "המספר המוגדר לא נמצא בין שולחי WhatsApp בחשבון Twilio",
+          });
+        } else {
+          const senderStatus = match.status?.toUpperCase() || "UNKNOWN";
+          const transitional = new Set([
+            "CREATING",
+            "PENDING_VERIFICATION",
+            "VERIFYING",
+            "ONLINE:UPDATING",
+            "TWILIO_REVIEW",
+            "DRAFT",
+          ]);
+          checks.push({
+            label: "WhatsApp Sender ב-Twilio",
+            state: senderStatus === "ONLINE" ? "healthy" : transitional.has(senderStatus) ? "warning" : "error",
+            detail:
+              senderStatus === "ONLINE"
+                ? "ה-Sender רשום ב-Twilio ובמצב ONLINE"
+                : `סטטוס ה-Sender ב-Twilio: ${senderStatus}`,
+          });
+        }
+      }
+    } catch {
+      checks.push({
+        label: "WhatsApp Sender ב-Twilio",
+        state: "error",
+        detail: "לא ניתן לקרוא את סטטוס ה-Sender מ-Twilio Senders API v2",
+      });
+    }
   }
 
   if (config && contentSid) {
@@ -556,13 +670,13 @@ async function probeLovable(checkedAt: string): Promise<AdminIntegrationStatus> 
     },
     {
       label: "Google OAuth",
-      state: "warning",
-      detail: "מוגדר דרך Lovable Auth בקוד; כניסה אמיתית אינה מופעלת כחלק מבדיקת הבריאות",
+      state: "unchecked",
+      detail: "לא נבדק אוטומטית: בדיקת OAuth מלאה דורשת תהליך התחברות אינטראקטיבי",
     },
     {
       label: "Apple OAuth",
-      state: "warning",
-      detail: "מוגדר דרך Lovable Auth בקוד; כניסה אמיתית אינה מופעלת כחלק מבדיקת הבריאות",
+      state: "unchecked",
+      detail: "לא נבדק אוטומטית: בדיקת OAuth מלאה דורשת תהליך התחברות אינטראקטיבי",
     },
   ];
 
