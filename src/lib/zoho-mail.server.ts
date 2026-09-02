@@ -287,6 +287,98 @@ export function formatSupportEmailHtml(content: string, addReplySeparator = fals
   ].join("");
 }
 
+type ZohoMessageLocation = {
+  messageId: string;
+  folderId: string;
+};
+
+async function listZohoThreadMessageLocations(threadId: string): Promise<ZohoMessageLocation[]> {
+  const accountId = await getZohoAccountId();
+  const query = new URLSearchParams({
+    threadId,
+    start: "1",
+    limit: String(MAX_SYNC_MESSAGES),
+    status: "all",
+    includeto: "true",
+    includesent: "true",
+    includearchive: "true",
+    sortBy: "date",
+    sortorder: "false",
+  });
+  const rows = await zohoRequest<ZohoMessageListRow[]>(`/api/accounts/${accountId}/messages/view?${query}`);
+  return rows
+    .filter((row) => row.messageId !== undefined && row.folderId !== undefined)
+    .map((row) => ({ messageId: String(row.messageId), folderId: String(row.folderId) }));
+}
+
+async function resolveZohoMessageLocations(messageIds: string[]): Promise<ZohoMessageLocation[]> {
+  const wanted = new Set(messageIds.filter(Boolean));
+  if (!wanted.size) return [];
+
+  const accountId = await getZohoAccountId();
+  const found = new Map<string, ZohoMessageLocation>();
+  const maxPages = 10;
+
+  for (let page = 0; page < maxPages && found.size < wanted.size; page += 1) {
+    const query = new URLSearchParams({
+      start: String(page * MAX_SYNC_MESSAGES + 1),
+      limit: String(MAX_SYNC_MESSAGES),
+      status: "all",
+      includeto: "true",
+      includesent: "true",
+      includearchive: "true",
+      sortBy: "date",
+      sortorder: "false",
+    });
+    const rows = await zohoRequest<ZohoMessageListRow[]>(`/api/accounts/${accountId}/messages/view?${query}`);
+    for (const row of rows) {
+      if (row.messageId === undefined || row.folderId === undefined) continue;
+      const messageId = String(row.messageId);
+      if (!wanted.has(messageId)) continue;
+      found.set(messageId, { messageId, folderId: String(row.folderId) });
+    }
+    if (rows.length < MAX_SYNC_MESSAGES) break;
+  }
+
+  const missing = [...wanted].filter((messageId) => !found.has(messageId));
+  if (missing.length) {
+    throw new Error("לא ניתן לאתר ב-Zoho Mail את כל הודעות הפנייה. הפנייה לא נמחקה מטיפולינקס.");
+  }
+  return [...found.values()];
+}
+
+export async function moveZohoSupportConversationToTrash(args: {
+  threadId: string | null;
+  messageIds: string[];
+}): Promise<number> {
+  const localIds = [...new Set(args.messageIds.filter(Boolean))];
+  let locations: ZohoMessageLocation[] = [];
+
+  if (args.threadId) {
+    locations = await listZohoThreadMessageLocations(args.threadId);
+  }
+  if (!locations.length && localIds.length) {
+    locations = await resolveZohoMessageLocations(localIds);
+  }
+
+  const unique = [...new Map(locations.map((location) => [location.messageId, location])).values()];
+  if (!unique.length) {
+    if (localIds.length) {
+      throw new Error("לא נמצאו ב-Zoho Mail הודעות למחיקה. הפנייה לא נמחקה מטיפולינקס.");
+    }
+    return 0;
+  }
+
+  const accountId = await getZohoAccountId();
+  for (const location of unique) {
+    await zohoRequest<{ cId?: string | number }>(
+      `/api/accounts/${accountId}/folders/${location.folderId}/messages/${location.messageId}?expunge=false`,
+      { method: "DELETE" },
+    );
+  }
+  return unique.length;
+}
+
 export async function sendZohoSupportEmail(args: {
   toAddress: string;
   subject: string;
