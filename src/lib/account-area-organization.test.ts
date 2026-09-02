@@ -34,7 +34,7 @@ describe("therapist account area organization", () => {
     expect(editorSource).toContain('to="/account/leads"');
   });
 
-  it("keeps settings focused on account, security, display, notifications, support and deletion", () => {
+  it("keeps settings focused on account, security, display, support and deletion", () => {
     expect(settingsSource).toContain("supabase.auth.updateUser({ email:");
     expect(settingsSource).toContain("supabase.auth.updateUser({ password }");
     expect(settingsSource).toContain("supabase.auth.signInWithPassword");
@@ -42,16 +42,14 @@ describe("therapist account area organization", () => {
     expect(settingsSource).toContain("סיסמה נוכחית");
     expect(settingsSource).toContain("הסיסמה מנוהלת אצל ספק ההתחברות");
     expect(settingsSource).toContain("saveDisplayPreferences");
-    expect(settingsSource).toContain("updateMyNotificationPreferences");
     expect(settingsSource).toContain("submitMySupportRequest");
     expect(settingsSource).toContain("DeleteAccountPanel");
   });
 
-  it("persists notification preferences for the authenticated account", () => {
+  it("keeps the legacy notification columns while removing the redundant new-lead UI", () => {
     expect(notificationMigrationSource).toContain("notify_new_leads boolean");
     expect(notificationMigrationSource).toContain("notify_account_updates boolean");
-    expect(notificationMigrationSource).toContain("auth.uid()");
-    expect(notificationMigrationSource).toContain("update_my_notification_preferences");
+    expect(settingsSource).not.toContain("notify_new_leads");
   });
 
   it("persists support requests through an authenticated database function", () => {
