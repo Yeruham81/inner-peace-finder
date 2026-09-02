@@ -426,20 +426,23 @@ function TipulinksEngineCard() {
 
 function MatchedTherapistCard() {
   return (
-    <article className="rounded-3xl border border-primary/30 bg-primary/20 p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+    <article className="flex flex-col rounded-3xl border border-primary/30 bg-primary/20 p-5 shadow-card sm:p-6">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
         <BadgeCheck className="h-6 w-6" />
       </div>
 
       <p className="mt-5 text-sm font-semibold text-primary">3. מתקבלת רשימה ממוקדת</p>
 
-      <h3 className="mt-1 text-xl font-bold text-foreground">מטפלים רלוונטיים לצורך שתואר</h3>
+      <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">
+        מטפלים רלוונטיים לצורך שתואר
+      </h3>
 
-      <p className="mt-4 text-sm leading-7 text-foreground/80">
+      <p className="mt-4 text-pretty text-sm leading-7 text-foreground/80">
         טיפולינקס בוחנת אילו פרופילים מתאימים לתחומי הטיפול ולמאפיינים שנמצאו ומציגה למשתמש רשימה רלוונטית יותר.
       </p>
 
-      <div className="mt-5 rounded-2xl border border-primary/20 bg-background/90 p-4">
+      <div className="mt-5 rounded-2xl border border-primary/20 bg-surface-elevated/90 p-4">
+
         <div className="flex items-start gap-3">
           <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
 
