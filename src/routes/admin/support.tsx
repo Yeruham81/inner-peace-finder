@@ -327,11 +327,12 @@ function AdminSupportPage() {
                 <Label htmlFor="support-reply">תשובה באימייל</Label>
                 <Textarea
                   id="support-reply"
+                  dir="rtl"
                   value={replyText}
                   onChange={(event) => setReplyText(event.target.value)}
                   maxLength={5000}
                   rows={5}
-                  className="mt-1 bg-white"
+                  className="mt-1 bg-white text-right"
                   placeholder="התשובה תישלח מ-admin@tipulinks.co.il"
                 />
                 <div className="mt-2 flex justify-end">
@@ -426,7 +427,9 @@ function SupportConversation({ messages }: { messages: AdminSupportMessage[] }) 
               </span>
               <span>{formatAdminDateTime(message.occurredAt)}</span>
             </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{message.body}</p>
+            <p dir="auto" className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
+              {message.body}
+            </p>
             {message.hasAttachment ? (
               <p className="mt-2 text-xs font-medium text-amber-800">ההודעה כוללת קובץ מצורף שנשמר ב-Zoho Mail.</p>
             ) : null}
