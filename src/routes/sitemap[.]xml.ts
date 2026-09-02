@@ -13,7 +13,9 @@ export const Route = createFileRoute("/sitemap.xml")({
         // Pre-launch (or on any non-production origin) the sitemap must not
         // advertise the production SEO inventory. The same central policy that
         // drives page-level `noindex` gates it, so the two cannot contradict.
-        if (!searchIndexingAllowed()) {
+        const { readSystemSettings } = await import("@/lib/system-settings.server");
+        const runtimeSettings = await readSystemSettings();
+        if (!searchIndexingAllowed() || !runtimeSettings.searchIndexingEnabled) {
           return new Response(
             [
               `<?xml version="1.0" encoding="UTF-8"?>`,
@@ -58,7 +60,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           // Defence in depth: nothing outside the indexable route allowlist can
           // reach the sitemap even if an entry is added above by mistake.
         ].filter((entry) => isSeoEligibleRoutePath(entry.path));
-
 
         const xml = [
           `<?xml version="1.0" encoding="UTF-8"?>`,
