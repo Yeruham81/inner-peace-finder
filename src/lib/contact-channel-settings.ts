@@ -13,8 +13,10 @@ export const DEFAULT_CONTACT_CHANNEL_AVAILABILITY: ContactChannelAvailability = 
 export function filterAvailableContactMethods(
   methods: readonly PublicContactMethod[],
   availability: ContactChannelAvailability,
+  maxMethods = 3,
 ): PublicContactMethod[] {
-  return [...new Set(methods)].filter((method) => availability[method]).slice(0, 3);
+  const safeMax = Math.max(1, Math.min(3, Math.trunc(maxMethods)));
+  return [...new Set(methods)].filter((method) => availability[method]).slice(0, safeMax);
 }
 
 export function resolveAvailablePreferredContactMethod(
