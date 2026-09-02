@@ -275,6 +275,11 @@ async function buildPlan(
   sb: SupabaseClient<Database>,
   requestedProblemSlugs: readonly string[] = [],
   excludedCriteriaRaw: readonly string[] = [],
+  semanticPolicy: { aiSearchEnabled: boolean; aiFallbackEnabled: boolean } = {
+    aiSearchEnabled: true,
+    aiFallbackEnabled: true,
+  },
+  hideUnclaimedAfterFirstLead = true,
 ): Promise<{ plan: TherapistSearchPlan; interpretation: InterpretationResult }> {
   // Safety is the first semantic decision in the request. An urgent result
   // blocks catalog loading, classification, LLM calls and therapist reads.
@@ -284,7 +289,7 @@ async function buildPlan(
     return { plan, interpretation: plan.interpretation };
   }
 
-  const catalog = await loadSearchCatalog(sb);
+  const catalog = await loadSearchCatalog(sb, { hideUnclaimedAfterFirstLead });
   const interpretation = interpretQuery(query, catalog);
   const excludedCriteria = normalizeExcludedCriteriaParam(excludedCriteriaRaw);
   const excludedProblems = excludedValues(excludedCriteria, "problem");
@@ -325,7 +330,10 @@ async function buildPlan(
     // authoritative, the LLM handles free wording/context, and the old
     // SemanticEngine classifier remains a temporary failure fallback.
     const { classifyUnifiedSemanticRemainder } = await import("./unified-semantic-classifier.server");
-    const classified = await classifyUnifiedSemanticRemainder(interpretation.semanticRemainder, sb);
+    const classified = await classifyUnifiedSemanticRemainder(interpretation.semanticRemainder, sb, {
+      llmEnabled: semanticPolicy.aiSearchEnabled,
+      fallbackEnabled: semanticPolicy.aiFallbackEnabled,
+    });
     semanticSignals = classified.signals.filter((signal) => !excludedProblems.has(signal.slug));
   }
 
@@ -442,11 +450,25 @@ function collect(rows: Array<{ therapist_id: string }> | null): Set<string> {
   return out;
 }
 
-function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
+function createSupabaseRepo(
+  sb: SupabaseClient<Database>,
+  options: { hideUnclaimedAfterFirstLead?: boolean; showUnverifiedTherapists?: boolean } = {},
+): TherapistRepo {
   const filterByEligible = (ids: Set<string>, eligible: Set<string>): Set<string> => {
     const out = new Set<string>();
     for (const id of ids) if (eligible.has(id)) out.add(id);
     return out;
+  };
+
+  const applySearchEligibility = <Q,>(builder: Q): Q => {
+    let filtered = applyEligibility(builder, "therapists", {
+      hideUnclaimedAfterFirstLead: options.hideUnclaimedAfterFirstLead ?? true,
+    });
+    if (options.showUnverifiedTherapists === false) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      filtered = (filtered as any).eq("verified", true) as Q;
+    }
+    return filtered;
   };
 
   // Cache the eligibility set inside the repo instance so multiple lookups
@@ -455,7 +477,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
   const eligibleIds = async (): Promise<Set<string>> => {
     if (cachedEligible) return cachedEligible;
     const rows = unwrap(
-      (await applyEligibility(sb.from("therapists").select("id"))) as unknown as {
+      (await applySearchEligibility(sb.from("therapists").select("id"))) as unknown as {
         data: Array<{ id: string }> | null;
         error: unknown;
       },
@@ -574,7 +596,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     },
     async idsByGender(gender) {
       const rows = unwrap(
-        (await applyEligibility(sb.from("therapists").select("id").eq("gender", gender))) as unknown as {
+        (await applySearchEligibility(sb.from("therapists").select("id").eq("gender", gender))) as unknown as {
           data: Array<{ id: string }> | null;
           error: unknown;
         },
@@ -595,7 +617,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       return filterByEligible(collect(rows), await eligibleIds());
     },
     async idsByProfileAttributes(filter) {
-      let therapistQuery = applyEligibility(sb.from("therapists").select("id"));
+      let therapistQuery = applySearchEligibility(sb.from("therapists").select("id"));
       if (filter.verifiedOnly) therapistQuery = therapistQuery.eq("verified", true);
       if (filter.lgbtqAffirming) therapistQuery = therapistQuery.eq("lgbtq_affirming", true);
       if (filter.freeIntroOnly) therapistQuery = therapistQuery.eq("offers_free_intro", true);
@@ -623,7 +645,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
     async hydrate(ids): Promise<HydratedCandidate[]> {
       if (ids.length === 0) return [];
       const [tRes, profRes, modRes, popRes, langRes, locRes] = await Promise.all([
-        applyEligibility(
+        applySearchEligibility(
           sb
             .from("therapists")
             .select("id, verified, image_url, gender, years_experience, full_description, semantic_profile"),
@@ -727,7 +749,7 @@ function createSupabaseRepo(sb: SupabaseClient<Database>): TherapistRepo {
       if (ids.length === 0) return map;
       // Batched display relations for the final result ids only (no N+1).
       const [tRes, locRes, langRes, popRes, modRes] = await Promise.all([
-        applyEligibility(
+        applySearchEligibility(
           sb
             .from("therapists")
             .select(
@@ -893,8 +915,9 @@ async function executeUnifiedPlan(
   plan: TherapistSearchPlan,
   limit: number,
   sb: SupabaseClient<Database>,
+  eligibilityPolicy: { hideUnclaimedAfterFirstLead?: boolean; showUnverifiedTherapists?: boolean } = {},
 ): Promise<UnifiedSearchResult> {
-  const repo = createSupabaseRepo(sb);
+  const repo = createSupabaseRepo(sb, eligibilityPolicy);
   const out = await executeUnifiedSearch(repo, plan, limit);
   return {
     plan,
@@ -911,16 +934,30 @@ export async function runUnifiedSearch(
     limit: number;
     problemSlugs?: readonly string[];
     excludedCriteria?: readonly string[];
+    semanticPolicy?: { aiSearchEnabled: boolean; aiFallbackEnabled: boolean };
+    eligibilityPolicy?: { hideUnclaimedAfterFirstLead?: boolean; showUnverifiedTherapists?: boolean };
   },
   client?: SupabaseClient<Database>,
 ): Promise<UnifiedSearchResult> {
   const sb = client ?? (await serverClient());
-  const { plan } = await buildPlan(args.query, args.explicit, sb, args.problemSlugs, args.excludedCriteria);
-  return executeUnifiedPlan(plan, args.limit, sb);
+  const { plan } = await buildPlan(
+    args.query,
+    args.explicit,
+    sb,
+    args.problemSlugs,
+    args.excludedCriteria,
+    args.semanticPolicy,
+    args.eligibilityPolicy?.hideUnclaimedAfterFirstLead ?? true,
+  );
+  return executeUnifiedPlan(plan, args.limit, sb, args.eligibilityPolicy);
 }
 
 export async function runUnifiedProblemSearch(
-  args: { problemSlug: string; limit: number },
+  args: {
+    problemSlug: string;
+    limit: number;
+    eligibilityPolicy?: { hideUnclaimedAfterFirstLead?: boolean; showUnverifiedTherapists?: boolean };
+  },
   client?: SupabaseClient<Database>,
 ): Promise<UnifiedSearchResult> {
   const sb = client ?? (await serverClient());
@@ -934,7 +971,7 @@ export async function runUnifiedProblemSearch(
   if (!problem) throw new Error("הבעיה לא נמצאה או אינה פעילה.");
 
   const plan = buildProblemSearchPlan({ slug: problem.slug, name: problem.name_he });
-  return executeUnifiedPlan(plan, args.limit, sb);
+  return executeUnifiedPlan(plan, args.limit, sb, args.eligibilityPolicy);
 }
 
 export const interpretQueryFn = createServerFn({ method: "POST" })
@@ -947,16 +984,26 @@ export const interpretQueryFn = createServerFn({ method: "POST" })
 export const searchProblemResults = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ProblemSearchInput.parse(input))
   .handler(async ({ data }): Promise<UnifiedSearchResult> => {
+    const { readSystemSettings } = await import("./system-settings.server");
+    const settings = await readSystemSettings();
+    const requestedLimit = data.limit ?? settings.searchResultsLimit;
     return runUnifiedProblemSearch({
       problemSlug: data.problemSlug,
-      limit: data.limit ?? 20,
+      limit: requestedLimit,
+      eligibilityPolicy: {
+        hideUnclaimedAfterFirstLead: settings.hideUnclaimedAfterFirstLead,
+        showUnverifiedTherapists: settings.showUnverifiedTherapists,
+      },
     });
   });
 
 export const unifiedSearch = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<UnifiedSearchResult> => {
-    return runUnifiedSearch({
+    const { readSystemSettings } = await import("./system-settings.server");
+    const settings = await readSystemSettings();
+    const requestedLimit = data.limit ?? settings.searchResultsLimit;
+    const result = await runUnifiedSearch({
       query: data.query,
       problemSlugs: typeof data.problems === "string" ? data.problems.split(",") : data.problems,
       excludedCriteria:
@@ -977,6 +1024,15 @@ export const unifiedSearch = createServerFn({ method: "POST" })
         lgbtqAffirming: data.lgbtqAffirming,
         freeIntro: data.freeIntro,
       },
-      limit: data.limit ?? 20,
+      limit: requestedLimit,
+      semanticPolicy: {
+        aiSearchEnabled: settings.aiSearchEnabled,
+        aiFallbackEnabled: settings.aiFallbackEnabled,
+      },
+      eligibilityPolicy: {
+        hideUnclaimedAfterFirstLead: settings.hideUnclaimedAfterFirstLead,
+        showUnverifiedTherapists: settings.showUnverifiedTherapists,
+      },
     });
+    return result;
   });
