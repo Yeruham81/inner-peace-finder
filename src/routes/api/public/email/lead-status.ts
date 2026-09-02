@@ -31,6 +31,8 @@ export const Route = createFileRoute("/api/public/email/lead-status")({
         for (const item of events) {
           if (!item || typeof item !== "object") continue;
           const payload = item as Record<string, unknown>;
+          const { applyBroadcastBrevoWebhook } = await import("@/lib/admin-broadcast.server");
+          if (await applyBroadcastBrevoWebhook(payload)) continue;
           const status = normalizeBrevoEmailEvent(payload.event);
           if (!status) continue;
 
