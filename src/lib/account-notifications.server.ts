@@ -49,6 +49,10 @@ function notificationHtml(content: NotificationContent): string {
 }
 
 async function sendAccountNotification(content: NotificationContent): Promise<boolean> {
+  const { readSystemSettings } = await import("./system-settings.server");
+  const settings = await readSystemSettings();
+  if (!settings.systemEmailsEnabled || !settings.therapistNotificationsEnabled) return false;
+
   const { data: claimed, error: claimError } = await supabaseAdmin.rpc("claim_account_notification", {
     _account_id: content.accountId,
     _notification_kind: content.kind,
