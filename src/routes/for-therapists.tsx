@@ -249,18 +249,21 @@ function VisionSection() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-border bg-background p-6 shadow-lg shadow-foreground/5 sm:p-8">
+        <div className="min-w-0 rounded-3xl border border-border bg-surface-elevated p-5 shadow-soft sm:p-8">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary">
               <UserRoundSearch className="h-6 w-6" />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-primary">למה החיפוש הרגיל מקשה?</p>
 
-              <h2 className="mt-1 text-xl font-bold text-foreground">הוא מצפה מהאדם לדעת את התשובה מראש</h2>
+              <h2 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">
+                הוא מצפה מהאדם לדעת את התשובה מראש
+              </h2>
             </div>
           </div>
+
 
           <div className="mt-6 space-y-3">
             {commonSearchProblems.map((problem) => (
