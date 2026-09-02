@@ -297,22 +297,22 @@ function VisionSection() {
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="scroll-mt-6 border-b border-border bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section id="how-it-works" className="scroll-mt-24 border-b border-border bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">איך זה עובד?</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">איך זה עובד?</p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
             מהתיאור החופשי — לרשימת מטפלים רלוונטיים
           </h2>
 
-          <p className="mt-5 text-base leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
             מנוע החיפוש של טיפולינקס מבין את המשמעות של הבקשה, מזהה את הצרכים הרלוונטיים ומשווה אותם למידע המקצועי
             בפרופילי המטפלים.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-4 md:grid-cols-[1fr_auto_1.15fr_auto_1fr] md:items-stretch">
+        <div className="mt-10 grid gap-4 sm:mt-12 lg:grid-cols-[1fr_auto_1.15fr_auto_1fr] lg:items-stretch lg:gap-3">
           <SearchUserCard />
 
           <DesktopArrow />
@@ -324,16 +324,17 @@ function HowItWorksSection() {
           <MatchedTherapistCard />
         </div>
 
-        <div className="mt-10 rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
-          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <div>
-              <h3 className="text-xl font-bold text-foreground">ההתאמה אינה מבוססת על גורם אחד</h3>
+        <div className="mt-8 rounded-3xl border border-primary/15 bg-primary/5 p-5 shadow-sm sm:mt-10 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:gap-10">
+            <div className="min-w-0">
+              <h3 className="text-pretty text-lg font-bold text-foreground sm:text-xl">ההתאמה אינה מבוססת על גורם אחד</h3>
 
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              <p className="mt-3 max-w-[52ch] text-pretty text-sm leading-7 text-muted-foreground">
                 המערכת מזהה את תחומי הטיפול הרלוונטיים ומשלבת אותם עם העדפות וצרכים נוספים שהמשתמש הגדיר כדי לצמצם את
                 החיפוש.
               </p>
             </div>
+
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {matchingParameters.map((parameter) => {
