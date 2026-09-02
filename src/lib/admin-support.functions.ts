@@ -295,6 +295,55 @@ export const replyAdminSupportRequest = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+const DeleteSupportSchema = z.object({ requestId: z.string().uuid() });
+
+export const deleteAdminSupportRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => DeleteSupportSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    requireTipulinksAdmin(context.claims, "אין הרשאת מנהל למחיקת פניות לצוות.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: request, error: requestError }, { data: messages, error: messagesError }] = await Promise.all([
+      supabaseAdmin
+        .from("account_support_requests")
+        .select("id, zoho_thread_id")
+        .eq("id", data.requestId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("account_support_messages")
+        .select("zoho_message_id")
+        .eq("request_id", data.requestId)
+        .not("zoho_message_id", "is", null),
+    ]);
+    if (requestError) throw new Error(requestError.message);
+    if (messagesError) throw new Error(messagesError.message);
+    if (!request) throw new Error("הפנייה אינה קיימת.");
+
+    const zohoMessageIds = [
+      ...new Set((messages ?? []).map((message) => message.zoho_message_id).filter(Boolean)),
+    ] as string[];
+    const { moveZohoSupportConversationToTrash } = await import("./zoho-mail.server");
+
+    // Zoho is handled first. If it fails (including a missing DELETE OAuth scope),
+    // the local request is deliberately left untouched.
+    const zohoDeleted = await moveZohoSupportConversationToTrash({
+      threadId: request.zoho_thread_id,
+      messageIds: zohoMessageIds,
+    });
+
+    const { data: deleted, error: deleteError } = await supabaseAdmin
+      .from("account_support_requests")
+      .delete()
+      .eq("id", data.requestId)
+      .select("id")
+      .maybeSingle();
+    if (deleteError) throw new Error(deleteError.message);
+    if (!deleted) throw new Error("הפנייה אינה זמינה למחיקה.");
+
+    return { ok: true as const, zohoDeleted };
+  });
+
 export const syncAdminSupportMailbox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
