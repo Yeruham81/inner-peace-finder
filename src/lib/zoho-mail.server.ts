@@ -168,9 +168,10 @@ export async function listRecentZohoIncomingMessages(): Promise<ZohoIncomingMess
       return {
         messageId: String(row.messageId),
         folderId: String(row.folderId),
-        threadId: row.threadId === undefined || row.threadId === null || String(row.threadId) === "0"
-          ? null
-          : String(row.threadId),
+        threadId:
+          row.threadId === undefined || row.threadId === null || String(row.threadId) === "0"
+            ? null
+            : String(row.threadId),
         fromAddress: row.fromAddress.trim().toLowerCase(),
         senderName: row.sender?.trim() || null,
         subject: row.subject?.trim() || "ללא נושא",
@@ -241,6 +242,40 @@ export function extractSupportTicketCode(subject: string): string | null {
   return subject.match(/\[TL-([A-F0-9]{10})\]/i)?.[1]?.toUpperCase() ?? null;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return character;
+    }
+  });
+}
+
+export function formatSupportEmailHtml(content: string, addReplySeparator = false): string {
+  const safeContent = escapeHtml(content.trim()).replace(/\r\n?/g, "\n").replace(/\n/g, "<br>");
+
+  const separator = addReplySeparator
+    ? '<div aria-hidden="true" style="margin:24px 0 16px;border-top:1px solid #d1d5db;"></div>'
+    : "";
+
+  return [
+    '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.7;color:#111827;">',
+    safeContent,
+    "</div>",
+    separator,
+  ].join("");
+}
+
 export async function sendZohoSupportEmail(args: {
   toAddress: string;
   subject: string;
@@ -253,8 +288,8 @@ export async function sendZohoSupportEmail(args: {
       fromAddress: getZohoMailboxAddress(),
       toAddress: args.toAddress,
       subject: args.subject,
-      content: args.content,
-      mailFormat: "plaintext",
+      content: formatSupportEmailHtml(args.content),
+      mailFormat: "html",
       encoding: "UTF-8",
     }),
   });
@@ -277,9 +312,9 @@ export async function replyViaZoho(args: {
       fromAddress: getZohoMailboxAddress(),
       toAddress: args.toAddress,
       subject: args.subject,
-      content: args.content,
+      content: formatSupportEmailHtml(args.content, true),
       action: "reply",
-      mailFormat: "plaintext",
+      mailFormat: "html",
       encoding: "UTF-8",
     }),
   });
