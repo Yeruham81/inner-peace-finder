@@ -1,12 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, CheckCircle2 } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { AccountPageHeader } from "@/components/account/account-page-header";
 import { TherapistCredentialPanel } from "@/components/therapist-credential-panel";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  getMyAccountUpdateNotificationPreference,
+  updateMyAccountUpdateNotificationPreference,
+} from "@/lib/account-settings.functions";
 import { getMyProfileOnboarding, setMyCredentialVerificationSkip } from "@/lib/profile-onboarding.functions";
 import { getEditorOptions, getMyProfile } from "@/lib/therapist-profile.functions";
 
@@ -24,6 +29,8 @@ function AccountCredentialsPage() {
   const getOptionsFn = useServerFn(getEditorOptions);
   const getOnboardingFn = useServerFn(getMyProfileOnboarding);
   const setSkipFn = useServerFn(setMyCredentialVerificationSkip);
+  const getNotificationPreferenceFn = useServerFn(getMyAccountUpdateNotificationPreference);
+  const updateNotificationPreferenceFn = useServerFn(updateMyAccountUpdateNotificationPreference);
   const profile = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfileFn() });
   const options = useQuery({ queryKey: ["editor-options"], queryFn: () => getOptionsFn() });
   const onboarding = useQuery({
@@ -32,6 +39,18 @@ function AccountCredentialsPage() {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     retry: 3,
+  });
+  const notificationPreference = useQuery({
+    queryKey: ["credential-notification-preference", user.id],
+    queryFn: () => getNotificationPreferenceFn(),
+  });
+  const notificationMutation = useMutation({
+    mutationFn: (enabled: boolean) => updateNotificationPreferenceFn({ data: { notify_account_updates: enabled } }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["credential-notification-preference", user.id], updated);
+      toast.success("העדפת עדכוני האימות נשמרה.");
+    },
+    onError: (error: Error) => toast.error(error.message || "לא ניתן לעדכן את העדפת האימייל."),
   });
   const skipMutation = useMutation({
     mutationFn: (skip: boolean) => setSkipFn({ data: { skip } }),
@@ -148,6 +167,29 @@ function AccountCredentialsPage() {
           )}
         </div>
       )}
+
+      <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-4 shadow-card sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+            <Mail className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">עדכוני אימות באימייל</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              קבלת אימייל כאשר מסמך הסמכה שהוגש נבדק ואושר או כאשר נדרש עדכון.
+            </p>
+            {notificationPreference.isError ? (
+              <p className="mt-2 text-xs text-destructive">לא ניתן לטעון כרגע את העדפת האימייל.</p>
+            ) : null}
+          </div>
+          <Switch
+            checked={notificationPreference.data?.notify_account_updates ?? true}
+            disabled={notificationPreference.isLoading || notificationMutation.isPending}
+            onCheckedChange={(checked) => notificationMutation.mutate(checked)}
+            aria-label="עדכוני אימות באימייל"
+          />
+        </div>
+      </div>
     </>
   );
 }
