@@ -34,7 +34,6 @@ type ZohoMessageListRow = {
   fromAddress?: string;
   sender?: string;
   subject?: string;
-  receivedTime?: string | number;
   receivedtime?: string | number;
   sentDateInGMT?: string | number;
   hasAttachment?: string | number | boolean;
@@ -122,6 +121,22 @@ async function zohoRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data;
 }
 
+export async function verifyZohoMailConnection(): Promise<void> {
+  const mailbox = getZohoMailboxAddress();
+  const accounts = await zohoRequest<ZohoAccount[]>("/api/accounts");
+  const found = accounts.some((candidate) => {
+    const addresses = [
+      candidate.primaryEmailAddress,
+      candidate.mailboxAddress,
+      ...(candidate.emailAddress ?? []).map((entry) => entry.mailId),
+    ]
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.toLowerCase());
+    return addresses.includes(mailbox);
+  });
+  if (!found) throw new Error(`Zoho mailbox ${mailbox} was not found.`);
+}
+
 export async function getZohoAccountId(): Promise<string> {
   if (accountIdCache) return accountIdCache;
   const mailbox = getZohoMailboxAddress();
@@ -175,8 +190,8 @@ export async function listRecentZohoIncomingMessages(): Promise<ZohoIncomingMess
             : String(row.threadId),
         fromAddress: row.fromAddress.trim().toLowerCase(),
         senderName: row.sender?.trim() || null,
-        subject: decodeHtmlEntitiesFully(row.subject?.trim() || "ללא נושא"),
-        receivedAt: asIsoDate(row.receivedTime ?? row.receivedtime ?? row.sentDateInGMT),
+        subject: row.subject?.trim() || "ללא נושא",
+        receivedAt: asIsoDate(row.receivedtime ?? row.sentDateInGMT),
         hasAttachment: row.hasAttachment === true || row.hasAttachment === 1 || row.hasAttachment === "1",
       };
     })
@@ -207,16 +222,6 @@ function decodeHtmlEntities(value: string): string {
   });
 }
 
-function decodeHtmlEntitiesFully(value: string): string {
-  let decoded = value;
-  for (let pass = 0; pass < 3; pass += 1) {
-    const next = decodeHtmlEntities(decoded);
-    if (next === decoded) break;
-    decoded = next;
-  }
-  return decoded;
-}
-
 export function htmlEmailToText(html: string): string {
   const withoutUnsafeBlocks = html
     .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, " ")
@@ -242,7 +247,7 @@ export async function getZohoMessageText(message: ZohoIncomingMessage): Promise<
 }
 
 export function supportTicketSubject(subject: string, ticketCode: string): string {
-  const clean = decodeHtmlEntitiesFully(subject)
+  const clean = subject
     .replace(/\s*\[TL-[A-F0-9]{10}\]\s*/gi, " ")
     .replace(/^(?:re:\s*)+/i, "")
     .trim();
@@ -285,98 +290,6 @@ export function formatSupportEmailHtml(content: string, addReplySeparator = fals
     "</div>",
     separator,
   ].join("");
-}
-
-type ZohoMessageLocation = {
-  messageId: string;
-  folderId: string;
-};
-
-async function listZohoThreadMessageLocations(threadId: string): Promise<ZohoMessageLocation[]> {
-  const accountId = await getZohoAccountId();
-  const query = new URLSearchParams({
-    threadId,
-    start: "1",
-    limit: String(MAX_SYNC_MESSAGES),
-    status: "all",
-    includeto: "true",
-    includesent: "true",
-    includearchive: "true",
-    sortBy: "date",
-    sortorder: "false",
-  });
-  const rows = await zohoRequest<ZohoMessageListRow[]>(`/api/accounts/${accountId}/messages/view?${query}`);
-  return rows
-    .filter((row) => row.messageId !== undefined && row.folderId !== undefined)
-    .map((row) => ({ messageId: String(row.messageId), folderId: String(row.folderId) }));
-}
-
-async function resolveZohoMessageLocations(messageIds: string[]): Promise<ZohoMessageLocation[]> {
-  const wanted = new Set(messageIds.filter(Boolean));
-  if (!wanted.size) return [];
-
-  const accountId = await getZohoAccountId();
-  const found = new Map<string, ZohoMessageLocation>();
-  const maxPages = 10;
-
-  for (let page = 0; page < maxPages && found.size < wanted.size; page += 1) {
-    const query = new URLSearchParams({
-      start: String(page * MAX_SYNC_MESSAGES + 1),
-      limit: String(MAX_SYNC_MESSAGES),
-      status: "all",
-      includeto: "true",
-      includesent: "true",
-      includearchive: "true",
-      sortBy: "date",
-      sortorder: "false",
-    });
-    const rows = await zohoRequest<ZohoMessageListRow[]>(`/api/accounts/${accountId}/messages/view?${query}`);
-    for (const row of rows) {
-      if (row.messageId === undefined || row.folderId === undefined) continue;
-      const messageId = String(row.messageId);
-      if (!wanted.has(messageId)) continue;
-      found.set(messageId, { messageId, folderId: String(row.folderId) });
-    }
-    if (rows.length < MAX_SYNC_MESSAGES) break;
-  }
-
-  const missing = [...wanted].filter((messageId) => !found.has(messageId));
-  if (missing.length) {
-    throw new Error("לא ניתן לאתר ב-Zoho Mail את כל הודעות הפנייה. הפנייה לא נמחקה מטיפולינקס.");
-  }
-  return [...found.values()];
-}
-
-export async function moveZohoSupportConversationToTrash(args: {
-  threadId: string | null;
-  messageIds: string[];
-}): Promise<number> {
-  const localIds = [...new Set(args.messageIds.filter(Boolean))];
-  let locations: ZohoMessageLocation[] = [];
-
-  if (args.threadId) {
-    locations = await listZohoThreadMessageLocations(args.threadId);
-  }
-  if (!locations.length && localIds.length) {
-    locations = await resolveZohoMessageLocations(localIds);
-  }
-
-  const unique = [...new Map(locations.map((location) => [location.messageId, location])).values()];
-  if (!unique.length) {
-    if (localIds.length) {
-      throw new Error("לא נמצאו ב-Zoho Mail הודעות למחיקה. הפנייה לא נמחקה מטיפולינקס.");
-    }
-    return 0;
-  }
-
-  const accountId = await getZohoAccountId();
-  for (const location of unique) {
-    await zohoRequest<{ cId?: string | number }>(
-      `/api/accounts/${accountId}/folders/${location.folderId}/messages/${location.messageId}?expunge=false`,
-      { method: "DELETE" },
-    );
-  }
-  return unique.length;
 }
 
 export async function sendZohoSupportEmail(args: {
