@@ -28,10 +28,6 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         ))}
       </nav>
-
-      <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
-        אזור ניהול פנימי למשתמשים בעלי הרשאת מנהל בלבד.
-      </p>
     </div>
   );
 }
