@@ -468,57 +468,61 @@ function DesktopArrow() {
 
 function TherapistBenefitsSection() {
   return (
-    <section id="therapist-benefits" className="scroll-mt-6 border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section id="therapist-benefits" className="scroll-mt-24 border-b border-border bg-brand-soft/25">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold text-primary">מה יוצא לכם מזה?</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">מה יוצא לכם מזה?</p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
             יותר פניות ממטופלים בפחות כסף
           </h2>
 
-          <p className="mt-5 text-base leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[58ch] text-pretty text-base leading-8 text-muted-foreground">
             טיפולינקס עוזרת לכם להגיע למטופלים חדשים — בלי לשלם דמי מנוי קבועים
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {therapistAdvantages.map((advantage) => {
             const Icon = advantage.icon;
 
             return (
               <article
                 key={advantage.title}
-                className="group rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition hover:border-primary/20 hover:bg-brand-soft/30 hover:-translate-y-0.5 hover:shadow-md"
+                className="group flex h-full flex-col rounded-3xl border border-border bg-surface-elevated p-5 shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft sm:p-6"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft/60 text-primary transition group-hover:bg-brand-soft">
                   <Icon className="h-6 w-6" />
                 </div>
 
-                <h3 className="mt-5 text-lg font-bold leading-7 text-foreground">{advantage.title}</h3>
+                <h3 className="mt-5 text-pretty text-base font-bold leading-7 text-foreground sm:text-lg">
+                  {advantage.title}
+                </h3>
 
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{advantage.description}</p>
+                <p className="mt-3 text-pretty text-sm leading-7 text-muted-foreground">{advantage.description}</p>
               </article>
             );
           })}
         </div>
-        <div className="mt-10 rounded-3xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
-          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div>
+
+        <div className="mt-8 rounded-3xl border border-primary/20 bg-primary/5 p-5 shadow-sm sm:mt-10 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10">
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-primary">למה זה משנה?</p>
 
-              <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+              <h3 className="mt-2 text-pretty text-xl font-bold leading-8 tracking-tight text-foreground sm:text-2xl">
                 גם מי שלא חיפש את המקצוע שלכם יכול להגיע אליכם
               </h3>
             </div>
 
-            <p className="text-sm leading-7 text-muted-foreground">
+            <p className="max-w-[68ch] text-pretty text-sm leading-7 text-muted-foreground">
               אדם שמחפש עזרה לא תמיד יודע איך נקרא המקצוע שמתאים לו. כשהפרופיל שלכם מתאר באופן מדויק במה אתם מטפלים ולמי
               אתם מסייעים, מנוע החיפוש יכול לזהות את הרלוונטיות מתוך הצורך שהמשתמש תיאר — ולא רק מתוך מילת מקצוע שחיפש
               מראש.
             </p>
           </div>
         </div>
+
       </div>
     </section>
   );
