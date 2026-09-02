@@ -570,6 +570,10 @@ function validateForPublish(
   input: SaveInput,
   semanticProfile: readonly { slug: string; weight: number }[],
   saveMode: "self" | "admin_public_info" = "self",
+  contactPolicy: { requireContactMethod: boolean; maxContactMethods: number } = {
+    requireContactMethod: true,
+    maxContactMethods: 3,
+  },
 ): string[] {
   const missing: string[] = [];
   if (saveMode === "admin_public_info" && !input.email?.trim()) {
@@ -582,8 +586,11 @@ function validateForPublish(
   if (semanticProfile.length === 0) missing.push('תחום טיפול אחד לפחות מתוך "קצת עליי"');
   if (!input.language_ids || input.language_ids.length === 0) missing.push("שפות");
   if (!input.population_ids || input.population_ids.length === 0) missing.push("אוכלוסיות טיפול");
+  if (input.contact_methods.length > contactPolicy.maxContactMethods) {
+    missing.push(`עד ${contactPolicy.maxContactMethods} דרכי התקשרות`);
+  }
   if (!input.contact_methods || input.contact_methods.length === 0) {
-    missing.push("דרכי התקשרות");
+    if (contactPolicy.requireContactMethod) missing.push("דרכי התקשרות");
   } else {
     if (!input.preferred_contact_method || !input.contact_methods.includes(input.preferred_contact_method)) {
       missing.push("דרך התקשרות מועדפת");
@@ -662,6 +669,13 @@ async function saveProfileForActor(args: {
   const { data: existingProfile, error: existingProfileError } = await existingProfileQuery;
   if (existingProfileError) throw new Error(existingProfileError.message);
 
+  const systemSettings =
+    saveMode === "self" ? await (await import("./system-settings.server")).readSystemSettings() : null;
+
+  if (systemSettings && data.contact_methods.length > systemSettings.maxContactMethods) {
+    throw new Error(`ניתן לבחור עד ${systemSettings.maxContactMethods} דרכי התקשרות.`);
+  }
+
   const contactPolicyScan = saveMode === "self" ? scanProfileContactPolicy(data) : null;
   if (contactPolicyScan && contactPolicyScan.findings.length > 0) {
     const { error: violationError } = await supabaseAdmin.rpc("record_profile_contact_policy_violation", {
@@ -691,7 +705,46 @@ async function saveProfileForActor(args: {
   // extraction failure must abort the save/publish instead of persisting an
   // outdated (or silently emptied) semantic_profile.
   const semanticProfile = await computeSemanticProfile(data.full_description, supabase);
-  const readinessMissing = validateForPublish(data, semanticProfile, saveMode);
+  const readinessMissing = validateForPublish(
+    data,
+    semanticProfile,
+    saveMode,
+    systemSettings
+      ? {
+          requireContactMethod: systemSettings.requireContactMethodForPublish,
+          maxContactMethods: systemSettings.maxContactMethods,
+        }
+      : { requireContactMethod: true, maxContactMethods: 3 },
+  );
+
+  if (data.publish && saveMode === "self" && systemSettings) {
+    if (systemSettings.requirePaymentMethodForPublish) {
+      const { data: account, error: accountError } = await supabaseAdmin
+        .from("therapist_accounts")
+        .select("payment_method_status")
+        .eq("id", ownerAccountId!)
+        .maybeSingle();
+      if (accountError) throw new Error(accountError.message);
+      if (account?.payment_method_status !== "active") readinessMissing.push("אמצעי תשלום פעיל");
+    }
+
+    if (systemSettings.requireVerifiedCredentialForPublish) {
+      if (!existingProfile?.id) {
+        readinessMissing.push("אימות הסמכה");
+      } else {
+        const { data: verifiedCredential, error: credentialError } = await supabaseAdmin
+          .from("therapist_credentials")
+          .select("id")
+          .eq("therapist_id", existingProfile.id)
+          .eq("verification_status", "verified")
+          .limit(1)
+          .maybeSingle();
+        if (credentialError) throw new Error(credentialError.message);
+        if (!verifiedCredential) readinessMissing.push("אימות הסמכה");
+      }
+    }
+  }
+
   if (data.publish && readinessMissing.length > 0) {
     return { therapist_id: "", profile_status: "draft", missing: readinessMissing };
   }
@@ -909,6 +962,10 @@ export const updateMyContactPreferences = createServerFn({ method: "POST" })
     return parsed.data;
   })
   .handler(async ({ data, context }) => {
+    const settings = await (await import("./system-settings.server")).readSystemSettings();
+    if (data.contact_methods.length > settings.maxContactMethods) {
+      throw new Error(`ניתן לבחור עד ${settings.maxContactMethods} דרכי התקשרות.`);
+    }
     const accountId = await resolveAccount(context.supabase, context.userId);
     const { updateOwnedProfileContactPreferences } = await import("./profile-management.server");
     return updateOwnedProfileContactPreferences(accountId, {
