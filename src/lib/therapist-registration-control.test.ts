@@ -11,12 +11,7 @@ function read(...parts: string[]): string {
   return readFileSync(join(import.meta.dir, "..", ...parts), "utf8");
 }
 
-const migration = read(
-  "..",
-  "supabase",
-  "migrations",
-  "20260831010000_therapist_registration_control.sql",
-);
+const migration = read("..", "supabase", "migrations", "20260831010000_therapist_registration_control.sql");
 const adminRoute = read("routes", "admin", "settings.tsx");
 const authRoute = read("routes", "auth.tsx");
 const forTherapistsRoute = read("routes", "for-therapists.tsx");
@@ -44,6 +39,21 @@ describe("therapist registration control", () => {
     expect(accountFunctions).toContain("assertTherapistRegistrationEnabled");
     expect(profileFunctions).toContain("assertTherapistRegistrationEnabled");
     expect(claimFunctions).toContain("assertTherapistRegistrationEnabled");
+  });
+
+  it("does not block profile publication for therapists who already have an account", () => {
+    const systemSettingsMigration = read("..", "supabase", "migrations", "20260902170000_system_settings.sql");
+    const profileSaveMigration = read(
+      "..",
+      "supabase",
+      "migrations",
+      "20260902172000_profile_save_system_settings.sql",
+    );
+
+    expect(profileFunctions).not.toContain("assertNewProfilePublicationEnabled");
+    expect(systemSettingsMigration).not.toContain("new_profile_publication_disabled");
+    expect(profileSaveMigration).not.toContain("new_profile_publication_disabled");
+    expect(adminRoute).toContain("מטפלים שכבר נרשמו יכולים להמשיך לערוך ולפרסם את הפרופיל שלהם");
   });
 
   it("enforces the gate at the therapist_accounts RLS boundary", () => {
