@@ -289,6 +289,13 @@ REVOKE ALL ON FUNCTION public.submit_lead(uuid, integer, text, text, text, uuid,
 REVOKE ALL ON FUNCTION public.submit_lead(uuid, integer, text, text, text, uuid, text, uuid, uuid, text, text, text, text) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_lead(uuid, integer, text, text, text, uuid, text, uuid, uuid, text, text, text, text) TO service_role;
 
+-- Keep the retired split-authorization path unavailable and preserve the
+-- service-role-only challenge purge invariant from the prior hardening migration.
+DROP FUNCTION IF EXISTS public.authorize_lead_submission(uuid, integer, text, text, uuid);
+REVOKE ALL ON FUNCTION public.purge_expired_lead_challenges() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.purge_expired_lead_challenges() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.purge_expired_lead_challenges() TO service_role;
+
 
 create or replace function public.submit_whatsapp_lead(
   _challenge_id uuid,
