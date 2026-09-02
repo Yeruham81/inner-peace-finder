@@ -216,27 +216,28 @@ function VisionSection() {
         </nav>
 
 
-        <div>
+        <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium text-primary shadow-sm">
             <Sparkles className="h-4 w-4" />
             דרך פשוטה יותר למצוא טיפול
           </div>
 
-          <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl sm:leading-tight">
+          <h1 className="mt-6 max-w-[22ch] text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.12]">
             המטופל לא צריך לדעת מראש איזה מטפל לחפש
           </h1>
 
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
+          <p className="mt-6 max-w-[58ch] text-pretty text-base leading-8 text-muted-foreground sm:text-lg sm:leading-9">
             אדם שמתמודד עם חרדה, קשיי שינה, משבר בזוגיות או קושי אצל הילד יודע בדרך כלל מה מפריע לו — אבל לא בהכרח יודע
             אם הוא צריך פסיכולוג, פסיכותרפיסט או איש מקצוע אחר.
           </p>
 
-          <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground">
+          <p className="mt-4 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
             הוא גם לא אמור לבחור מטפל לפי שיטת טיפול שמעולם לא שמע עליה. בטיפולינקס מתחילים מהקושי עצמו: המשתמש מתאר
             במילים שלו מה עובר עליו, והמנוע מחפש עבורו מטפלים רלוונטיים שמציעים טיפול בתחום המתאים.
           </p>
 
-          <div className="mt-7 rounded-2xl border-r-4 border-primary bg-background p-5 shadow-sm">
+          <div className="mt-8 max-w-[62ch] rounded-2xl border border-border border-r-4 border-r-primary bg-surface-elevated p-5 shadow-card sm:p-6">
+
             <p className="text-base font-semibold leading-8 text-foreground">
               במקום לשאול את המשתמש "איזה מטפל אתה מחפש?" — טיפולינקס מתחילה בשאלה "במה אפשר לעזור?"
             </p>
