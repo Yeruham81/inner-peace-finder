@@ -2,6 +2,11 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const ACCOUNT_DELETION_SUPPORT_EMAIL = "admin@tipulinks.co.il";
 
+async function configuredSupportEmail(): Promise<string> {
+  const { readSystemSettings } = await import("./system-settings.server");
+  return (await readSystemSettings()).supportEmail || ACCOUNT_DELETION_SUPPORT_EMAIL;
+}
+
 export type AccountDeletionStatus =
   | "blocked_pending_leads"
   | "payment_method_required"
@@ -48,7 +53,7 @@ function asNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function preparationFrom(value: unknown): AccountDeletionPreparation {
+function preparationFrom(value: unknown, supportEmail: string): AccountDeletionPreparation {
   const row = asRecord(value);
   return {
     deleted: false,
@@ -62,7 +67,7 @@ function preparationFrom(value: unknown): AccountDeletionPreparation {
         ? row.payment_method_kind
         : null,
     profile_frozen: true,
-    support_email: ACCOUNT_DELETION_SUPPORT_EMAIL,
+    support_email: supportEmail,
   };
 }
 
@@ -96,7 +101,7 @@ async function prepareDeletion(authUserId: string): Promise<AccountDeletionPrepa
     _actor: authUserId,
   });
   if (error) throw new Error(error.message);
-  return preparationFrom(data);
+  return preparationFrom(data, await configuredSupportEmail());
 }
 
 export async function beginOwnedAccountDeletion(authUserId: string) {
@@ -110,7 +115,7 @@ export async function assertOwnedAccountDeletionReady(authUserId: string) {
   if (error) {
     if (error.message.includes("account_deletion_pending_leads")) {
       throw new Error(
-        `מחיקת החשבון אינה אפשרית כרגע משום שקיימת פנייה שעדיין נמצאת בתהליך. אם המצב אינו משתנה, יש לפנות לתמיכה: ${ACCOUNT_DELETION_SUPPORT_EMAIL}`,
+        `מחיקת החשבון אינה אפשרית כרגע משום שקיימת פנייה שעדיין נמצאת בתהליך. אם המצב אינו משתנה, יש לפנות לתמיכה: ${await configuredSupportEmail()}`,
       );
     }
     const balanceMatch = error.message.match(/account_deletion_balance_due:(\d+)/);
@@ -133,7 +138,7 @@ export async function settleOwnedAccountDeletionBalance(authUserId: string, requ
   const status = String(claim.status ?? "payment_required") as AccountDeletionStatus;
 
   if (status === "blocked_pending_leads" || status === "payment_method_required" || status === "ready_to_delete") {
-    return preparationFrom({ ...claim, status, profile_frozen: true });
+    return preparationFrom({ ...claim, status, profile_frozen: true }, await configuredSupportEmail());
   }
 
   const paymentAttemptId = String(claim.payment_attempt_id ?? "");
@@ -170,7 +175,7 @@ export async function settleOwnedAccountDeletionBalance(authUserId: string, requ
     });
     if (finishError) throw new Error(finishError.message);
 
-    return preparationFrom({ ...asRecord(finished), profile_frozen: true });
+    return preparationFrom({ ...asRecord(finished), profile_frozen: true }, await configuredSupportEmail());
   } catch (error) {
     const message = error instanceof Error ? error.message : "payment_failed";
 
