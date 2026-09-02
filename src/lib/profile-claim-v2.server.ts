@@ -185,6 +185,11 @@ export async function sendClaimInvitation(input: {
   inviteSource: ClaimInviteSource;
   replaceExisting?: boolean;
 }): Promise<ClaimInviteDeliveryResult> {
+  const { readSystemSettings } = await import("./system-settings.server");
+  if (!(await readSystemSettings()).systemEmailsEnabled) {
+    return { status: "failed", inviteId: null, providerMessageId: null, error: "system_emails_disabled" };
+  }
+
   let invite: ClaimInvite;
   try {
     invite = await createClaimInviteForTherapist(input);
