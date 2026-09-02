@@ -17,6 +17,12 @@ const LeadSchema = z.object({
 export const createLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => LeadSchema.parse(input))
   .handler(async ({ data }) => {
+    const { readSystemSettings } = await import("./system-settings.server");
+    const systemSettings = await readSystemSettings();
+    if (data.message.length > systemSettings.leadMessageMaxLength) {
+      throw new Error(`ההודעה ארוכה מדי. ניתן להזין עד ${systemSettings.leadMessageMaxLength} תווים.`);
+    }
+
     const { isContactChannelEnabled } = await import("./contact-channel-settings.server");
     if (!(await isContactChannelEnabled("email"))) {
       return {
