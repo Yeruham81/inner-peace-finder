@@ -29,9 +29,7 @@ describe("therapist account management workflows", () => {
     expect(leadDetailFunctions).toContain('rpc("update_my_account_lead"');
     expect(migration).toContain("where account.auth_user_id = auth.uid()");
     expect(migration).toContain("and lead.therapist_id = v_therapist_id");
-    expect(migration).toContain(
-      "revoke all on function public.get_my_account_lead_detail(uuid) from public, anon",
-    );
+    expect(migration).toContain("revoke all on function public.get_my_account_lead_detail(uuid) from public, anon");
   });
 
   it("connects the therapist lead drawer to real details and a private workflow", () => {
@@ -48,6 +46,13 @@ describe("therapist account management workflows", () => {
     expect(credentialFunctions).toContain("createSignedUrl(credential.document_url, 5 * 60)");
     expect(credentialFunctions).toContain('current.verification_status !== "pending_review"');
     expect(credentialFunctions).toContain('.eq("verification_status", "pending_review")');
+    expect(credentialFunctions).toContain("if (approved && !current.document_url)");
+    expect(credentialFunctions).toContain("cleanupVerifiedCredentialDocument");
+    expect(credentialFunctions).toContain('row.verification_status === "verified" && Boolean(row.document_url)');
+    expect(credentialFunctions).toContain('credential?.verification_status === "verified"');
+    expect(credentialFunctions).toContain('.from("therapist-credentials")');
+    expect(credentialFunctions).toContain(".remove([documentPath])");
+    expect(credentialFunctions).toContain(".update({ document_url: null })");
     expect(credentialFunctions).toContain("reviewed_by: context.userId");
     expect(credentialFunctions).toContain("sendCredentialStatusNotification");
     expect(credentialRoute).toContain("listAdminCredentials");
@@ -65,18 +70,14 @@ describe("therapist account management workflows", () => {
     expect(supportRoute).toContain("listAdminSupportRequests");
     expect(supportRoute).toContain("reviewAdminSupportRequest");
     expect(migration).toContain("where account.auth_user_id = auth.uid()");
-    expect(migration).toContain(
-      "revoke all on function public.get_my_support_requests() from public, anon",
-    );
+    expect(migration).toContain("revoke all on function public.get_my_support_requests() from public, anon");
   });
 
   it("enforces notification preferences with an idempotent service-role outbox", () => {
     expect(migration).toContain("account.notify_new_leads");
     expect(migration).toContain("account.notify_account_updates");
     expect(migration).toContain("unique (account_id, notification_kind, entity_key)");
-    expect(migration).toContain(
-      "grant all on table public.account_notification_deliveries to service_role",
-    );
+    expect(migration).toContain("grant all on table public.account_notification_deliveries to service_role");
     expect(migration).toContain("from public, anon, authenticated");
     expect(notifications).toContain('kind: "new_lead"');
     expect(notifications).toContain('kind: "credential_status"');
