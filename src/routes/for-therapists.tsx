@@ -457,13 +457,14 @@ function MatchedTherapistCard() {
 
 function DesktopArrow() {
   return (
-    <div className="hidden items-center justify-center md:flex">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-background text-primary shadow-sm">
+    <div className="hidden items-center justify-center lg:flex">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-surface-elevated text-primary shadow-sm">
         <ArrowLeft className="h-5 w-5" />
       </div>
     </div>
   );
 }
+
 
 function TherapistBenefitsSection() {
   return (
