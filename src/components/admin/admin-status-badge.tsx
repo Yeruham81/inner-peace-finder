@@ -60,6 +60,11 @@ const STATUS_TONES: Record<string, Tone> = {
   שגיאה: "negative",
   מתוכנן: "neutral",
   "לא נבדק": "neutral",
+  מתוזמנת: "pending",
+  בתהליך: "pending",
+  נשלחה: "positive",
+  "נשלחה חלקית": "pending",
+  בוטלה: "neutral",
   // admin task urgency
   דחוף: "negative",
   לבדיקה: "neutral",

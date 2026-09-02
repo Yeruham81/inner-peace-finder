@@ -1,3367 +1,3531 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       account_deletion_requests: {
         Row: {
-          account_id: string
-          id: string
-          last_checked_at: string
-          last_error: string | null
-          outstanding_agorot: number
-          pending_reservations: number
-          previous_account_status: Database["public"]["Enums"]["therapist_account_status"]
-          requested_at: string
-          status: string
-          updated_at: string
-        }
+          account_id: string;
+          id: string;
+          last_checked_at: string;
+          last_error: string | null;
+          outstanding_agorot: number;
+          pending_reservations: number;
+          previous_account_status: Database["public"]["Enums"]["therapist_account_status"];
+          requested_at: string;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          account_id: string
-          id?: string
-          last_checked_at?: string
-          last_error?: string | null
-          outstanding_agorot?: number
-          pending_reservations?: number
-          previous_account_status: Database["public"]["Enums"]["therapist_account_status"]
-          requested_at?: string
-          status?: string
-          updated_at?: string
-        }
+          account_id: string;
+          id?: string;
+          last_checked_at?: string;
+          last_error?: string | null;
+          outstanding_agorot?: number;
+          pending_reservations?: number;
+          previous_account_status: Database["public"]["Enums"]["therapist_account_status"];
+          requested_at?: string;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string
-          id?: string
-          last_checked_at?: string
-          last_error?: string | null
-          outstanding_agorot?: number
-          pending_reservations?: number
-          previous_account_status?: Database["public"]["Enums"]["therapist_account_status"]
-          requested_at?: string
-          status?: string
-          updated_at?: string
-        }
+          account_id?: string;
+          id?: string;
+          last_checked_at?: string;
+          last_error?: string | null;
+          outstanding_agorot?: number;
+          pending_reservations?: number;
+          previous_account_status?: Database["public"]["Enums"]["therapist_account_status"];
+          requested_at?: string;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "account_deletion_requests_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: true
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "account_deletion_requests_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: true;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       account_notification_deliveries: {
         Row: {
-          account_id: string
-          attempts: number
-          created_at: string
-          entity_key: string
-          id: string
-          last_attempt_at: string
-          last_error: string | null
-          notification_kind: string
-          provider_message_id: string | null
-          sent_at: string | null
-          status: string
-          updated_at: string
-        }
+          account_id: string;
+          attempts: number;
+          created_at: string;
+          entity_key: string;
+          id: string;
+          last_attempt_at: string;
+          last_error: string | null;
+          notification_kind: string;
+          provider_message_id: string | null;
+          sent_at: string | null;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          account_id: string
-          attempts?: number
-          created_at?: string
-          entity_key: string
-          id?: string
-          last_attempt_at?: string
-          last_error?: string | null
-          notification_kind: string
-          provider_message_id?: string | null
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-        }
+          account_id: string;
+          attempts?: number;
+          created_at?: string;
+          entity_key: string;
+          id?: string;
+          last_attempt_at?: string;
+          last_error?: string | null;
+          notification_kind: string;
+          provider_message_id?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string
-          attempts?: number
-          created_at?: string
-          entity_key?: string
-          id?: string
-          last_attempt_at?: string
-          last_error?: string | null
-          notification_kind?: string
-          provider_message_id?: string | null
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-        }
+          account_id?: string;
+          attempts?: number;
+          created_at?: string;
+          entity_key?: string;
+          id?: string;
+          last_attempt_at?: string;
+          last_error?: string | null;
+          notification_kind?: string;
+          provider_message_id?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "account_notification_deliveries_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "account_notification_deliveries_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       account_support_messages: {
         Row: {
-          body: string
-          channel: string
-          created_at: string
-          direction: string
-          has_attachment: boolean
-          id: string
-          occurred_at: string
-          recipient_email: string | null
-          request_id: string
-          sender_email: string | null
-          sender_name: string | null
-          zoho_message_id: string | null
-          zoho_thread_id: string | null
-        }
+          body: string;
+          channel: string;
+          created_at: string;
+          direction: string;
+          has_attachment: boolean;
+          id: string;
+          occurred_at: string;
+          recipient_email: string | null;
+          request_id: string;
+          sender_email: string | null;
+          sender_name: string | null;
+          zoho_message_id: string | null;
+          zoho_thread_id: string | null;
+        };
         Insert: {
-          body: string
-          channel: string
-          created_at?: string
-          direction: string
-          has_attachment?: boolean
-          id?: string
-          occurred_at?: string
-          recipient_email?: string | null
-          request_id: string
-          sender_email?: string | null
-          sender_name?: string | null
-          zoho_message_id?: string | null
-          zoho_thread_id?: string | null
-        }
+          body: string;
+          channel: string;
+          created_at?: string;
+          direction: string;
+          has_attachment?: boolean;
+          id?: string;
+          occurred_at?: string;
+          recipient_email?: string | null;
+          request_id: string;
+          sender_email?: string | null;
+          sender_name?: string | null;
+          zoho_message_id?: string | null;
+          zoho_thread_id?: string | null;
+        };
         Update: {
-          body?: string
-          channel?: string
-          created_at?: string
-          direction?: string
-          has_attachment?: boolean
-          id?: string
-          occurred_at?: string
-          recipient_email?: string | null
-          request_id?: string
-          sender_email?: string | null
-          sender_name?: string | null
-          zoho_message_id?: string | null
-          zoho_thread_id?: string | null
-        }
+          body?: string;
+          channel?: string;
+          created_at?: string;
+          direction?: string;
+          has_attachment?: boolean;
+          id?: string;
+          occurred_at?: string;
+          recipient_email?: string | null;
+          request_id?: string;
+          sender_email?: string | null;
+          sender_name?: string | null;
+          zoho_message_id?: string | null;
+          zoho_thread_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "account_support_messages_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "account_support_requests"
-            referencedColumns: ["id"]
+            foreignKeyName: "account_support_messages_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "account_support_requests";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       account_support_requests: {
         Row: {
-          account_id: string | null
-          category: string
-          created_at: string
-          id: string
-          last_message_at: string
-          last_zoho_message_id: string | null
-          message: string
-          requester_email: string | null
-          requester_name: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          source: string
-          staff_response: string | null
-          status: string
-          subject: string
-          ticket_code: string
-          updated_at: string
-          zoho_thread_id: string | null
-        }
+          account_id: string | null;
+          category: string;
+          created_at: string;
+          id: string;
+          last_message_at: string;
+          last_zoho_message_id: string | null;
+          message: string;
+          requester_email: string | null;
+          requester_name: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          source: string;
+          staff_response: string | null;
+          status: string;
+          subject: string;
+          ticket_code: string;
+          updated_at: string;
+          zoho_thread_id: string | null;
+        };
         Insert: {
-          account_id?: string | null
-          category: string
-          created_at?: string
-          id?: string
-          last_message_at?: string
-          last_zoho_message_id?: string | null
-          message: string
-          requester_email?: string | null
-          requester_name?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          source?: string
-          staff_response?: string | null
-          status?: string
-          subject: string
-          ticket_code?: string
-          updated_at?: string
-          zoho_thread_id?: string | null
-        }
+          account_id?: string | null;
+          category: string;
+          created_at?: string;
+          id?: string;
+          last_message_at?: string;
+          last_zoho_message_id?: string | null;
+          message: string;
+          requester_email?: string | null;
+          requester_name?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source?: string;
+          staff_response?: string | null;
+          status?: string;
+          subject: string;
+          ticket_code?: string;
+          updated_at?: string;
+          zoho_thread_id?: string | null;
+        };
         Update: {
-          account_id?: string | null
-          category?: string
-          created_at?: string
-          id?: string
-          last_message_at?: string
-          last_zoho_message_id?: string | null
-          message?: string
-          requester_email?: string | null
-          requester_name?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          source?: string
-          staff_response?: string | null
-          status?: string
-          subject?: string
-          ticket_code?: string
-          updated_at?: string
-          zoho_thread_id?: string | null
-        }
+          account_id?: string | null;
+          category?: string;
+          created_at?: string;
+          id?: string;
+          last_message_at?: string;
+          last_zoho_message_id?: string | null;
+          message?: string;
+          requester_email?: string | null;
+          requester_name?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source?: string;
+          staff_response?: string | null;
+          status?: string;
+          subject?: string;
+          ticket_code?: string;
+          updated_at?: string;
+          zoho_thread_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "account_support_requests_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "account_support_requests_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       analytics_events: {
         Row: {
-          created_at: string
-          event_name: string
-          id: string
-          identity_hash: string | null
-          page_source: string | null
-          population_id: string | null
-          problem_id: string | null
-          rank_position: number | null
-          session_id: string
-          therapist_id: string | null
-        }
+          created_at: string;
+          event_name: string;
+          id: string;
+          identity_hash: string | null;
+          page_source: string | null;
+          population_id: string | null;
+          problem_id: string | null;
+          rank_position: number | null;
+          session_id: string;
+          therapist_id: string | null;
+        };
         Insert: {
-          created_at?: string
-          event_name: string
-          id?: string
-          identity_hash?: string | null
-          page_source?: string | null
-          population_id?: string | null
-          problem_id?: string | null
-          rank_position?: number | null
-          session_id: string
-          therapist_id?: string | null
-        }
+          created_at?: string;
+          event_name: string;
+          id?: string;
+          identity_hash?: string | null;
+          page_source?: string | null;
+          population_id?: string | null;
+          problem_id?: string | null;
+          rank_position?: number | null;
+          session_id: string;
+          therapist_id?: string | null;
+        };
         Update: {
-          created_at?: string
-          event_name?: string
-          id?: string
-          identity_hash?: string | null
-          page_source?: string | null
-          population_id?: string | null
-          problem_id?: string | null
-          rank_position?: number | null
-          session_id?: string
-          therapist_id?: string | null
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          event_name?: string;
+          id?: string;
+          identity_hash?: string | null;
+          page_source?: string | null;
+          population_id?: string | null;
+          problem_id?: string | null;
+          rank_position?: number | null;
+          session_id?: string;
+          therapist_id?: string | null;
+        };
+        Relationships: [];
+      };
       billing_payment_attempts: {
         Row: {
-          account_id: string | null
-          account_reference: string
-          amount_agorot: number
-          created_at: string
-          deletion_request_id: string | null
-          id: string
-          idempotency_key: string
-          last_error: string | null
-          payment_method_kind: string | null
-          provider: string | null
-          provider_reference: string | null
-          purpose: string
-          status: string
-          succeeded_at: string | null
-          updated_at: string
-        }
+          account_id: string | null;
+          account_reference: string;
+          amount_agorot: number;
+          created_at: string;
+          deletion_request_id: string | null;
+          id: string;
+          idempotency_key: string;
+          last_error: string | null;
+          payment_method_kind: string | null;
+          provider: string | null;
+          provider_reference: string | null;
+          purpose: string;
+          status: string;
+          succeeded_at: string | null;
+          updated_at: string;
+        };
         Insert: {
-          account_id?: string | null
-          account_reference: string
-          amount_agorot: number
-          created_at?: string
-          deletion_request_id?: string | null
-          id?: string
-          idempotency_key: string
-          last_error?: string | null
-          payment_method_kind?: string | null
-          provider?: string | null
-          provider_reference?: string | null
-          purpose: string
-          status: string
-          succeeded_at?: string | null
-          updated_at?: string
-        }
+          account_id?: string | null;
+          account_reference: string;
+          amount_agorot: number;
+          created_at?: string;
+          deletion_request_id?: string | null;
+          id?: string;
+          idempotency_key: string;
+          last_error?: string | null;
+          payment_method_kind?: string | null;
+          provider?: string | null;
+          provider_reference?: string | null;
+          purpose: string;
+          status: string;
+          succeeded_at?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string | null
-          account_reference?: string
-          amount_agorot?: number
-          created_at?: string
-          deletion_request_id?: string | null
-          id?: string
-          idempotency_key?: string
-          last_error?: string | null
-          payment_method_kind?: string | null
-          provider?: string | null
-          provider_reference?: string | null
-          purpose?: string
-          status?: string
-          succeeded_at?: string | null
-          updated_at?: string
-        }
+          account_id?: string | null;
+          account_reference?: string;
+          amount_agorot?: number;
+          created_at?: string;
+          deletion_request_id?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          last_error?: string | null;
+          payment_method_kind?: string | null;
+          provider?: string | null;
+          provider_reference?: string | null;
+          purpose?: string;
+          status?: string;
+          succeeded_at?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "billing_payment_attempts_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "billing_payment_attempts_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "billing_payment_attempts_deletion_request_id_fkey"
-            columns: ["deletion_request_id"]
-            isOneToOne: false
-            referencedRelation: "account_deletion_requests"
-            referencedColumns: ["id"]
+            foreignKeyName: "billing_payment_attempts_deletion_request_id_fkey";
+            columns: ["deletion_request_id"];
+            isOneToOne: false;
+            referencedRelation: "account_deletion_requests";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       billing_price_settings: {
         Row: {
-          created_at: string
-          currency: string
-          lead_price_agorot: number | null
-          pricing_active: boolean
-          singleton: boolean
-          updated_at: string
-          updated_by: string | null
-        }
+          created_at: string;
+          currency: string;
+          lead_price_agorot: number | null;
+          pricing_active: boolean;
+          singleton: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
         Insert: {
-          created_at?: string
-          currency?: string
-          lead_price_agorot?: number | null
-          pricing_active?: boolean
-          singleton?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
+          created_at?: string;
+          currency?: string;
+          lead_price_agorot?: number | null;
+          pricing_active?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Update: {
-          created_at?: string
-          currency?: string
-          lead_price_agorot?: number | null
-          pricing_active?: boolean
-          singleton?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          currency?: string;
+          lead_price_agorot?: number | null;
+          pricing_active?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       contact_channel_settings: {
         Row: {
-          created_at: string
-          email_enabled: boolean
-          phone_enabled: boolean
-          singleton: boolean
-          updated_at: string
-          updated_by: string | null
-          whatsapp_enabled: boolean
-        }
+          created_at: string;
+          email_enabled: boolean;
+          phone_enabled: boolean;
+          singleton: boolean;
+          updated_at: string;
+          updated_by: string | null;
+          whatsapp_enabled: boolean;
+        };
         Insert: {
-          created_at?: string
-          email_enabled?: boolean
-          phone_enabled?: boolean
-          singleton?: boolean
-          updated_at?: string
-          updated_by?: string | null
-          whatsapp_enabled?: boolean
-        }
+          created_at?: string;
+          email_enabled?: boolean;
+          phone_enabled?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+          whatsapp_enabled?: boolean;
+        };
         Update: {
-          created_at?: string
-          email_enabled?: boolean
-          phone_enabled?: boolean
-          singleton?: boolean
-          updated_at?: string
-          updated_by?: string | null
-          whatsapp_enabled?: boolean
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          email_enabled?: boolean;
+          phone_enabled?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+          whatsapp_enabled?: boolean;
+        };
+        Relationships: [];
+      };
       contact_email_suppressions: {
         Row: {
-          created_at: string
-          email_normalized: string
-          last_confirmed_at: string
-          source: string
-        }
+          created_at: string;
+          email_normalized: string;
+          last_confirmed_at: string;
+          source: string;
+        };
         Insert: {
-          created_at?: string
-          email_normalized: string
-          last_confirmed_at?: string
-          source: string
-        }
+          created_at?: string;
+          email_normalized: string;
+          last_confirmed_at?: string;
+          source: string;
+        };
         Update: {
-          created_at?: string
-          email_normalized?: string
-          last_confirmed_at?: string
-          source?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          email_normalized?: string;
+          last_confirmed_at?: string;
+          source?: string;
+        };
+        Relationships: [];
+      };
       cta_clicks: {
         Row: {
-          billable: boolean
-          created_at: string
-          cta_id: string
-          id: string
-          ip_hash: string | null
-          session_id: string
-          source_problem_id: string | null
-          therapist_id: string
-          user_agent: string | null
-        }
+          billable: boolean;
+          created_at: string;
+          cta_id: string;
+          id: string;
+          ip_hash: string | null;
+          session_id: string;
+          source_problem_id: string | null;
+          therapist_id: string;
+          user_agent: string | null;
+        };
         Insert: {
-          billable?: boolean
-          created_at?: string
-          cta_id?: string
-          id?: string
-          ip_hash?: string | null
-          session_id: string
-          source_problem_id?: string | null
-          therapist_id: string
-          user_agent?: string | null
-        }
+          billable?: boolean;
+          created_at?: string;
+          cta_id?: string;
+          id?: string;
+          ip_hash?: string | null;
+          session_id: string;
+          source_problem_id?: string | null;
+          therapist_id: string;
+          user_agent?: string | null;
+        };
         Update: {
-          billable?: boolean
-          created_at?: string
-          cta_id?: string
-          id?: string
-          ip_hash?: string | null
-          session_id?: string
-          source_problem_id?: string | null
-          therapist_id?: string
-          user_agent?: string | null
-        }
+          billable?: boolean;
+          created_at?: string;
+          cta_id?: string;
+          id?: string;
+          ip_hash?: string | null;
+          session_id?: string;
+          source_problem_id?: string | null;
+          therapist_id?: string;
+          user_agent?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "cta_clicks_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "cta_clicks_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       email_lead_deliveries: {
         Row: {
-          accepted_at: string | null
-          billable_eligible: boolean
-          billed_at: string | null
-          budget_reservation_id: string | null
-          channel: string
-          created_at: string
-          cta_event_id: string | null
-          deferred_at: string | null
-          delivered_at: string | null
-          error_code: string | null
-          failed_at: string | null
-          id: string
-          lead_id: string
-          provider: string
-          provider_message_id: string | null
-          reservation_released_at: string | null
-          status: string
-          therapist_id: string
-          updated_at: string
-        }
+          accepted_at: string | null;
+          billable_eligible: boolean;
+          billed_at: string | null;
+          budget_reservation_id: string | null;
+          channel: string;
+          created_at: string;
+          cta_event_id: string | null;
+          deferred_at: string | null;
+          delivered_at: string | null;
+          error_code: string | null;
+          failed_at: string | null;
+          id: string;
+          lead_id: string;
+          provider: string;
+          provider_message_id: string | null;
+          reservation_released_at: string | null;
+          status: string;
+          therapist_id: string;
+          updated_at: string;
+        };
         Insert: {
-          accepted_at?: string | null
-          billable_eligible?: boolean
-          billed_at?: string | null
-          budget_reservation_id?: string | null
-          channel?: string
-          created_at?: string
-          cta_event_id?: string | null
-          deferred_at?: string | null
-          delivered_at?: string | null
-          error_code?: string | null
-          failed_at?: string | null
-          id?: string
-          lead_id: string
-          provider?: string
-          provider_message_id?: string | null
-          reservation_released_at?: string | null
-          status?: string
-          therapist_id: string
-          updated_at?: string
-        }
+          accepted_at?: string | null;
+          billable_eligible?: boolean;
+          billed_at?: string | null;
+          budget_reservation_id?: string | null;
+          channel?: string;
+          created_at?: string;
+          cta_event_id?: string | null;
+          deferred_at?: string | null;
+          delivered_at?: string | null;
+          error_code?: string | null;
+          failed_at?: string | null;
+          id?: string;
+          lead_id: string;
+          provider?: string;
+          provider_message_id?: string | null;
+          reservation_released_at?: string | null;
+          status?: string;
+          therapist_id: string;
+          updated_at?: string;
+        };
         Update: {
-          accepted_at?: string | null
-          billable_eligible?: boolean
-          billed_at?: string | null
-          budget_reservation_id?: string | null
-          channel?: string
-          created_at?: string
-          cta_event_id?: string | null
-          deferred_at?: string | null
-          delivered_at?: string | null
-          error_code?: string | null
-          failed_at?: string | null
-          id?: string
-          lead_id?: string
-          provider?: string
-          provider_message_id?: string | null
-          reservation_released_at?: string | null
-          status?: string
-          therapist_id?: string
-          updated_at?: string
-        }
+          accepted_at?: string | null;
+          billable_eligible?: boolean;
+          billed_at?: string | null;
+          budget_reservation_id?: string | null;
+          channel?: string;
+          created_at?: string;
+          cta_event_id?: string | null;
+          deferred_at?: string | null;
+          delivered_at?: string | null;
+          error_code?: string | null;
+          failed_at?: string | null;
+          id?: string;
+          lead_id?: string;
+          provider?: string;
+          provider_message_id?: string | null;
+          reservation_released_at?: string | null;
+          status?: string;
+          therapist_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "email_lead_deliveries_budget_reservation_id_fkey"
-            columns: ["budget_reservation_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_budget_reservations"
-            referencedColumns: ["id"]
+            foreignKeyName: "email_lead_deliveries_budget_reservation_id_fkey";
+            columns: ["budget_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "monthly_budget_reservations";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "email_lead_deliveries_cta_event_id_fkey"
-            columns: ["cta_event_id"]
-            isOneToOne: false
-            referencedRelation: "cta_clicks"
-            referencedColumns: ["id"]
+            foreignKeyName: "email_lead_deliveries_cta_event_id_fkey";
+            columns: ["cta_event_id"];
+            isOneToOne: false;
+            referencedRelation: "cta_clicks";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "email_lead_deliveries_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "lead_events"
-            referencedColumns: ["id"]
+            foreignKeyName: "email_lead_deliveries_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "lead_events";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "email_lead_deliveries_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "email_lead_deliveries_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       languages: {
         Row: {
-          code: string
-          id: string
-          name: string
-        }
+          code: string;
+          id: string;
+          name: string;
+        };
         Insert: {
-          code: string
-          id?: string
-          name: string
-        }
+          code: string;
+          id?: string;
+          name: string;
+        };
         Update: {
-          code?: string
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
+          code?: string;
+          id?: string;
+          name?: string;
+        };
+        Relationships: [];
+      };
       lead_challenges: {
         Row: {
-          consumed_at: string | null
-          created_at: string
-          expected_answer: number
-          expires_at: string
-          id: string
-          ip_hash: string
-          prompt: string
-        }
+          consumed_at: string | null;
+          created_at: string;
+          expected_answer: number;
+          expires_at: string;
+          id: string;
+          ip_hash: string;
+          prompt: string;
+        };
         Insert: {
-          consumed_at?: string | null
-          created_at?: string
-          expected_answer: number
-          expires_at: string
-          id?: string
-          ip_hash: string
-          prompt: string
-        }
+          consumed_at?: string | null;
+          created_at?: string;
+          expected_answer: number;
+          expires_at: string;
+          id?: string;
+          ip_hash: string;
+          prompt: string;
+        };
         Update: {
-          consumed_at?: string | null
-          created_at?: string
-          expected_answer?: number
-          expires_at?: string
-          id?: string
-          ip_hash?: string
-          prompt?: string
-        }
-        Relationships: []
-      }
+          consumed_at?: string | null;
+          created_at?: string;
+          expected_answer?: number;
+          expires_at?: string;
+          id?: string;
+          ip_hash?: string;
+          prompt?: string;
+        };
+        Relationships: [];
+      };
       lead_events: {
         Row: {
-          challenge_passed: boolean
-          challenge_presented: string | null
-          created_at: string
-          cta_event_id: string | null
-          delivery_channel: string | null
-          delivery_status: string
-          id: string
-          message: string
-          population_id: string | null
-          problem_id: string | null
-          provider_message_id: string | null
-          session_id: string
-          therapist_id: string
-          therapist_note: string | null
-          therapist_status: string
-          therapist_updated_at: string | null
-          visitor_name: string
-          visitor_phone: string
-        }
+          challenge_passed: boolean;
+          challenge_presented: string | null;
+          created_at: string;
+          cta_event_id: string | null;
+          delivery_channel: string | null;
+          delivery_status: string;
+          id: string;
+          message: string;
+          population_id: string | null;
+          problem_id: string | null;
+          provider_message_id: string | null;
+          session_id: string;
+          therapist_id: string;
+          therapist_note: string | null;
+          therapist_status: string;
+          therapist_updated_at: string | null;
+          visitor_name: string;
+          visitor_phone: string;
+        };
         Insert: {
-          challenge_passed?: boolean
-          challenge_presented?: string | null
-          created_at?: string
-          cta_event_id?: string | null
-          delivery_channel?: string | null
-          delivery_status?: string
-          id?: string
-          message: string
-          population_id?: string | null
-          problem_id?: string | null
-          provider_message_id?: string | null
-          session_id: string
-          therapist_id: string
-          therapist_note?: string | null
-          therapist_status?: string
-          therapist_updated_at?: string | null
-          visitor_name: string
-          visitor_phone: string
-        }
+          challenge_passed?: boolean;
+          challenge_presented?: string | null;
+          created_at?: string;
+          cta_event_id?: string | null;
+          delivery_channel?: string | null;
+          delivery_status?: string;
+          id?: string;
+          message: string;
+          population_id?: string | null;
+          problem_id?: string | null;
+          provider_message_id?: string | null;
+          session_id: string;
+          therapist_id: string;
+          therapist_note?: string | null;
+          therapist_status?: string;
+          therapist_updated_at?: string | null;
+          visitor_name: string;
+          visitor_phone: string;
+        };
         Update: {
-          challenge_passed?: boolean
-          challenge_presented?: string | null
-          created_at?: string
-          cta_event_id?: string | null
-          delivery_channel?: string | null
-          delivery_status?: string
-          id?: string
-          message?: string
-          population_id?: string | null
-          problem_id?: string | null
-          provider_message_id?: string | null
-          session_id?: string
-          therapist_id?: string
-          therapist_note?: string | null
-          therapist_status?: string
-          therapist_updated_at?: string | null
-          visitor_name?: string
-          visitor_phone?: string
-        }
+          challenge_passed?: boolean;
+          challenge_presented?: string | null;
+          created_at?: string;
+          cta_event_id?: string | null;
+          delivery_channel?: string | null;
+          delivery_status?: string;
+          id?: string;
+          message?: string;
+          population_id?: string | null;
+          problem_id?: string | null;
+          provider_message_id?: string | null;
+          session_id?: string;
+          therapist_id?: string;
+          therapist_note?: string | null;
+          therapist_status?: string;
+          therapist_updated_at?: string | null;
+          visitor_name?: string;
+          visitor_phone?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "lead_events_cta_event_id_fkey"
-            columns: ["cta_event_id"]
-            isOneToOne: false
-            referencedRelation: "cta_clicks"
-            referencedColumns: ["id"]
+            foreignKeyName: "lead_events_cta_event_id_fkey";
+            columns: ["cta_event_id"];
+            isOneToOne: false;
+            referencedRelation: "cta_clicks";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "lead_events_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "lead_events_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lead_submission_attempts: {
         Row: {
-          created_at: string
-          id: string
-          ip_hash: string
-          outcome: string
-          session_hash: string
-          therapist_id: string | null
-        }
+          created_at: string;
+          id: string;
+          ip_hash: string;
+          outcome: string;
+          session_hash: string;
+          therapist_id: string | null;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          ip_hash: string
-          outcome: string
-          session_hash: string
-          therapist_id?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          ip_hash: string;
+          outcome: string;
+          session_hash: string;
+          therapist_id?: string | null;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          ip_hash?: string
-          outcome?: string
-          session_hash?: string
-          therapist_id?: string | null
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          ip_hash?: string;
+          outcome?: string;
+          session_hash?: string;
+          therapist_id?: string | null;
+        };
+        Relationships: [];
+      };
       monthly_budget_notifications: {
         Row: {
-          account_id: string
-          attempts: number
-          created_at: string
-          id: string
-          last_error: string | null
-          month_start: string
-          monthly_limit_agorot: number
-          sent_at: string | null
-          spent_agorot: number
-          status: string
-          updated_at: string
-        }
+          account_id: string;
+          attempts: number;
+          created_at: string;
+          id: string;
+          last_error: string | null;
+          month_start: string;
+          monthly_limit_agorot: number;
+          sent_at: string | null;
+          spent_agorot: number;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          account_id: string
-          attempts?: number
-          created_at?: string
-          id?: string
-          last_error?: string | null
-          month_start: string
-          monthly_limit_agorot: number
-          sent_at?: string | null
-          spent_agorot: number
-          status?: string
-          updated_at?: string
-        }
+          account_id: string;
+          attempts?: number;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          month_start: string;
+          monthly_limit_agorot: number;
+          sent_at?: string | null;
+          spent_agorot: number;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string
-          attempts?: number
-          created_at?: string
-          id?: string
-          last_error?: string | null
-          month_start?: string
-          monthly_limit_agorot?: number
-          sent_at?: string | null
-          spent_agorot?: number
-          status?: string
-          updated_at?: string
-        }
+          account_id?: string;
+          attempts?: number;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          month_start?: string;
+          monthly_limit_agorot?: number;
+          sent_at?: string | null;
+          spent_agorot?: number;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "monthly_budget_notifications_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "monthly_budget_notifications_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       monthly_budget_reservations: {
         Row: {
-          account_id: string
-          amount_agorot: number
-          committed_at: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          month_start: string
-          released_at: string | null
-          source_key: string
-          source_type: string
-          status: string
-          therapist_id: string
-          updated_at: string
-        }
+          account_id: string;
+          amount_agorot: number;
+          committed_at: string | null;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          month_start: string;
+          released_at: string | null;
+          source_key: string;
+          source_type: string;
+          status: string;
+          therapist_id: string;
+          updated_at: string;
+        };
         Insert: {
-          account_id: string
-          amount_agorot: number
-          committed_at?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          month_start: string
-          released_at?: string | null
-          source_key: string
-          source_type: string
-          status: string
-          therapist_id: string
-          updated_at?: string
-        }
+          account_id: string;
+          amount_agorot: number;
+          committed_at?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          month_start: string;
+          released_at?: string | null;
+          source_key: string;
+          source_type: string;
+          status: string;
+          therapist_id: string;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string
-          amount_agorot?: number
-          committed_at?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          month_start?: string
-          released_at?: string | null
-          source_key?: string
-          source_type?: string
-          status?: string
-          therapist_id?: string
-          updated_at?: string
-        }
+          account_id?: string;
+          amount_agorot?: number;
+          committed_at?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          month_start?: string;
+          released_at?: string | null;
+          source_key?: string;
+          source_type?: string;
+          status?: string;
+          therapist_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "monthly_budget_reservations_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "monthly_budget_reservations_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "monthly_budget_reservations_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "monthly_budget_reservations_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       notification_events: {
         Row: {
-          attempts: number
-          claim_request_id: string | null
-          created_at: string
-          event_type: string
-          id: string
-          last_error: string | null
-          payload: Json
-          recipient_account_id: string | null
-          sent_at: string | null
-          status: string
-          updated_at: string
-        }
+          attempts: number;
+          claim_request_id: string | null;
+          created_at: string;
+          event_type: string;
+          id: string;
+          last_error: string | null;
+          payload: Json;
+          recipient_account_id: string | null;
+          sent_at: string | null;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          attempts?: number
-          claim_request_id?: string | null
-          created_at?: string
-          event_type: string
-          id?: string
-          last_error?: string | null
-          payload?: Json
-          recipient_account_id?: string | null
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-        }
+          attempts?: number;
+          claim_request_id?: string | null;
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          last_error?: string | null;
+          payload?: Json;
+          recipient_account_id?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          attempts?: number
-          claim_request_id?: string | null
-          created_at?: string
-          event_type?: string
-          id?: string
-          last_error?: string | null
-          payload?: Json
-          recipient_account_id?: string | null
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-        }
+          attempts?: number;
+          claim_request_id?: string | null;
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          last_error?: string | null;
+          payload?: Json;
+          recipient_account_id?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "notification_events_claim_request_id_fkey"
-            columns: ["claim_request_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_claim_requests"
-            referencedColumns: ["id"]
+            foreignKeyName: "notification_events_claim_request_id_fkey";
+            columns: ["claim_request_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_claim_requests";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "notification_events_recipient_account_id_fkey"
-            columns: ["recipient_account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "notification_events_recipient_account_id_fkey";
+            columns: ["recipient_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       population_groups: {
         Row: {
-          id: string
-          name: string
-          slug: string
-          sort_order: number
-        }
+          id: string;
+          name: string;
+          slug: string;
+          sort_order: number;
+        };
         Insert: {
-          id?: string
-          name: string
-          slug: string
-          sort_order?: number
-        }
+          id?: string;
+          name: string;
+          slug: string;
+          sort_order?: number;
+        };
         Update: {
-          id?: string
-          name?: string
-          slug?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
+          id?: string;
+          name?: string;
+          slug?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       problem_aliases: {
         Row: {
-          alias: string
-          created_at: string | null
-          id: number
-          problem_id: number
-        }
+          alias: string;
+          created_at: string | null;
+          id: number;
+          problem_id: number;
+        };
         Insert: {
-          alias: string
-          created_at?: string | null
-          id?: number
-          problem_id: number
-        }
+          alias: string;
+          created_at?: string | null;
+          id?: number;
+          problem_id: number;
+        };
         Update: {
-          alias?: string
-          created_at?: string | null
-          id?: number
-          problem_id?: number
-        }
+          alias?: string;
+          created_at?: string | null;
+          id?: number;
+          problem_id?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "problem_aliases_problem_id_fkey"
-            columns: ["problem_id"]
-            isOneToOne: false
-            referencedRelation: "problems"
-            referencedColumns: ["id"]
+            foreignKeyName: "problem_aliases_problem_id_fkey";
+            columns: ["problem_id"];
+            isOneToOne: false;
+            referencedRelation: "problems";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       problem_intents: {
         Row: {
-          id: string
-          intent_text: string
-          problem_slug: string | null
-        }
+          id: string;
+          intent_text: string;
+          problem_slug: string | null;
+        };
         Insert: {
-          id?: string
-          intent_text: string
-          problem_slug?: string | null
-        }
+          id?: string;
+          intent_text: string;
+          problem_slug?: string | null;
+        };
         Update: {
-          id?: string
-          intent_text?: string
-          problem_slug?: string | null
-        }
-        Relationships: []
-      }
+          id?: string;
+          intent_text?: string;
+          problem_slug?: string | null;
+        };
+        Relationships: [];
+      };
       problems: {
         Row: {
-          created_at: string
-          description: string | null
-          id: number
-          is_active: boolean
-          name_en: string
-          name_he: string
-          parent_id: number | null
-          slug: string
-          sort_order: number
-          updated_at: string
-        }
+          created_at: string;
+          description: string | null;
+          id: number;
+          is_active: boolean;
+          name_en: string;
+          name_he: string;
+          parent_id: number | null;
+          slug: string;
+          sort_order: number;
+          updated_at: string;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          id?: number
-          is_active?: boolean
-          name_en: string
-          name_he: string
-          parent_id?: number | null
-          slug: string
-          sort_order?: number
-          updated_at?: string
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: number;
+          is_active?: boolean;
+          name_en: string;
+          name_he: string;
+          parent_id?: number | null;
+          slug: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          id?: number
-          is_active?: boolean
-          name_en?: string
-          name_he?: string
-          parent_id?: number | null
-          slug?: string
-          sort_order?: number
-          updated_at?: string
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: number;
+          is_active?: boolean;
+          name_en?: string;
+          name_he?: string;
+          parent_id?: number | null;
+          slug?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "problems_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "problems"
-            referencedColumns: ["id"]
+            foreignKeyName: "problems_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "problems";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       professions: {
         Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          name_en: string | null
-          name_he: string
-          slug: string
-          sort_order: number
-        }
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name_en: string | null;
+          name_he: string;
+          slug: string;
+          sort_order: number;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name_en?: string | null
-          name_he: string
-          slug: string
-          sort_order?: number
-        }
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name_en?: string | null;
+          name_he: string;
+          slug: string;
+          sort_order?: number;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name_en?: string | null
-          name_he?: string
-          slug?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
-      system_settings: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name_en?: string | null;
+          name_he?: string;
+          slug?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      admin_broadcast_campaigns: {
         Row: {
-          ai_fallback_enabled: boolean
-          ai_search_enabled: boolean
-          created_at: string
-          hide_unclaimed_after_first_lead: boolean
-          lead_antispam_enabled: boolean
-          lead_challenge_ttl_minutes: number
-          lead_message_max_length: number
-          maintenance_enabled: boolean
-          max_contact_methods: number
-          require_contact_method_for_publish: boolean
-          require_payment_method_for_publish: boolean
-          require_verified_credential_for_publish: boolean
-          search_indexing_enabled: boolean
-          search_results_limit: number
-          show_unverified_therapists: boolean
-          singleton: boolean
-          support_email: string
-          system_emails_enabled: boolean
-          therapist_notifications_enabled: boolean
-          updated_at: string
-          updated_by: string | null
-        }
+          audience: Json;
+          body: string;
+          brevo_batch_id: string | null;
+          brevo_campaign_id: number | null;
+          brevo_list_deleted_at: string | null;
+          brevo_list_id: number | null;
+          cancelled_at: string | null;
+          category: string;
+          client_request_id: string;
+          created_at: string;
+          created_by: string | null;
+          cta_label: string | null;
+          cta_url: string | null;
+          delivered_count: number;
+          delivery_channels: string[];
+          email_recipient_count: number;
+          email_subject: string | null;
+          expires_at: string | null;
+          failed_count: number;
+          id: string;
+          last_error: string | null;
+          locked_at: string | null;
+          opened_count: number;
+          recipient_count: number;
+          scheduled_at: string | null;
+          site_display_type: string | null;
+          site_recipient_count: number;
+          status: string;
+          submitted_count: number;
+          title: string;
+          updated_at: string;
+        };
         Insert: {
-          ai_fallback_enabled?: boolean
-          ai_search_enabled?: boolean
-          created_at?: string
-          hide_unclaimed_after_first_lead?: boolean
-          lead_antispam_enabled?: boolean
-          lead_challenge_ttl_minutes?: number
-          lead_message_max_length?: number
-          maintenance_enabled?: boolean
-          max_contact_methods?: number
-          require_contact_method_for_publish?: boolean
-          require_payment_method_for_publish?: boolean
-          require_verified_credential_for_publish?: boolean
-          search_indexing_enabled?: boolean
-          search_results_limit?: number
-          show_unverified_therapists?: boolean
-          singleton?: boolean
-          support_email?: string
-          system_emails_enabled?: boolean
-          therapist_notifications_enabled?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
+          audience?: Json;
+          body: string;
+          brevo_batch_id?: string | null;
+          brevo_campaign_id?: number | null;
+          brevo_list_deleted_at?: string | null;
+          brevo_list_id?: number | null;
+          cancelled_at?: string | null;
+          category: string;
+          client_request_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          cta_label?: string | null;
+          cta_url?: string | null;
+          delivered_count?: number;
+          delivery_channels?: string[];
+          email_recipient_count?: number;
+          email_subject?: string | null;
+          expires_at?: string | null;
+          failed_count?: number;
+          id?: string;
+          last_error?: string | null;
+          locked_at?: string | null;
+          opened_count?: number;
+          recipient_count?: number;
+          scheduled_at?: string | null;
+          site_display_type?: string | null;
+          site_recipient_count?: number;
+          status?: string;
+          submitted_count?: number;
+          title: string;
+          updated_at?: string;
+        };
         Update: {
-          ai_fallback_enabled?: boolean
-          ai_search_enabled?: boolean
-          created_at?: string
-          hide_unclaimed_after_first_lead?: boolean
-          lead_antispam_enabled?: boolean
-          lead_challenge_ttl_minutes?: number
-          lead_message_max_length?: number
-          maintenance_enabled?: boolean
-          max_contact_methods?: number
-          require_contact_method_for_publish?: boolean
-          require_payment_method_for_publish?: boolean
-          require_verified_credential_for_publish?: boolean
-          search_indexing_enabled?: boolean
-          search_results_limit?: number
-          show_unverified_therapists?: boolean
-          singleton?: boolean
-          support_email?: string
-          system_emails_enabled?: boolean
-          therapist_notifications_enabled?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
+          audience?: Json;
+          body?: string;
+          brevo_batch_id?: string | null;
+          brevo_campaign_id?: number | null;
+          brevo_list_deleted_at?: string | null;
+          brevo_list_id?: number | null;
+          cancelled_at?: string | null;
+          category?: string;
+          client_request_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          cta_label?: string | null;
+          cta_url?: string | null;
+          delivered_count?: number;
+          delivery_channels?: string[];
+          email_recipient_count?: number;
+          email_subject?: string | null;
+          expires_at?: string | null;
+          failed_count?: number;
+          id?: string;
+          last_error?: string | null;
+          locked_at?: string | null;
+          opened_count?: number;
+          recipient_count?: number;
+          scheduled_at?: string | null;
+          site_display_type?: string | null;
+          site_recipient_count?: number;
+          status?: string;
+          submitted_count?: number;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      admin_broadcast_recipients: {
+        Row: {
+          auth_user_id: string | null;
+          campaign_id: string;
+          channel: string;
+          created_at: string;
+          delivered_at: string | null;
+          display_name: string | null;
+          email: string | null;
+          error: string | null;
+          failed_at: string | null;
+          id: string;
+          opened_at: string | null;
+          provider_message_id: string | null;
+          status: string;
+          submitted_at: string | null;
+          therapist_account_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          auth_user_id?: string | null;
+          campaign_id: string;
+          channel: string;
+          created_at?: string;
+          delivered_at?: string | null;
+          display_name?: string | null;
+          email?: string | null;
+          error?: string | null;
+          failed_at?: string | null;
+          id?: string;
+          opened_at?: string | null;
+          provider_message_id?: string | null;
+          status?: string;
+          submitted_at?: string | null;
+          therapist_account_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          auth_user_id?: string | null;
+          campaign_id?: string;
+          channel?: string;
+          created_at?: string;
+          delivered_at?: string | null;
+          display_name?: string | null;
+          email?: string | null;
+          error?: string | null;
+          failed_at?: string | null;
+          id?: string;
+          opened_at?: string | null;
+          provider_message_id?: string | null;
+          status?: string;
+          submitted_at?: string | null;
+          therapist_account_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      site_announcements: {
+        Row: {
+          body: string;
+          campaign_id: string;
+          cancelled_at: string | null;
+          category: string;
+          created_at: string;
+          cta_label: string | null;
+          cta_url: string | null;
+          display_type: string;
+          expires_at: string | null;
+          id: string;
+          starts_at: string;
+          title: string;
+        };
+        Insert: {
+          body: string;
+          campaign_id: string;
+          cancelled_at?: string | null;
+          category: string;
+          created_at?: string;
+          cta_label?: string | null;
+          cta_url?: string | null;
+          display_type: string;
+          expires_at?: string | null;
+          id?: string;
+          starts_at?: string;
+          title: string;
+        };
+        Update: {
+          body?: string;
+          campaign_id?: string;
+          cancelled_at?: string | null;
+          category?: string;
+          created_at?: string;
+          cta_label?: string | null;
+          cta_url?: string | null;
+          display_type?: string;
+          expires_at?: string | null;
+          id?: string;
+          starts_at?: string;
+          title?: string;
+        };
+        Relationships: [];
+      };
+      user_announcement_dismissals: {
+        Row: {
+          announcement_id: string;
+          auth_user_id: string;
+          dismissed_at: string;
+        };
+        Insert: {
+          announcement_id: string;
+          auth_user_id: string;
+          dismissed_at?: string;
+        };
+        Update: {
+          announcement_id?: string;
+          auth_user_id?: string;
+          dismissed_at?: string;
+        };
+        Relationships: [];
+      };
       therapist_accounts: {
         Row: {
-          account_status: Database["public"]["Enums"]["therapist_account_status"]
-          auth_user_id: string
-          contact_policy_last_violation_at: string | null
-          contact_policy_last_violation_types: string[]
-          contact_policy_violation_count: number
-          created_at: string
-          credential_verification_skipped_at: string | null
-          id: string
-          notify_account_updates: boolean
-          notify_new_leads: boolean
-          onboarding_completed: boolean
-          payment_method_kind: string
-          payment_method_status: string
-          updated_at: string
-        }
+          account_status: Database["public"]["Enums"]["therapist_account_status"];
+          auth_user_id: string;
+          contact_policy_last_violation_at: string | null;
+          contact_policy_last_violation_types: string[];
+          contact_policy_violation_count: number;
+          created_at: string;
+          credential_verification_skipped_at: string | null;
+          id: string;
+          notify_account_updates: boolean;
+          notify_new_leads: boolean;
+          onboarding_completed: boolean;
+          payment_method_kind: string;
+          payment_method_status: string;
+          updated_at: string;
+        };
         Insert: {
-          account_status?: Database["public"]["Enums"]["therapist_account_status"]
-          auth_user_id: string
-          contact_policy_last_violation_at?: string | null
-          contact_policy_last_violation_types?: string[]
-          contact_policy_violation_count?: number
-          created_at?: string
-          credential_verification_skipped_at?: string | null
-          id?: string
-          notify_account_updates?: boolean
-          notify_new_leads?: boolean
-          onboarding_completed?: boolean
-          payment_method_kind?: string
-          payment_method_status?: string
-          updated_at?: string
-        }
+          account_status?: Database["public"]["Enums"]["therapist_account_status"];
+          auth_user_id: string;
+          contact_policy_last_violation_at?: string | null;
+          contact_policy_last_violation_types?: string[];
+          contact_policy_violation_count?: number;
+          created_at?: string;
+          credential_verification_skipped_at?: string | null;
+          id?: string;
+          notify_account_updates?: boolean;
+          notify_new_leads?: boolean;
+          onboarding_completed?: boolean;
+          payment_method_kind?: string;
+          payment_method_status?: string;
+          updated_at?: string;
+        };
         Update: {
-          account_status?: Database["public"]["Enums"]["therapist_account_status"]
-          auth_user_id?: string
-          contact_policy_last_violation_at?: string | null
-          contact_policy_last_violation_types?: string[]
-          contact_policy_violation_count?: number
-          created_at?: string
-          credential_verification_skipped_at?: string | null
-          id?: string
-          notify_account_updates?: boolean
-          notify_new_leads?: boolean
-          onboarding_completed?: boolean
-          payment_method_kind?: string
-          payment_method_status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          account_status?: Database["public"]["Enums"]["therapist_account_status"];
+          auth_user_id?: string;
+          contact_policy_last_violation_at?: string | null;
+          contact_policy_last_violation_types?: string[];
+          contact_policy_violation_count?: number;
+          created_at?: string;
+          credential_verification_skipped_at?: string | null;
+          id?: string;
+          notify_account_updates?: boolean;
+          notify_new_leads?: boolean;
+          onboarding_completed?: boolean;
+          payment_method_kind?: string;
+          payment_method_status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       therapist_claim_invites: {
         Row: {
-          accepted_at: string | null
-          accepted_by_account_id: string | null
-          created_at: string
-          created_by: string | null
-          delivery_attempts: number
-          delivery_status: string
-          email: string
-          expires_at: string
-          id: string
-          invite_source: string
-          last_delivery_attempt_at: string | null
-          last_delivery_error: string | null
-          provider_message_id: string | null
-          revoked_at: string | null
-          sent_at: string | null
-          source_lead_id: string | null
-          status: string
-          therapist_id: string
-          token_hash: string
-          updated_at: string
-        }
+          accepted_at: string | null;
+          accepted_by_account_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          delivery_attempts: number;
+          delivery_status: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invite_source: string;
+          last_delivery_attempt_at: string | null;
+          last_delivery_error: string | null;
+          provider_message_id: string | null;
+          revoked_at: string | null;
+          sent_at: string | null;
+          source_lead_id: string | null;
+          status: string;
+          therapist_id: string;
+          token_hash: string;
+          updated_at: string;
+        };
         Insert: {
-          accepted_at?: string | null
-          accepted_by_account_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          delivery_attempts?: number
-          delivery_status?: string
-          email: string
-          expires_at: string
-          id?: string
-          invite_source?: string
-          last_delivery_attempt_at?: string | null
-          last_delivery_error?: string | null
-          provider_message_id?: string | null
-          revoked_at?: string | null
-          sent_at?: string | null
-          source_lead_id?: string | null
-          status?: string
-          therapist_id: string
-          token_hash: string
-          updated_at?: string
-        }
+          accepted_at?: string | null;
+          accepted_by_account_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          delivery_attempts?: number;
+          delivery_status?: string;
+          email: string;
+          expires_at: string;
+          id?: string;
+          invite_source?: string;
+          last_delivery_attempt_at?: string | null;
+          last_delivery_error?: string | null;
+          provider_message_id?: string | null;
+          revoked_at?: string | null;
+          sent_at?: string | null;
+          source_lead_id?: string | null;
+          status?: string;
+          therapist_id: string;
+          token_hash: string;
+          updated_at?: string;
+        };
         Update: {
-          accepted_at?: string | null
-          accepted_by_account_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          delivery_attempts?: number
-          delivery_status?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          invite_source?: string
-          last_delivery_attempt_at?: string | null
-          last_delivery_error?: string | null
-          provider_message_id?: string | null
-          revoked_at?: string | null
-          sent_at?: string | null
-          source_lead_id?: string | null
-          status?: string
-          therapist_id?: string
-          token_hash?: string
-          updated_at?: string
-        }
+          accepted_at?: string | null;
+          accepted_by_account_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          delivery_attempts?: number;
+          delivery_status?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invite_source?: string;
+          last_delivery_attempt_at?: string | null;
+          last_delivery_error?: string | null;
+          provider_message_id?: string | null;
+          revoked_at?: string | null;
+          sent_at?: string | null;
+          source_lead_id?: string | null;
+          status?: string;
+          therapist_id?: string;
+          token_hash?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_claim_invites_accepted_by_account_id_fkey"
-            columns: ["accepted_by_account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_claim_invites_accepted_by_account_id_fkey";
+            columns: ["accepted_by_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_claim_invites_source_lead_id_fkey"
-            columns: ["source_lead_id"]
-            isOneToOne: false
-            referencedRelation: "lead_events"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_claim_invites_source_lead_id_fkey";
+            columns: ["source_lead_id"];
+            isOneToOne: false;
+            referencedRelation: "lead_events";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_claim_invites_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_claim_invites_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_claim_requests: {
         Row: {
-          created_at: string
-          id: string
-          note: string | null
-          request_type: Database["public"]["Enums"]["claim_request_type"]
-          requester_account_id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["claim_request_status"]
-          therapist_id: string
-          updated_at: string
-          verification_data: Json
-          verification_method: string | null
-        }
+          created_at: string;
+          id: string;
+          note: string | null;
+          request_type: Database["public"]["Enums"]["claim_request_type"];
+          requester_account_id: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["claim_request_status"];
+          therapist_id: string;
+          updated_at: string;
+          verification_data: Json;
+          verification_method: string | null;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          note?: string | null
-          request_type?: Database["public"]["Enums"]["claim_request_type"]
-          requester_account_id: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["claim_request_status"]
-          therapist_id: string
-          updated_at?: string
-          verification_data?: Json
-          verification_method?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          request_type?: Database["public"]["Enums"]["claim_request_type"];
+          requester_account_id: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["claim_request_status"];
+          therapist_id: string;
+          updated_at?: string;
+          verification_data?: Json;
+          verification_method?: string | null;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          note?: string | null
-          request_type?: Database["public"]["Enums"]["claim_request_type"]
-          requester_account_id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["claim_request_status"]
-          therapist_id?: string
-          updated_at?: string
-          verification_data?: Json
-          verification_method?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          request_type?: Database["public"]["Enums"]["claim_request_type"];
+          requester_account_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["claim_request_status"];
+          therapist_id?: string;
+          updated_at?: string;
+          verification_data?: Json;
+          verification_method?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_claim_requests_requester_account_id_fkey"
-            columns: ["requester_account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_claim_requests_requester_account_id_fkey";
+            columns: ["requester_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_claim_requests_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_claim_requests_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_contact_policy_events: {
         Row: {
-          created_at: string
-          field_names: string[]
-          id: string
-          therapist_account_id: string
-          therapist_id: string | null
-          violation_types: string[]
-        }
+          created_at: string;
+          field_names: string[];
+          id: string;
+          therapist_account_id: string;
+          therapist_id: string | null;
+          violation_types: string[];
+        };
         Insert: {
-          created_at?: string
-          field_names: string[]
-          id?: string
-          therapist_account_id: string
-          therapist_id?: string | null
-          violation_types: string[]
-        }
+          created_at?: string;
+          field_names: string[];
+          id?: string;
+          therapist_account_id: string;
+          therapist_id?: string | null;
+          violation_types: string[];
+        };
         Update: {
-          created_at?: string
-          field_names?: string[]
-          id?: string
-          therapist_account_id?: string
-          therapist_id?: string | null
-          violation_types?: string[]
-        }
+          created_at?: string;
+          field_names?: string[];
+          id?: string;
+          therapist_account_id?: string;
+          therapist_id?: string | null;
+          violation_types?: string[];
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_contact_policy_events_therapist_account_id_fkey"
-            columns: ["therapist_account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_contact_policy_events_therapist_account_id_fkey";
+            columns: ["therapist_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_contact_policy_events_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_contact_policy_events_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_credentials: {
         Row: {
-          created_at: string
-          credential_type: string
-          document_url: string | null
-          expires_at: string | null
-          id: string
-          institution: string | null
-          issue_date: string | null
-          issuing_authority: string | null
-          license_number: string | null
-          profession_id: string | null
-          rejection_reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          submitted_at: string | null
-          therapist_id: string
-          updated_at: string
-          verification_status: Database["public"]["Enums"]["credential_verification_status"]
-          verified_at: string | null
-          verified_by: string | null
-        }
+          created_at: string;
+          credential_type: string;
+          document_url: string | null;
+          expires_at: string | null;
+          id: string;
+          institution: string | null;
+          issue_date: string | null;
+          issuing_authority: string | null;
+          license_number: string | null;
+          profession_id: string | null;
+          rejection_reason: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          submitted_at: string | null;
+          therapist_id: string;
+          updated_at: string;
+          verification_status: Database["public"]["Enums"]["credential_verification_status"];
+          verified_at: string | null;
+          verified_by: string | null;
+        };
         Insert: {
-          created_at?: string
-          credential_type: string
-          document_url?: string | null
-          expires_at?: string | null
-          id?: string
-          institution?: string | null
-          issue_date?: string | null
-          issuing_authority?: string | null
-          license_number?: string | null
-          profession_id?: string | null
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          submitted_at?: string | null
-          therapist_id: string
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["credential_verification_status"]
-          verified_at?: string | null
-          verified_by?: string | null
-        }
+          created_at?: string;
+          credential_type: string;
+          document_url?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          institution?: string | null;
+          issue_date?: string | null;
+          issuing_authority?: string | null;
+          license_number?: string | null;
+          profession_id?: string | null;
+          rejection_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          submitted_at?: string | null;
+          therapist_id: string;
+          updated_at?: string;
+          verification_status?: Database["public"]["Enums"]["credential_verification_status"];
+          verified_at?: string | null;
+          verified_by?: string | null;
+        };
         Update: {
-          created_at?: string
-          credential_type?: string
-          document_url?: string | null
-          expires_at?: string | null
-          id?: string
-          institution?: string | null
-          issue_date?: string | null
-          issuing_authority?: string | null
-          license_number?: string | null
-          profession_id?: string | null
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          submitted_at?: string | null
-          therapist_id?: string
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["credential_verification_status"]
-          verified_at?: string | null
-          verified_by?: string | null
-        }
+          created_at?: string;
+          credential_type?: string;
+          document_url?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          institution?: string | null;
+          issue_date?: string | null;
+          issuing_authority?: string | null;
+          license_number?: string | null;
+          profession_id?: string | null;
+          rejection_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          submitted_at?: string | null;
+          therapist_id?: string;
+          updated_at?: string;
+          verification_status?: Database["public"]["Enums"]["credential_verification_status"];
+          verified_at?: string | null;
+          verified_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_credentials_profession_id_fkey"
-            columns: ["profession_id"]
-            isOneToOne: false
-            referencedRelation: "professions"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_credentials_profession_id_fkey";
+            columns: ["profession_id"];
+            isOneToOne: false;
+            referencedRelation: "professions";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_credentials_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_credentials_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_languages: {
         Row: {
-          id: string
-          language_id: string
-          therapist_id: string
-        }
+          id: string;
+          language_id: string;
+          therapist_id: string;
+        };
         Insert: {
-          id?: string
-          language_id: string
-          therapist_id: string
-        }
+          id?: string;
+          language_id: string;
+          therapist_id: string;
+        };
         Update: {
-          id?: string
-          language_id?: string
-          therapist_id?: string
-        }
+          id?: string;
+          language_id?: string;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_languages_language_id_fkey"
-            columns: ["language_id"]
-            isOneToOne: false
-            referencedRelation: "languages"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_languages_language_id_fkey";
+            columns: ["language_id"];
+            isOneToOne: false;
+            referencedRelation: "languages";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_languages_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_languages_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_locations: {
         Row: {
-          accessibility_features: string[]
-          accessibility_note: string | null
-          accessibility_status: string
-          address: string | null
-          city: string | null
-          country: string
-          created_at: string
-          id: string
-          is_active: boolean
-          is_primary: boolean
-          label: string | null
-          latitude: number | null
-          location_type: Database["public"]["Enums"]["location_type"]
-          longitude: number | null
-          notes: string | null
-          postal_code: string | null
-          region: string | null
-          therapist_id: string
-          updated_at: string
-        }
+          accessibility_features: string[];
+          accessibility_note: string | null;
+          accessibility_status: string;
+          address: string | null;
+          city: string | null;
+          country: string;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          is_primary: boolean;
+          label: string | null;
+          latitude: number | null;
+          location_type: Database["public"]["Enums"]["location_type"];
+          longitude: number | null;
+          notes: string | null;
+          postal_code: string | null;
+          region: string | null;
+          therapist_id: string;
+          updated_at: string;
+        };
         Insert: {
-          accessibility_features?: string[]
-          accessibility_note?: string | null
-          accessibility_status?: string
-          address?: string | null
-          city?: string | null
-          country?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          is_primary?: boolean
-          label?: string | null
-          latitude?: number | null
-          location_type?: Database["public"]["Enums"]["location_type"]
-          longitude?: number | null
-          notes?: string | null
-          postal_code?: string | null
-          region?: string | null
-          therapist_id: string
-          updated_at?: string
-        }
+          accessibility_features?: string[];
+          accessibility_note?: string | null;
+          accessibility_status?: string;
+          address?: string | null;
+          city?: string | null;
+          country?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          is_primary?: boolean;
+          label?: string | null;
+          latitude?: number | null;
+          location_type?: Database["public"]["Enums"]["location_type"];
+          longitude?: number | null;
+          notes?: string | null;
+          postal_code?: string | null;
+          region?: string | null;
+          therapist_id: string;
+          updated_at?: string;
+        };
         Update: {
-          accessibility_features?: string[]
-          accessibility_note?: string | null
-          accessibility_status?: string
-          address?: string | null
-          city?: string | null
-          country?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          is_primary?: boolean
-          label?: string | null
-          latitude?: number | null
-          location_type?: Database["public"]["Enums"]["location_type"]
-          longitude?: number | null
-          notes?: string | null
-          postal_code?: string | null
-          region?: string | null
-          therapist_id?: string
-          updated_at?: string
-        }
+          accessibility_features?: string[];
+          accessibility_note?: string | null;
+          accessibility_status?: string;
+          address?: string | null;
+          city?: string | null;
+          country?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          is_primary?: boolean;
+          label?: string | null;
+          latitude?: number | null;
+          location_type?: Database["public"]["Enums"]["location_type"];
+          longitude?: number | null;
+          notes?: string | null;
+          postal_code?: string | null;
+          region?: string | null;
+          therapist_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_locations_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_locations_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_modalities: {
         Row: {
-          created_at: string
-          modality_id: string
-          therapist_id: string
-        }
+          created_at: string;
+          modality_id: string;
+          therapist_id: string;
+        };
         Insert: {
-          created_at?: string
-          modality_id: string
-          therapist_id: string
-        }
+          created_at?: string;
+          modality_id: string;
+          therapist_id: string;
+        };
         Update: {
-          created_at?: string
-          modality_id?: string
-          therapist_id?: string
-        }
+          created_at?: string;
+          modality_id?: string;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_modalities_modality_id_fkey"
-            columns: ["modality_id"]
-            isOneToOne: false
-            referencedRelation: "treatment_modalities"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_modalities_modality_id_fkey";
+            columns: ["modality_id"];
+            isOneToOne: false;
+            referencedRelation: "treatment_modalities";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_modalities_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_modalities_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_monthly_budget_usage: {
         Row: {
-          account_id: string
-          created_at: string
-          month_start: string
-          spent_agorot: number
-          updated_at: string
-        }
+          account_id: string;
+          created_at: string;
+          month_start: string;
+          spent_agorot: number;
+          updated_at: string;
+        };
         Insert: {
-          account_id: string
-          created_at?: string
-          month_start: string
-          spent_agorot?: number
-          updated_at?: string
-        }
+          account_id: string;
+          created_at?: string;
+          month_start: string;
+          spent_agorot?: number;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string
-          created_at?: string
-          month_start?: string
-          spent_agorot?: number
-          updated_at?: string
-        }
+          account_id?: string;
+          created_at?: string;
+          month_start?: string;
+          spent_agorot?: number;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_monthly_budget_usage_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_monthly_budget_usage_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_monthly_budgets: {
         Row: {
-          account_id: string
-          created_at: string
-          monthly_limit_agorot: number | null
-          notify_on_exhaustion: boolean
-          updated_at: string
-        }
+          account_id: string;
+          created_at: string;
+          monthly_limit_agorot: number | null;
+          notify_on_exhaustion: boolean;
+          updated_at: string;
+        };
         Insert: {
-          account_id: string
-          created_at?: string
-          monthly_limit_agorot?: number | null
-          notify_on_exhaustion?: boolean
-          updated_at?: string
-        }
+          account_id: string;
+          created_at?: string;
+          monthly_limit_agorot?: number | null;
+          notify_on_exhaustion?: boolean;
+          updated_at?: string;
+        };
         Update: {
-          account_id?: string
-          created_at?: string
-          monthly_limit_agorot?: number | null
-          notify_on_exhaustion?: boolean
-          updated_at?: string
-        }
+          account_id?: string;
+          created_at?: string;
+          monthly_limit_agorot?: number | null;
+          notify_on_exhaustion?: boolean;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_monthly_budgets_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: true
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_monthly_budgets_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: true;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_populations: {
         Row: {
-          id: string
-          population_id: string
-          therapist_id: string
-        }
+          id: string;
+          population_id: string;
+          therapist_id: string;
+        };
         Insert: {
-          id?: string
-          population_id: string
-          therapist_id: string
-        }
+          id?: string;
+          population_id: string;
+          therapist_id: string;
+        };
         Update: {
-          id?: string
-          population_id?: string
-          therapist_id?: string
-        }
+          id?: string;
+          population_id?: string;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_populations_population_id_fkey"
-            columns: ["population_id"]
-            isOneToOne: false
-            referencedRelation: "population_groups"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_populations_population_id_fkey";
+            columns: ["population_id"];
+            isOneToOne: false;
+            referencedRelation: "population_groups";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_populations_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_populations_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_problems: {
         Row: {
-          id: string
-          population_id: string | null
-          problem_id: string
-          therapist_id: string
-        }
+          id: string;
+          population_id: string | null;
+          problem_id: string;
+          therapist_id: string;
+        };
         Insert: {
-          id?: string
-          population_id?: string | null
-          problem_id: string
-          therapist_id: string
-        }
+          id?: string;
+          population_id?: string | null;
+          problem_id: string;
+          therapist_id: string;
+        };
         Update: {
-          id?: string
-          population_id?: string | null
-          problem_id?: string
-          therapist_id?: string
-        }
+          id?: string;
+          population_id?: string | null;
+          problem_id?: string;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_problems_population_id_fkey"
-            columns: ["population_id"]
-            isOneToOne: false
-            referencedRelation: "population_groups"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_problems_population_id_fkey";
+            columns: ["population_id"];
+            isOneToOne: false;
+            referencedRelation: "population_groups";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_problems_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_problems_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_professional_memberships: {
         Row: {
-          created_at: string
-          id: string
-          member_since: number | null
-          membership_start_date: string | null
-          organization_name: string
-          sort_order: number
-          therapist_id: string
-        }
+          created_at: string;
+          id: string;
+          member_since: number | null;
+          membership_start_date: string | null;
+          organization_name: string;
+          sort_order: number;
+          therapist_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          member_since?: number | null
-          membership_start_date?: string | null
-          organization_name: string
-          sort_order?: number
-          therapist_id: string
-        }
+          created_at?: string;
+          id?: string;
+          member_since?: number | null;
+          membership_start_date?: string | null;
+          organization_name: string;
+          sort_order?: number;
+          therapist_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          member_since?: number | null
-          membership_start_date?: string | null
-          organization_name?: string
-          sort_order?: number
-          therapist_id?: string
-        }
+          created_at?: string;
+          id?: string;
+          member_since?: number | null;
+          membership_start_date?: string | null;
+          organization_name?: string;
+          sort_order?: number;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_professional_memberships_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_professional_memberships_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_professions: {
         Row: {
-          created_at: string
-          is_primary: boolean
-          profession_id: string
-          therapist_id: string
-        }
+          created_at: string;
+          is_primary: boolean;
+          profession_id: string;
+          therapist_id: string;
+        };
         Insert: {
-          created_at?: string
-          is_primary?: boolean
-          profession_id: string
-          therapist_id: string
-        }
+          created_at?: string;
+          is_primary?: boolean;
+          profession_id: string;
+          therapist_id: string;
+        };
         Update: {
-          created_at?: string
-          is_primary?: boolean
-          profession_id?: string
-          therapist_id?: string
-        }
+          created_at?: string;
+          is_primary?: boolean;
+          profession_id?: string;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_professions_profession_id_fkey"
-            columns: ["profession_id"]
-            isOneToOne: false
-            referencedRelation: "professions"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_professions_profession_id_fkey";
+            columns: ["profession_id"];
+            isOneToOne: false;
+            referencedRelation: "professions";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_professions_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_professions_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_profile_requests: {
         Row: {
-          created_at: string
-          id: string
-          note: string | null
-          request_ip_hash: string | null
-          request_type: string
-          requester_email: string
-          requester_name: string
-          requester_phone: string | null
-          review_note: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          therapist_id: string
-          updated_at: string
-          verification_method: string | null
-        }
+          created_at: string;
+          id: string;
+          note: string | null;
+          request_ip_hash: string | null;
+          request_type: string;
+          requester_email: string;
+          requester_name: string;
+          requester_phone: string | null;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: string;
+          therapist_id: string;
+          updated_at: string;
+          verification_method: string | null;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          note?: string | null
-          request_ip_hash?: string | null
-          request_type: string
-          requester_email: string
-          requester_name: string
-          requester_phone?: string | null
-          review_note?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          therapist_id: string
-          updated_at?: string
-          verification_method?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          request_ip_hash?: string | null;
+          request_type: string;
+          requester_email: string;
+          requester_name: string;
+          requester_phone?: string | null;
+          review_note?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          therapist_id: string;
+          updated_at?: string;
+          verification_method?: string | null;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          note?: string | null
-          request_ip_hash?: string | null
-          request_type?: string
-          requester_email?: string
-          requester_name?: string
-          requester_phone?: string | null
-          review_note?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          therapist_id?: string
-          updated_at?: string
-          verification_method?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          request_ip_hash?: string | null;
+          request_type?: string;
+          requester_email?: string;
+          requester_name?: string;
+          requester_phone?: string | null;
+          review_note?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          therapist_id?: string;
+          updated_at?: string;
+          verification_method?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_profile_requests_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_profile_requests_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_recruitment_import_batches: {
         Row: {
-          already_invited_rows: number
-          already_registered_rows: number
-          channel: string
-          created_at: string
-          created_by: string
-          duplicate_rows: number
-          eligible_rows: number
-          existing_profile_rows: number
-          id: string
-          imported_rows: number
-          invalid_rows: number
-          source_filename: string | null
-          suppressed_rows: number
-          total_rows: number
-        }
+          already_invited_rows: number;
+          already_registered_rows: number;
+          channel: string;
+          created_at: string;
+          created_by: string;
+          duplicate_rows: number;
+          eligible_rows: number;
+          existing_profile_rows: number;
+          id: string;
+          imported_rows: number;
+          invalid_rows: number;
+          source_filename: string | null;
+          suppressed_rows: number;
+          total_rows: number;
+        };
         Insert: {
-          already_invited_rows?: number
-          already_registered_rows?: number
-          channel: string
-          created_at?: string
-          created_by: string
-          duplicate_rows?: number
-          eligible_rows?: number
-          existing_profile_rows?: number
-          id?: string
-          imported_rows?: number
-          invalid_rows?: number
-          source_filename?: string | null
-          suppressed_rows?: number
-          total_rows?: number
-        }
+          already_invited_rows?: number;
+          already_registered_rows?: number;
+          channel: string;
+          created_at?: string;
+          created_by: string;
+          duplicate_rows?: number;
+          eligible_rows?: number;
+          existing_profile_rows?: number;
+          id?: string;
+          imported_rows?: number;
+          invalid_rows?: number;
+          source_filename?: string | null;
+          suppressed_rows?: number;
+          total_rows?: number;
+        };
         Update: {
-          already_invited_rows?: number
-          already_registered_rows?: number
-          channel?: string
-          created_at?: string
-          created_by?: string
-          duplicate_rows?: number
-          eligible_rows?: number
-          existing_profile_rows?: number
-          id?: string
-          imported_rows?: number
-          invalid_rows?: number
-          source_filename?: string | null
-          suppressed_rows?: number
-          total_rows?: number
-        }
-        Relationships: []
-      }
+          already_invited_rows?: number;
+          already_registered_rows?: number;
+          channel?: string;
+          created_at?: string;
+          created_by?: string;
+          duplicate_rows?: number;
+          eligible_rows?: number;
+          existing_profile_rows?: number;
+          id?: string;
+          imported_rows?: number;
+          invalid_rows?: number;
+          source_filename?: string | null;
+          suppressed_rows?: number;
+          total_rows?: number;
+        };
+        Relationships: [];
+      };
       therapist_recruitment_invitations: {
         Row: {
-          bounced_at: string | null
-          channel: string
-          created_at: string
-          decline_source: string | null
-          declined_at: string | null
-          delivered_at: string | null
-          destination_normalized: string
-          failure_code: string | null
-          failure_reason: string | null
-          first_name: string | null
-          id: string
-          import_batch_id: string | null
-          invite_token_hash: string | null
-          last_name: string | null
-          provider: string | null
-          provider_campaign_id: number | null
-          provider_list_id: number | null
-          provider_message_id: string | null
-          registered_account_id: string | null
-          registered_at: string | null
-          registered_therapist_id: string | null
-          search_text: string
-          send_batch_id: string | null
-          send_quota_date: string | null
-          status: string
-          submission_started_at: string | null
-          submitted_at: string | null
-          updated_at: string
-        }
+          bounced_at: string | null;
+          channel: string;
+          created_at: string;
+          decline_source: string | null;
+          declined_at: string | null;
+          delivered_at: string | null;
+          destination_normalized: string;
+          failure_code: string | null;
+          failure_reason: string | null;
+          first_name: string | null;
+          id: string;
+          import_batch_id: string | null;
+          last_name: string | null;
+          provider: string | null;
+          provider_message_id: string | null;
+          provider_campaign_id: number | null;
+          provider_list_id: number | null;
+          invite_token_hash: string | null;
+          send_batch_id: string | null;
+          send_quota_date: string | null;
+          registered_account_id: string | null;
+          registered_at: string | null;
+          registered_therapist_id: string | null;
+          search_text: string;
+          status: string;
+          submission_started_at: string | null;
+          submitted_at: string | null;
+          updated_at: string;
+        };
         Insert: {
-          bounced_at?: string | null
-          channel: string
-          created_at?: string
-          decline_source?: string | null
-          declined_at?: string | null
-          delivered_at?: string | null
-          destination_normalized: string
-          failure_code?: string | null
-          failure_reason?: string | null
-          first_name?: string | null
-          id?: string
-          import_batch_id?: string | null
-          invite_token_hash?: string | null
-          last_name?: string | null
-          provider?: string | null
-          provider_campaign_id?: number | null
-          provider_list_id?: number | null
-          provider_message_id?: string | null
-          registered_account_id?: string | null
-          registered_at?: string | null
-          registered_therapist_id?: string | null
-          search_text?: string
-          send_batch_id?: string | null
-          send_quota_date?: string | null
-          status?: string
-          submission_started_at?: string | null
-          submitted_at?: string | null
-          updated_at?: string
-        }
+          bounced_at?: string | null;
+          channel: string;
+          created_at?: string;
+          decline_source?: string | null;
+          declined_at?: string | null;
+          delivered_at?: string | null;
+          destination_normalized: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          first_name?: string | null;
+          id?: string;
+          import_batch_id?: string | null;
+          last_name?: string | null;
+          provider?: string | null;
+          provider_message_id?: string | null;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          invite_token_hash?: string | null;
+          send_batch_id?: string | null;
+          send_quota_date?: string | null;
+          registered_account_id?: string | null;
+          registered_at?: string | null;
+          registered_therapist_id?: string | null;
+          status?: string;
+          submission_started_at?: string | null;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          bounced_at?: string | null
-          channel?: string
-          created_at?: string
-          decline_source?: string | null
-          declined_at?: string | null
-          delivered_at?: string | null
-          destination_normalized?: string
-          failure_code?: string | null
-          failure_reason?: string | null
-          first_name?: string | null
-          id?: string
-          import_batch_id?: string | null
-          invite_token_hash?: string | null
-          last_name?: string | null
-          provider?: string | null
-          provider_campaign_id?: number | null
-          provider_list_id?: number | null
-          provider_message_id?: string | null
-          registered_account_id?: string | null
-          registered_at?: string | null
-          registered_therapist_id?: string | null
-          search_text?: string
-          send_batch_id?: string | null
-          send_quota_date?: string | null
-          status?: string
-          submission_started_at?: string | null
-          submitted_at?: string | null
-          updated_at?: string
-        }
+          bounced_at?: string | null;
+          channel?: string;
+          created_at?: string;
+          decline_source?: string | null;
+          declined_at?: string | null;
+          delivered_at?: string | null;
+          destination_normalized?: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          first_name?: string | null;
+          id?: string;
+          import_batch_id?: string | null;
+          last_name?: string | null;
+          provider?: string | null;
+          provider_message_id?: string | null;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          invite_token_hash?: string | null;
+          send_batch_id?: string | null;
+          send_quota_date?: string | null;
+          registered_account_id?: string | null;
+          registered_at?: string | null;
+          registered_therapist_id?: string | null;
+          status?: string;
+          submission_started_at?: string | null;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_recruitment_invitations_import_batch_id_fkey"
-            columns: ["import_batch_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_recruitment_import_batches"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_recruitment_invitations_import_batch_id_fkey";
+            columns: ["import_batch_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_recruitment_import_batches";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_recruitment_invitations_registered_account_id_fkey"
-            columns: ["registered_account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_recruitment_invitations_send_batch_id_fkey";
+            columns: ["send_batch_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_recruitment_send_batches";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_recruitment_invitations_registered_therapist_id_fkey"
-            columns: ["registered_therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_recruitment_invitations_registered_account_id_fkey";
+            columns: ["registered_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_recruitment_invitations_send_batch_id_fkey"
-            columns: ["send_batch_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_recruitment_send_batches"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_recruitment_invitations_registered_therapist_id_fkey";
+            columns: ["registered_therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_recruitment_send_batches: {
         Row: {
-          channel: string
-          created_at: string
-          created_by: string
-          failure_code: string | null
-          failure_reason: string | null
-          id: string
-          provider: string
-          provider_campaign_id: number | null
-          provider_list_deleted_at: string | null
-          provider_list_id: number | null
-          recipient_count: number
-          status: string
-          submitted_at: string | null
-          updated_at: string
-        }
+          channel: string;
+          created_at: string;
+          created_by: string;
+          failure_code: string | null;
+          failure_reason: string | null;
+          id: string;
+          provider: string;
+          provider_campaign_id: number | null;
+          provider_list_id: number | null;
+          provider_list_deleted_at: string | null;
+          recipient_count: number;
+          status: string;
+          submitted_at: string | null;
+          updated_at: string;
+        };
         Insert: {
-          channel: string
-          created_at?: string
-          created_by: string
-          failure_code?: string | null
-          failure_reason?: string | null
-          id?: string
-          provider: string
-          provider_campaign_id?: number | null
-          provider_list_deleted_at?: string | null
-          provider_list_id?: number | null
-          recipient_count?: number
-          status?: string
-          submitted_at?: string | null
-          updated_at?: string
-        }
+          channel: string;
+          created_at?: string;
+          created_by: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          id?: string;
+          provider: string;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          provider_list_deleted_at?: string | null;
+          recipient_count?: number;
+          status?: string;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          channel?: string
-          created_at?: string
-          created_by?: string
-          failure_code?: string | null
-          failure_reason?: string | null
-          id?: string
-          provider?: string
-          provider_campaign_id?: number | null
-          provider_list_deleted_at?: string | null
-          provider_list_id?: number | null
-          recipient_count?: number
-          status?: string
-          submitted_at?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          channel?: string;
+          created_at?: string;
+          created_by?: string;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          id?: string;
+          provider?: string;
+          provider_campaign_id?: number | null;
+          provider_list_id?: number | null;
+          provider_list_deleted_at?: string | null;
+          recipient_count?: number;
+          status?: string;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       therapist_recruitment_suppressions: {
         Row: {
-          channel: string
-          created_at: string
-          destination_normalized: string
-          id: string
-          reason: string | null
-          source: string
-          updated_at: string
-        }
+          channel: string;
+          created_at: string;
+          destination_normalized: string;
+          id: string;
+          reason: string | null;
+          source: string;
+          updated_at: string;
+        };
         Insert: {
-          channel: string
-          created_at?: string
-          destination_normalized: string
-          id?: string
-          reason?: string | null
-          source: string
-          updated_at?: string
-        }
+          channel: string;
+          created_at?: string;
+          destination_normalized: string;
+          id?: string;
+          reason?: string | null;
+          source: string;
+          updated_at?: string;
+        };
         Update: {
-          channel?: string
-          created_at?: string
-          destination_normalized?: string
-          id?: string
-          reason?: string | null
-          source?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          channel?: string;
+          created_at?: string;
+          destination_normalized?: string;
+          id?: string;
+          reason?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      system_settings: {
+        Row: {
+          ai_fallback_enabled: boolean;
+          ai_search_enabled: boolean;
+          created_at: string;
+          lead_antispam_enabled: boolean;
+          lead_challenge_ttl_minutes: number;
+          hide_unclaimed_after_first_lead: boolean;
+          lead_message_max_length: number;
+          maintenance_enabled: boolean;
+          max_contact_methods: number;
+          require_contact_method_for_publish: boolean;
+          require_payment_method_for_publish: boolean;
+          require_verified_credential_for_publish: boolean;
+          search_indexing_enabled: boolean;
+          search_results_limit: number;
+          show_unverified_therapists: boolean;
+          singleton: boolean;
+          support_email: string;
+          system_emails_enabled: boolean;
+          therapist_notifications_enabled: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          ai_fallback_enabled?: boolean;
+          ai_search_enabled?: boolean;
+          created_at?: string;
+          lead_antispam_enabled?: boolean;
+          lead_challenge_ttl_minutes?: number;
+          hide_unclaimed_after_first_lead?: boolean;
+          lead_message_max_length?: number;
+          maintenance_enabled?: boolean;
+          max_contact_methods?: number;
+          require_contact_method_for_publish?: boolean;
+          require_payment_method_for_publish?: boolean;
+          require_verified_credential_for_publish?: boolean;
+          search_indexing_enabled?: boolean;
+          search_results_limit?: number;
+          show_unverified_therapists?: boolean;
+          singleton?: boolean;
+          support_email?: string;
+          system_emails_enabled?: boolean;
+          therapist_notifications_enabled?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          ai_fallback_enabled?: boolean;
+          ai_search_enabled?: boolean;
+          created_at?: string;
+          lead_antispam_enabled?: boolean;
+          lead_challenge_ttl_minutes?: number;
+          hide_unclaimed_after_first_lead?: boolean;
+          lead_message_max_length?: number;
+          maintenance_enabled?: boolean;
+          max_contact_methods?: number;
+          require_contact_method_for_publish?: boolean;
+          require_payment_method_for_publish?: boolean;
+          require_verified_credential_for_publish?: boolean;
+          search_indexing_enabled?: boolean;
+          search_results_limit?: number;
+          show_unverified_therapists?: boolean;
+          singleton?: boolean;
+          support_email?: string;
+          system_emails_enabled?: boolean;
+          therapist_notifications_enabled?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       therapist_registration_settings: {
         Row: {
-          created_at: string
-          registration_enabled: boolean
-          singleton: boolean
-          updated_at: string
-          updated_by: string | null
-        }
+          created_at: string;
+          registration_enabled: boolean;
+          singleton: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
         Insert: {
-          created_at?: string
-          registration_enabled?: boolean
-          singleton?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
+          created_at?: string;
+          registration_enabled?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Update: {
-          created_at?: string
-          registration_enabled?: boolean
-          singleton?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          registration_enabled?: boolean;
+          singleton?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       therapist_service_arrangements: {
         Row: {
-          created_at: string
-          id: string
-          note: string | null
-          organization_name: string
-          sort_order: number
-          therapist_id: string
-        }
+          created_at: string;
+          id: string;
+          note: string | null;
+          organization_name: string;
+          sort_order: number;
+          therapist_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          note?: string | null
-          organization_name: string
-          sort_order?: number
-          therapist_id: string
-        }
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          organization_name: string;
+          sort_order?: number;
+          therapist_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          note?: string | null
-          organization_name?: string
-          sort_order?: number
-          therapist_id?: string
-        }
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          organization_name?: string;
+          sort_order?: number;
+          therapist_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_service_arrangements_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_service_arrangements_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapist_therapy_formats: {
         Row: {
-          created_at: string
-          therapist_id: string
-          therapy_format_id: string
-        }
+          created_at: string;
+          therapist_id: string;
+          therapy_format_id: string;
+        };
         Insert: {
-          created_at?: string
-          therapist_id: string
-          therapy_format_id: string
-        }
+          created_at?: string;
+          therapist_id: string;
+          therapy_format_id: string;
+        };
         Update: {
-          created_at?: string
-          therapist_id?: string
-          therapy_format_id?: string
-        }
+          created_at?: string;
+          therapist_id?: string;
+          therapy_format_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapist_therapy_formats_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_therapy_formats_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "therapist_therapy_formats_therapy_format_id_fkey"
-            columns: ["therapy_format_id"]
-            isOneToOne: false
-            referencedRelation: "therapy_formats"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapist_therapy_formats_therapy_format_id_fkey";
+            columns: ["therapy_format_id"];
+            isOneToOne: false;
+            referencedRelation: "therapy_formats";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapists: {
         Row: {
-          background: string | null
-          billing_hold: boolean
-          bio_raw: string | null
-          budget_hold_reason: string | null
-          budget_hold_until: string | null
-          city: string | null
-          contact_destination: string | null
-          contact_methods: string[]
-          country: string
-          created_at: string
-          do_not_republish: boolean
-          education_training: string | null
-          email: string | null
-          first_contact_reserved_at: string | null
-          first_contact_sent_at: string | null
-          free_intro_duration_minutes: number | null
-          free_intro_types: string[]
-          full_description: string | null
-          full_name: string
-          gender: Database["public"]["Enums"]["therapist_gender"] | null
-          id: string
-          image_url: string | null
-          is_active: boolean
-          is_active_before_billing_hold: boolean | null
-          latitude: number | null
-          lgbtq_affirming: boolean
-          license_number: string | null
-          longitude: number | null
-          manual_verified: boolean
-          offers_free_intro: boolean
-          owner_account_id: string | null
-          owner_reviewed_at: string | null
-          ownership_verification_method: string | null
-          ownership_verified_at: string | null
-          participation_consent_at: string | null
-          participation_consent_source: string | null
-          phone: string | null
-          preferred_contact_channel: Database["public"]["Enums"]["contact_channel"]
-          preferred_contact_method: string | null
-          professional_experience: string | null
-          professional_title: string | null
-          profile_claimed: boolean
-          profile_origin: string
-          profile_status: Database["public"]["Enums"]["therapist_profile_status"]
-          region: string | null
-          semantic_profile: Json
-          short_intro: string | null
-          slug: string
-          verified: boolean
-          visibility: Database["public"]["Enums"]["therapist_visibility"]
-          years_experience: number | null
-        }
+          background: string | null;
+          billing_hold: boolean;
+          bio_raw: string | null;
+          budget_hold_reason: string | null;
+          budget_hold_until: string | null;
+          city: string | null;
+          contact_destination: string | null;
+          contact_methods: string[];
+          country: string;
+          created_at: string;
+          do_not_republish: boolean;
+          education_training: string | null;
+          email: string | null;
+          first_contact_reserved_at: string | null;
+          first_contact_sent_at: string | null;
+          free_intro_duration_minutes: number | null;
+          free_intro_types: string[];
+          full_description: string | null;
+          full_name: string;
+          gender: Database["public"]["Enums"]["therapist_gender"] | null;
+          id: string;
+          image_url: string | null;
+          is_active: boolean;
+          is_active_before_billing_hold: boolean | null;
+          latitude: number | null;
+          lgbtq_affirming: boolean;
+          license_number: string | null;
+          longitude: number | null;
+          manual_verified: boolean;
+          offers_free_intro: boolean;
+          owner_account_id: string | null;
+          owner_reviewed_at: string | null;
+          ownership_verification_method: string | null;
+          ownership_verified_at: string | null;
+          participation_consent_at: string | null;
+          participation_consent_source: string | null;
+          phone: string | null;
+          preferred_contact_channel: Database["public"]["Enums"]["contact_channel"];
+          preferred_contact_method: string | null;
+          professional_experience: string | null;
+          professional_title: string | null;
+          profile_claimed: boolean;
+          profile_origin: string;
+          profile_status: Database["public"]["Enums"]["therapist_profile_status"];
+          region: string | null;
+          semantic_profile: Json;
+          short_intro: string | null;
+          slug: string;
+          verified: boolean;
+          visibility: Database["public"]["Enums"]["therapist_visibility"];
+          years_experience: number | null;
+        };
         Insert: {
-          background?: string | null
-          billing_hold?: boolean
-          bio_raw?: string | null
-          budget_hold_reason?: string | null
-          budget_hold_until?: string | null
-          city?: string | null
-          contact_destination?: string | null
-          contact_methods?: string[]
-          country?: string
-          created_at?: string
-          do_not_republish?: boolean
-          education_training?: string | null
-          email?: string | null
-          first_contact_reserved_at?: string | null
-          first_contact_sent_at?: string | null
-          free_intro_duration_minutes?: number | null
-          free_intro_types?: string[]
-          full_description?: string | null
-          full_name: string
-          gender?: Database["public"]["Enums"]["therapist_gender"] | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_active_before_billing_hold?: boolean | null
-          latitude?: number | null
-          lgbtq_affirming?: boolean
-          license_number?: string | null
-          longitude?: number | null
-          manual_verified?: boolean
-          offers_free_intro?: boolean
-          owner_account_id?: string | null
-          owner_reviewed_at?: string | null
-          ownership_verification_method?: string | null
-          ownership_verified_at?: string | null
-          participation_consent_at?: string | null
-          participation_consent_source?: string | null
-          phone?: string | null
-          preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
-          preferred_contact_method?: string | null
-          professional_experience?: string | null
-          professional_title?: string | null
-          profile_claimed?: boolean
-          profile_origin?: string
-          profile_status?: Database["public"]["Enums"]["therapist_profile_status"]
-          region?: string | null
-          semantic_profile?: Json
-          short_intro?: string | null
-          slug: string
-          verified?: boolean
-          visibility?: Database["public"]["Enums"]["therapist_visibility"]
-          years_experience?: number | null
-        }
+          background?: string | null;
+          billing_hold?: boolean;
+          bio_raw?: string | null;
+          budget_hold_reason?: string | null;
+          budget_hold_until?: string | null;
+          city?: string | null;
+          contact_destination?: string | null;
+          contact_methods?: string[];
+          country?: string;
+          created_at?: string;
+          do_not_republish?: boolean;
+          education_training?: string | null;
+          email?: string | null;
+          first_contact_reserved_at?: string | null;
+          first_contact_sent_at?: string | null;
+          free_intro_duration_minutes?: number | null;
+          free_intro_types?: string[];
+          full_description?: string | null;
+          full_name: string;
+          gender?: Database["public"]["Enums"]["therapist_gender"] | null;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          is_active_before_billing_hold?: boolean | null;
+          latitude?: number | null;
+          lgbtq_affirming?: boolean;
+          license_number?: string | null;
+          longitude?: number | null;
+          manual_verified?: boolean;
+          offers_free_intro?: boolean;
+          owner_account_id?: string | null;
+          owner_reviewed_at?: string | null;
+          ownership_verification_method?: string | null;
+          ownership_verified_at?: string | null;
+          participation_consent_at?: string | null;
+          participation_consent_source?: string | null;
+          phone?: string | null;
+          preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"];
+          preferred_contact_method?: string | null;
+          professional_experience?: string | null;
+          professional_title?: string | null;
+          profile_claimed?: boolean;
+          profile_origin?: string;
+          profile_status?: Database["public"]["Enums"]["therapist_profile_status"];
+          region?: string | null;
+          semantic_profile?: Json;
+          short_intro?: string | null;
+          slug: string;
+          verified?: boolean;
+          visibility?: Database["public"]["Enums"]["therapist_visibility"];
+          years_experience?: number | null;
+        };
         Update: {
-          background?: string | null
-          billing_hold?: boolean
-          bio_raw?: string | null
-          budget_hold_reason?: string | null
-          budget_hold_until?: string | null
-          city?: string | null
-          contact_destination?: string | null
-          contact_methods?: string[]
-          country?: string
-          created_at?: string
-          do_not_republish?: boolean
-          education_training?: string | null
-          email?: string | null
-          first_contact_reserved_at?: string | null
-          first_contact_sent_at?: string | null
-          free_intro_duration_minutes?: number | null
-          free_intro_types?: string[]
-          full_description?: string | null
-          full_name?: string
-          gender?: Database["public"]["Enums"]["therapist_gender"] | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_active_before_billing_hold?: boolean | null
-          latitude?: number | null
-          lgbtq_affirming?: boolean
-          license_number?: string | null
-          longitude?: number | null
-          manual_verified?: boolean
-          offers_free_intro?: boolean
-          owner_account_id?: string | null
-          owner_reviewed_at?: string | null
-          ownership_verification_method?: string | null
-          ownership_verified_at?: string | null
-          participation_consent_at?: string | null
-          participation_consent_source?: string | null
-          phone?: string | null
-          preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"]
-          preferred_contact_method?: string | null
-          professional_experience?: string | null
-          professional_title?: string | null
-          profile_claimed?: boolean
-          profile_origin?: string
-          profile_status?: Database["public"]["Enums"]["therapist_profile_status"]
-          region?: string | null
-          semantic_profile?: Json
-          short_intro?: string | null
-          slug?: string
-          verified?: boolean
-          visibility?: Database["public"]["Enums"]["therapist_visibility"]
-          years_experience?: number | null
-        }
+          background?: string | null;
+          billing_hold?: boolean;
+          bio_raw?: string | null;
+          budget_hold_reason?: string | null;
+          budget_hold_until?: string | null;
+          city?: string | null;
+          contact_destination?: string | null;
+          contact_methods?: string[];
+          country?: string;
+          created_at?: string;
+          do_not_republish?: boolean;
+          education_training?: string | null;
+          email?: string | null;
+          first_contact_reserved_at?: string | null;
+          first_contact_sent_at?: string | null;
+          free_intro_duration_minutes?: number | null;
+          free_intro_types?: string[];
+          full_description?: string | null;
+          full_name?: string;
+          gender?: Database["public"]["Enums"]["therapist_gender"] | null;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          is_active_before_billing_hold?: boolean | null;
+          latitude?: number | null;
+          lgbtq_affirming?: boolean;
+          license_number?: string | null;
+          longitude?: number | null;
+          manual_verified?: boolean;
+          offers_free_intro?: boolean;
+          owner_account_id?: string | null;
+          owner_reviewed_at?: string | null;
+          ownership_verification_method?: string | null;
+          ownership_verified_at?: string | null;
+          participation_consent_at?: string | null;
+          participation_consent_source?: string | null;
+          phone?: string | null;
+          preferred_contact_channel?: Database["public"]["Enums"]["contact_channel"];
+          preferred_contact_method?: string | null;
+          professional_experience?: string | null;
+          professional_title?: string | null;
+          profile_claimed?: boolean;
+          profile_origin?: string;
+          profile_status?: Database["public"]["Enums"]["therapist_profile_status"];
+          region?: string | null;
+          semantic_profile?: Json;
+          short_intro?: string | null;
+          slug?: string;
+          verified?: boolean;
+          visibility?: Database["public"]["Enums"]["therapist_visibility"];
+          years_experience?: number | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "therapists_owner_account_id_fkey"
-            columns: ["owner_account_id"]
-            isOneToOne: false
-            referencedRelation: "therapist_accounts"
-            referencedColumns: ["id"]
+            foreignKeyName: "therapists_owner_account_id_fkey";
+            columns: ["owner_account_id"];
+            isOneToOne: false;
+            referencedRelation: "therapist_accounts";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       therapy_formats: {
         Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          name_he: string
-          slug: string
-          sort_order: number
-        }
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name_he: string;
+          slug: string;
+          sort_order: number;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name_he: string
-          slug: string
-          sort_order: number
-        }
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name_he: string;
+          slug: string;
+          sort_order: number;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name_he?: string
-          slug?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name_he?: string;
+          slug?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       treatment_modalities: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_active: boolean
-          name_en: string | null
-          name_he: string
-          slug: string
-          sort_order: number
-        }
+          created_at: string;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          name_en: string | null;
+          name_he: string;
+          slug: string;
+          sort_order: number;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name_en?: string | null
-          name_he: string
-          slug: string
-          sort_order?: number
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name_en?: string | null;
+          name_he: string;
+          slug: string;
+          sort_order?: number;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name_en?: string | null
-          name_he?: string
-          slug?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name_en?: string | null;
+          name_he?: string;
+          slug?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       voice_call_sessions: {
         Row: {
-          billable_eligible: boolean
-          billable_event_at: string | null
-          budget_reservation_id: string | null
-          caller_amd_result: string | null
-          caller_answered_at: string | null
-          caller_hash: string
-          caller_leg_status: string
-          child_call_sid: string | null
-          completed_at: string | null
-          connected_at: string | null
-          connected_duration_seconds: number | null
-          created_at: string
-          cta_event_id: string | null
-          id: string
-          ip_hash: string
-          last_caller_sequence: number | null
-          last_therapist_sequence: number | null
-          lead_id: string | null
-          outcome: string | null
-          parent_call_sid: string | null
-          provider_error_code: string | null
-          requested_at: string
-          session_id: string
-          therapist_answered_at: string | null
-          therapist_id: string
-          therapist_leg_status: string | null
-          updated_at: string
-        }
+          billable_eligible: boolean;
+          billable_event_at: string | null;
+          budget_reservation_id: string | null;
+          caller_amd_result: string | null;
+          caller_answered_at: string | null;
+          caller_hash: string;
+          caller_leg_status: string;
+          child_call_sid: string | null;
+          completed_at: string | null;
+          connected_at: string | null;
+          connected_duration_seconds: number | null;
+          created_at: string;
+          cta_event_id: string | null;
+          id: string;
+          ip_hash: string;
+          last_caller_sequence: number | null;
+          last_therapist_sequence: number | null;
+          lead_id: string | null;
+          outcome: string | null;
+          parent_call_sid: string | null;
+          provider_error_code: string | null;
+          requested_at: string;
+          session_id: string;
+          therapist_answered_at: string | null;
+          therapist_id: string;
+          therapist_leg_status: string | null;
+          updated_at: string;
+        };
         Insert: {
-          billable_eligible?: boolean
-          billable_event_at?: string | null
-          budget_reservation_id?: string | null
-          caller_amd_result?: string | null
-          caller_answered_at?: string | null
-          caller_hash: string
-          caller_leg_status?: string
-          child_call_sid?: string | null
-          completed_at?: string | null
-          connected_at?: string | null
-          connected_duration_seconds?: number | null
-          created_at?: string
-          cta_event_id?: string | null
-          id?: string
-          ip_hash: string
-          last_caller_sequence?: number | null
-          last_therapist_sequence?: number | null
-          lead_id?: string | null
-          outcome?: string | null
-          parent_call_sid?: string | null
-          provider_error_code?: string | null
-          requested_at?: string
-          session_id: string
-          therapist_answered_at?: string | null
-          therapist_id: string
-          therapist_leg_status?: string | null
-          updated_at?: string
-        }
+          billable_eligible?: boolean;
+          billable_event_at?: string | null;
+          budget_reservation_id?: string | null;
+          caller_amd_result?: string | null;
+          caller_answered_at?: string | null;
+          caller_hash: string;
+          caller_leg_status?: string;
+          child_call_sid?: string | null;
+          completed_at?: string | null;
+          connected_at?: string | null;
+          connected_duration_seconds?: number | null;
+          created_at?: string;
+          cta_event_id?: string | null;
+          id?: string;
+          ip_hash: string;
+          last_caller_sequence?: number | null;
+          last_therapist_sequence?: number | null;
+          lead_id?: string | null;
+          outcome?: string | null;
+          parent_call_sid?: string | null;
+          provider_error_code?: string | null;
+          requested_at?: string;
+          session_id: string;
+          therapist_answered_at?: string | null;
+          therapist_id: string;
+          therapist_leg_status?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          billable_eligible?: boolean
-          billable_event_at?: string | null
-          budget_reservation_id?: string | null
-          caller_amd_result?: string | null
-          caller_answered_at?: string | null
-          caller_hash?: string
-          caller_leg_status?: string
-          child_call_sid?: string | null
-          completed_at?: string | null
-          connected_at?: string | null
-          connected_duration_seconds?: number | null
-          created_at?: string
-          cta_event_id?: string | null
-          id?: string
-          ip_hash?: string
-          last_caller_sequence?: number | null
-          last_therapist_sequence?: number | null
-          lead_id?: string | null
-          outcome?: string | null
-          parent_call_sid?: string | null
-          provider_error_code?: string | null
-          requested_at?: string
-          session_id?: string
-          therapist_answered_at?: string | null
-          therapist_id?: string
-          therapist_leg_status?: string | null
-          updated_at?: string
-        }
+          billable_eligible?: boolean;
+          billable_event_at?: string | null;
+          budget_reservation_id?: string | null;
+          caller_amd_result?: string | null;
+          caller_answered_at?: string | null;
+          caller_hash?: string;
+          caller_leg_status?: string;
+          child_call_sid?: string | null;
+          completed_at?: string | null;
+          connected_at?: string | null;
+          connected_duration_seconds?: number | null;
+          created_at?: string;
+          cta_event_id?: string | null;
+          id?: string;
+          ip_hash?: string;
+          last_caller_sequence?: number | null;
+          last_therapist_sequence?: number | null;
+          lead_id?: string | null;
+          outcome?: string | null;
+          parent_call_sid?: string | null;
+          provider_error_code?: string | null;
+          requested_at?: string;
+          session_id?: string;
+          therapist_answered_at?: string | null;
+          therapist_id?: string;
+          therapist_leg_status?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "voice_call_sessions_budget_reservation_id_fkey"
-            columns: ["budget_reservation_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_budget_reservations"
-            referencedColumns: ["id"]
+            foreignKeyName: "voice_call_sessions_budget_reservation_id_fkey";
+            columns: ["budget_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "monthly_budget_reservations";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "voice_call_sessions_cta_event_id_fkey"
-            columns: ["cta_event_id"]
-            isOneToOne: false
-            referencedRelation: "cta_clicks"
-            referencedColumns: ["id"]
+            foreignKeyName: "voice_call_sessions_cta_event_id_fkey";
+            columns: ["cta_event_id"];
+            isOneToOne: false;
+            referencedRelation: "cta_clicks";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "voice_call_sessions_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "lead_events"
-            referencedColumns: ["id"]
+            foreignKeyName: "voice_call_sessions_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "lead_events";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "voice_call_sessions_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "voice_call_sessions_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       whatsapp_lead_deliveries: {
         Row: {
-          billed_at: string | null
-          budget_reservation_id: string | null
-          channel: string
-          created_at: string
-          cta_event_id: string | null
-          delivered_at: string | null
-          error_code: string | null
-          failed_at: string | null
-          id: string
-          lead_id: string
-          message_sid: string | null
-          provider: string
-          reservation_released_at: string | null
-          sent_at: string | null
-          status: string
-          therapist_id: string
-          updated_at: string
-        }
+          billed_at: string | null;
+          budget_reservation_id: string | null;
+          channel: string;
+          created_at: string;
+          cta_event_id: string | null;
+          delivered_at: string | null;
+          error_code: string | null;
+          failed_at: string | null;
+          id: string;
+          lead_id: string;
+          message_sid: string | null;
+          provider: string;
+          reservation_released_at: string | null;
+          sent_at: string | null;
+          status: string;
+          therapist_id: string;
+          updated_at: string;
+        };
         Insert: {
-          billed_at?: string | null
-          budget_reservation_id?: string | null
-          channel?: string
-          created_at?: string
-          cta_event_id?: string | null
-          delivered_at?: string | null
-          error_code?: string | null
-          failed_at?: string | null
-          id?: string
-          lead_id: string
-          message_sid?: string | null
-          provider?: string
-          reservation_released_at?: string | null
-          sent_at?: string | null
-          status?: string
-          therapist_id: string
-          updated_at?: string
-        }
+          billed_at?: string | null;
+          budget_reservation_id?: string | null;
+          channel?: string;
+          created_at?: string;
+          cta_event_id?: string | null;
+          delivered_at?: string | null;
+          error_code?: string | null;
+          failed_at?: string | null;
+          id?: string;
+          lead_id: string;
+          message_sid?: string | null;
+          provider?: string;
+          reservation_released_at?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          therapist_id: string;
+          updated_at?: string;
+        };
         Update: {
-          billed_at?: string | null
-          budget_reservation_id?: string | null
-          channel?: string
-          created_at?: string
-          cta_event_id?: string | null
-          delivered_at?: string | null
-          error_code?: string | null
-          failed_at?: string | null
-          id?: string
-          lead_id?: string
-          message_sid?: string | null
-          provider?: string
-          reservation_released_at?: string | null
-          sent_at?: string | null
-          status?: string
-          therapist_id?: string
-          updated_at?: string
-        }
+          billed_at?: string | null;
+          budget_reservation_id?: string | null;
+          channel?: string;
+          created_at?: string;
+          cta_event_id?: string | null;
+          delivered_at?: string | null;
+          error_code?: string | null;
+          failed_at?: string | null;
+          id?: string;
+          lead_id?: string;
+          message_sid?: string | null;
+          provider?: string;
+          reservation_released_at?: string | null;
+          sent_at?: string | null;
+          status?: string;
+          therapist_id?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "whatsapp_lead_deliveries_budget_reservation_id_fkey"
-            columns: ["budget_reservation_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_budget_reservations"
-            referencedColumns: ["id"]
+            foreignKeyName: "whatsapp_lead_deliveries_budget_reservation_id_fkey";
+            columns: ["budget_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "monthly_budget_reservations";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "whatsapp_lead_deliveries_cta_event_id_fkey"
-            columns: ["cta_event_id"]
-            isOneToOne: false
-            referencedRelation: "cta_clicks"
-            referencedColumns: ["id"]
+            foreignKeyName: "whatsapp_lead_deliveries_cta_event_id_fkey";
+            columns: ["cta_event_id"];
+            isOneToOne: false;
+            referencedRelation: "cta_clicks";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "whatsapp_lead_deliveries_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "lead_events"
-            referencedColumns: ["id"]
+            foreignKeyName: "whatsapp_lead_deliveries_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "lead_events";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "whatsapp_lead_deliveries_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
+            foreignKeyName: "whatsapp_lead_deliveries_therapist_id_fkey";
+            columns: ["therapist_id"];
+            isOneToOne: false;
+            referencedRelation: "therapists";
+            referencedColumns: ["id"];
           },
-        ]
-      }
-    }
+        ];
+      };
+    };
     Views: {
       admin_profile_claims: {
         Row: {
-          accepted_at: string | null
-          attention_rank: number | null
-          created_at: string | null
-          do_not_republish: boolean | null
-          expires_at: string | null
-          id: string | null
-          is_active: boolean | null
-          kind: string | null
-          last_delivery_error: string | null
-          owner_account_id: string | null
-          professional_title: string | null
-          profile_claimed: boolean | null
-          profile_email: string | null
-          profile_ownership_verification_method: string | null
-          profile_ownership_verified_at: string | null
-          profile_status:
-            | Database["public"]["Enums"]["therapist_profile_status"]
-            | null
-          provider_message_id: string | null
-          request_note: string | null
-          requester_email: string | null
-          requester_name: string | null
-          requester_phone: string | null
-          resolved_at: string | null
-          review_note: string | null
-          reviewed_by: string | null
-          revoked_at: string | null
-          search_text: string | null
-          sent_at: string | null
-          source_lead_id: string | null
-          status: string | null
-          therapist_id: string | null
-          therapist_name: string | null
-          therapist_slug: string | null
-          verification_category: string | null
-          verification_method: string | null
-          visibility: Database["public"]["Enums"]["therapist_visibility"] | null
-        }
-        Relationships: []
-      }
-    }
+          accepted_at: string | null;
+          attention_rank: number | null;
+          created_at: string | null;
+          do_not_republish: boolean | null;
+          expires_at: string | null;
+          id: string | null;
+          is_active: boolean | null;
+          kind: string | null;
+          last_delivery_error: string | null;
+          owner_account_id: string | null;
+          professional_title: string | null;
+          profile_claimed: boolean | null;
+          profile_email: string | null;
+          profile_ownership_verification_method: string | null;
+          profile_ownership_verified_at: string | null;
+          profile_status: string | null;
+          provider_message_id: string | null;
+          request_note: string | null;
+          requester_email: string | null;
+          requester_name: string | null;
+          requester_phone: string | null;
+          resolved_at: string | null;
+          review_note: string | null;
+          reviewed_by: string | null;
+          revoked_at: string | null;
+          search_text: string | null;
+          sent_at: string | null;
+          source_lead_id: string | null;
+          status: string | null;
+          therapist_id: string | null;
+          therapist_name: string | null;
+          therapist_slug: string | null;
+          verification_category: string | null;
+          verification_method: string | null;
+          visibility: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       account_outstanding_balance_agorot: {
-        Args: { _account_id: string }
-        Returns: number
-      }
-      apply_recruitment_email_event: {
-        Args: {
-          _email: string
-          _event: string
-          _event_at?: string
-          _provider_campaign_id: number
-        }
-        Returns: string
-      }
+        Args: { _account_id: string };
+        Returns: number;
+      };
       approve_therapist_profile_removal: {
         Args: {
-          _request_id: string
-          _reviewer: string
-          _verification_method: string
-        }
-        Returns: string
-      }
-      assert_account_deletion_ready: { Args: { _actor: string }; Returns: Json }
+          _request_id: string;
+          _reviewer: string;
+          _verification_method: string;
+        };
+        Returns: string;
+      };
+      assert_account_deletion_ready: { Args: { _actor: string }; Returns: Json };
       attach_email_lead_message: {
-        Args: { _delivery_id: string; _message_id: string }
-        Returns: undefined
-      }
-      attach_recruitment_email_provider_batch: {
-        Args: {
-          _provider_campaign_id: number
-          _provider_list_id: number
-          _send_batch_id: string
-        }
-        Returns: undefined
-      }
-      attach_recruitment_email_provider_list: {
-        Args: { _provider_list_id: number; _send_batch_id: string }
-        Returns: undefined
-      }
+        Args: { _delivery_id: string; _message_id: string };
+        Returns: undefined;
+      };
       attach_voice_call_provider: {
-        Args: { _attempt_id: string; _parent_call_sid: string }
-        Returns: undefined
-      }
+        Args: { _attempt_id: string; _parent_call_sid: string };
+        Returns: undefined;
+      };
       attach_whatsapp_lead_message: {
-        Args: { _delivery_id: string; _message_sid: string }
-        Returns: undefined
-      }
+        Args: { _delivery_id: string; _message_sid: string };
+        Returns: undefined;
+      };
       begin_admin_public_profile_deletion: {
-        Args: { _actor: string; _therapist_id: string }
-        Returns: string
-      }
+        Args: { _actor: string; _therapist_id: string };
+        Returns: string;
+      };
       begin_therapist_profile_deletion: {
-        Args: { _actor: string }
-        Returns: Json
-      }
-      billing_month_start: { Args: { _at?: string }; Returns: string }
-      billing_next_month_at: { Args: { _at?: string }; Returns: string }
+        Args: { _actor: string };
+        Returns: Json;
+      };
+      billing_month_start: { Args: { _at?: string }; Returns: string };
+      billing_next_month_at: { Args: { _at?: string }; Returns: string };
       claim_account_deletion_payment: {
-        Args: { _actor: string; _request_id: string }
-        Returns: Json
-      }
+        Args: { _actor: string; _request_id: string };
+        Returns: Json;
+      };
       claim_account_notification: {
         Args: {
-          _account_id: string
-          _entity_key: string
-          _notification_kind: string
-        }
-        Returns: boolean
-      }
+          _account_id: string;
+          _entity_key: string;
+          _notification_kind: string;
+        };
+        Returns: boolean;
+      };
       claim_monthly_budget_notification: {
-        Args: { _therapist_id: string }
-        Returns: Json
-      }
-      claim_recruitment_invite: {
-        Args: { _token_hash: string }
-        Returns: {
-          account_id: string
-          created_account: boolean
-          invitation_id: string
-        }[]
-      }
+        Args: { _therapist_id: string };
+        Returns: Json;
+      };
       claim_therapist_by_invite: {
-        Args: { _auth_user_id: string; _token_hash: string }
-        Returns: string
-      }
+        Args: { _auth_user_id: string; _token_hash: string };
+        Returns: string;
+      };
       commit_monthly_budget_reservation: {
-        Args: { _reservation_id: string }
-        Returns: Json
-      }
+        Args: { _reservation_id: string };
+        Returns: Json;
+      };
       create_therapist_claim_invite: {
         Args: {
-          _created_by: string
-          _email: string
-          _expires_at: string
-          _invite_source?: string
-          _replace_existing?: boolean
-          _source_lead_id?: string
-          _therapist_id: string
-          _token_hash: string
-        }
+          _created_by: string;
+          _email: string;
+          _expires_at: string;
+          _invite_source?: string;
+          _replace_existing?: boolean;
+          _source_lead_id?: string;
+          _therapist_id: string;
+          _token_hash: string;
+        };
         Returns: {
-          accepted_at: string | null
-          accepted_by_account_id: string | null
-          created_at: string
-          created_by: string | null
-          delivery_attempts: number
-          delivery_status: string
-          email: string
-          expires_at: string
-          id: string
-          invite_source: string
-          last_delivery_attempt_at: string | null
-          last_delivery_error: string | null
-          provider_message_id: string | null
-          revoked_at: string | null
-          sent_at: string | null
-          source_lead_id: string | null
-          status: string
-          therapist_id: string
-          token_hash: string
-          updated_at: string
-        }
+          accepted_at: string | null;
+          accepted_by_account_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          delivery_attempts: number;
+          delivery_status: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invite_source: string;
+          last_delivery_attempt_at: string | null;
+          last_delivery_error: string | null;
+          provider_message_id: string | null;
+          revoked_at: string | null;
+          sent_at: string | null;
+          source_lead_id: string | null;
+          status: string;
+          therapist_id: string;
+          token_hash: string;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "therapist_claim_invites"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "therapist_claim_invites";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       fail_email_lead_delivery: {
-        Args: { _delivery_id: string; _error_code: string }
-        Returns: undefined
-      }
+        Args: { _delivery_id: string; _error_code: string };
+        Returns: undefined;
+      };
       fail_voice_call_attempt: {
-        Args: { _attempt_id: string; _error_code: string }
-        Returns: undefined
-      }
+        Args: { _attempt_id: string; _error_code: string };
+        Returns: undefined;
+      };
       fail_whatsapp_lead_delivery: {
-        Args: { _delivery_id: string; _error_code: string }
-        Returns: undefined
-      }
-      finalize_admin_public_profile_deletion: {
-        Args: { _actor: string; _therapist_id: string }
-        Returns: string
-      }
-      finalize_therapist_profile_deletion: {
-        Args: { _actor: string }
-        Returns: Json
-      }
-      finish_account_deletion_payment: {
-        Args: {
-          _actor: string
-          _error?: string
-          _payment_attempt_id: string
-          _provider?: string
-          _provider_reference?: string
-          _request_id: string
-          _success: boolean
-        }
-        Returns: Json
-      }
-      finish_account_notification: {
-        Args: {
-          _account_id: string
-          _entity_key: string
-          _error: string
-          _notification_kind: string
-          _provider_message_id: string
-          _success: boolean
-        }
-        Returns: undefined
-      }
-      finish_monthly_budget_notification: {
-        Args: { _error?: string; _notification_id: string; _success: boolean }
-        Returns: undefined
-      }
+        Args: { _delivery_id: string; _error_code: string };
+        Returns: undefined;
+      };
+      get_recruitment_email_conflicts: {
+        Args: { _emails: string[] };
+        Returns: {
+          already_registered: boolean;
+          email_normalized: string;
+          existing_profile: boolean;
+          globally_suppressed: boolean;
+        }[];
+      };
+      get_recruitment_email_daily_capacity: {
+        Args: never;
+        Returns: {
+          daily_limit: number;
+          remaining_count: number;
+          send_date: string;
+          used_count: number;
+        }[];
+      };
+      reserve_recruitment_email_invitations: {
+        Args: { _created_by: string; _reservations: Json };
+        Returns: {
+          destination_normalized: string;
+          first_name: string | null;
+          invitation_id: string;
+          last_name: string | null;
+          remaining_after_reservation: number;
+          send_batch_id: string;
+        }[];
+      };
+      attach_recruitment_email_provider_list: {
+        Args: { _provider_list_id: number; _send_batch_id: string };
+        Returns: undefined;
+      };
+      attach_recruitment_email_provider_batch: {
+        Args: { _provider_campaign_id: number; _provider_list_id: number; _send_batch_id: string };
+        Returns: undefined;
+      };
+      mark_recruitment_provider_list_deleted: {
+        Args: { _provider_list_id: number; _send_batch_id: string };
+        Returns: undefined;
+      };
       finish_recruitment_email_send_batch: {
         Args: {
-          _failure_code?: string
-          _failure_reason?: string
-          _outcome: string
-          _send_batch_id: string
-        }
-        Returns: undefined
-      }
-      get_my_account_dashboard: { Args: never; Returns: Json }
-      get_my_account_lead_detail: { Args: { _lead_id: string }; Returns: Json }
-      get_my_account_leads: { Args: { _limit?: number }; Returns: Json }
-      get_my_account_update_notification_preference: {
-        Args: never
-        Returns: boolean
-      }
-      get_my_billing_transactions: { Args: { _limit?: number }; Returns: Json }
-      get_my_monthly_budget: { Args: never; Returns: Json }
+          _failure_code?: string | null;
+          _failure_reason?: string | null;
+          _outcome: string;
+          _send_batch_id: string;
+        };
+        Returns: undefined;
+      };
+      apply_recruitment_email_event: {
+        Args: {
+          _email: string;
+          _event: string;
+          _event_at?: string | null;
+          _provider_campaign_id: number;
+        };
+        Returns: string;
+      };
+      claim_recruitment_invite: {
+        Args: { _token_hash: string };
+        Returns: {
+          account_id: string;
+          created_account: boolean;
+          invitation_id: string;
+        }[];
+      };
+      finalize_admin_public_profile_deletion: {
+        Args: { _actor: string; _therapist_id: string };
+        Returns: string;
+      };
+      finalize_therapist_profile_deletion: {
+        Args: { _actor: string };
+        Returns: Json;
+      };
+      finish_account_deletion_payment: {
+        Args: {
+          _actor: string;
+          _error?: string;
+          _payment_attempt_id: string;
+          _provider?: string;
+          _provider_reference?: string;
+          _request_id: string;
+          _success: boolean;
+        };
+        Returns: Json;
+      };
+      finish_account_notification: {
+        Args: {
+          _account_id: string;
+          _entity_key: string;
+          _error: string;
+          _notification_kind: string;
+          _provider_message_id: string;
+          _success: boolean;
+        };
+        Returns: undefined;
+      };
+      finish_monthly_budget_notification: {
+        Args: { _error?: string; _notification_id: string; _success: boolean };
+        Returns: undefined;
+      };
+      get_my_account_dashboard: { Args: never; Returns: Json };
+      get_my_account_lead_detail: { Args: { _lead_id: string }; Returns: Json };
+      get_my_account_leads: { Args: { _limit?: number }; Returns: Json };
+      get_my_billing_transactions: { Args: { _limit?: number }; Returns: Json };
+      get_my_monthly_budget: { Args: never; Returns: Json };
+      get_my_account_update_notification_preference: { Args: never; Returns: boolean };
       get_my_notification_preferences: {
-        Args: never
+        Args: never;
         Returns: {
-          notify_account_updates: boolean
-          notify_new_leads: boolean
-        }[]
-      }
-      get_my_support_requests: { Args: never; Returns: Json }
-      get_recruitment_email_conflicts: {
-        Args: { _emails: string[] }
-        Returns: {
-          already_registered: boolean
-          email_normalized: string
-          existing_profile: boolean
-          globally_suppressed: boolean
-        }[]
-      }
-      get_recruitment_email_daily_capacity: {
-        Args: never
-        Returns: {
-          daily_limit: number
-          remaining_count: number
-          send_date: string
-          used_count: number
-        }[]
-      }
+          notify_account_updates: boolean;
+          notify_new_leads: boolean;
+        }[];
+      };
+      get_my_support_requests: { Args: never; Returns: Json };
       is_contact_email_suppressed: {
-        Args: { _email: string }
-        Returns: boolean
-      }
-      is_therapist_registration_enabled: { Args: never; Returns: boolean }
+        Args: { _email: string };
+        Returns: boolean;
+      };
+      is_therapist_registration_enabled: { Args: never; Returns: boolean };
       issue_lead_challenge: {
         Args: {
-          _expected: number
-          _ip_hash: string
-          _issue_limit?: number
-          _prompt: string
-          _ttl_seconds?: number
-          _window_seconds?: number
-        }
+          _expected: number;
+          _ip_hash: string;
+          _issue_limit?: number;
+          _prompt: string;
+          _ttl_seconds?: number;
+          _window_seconds?: number;
+        };
         Returns: {
-          allowed: boolean
-          challenge_id: string
-          expires_at: string
-          prompt: string
-          reason: string
-        }[]
-      }
-      mark_recruitment_provider_list_deleted: {
-        Args: { _provider_list_id: number; _send_batch_id: string }
-        Returns: undefined
-      }
+          allowed: boolean;
+          challenge_id: string;
+          expires_at: string;
+          prompt: string;
+          reason: string;
+        }[];
+      };
       mark_therapist_as_admin_public_profile: {
-        Args: { _therapist_id: string }
-        Returns: undefined
-      }
+        Args: { _therapist_id: string };
+        Returns: undefined;
+      };
       mark_therapist_claim_invite_failed: {
-        Args: { _error: string; _invite_id: string }
-        Returns: undefined
-      }
+        Args: { _error: string; _invite_id: string };
+        Returns: undefined;
+      };
       mark_therapist_claim_invite_sent: {
-        Args: { _invite_id: string; _provider_message_id: string }
-        Returns: undefined
-      }
-      monthly_budget_snapshot: { Args: { _account_id: string }; Returns: Json }
-      prepare_account_deletion: { Args: { _actor: string }; Returns: Json }
-      publish_my_completed_profile: { Args: never; Returns: Json }
-      purge_expired_lead_challenges: { Args: never; Returns: number }
+        Args: { _invite_id: string; _provider_message_id: string };
+        Returns: undefined;
+      };
+      monthly_budget_snapshot: { Args: { _account_id: string }; Returns: Json };
+      prepare_account_deletion: { Args: { _actor: string }; Returns: Json };
+      publish_my_completed_profile: { Args: never; Returns: Json };
+      purge_expired_lead_challenges: { Args: never; Returns: number };
       reconcile_monthly_budget_hold: {
-        Args: { _account_id: string; _queue_notification?: boolean }
-        Returns: boolean
-      }
+        Args: { _account_id: string; _queue_notification?: boolean };
+        Returns: boolean;
+      };
       record_contact_email_suppressions: {
-        Args: { _emails: string[]; _source: string }
-        Returns: number
-      }
+        Args: { _emails: string[]; _source: string };
+        Returns: number;
+      };
       record_cta_click: {
         Args: {
-          _cta_id?: string
-          _ip_hash?: string
-          _session_id: string
-          _source_problem_id?: string
-          _therapist_id: string
-          _user_agent?: string
-        }
+          _cta_id?: string;
+          _ip_hash?: string;
+          _session_id: string;
+          _source_problem_id?: string;
+          _therapist_id: string;
+          _user_agent?: string;
+        };
         Returns: {
-          already_exists: boolean
-          billable: boolean
-          click_id: string
-        }[]
-      }
+          already_exists: boolean;
+          billable: boolean;
+          click_id: string;
+        }[];
+      };
       record_email_lead_status: {
         Args: {
-          _delivery_id?: string
-          _error_code?: string
-          _message_id: string
-          _status: string
-        }
+          _delivery_id?: string;
+          _error_code?: string;
+          _message_id: string;
+          _status: string;
+        };
         Returns: {
-          billed: boolean
-          handled: boolean
-          lead_id: string
-          therapist_id: string
-        }[]
-      }
+          billed: boolean;
+          handled: boolean;
+          lead_id: string;
+          therapist_id: string;
+        }[];
+      };
       record_profile_contact_policy_violation: {
         Args: {
-          _actor: string
-          _field_names: string[]
-          _therapist_id: string
-          _violation_types: string[]
-        }
-        Returns: Json
-      }
+          _actor: string;
+          _field_names: string[];
+          _therapist_id: string;
+          _violation_types: string[];
+        };
+        Returns: Json;
+      };
       record_public_analytics_event: {
         Args: {
-          _event_name: string
-          _identity_hash: string
-          _page_source: string
-          _population_id: string
-          _problem_id: string
-          _rank_position: number
-          _session_hash: string
-          _therapist_id: string
-        }
-        Returns: boolean
-      }
+          _event_name: string;
+          _identity_hash: string;
+          _page_source: string;
+          _population_id: string;
+          _problem_id: string;
+          _rank_position: number;
+          _session_hash: string;
+          _therapist_id: string;
+        };
+        Returns: boolean;
+      };
       record_voice_call_leg_event: {
         Args: {
-          _child_call_sid: string
-          _duration: number
-          _leg: string
-          _parent_call_sid: string
-          _sequence: number
-          _status: string
-        }
+          _child_call_sid: string;
+          _duration: number;
+          _leg: string;
+          _parent_call_sid: string;
+          _sequence: number;
+          _status: string;
+        };
         Returns: {
-          attempt_id: string
-          billable_created: boolean
-          handled: boolean
-        }[]
-      }
+          attempt_id: string;
+          billable_created: boolean;
+          handled: boolean;
+        }[];
+      };
       record_whatsapp_lead_status: {
         Args: {
-          _delivery_id?: string
-          _error_code?: string
-          _message_sid: string
-          _status: string
-        }
+          _delivery_id?: string;
+          _error_code?: string;
+          _message_sid: string;
+          _status: string;
+        };
         Returns: {
-          billed: boolean
-          handled: boolean
-          lead_id: string
-          therapist_id: string
-        }[]
-      }
+          billed: boolean;
+          handled: boolean;
+          lead_id: string;
+          therapist_id: string;
+        }[];
+      };
       register_monthly_budget_event: {
         Args: {
-          _source_key: string
-          _source_type: string
-          _therapist_id: string
-        }
-        Returns: Json
-      }
+          _source_key: string;
+          _source_type: string;
+          _therapist_id: string;
+        };
+        Returns: Json;
+      };
       release_monthly_budget_reservation: {
-        Args: { _reservation_id: string }
-        Returns: boolean
-      }
+        Args: { _reservation_id: string };
+        Returns: boolean;
+      };
       reserve_monthly_budget_for_source: {
         Args: {
-          _source_key: string
-          _source_type: string
-          _therapist_id: string
-          _ttl_minutes?: number
-        }
-        Returns: Json
-      }
+          _source_key: string;
+          _source_type: string;
+          _therapist_id: string;
+          _ttl_minutes?: number;
+        };
+        Returns: Json;
+      };
       reserve_monthly_budget_for_voice: {
         Args: {
-          _source_key: string
-          _therapist_id: string
-          _ttl_minutes?: number
-        }
-        Returns: Json
-      }
-      reserve_recruitment_email_invitations: {
-        Args: { _created_by: string; _reservations: Json }
-        Returns: {
-          destination_normalized: string
-          first_name: string
-          invitation_id: string
-          last_name: string
-          remaining_after_reservation: number
-          send_batch_id: string
-        }[]
-      }
+          _source_key: string;
+          _therapist_id: string;
+          _ttl_minutes?: number;
+        };
+        Returns: Json;
+      };
       save_therapist_profile: {
-        Args: { _actor: string; _payload: Json }
-        Returns: Json
-      }
+        Args: { _actor: string; _payload: Json };
+        Returns: Json;
+      };
       save_therapist_profile_with_contacts: {
-        Args: { _actor: string; _payload: Json }
-        Returns: Json
-      }
+        Args: { _actor: string; _payload: Json };
+        Returns: Json;
+      };
       set_my_credential_verification_skip: {
-        Args: { _skip: boolean }
-        Returns: string
-      }
+        Args: { _skip: boolean };
+        Returns: string;
+      };
       set_my_monthly_budget: {
-        Args: { _monthly_limit_agorot: number; _notify_on_exhaustion: boolean }
-        Returns: Json
-      }
-      set_my_test_payment_method: { Args: { _enabled: boolean }; Returns: Json }
+        Args: { _monthly_limit_agorot: number; _notify_on_exhaustion: boolean };
+        Returns: Json;
+      };
+      set_my_test_payment_method: { Args: { _enabled: boolean }; Returns: Json };
       start_voice_call_attempt: {
         Args: {
-          _answer: number
-          _caller_hash: string
-          _challenge_id: string
-          _ip_hash: string
-          _session_hash: string
-          _session_id: string
-          _therapist_id: string
-        }
+          _answer: number;
+          _caller_hash: string;
+          _challenge_id: string;
+          _ip_hash: string;
+          _session_hash: string;
+          _session_id: string;
+          _therapist_id: string;
+        };
         Returns: {
-          allowed: boolean
-          attempt_id: string
-          reason: string
-          therapist_name: string
-          therapist_phone: string
-        }[]
-      }
+          allowed: boolean;
+          attempt_id: string;
+          reason: string;
+          therapist_name: string;
+          therapist_phone: string;
+        }[];
+      };
       submit_lead: {
         Args: {
-          _answer: number
-          _challenge_id: string
-          _cta_id: string
-          _ip_hash: string
-          _message: string
-          _population_id: string
-          _session_hash: string
-          _session_id: string
-          _source_problem_id: string
-          _therapist_id: string
-          _user_agent: string
-          _visitor_name: string
-          _visitor_phone: string
-        }
+          _answer: number;
+          _challenge_id: string;
+          _cta_id: string;
+          _ip_hash: string;
+          _message: string;
+          _population_id: string;
+          _session_hash: string;
+          _session_id: string;
+          _source_problem_id: string;
+          _therapist_id: string;
+          _user_agent: string;
+          _visitor_name: string;
+          _visitor_phone: string;
+        };
         Returns: {
-          allowed: boolean
-          billable: boolean
-          cta_event_id: string
-          delivery_channel: string
-          delivery_id: string
-          destination: string
-          lead_id: string
-          reason: string
-          therapist_name: string
-        }[]
-      }
+          allowed: boolean;
+          billable: boolean;
+          cta_event_id: string;
+          delivery_channel: string;
+          delivery_id: string;
+          destination: string;
+          lead_id: string;
+          reason: string;
+          therapist_name: string;
+        }[];
+      };
       submit_my_support_request: {
-        Args: { _category: string; _message: string; _subject: string }
-        Returns: string
-      }
+        Args: { _category: string; _message: string; _subject: string };
+        Returns: string;
+      };
       submit_whatsapp_lead: {
         Args: {
-          _answer: number
-          _challenge_id: string
-          _cta_id: string
-          _ip_hash: string
-          _message: string
-          _population_id: string
-          _session_hash: string
-          _session_id: string
-          _source_problem_id: string
-          _therapist_id: string
-          _user_agent: string
-          _visitor_name: string
-          _visitor_phone: string
-        }
+          _answer: number;
+          _challenge_id: string;
+          _cta_id: string;
+          _ip_hash: string;
+          _message: string;
+          _population_id: string;
+          _session_hash: string;
+          _session_id: string;
+          _source_problem_id: string;
+          _therapist_id: string;
+          _user_agent: string;
+          _visitor_name: string;
+          _visitor_phone: string;
+        };
         Returns: {
-          allowed: boolean
-          delivery_id: string
-          destination: string
-          lead_id: string
-          reason: string
-          therapist_name: string
-        }[]
-      }
+          allowed: boolean;
+          delivery_id: string;
+          destination: string;
+          lead_id: string;
+          reason: string;
+          therapist_name: string;
+        }[];
+      };
       update_my_account_lead: {
         Args: {
-          _lead_id: string
-          _private_note: string
-          _workflow_status: string
-        }
-        Returns: Json
-      }
+          _lead_id: string;
+          _private_note: string;
+          _workflow_status: string;
+        };
+        Returns: Json;
+      };
       update_my_account_update_notification_preference: {
-        Args: { _notify_account_updates: boolean }
-        Returns: boolean
-      }
+        Args: { _notify_account_updates: boolean };
+        Returns: boolean;
+      };
       update_my_notification_preferences: {
-        Args: { _notify_account_updates: boolean; _notify_new_leads: boolean }
+        Args: { _notify_account_updates: boolean; _notify_new_leads: boolean };
         Returns: {
-          notify_account_updates: boolean
-          notify_new_leads: boolean
-        }[]
-      }
+          notify_account_updates: boolean;
+          notify_new_leads: boolean;
+        }[];
+      };
       voice_call_caller_answered: {
-        Args: { _amd_result: string; _parent_call_sid: string }
+        Args: { _amd_result: string; _parent_call_sid: string };
         Returns: {
-          allowed: boolean
-          attempt_id: string
-          reason: string
-          therapist_phone: string
-        }[]
-      }
-    }
+          allowed: boolean;
+          attempt_id: string;
+          reason: string;
+          therapist_phone: string;
+        }[];
+      };
+    };
     Enums: {
-      claim_request_status:
-        | "pending"
-        | "approved"
-        | "rejected"
-        | "cancelled"
-        | "needs_information"
-      claim_request_type: "claim_profile" | "remove_profile"
-      contact_channel: "whatsapp" | "sms" | "email"
-      credential_verification_status:
-        | "unverified"
-        | "pending_review"
-        | "verified"
-        | "rejected"
-        | "expired"
-      location_type: "clinic" | "home_visit" | "online" | "hospital" | "other"
-      therapist_account_status: "pending" | "active" | "claimed" | "suspended"
-      therapist_gender: "male" | "female" | "unspecified"
-      therapist_profile_status: "draft" | "completed" | "published"
-      therapist_visibility:
-        | "published"
-        | "hidden_by_owner"
-        | "archived"
-        | "visible"
-        | "hidden"
-    }
+      claim_request_status: "pending" | "approved" | "rejected" | "cancelled" | "needs_information";
+      claim_request_type: "claim_profile" | "remove_profile";
+      contact_channel: "whatsapp" | "sms" | "email";
+      credential_verification_status: "unverified" | "pending_review" | "verified" | "rejected" | "expired";
+      location_type: "clinic" | "home_visit" | "online" | "hospital" | "other";
+      therapist_account_status: "pending" | "active" | "claimed" | "suspended";
+      therapist_gender: "male" | "female" | "unspecified";
+      therapist_profile_status: "draft" | "completed" | "published";
+      therapist_visibility: "published" | "hidden_by_owner" | "archived" | "visible" | "hidden";
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   public: {
     Enums: {
-      claim_request_status: [
-        "pending",
-        "approved",
-        "rejected",
-        "cancelled",
-        "needs_information",
-      ],
+      claim_request_status: ["pending", "approved", "rejected", "cancelled", "needs_information"],
       claim_request_type: ["claim_profile", "remove_profile"],
       contact_channel: ["whatsapp", "sms", "email"],
-      credential_verification_status: [
-        "unverified",
-        "pending_review",
-        "verified",
-        "rejected",
-        "expired",
-      ],
+      credential_verification_status: ["unverified", "pending_review", "verified", "rejected", "expired"],
       location_type: ["clinic", "home_visit", "online", "hospital", "other"],
       therapist_account_status: ["pending", "active", "claimed", "suspended"],
       therapist_gender: ["male", "female", "unspecified"],
       therapist_profile_status: ["draft", "completed", "published"],
-      therapist_visibility: [
-        "published",
-        "hidden_by_owner",
-        "archived",
-        "visible",
-        "hidden",
-      ],
+      therapist_visibility: ["published", "hidden_by_owner", "archived", "visible", "hidden"],
     },
   },
-} as const
+} as const;

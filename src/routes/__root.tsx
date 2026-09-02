@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { initializeDisplayPreferences } from "../lib/display-preferences";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { SiteAnnouncementSurface } from "@/components/site-announcement-surface";
 import { indexingBootstrapScript, robotsDirective } from "@/lib/seo-indexing";
 
 function NotFoundComponent() {
@@ -155,6 +156,7 @@ function RootComponent() {
   if (isAdmin || isAccount) {
     return (
       <QueryClientProvider client={queryClient}>
+        <SiteAnnouncementSurface />
         <Outlet />
         <Toaster />
       </QueryClientProvider>
@@ -163,6 +165,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <SiteAnnouncementSurface />
       <SiteHeader />
       <main className="min-h-[calc(100vh-4rem)]">
         <Outlet />
