@@ -57,6 +57,7 @@ const STATUS_LABEL: Record<IntegrationHealth, string> = {
   warning: "אזהרה",
   error: "שגיאה",
   planned: "מתוכנן",
+  unchecked: "לא נבדק",
 };
 
 const CHECK_DOT: Record<IntegrationHealth, string> = {
@@ -64,6 +65,7 @@ const CHECK_DOT: Record<IntegrationHealth, string> = {
   warning: "bg-amber-500",
   error: "bg-rose-500",
   planned: "bg-muted-foreground/40",
+  unchecked: "bg-muted-foreground/40",
 };
 
 function formatDateTime(value: string): string {
@@ -104,7 +106,7 @@ function IntegrationsPage() {
         <div>
           <p className="text-sm font-medium text-foreground">מצב מערכת חיצונית</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            הבדיקות הן קריאה בלבד ואינן שולחות שיחות, WhatsApp, אימיילים או בקשות OpenAI בתשלום.
+            הבדיקות אינן יוצרות שיחות או הודעות ואינן שולחות בקשות OpenAI בתשלום.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={() => refresh.mutate()} disabled={isRefreshing}>
