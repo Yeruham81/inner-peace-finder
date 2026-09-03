@@ -365,7 +365,7 @@ export async function deliverRecruitmentEmailBatch(rows: ReservedRecruitmentInvi
     _send_batch_id: sendBatchId,
     _outcome: outcome,
     _failure_code: result.definiteFailure ? "provider_rejected" : "provider_result_unknown",
-    _failure_reason: result.error ?? null,
+    _failure_reason: result.error ?? undefined,
   });
   if (finish.error)
     console.error("[recruitment] failed to persist provider outcome", { sendBatchId, code: finish.error.code });
