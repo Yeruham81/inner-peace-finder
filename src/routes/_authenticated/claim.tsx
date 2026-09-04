@@ -6,7 +6,6 @@ import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, MailCheck } from "lucide-react";
 
-import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptClaimInvite, getClaimInvitePreview, type ClaimInvitePreview } from "@/lib/profile-claim-v2.functions";
 
@@ -71,15 +70,14 @@ function ClaimInvitePage() {
       queryClient.clear();
 
       const claimDestination = `/claim?token=${encodeURIComponent(token)}`;
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth?next=${encodeURIComponent(claimDestination)}`,
-        extraParams: { prompt: "select_account" },
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(claimDestination)}`,
+          queryParams: { prompt: "select_account" },
+        },
       });
-      if (result.error) throw result.error;
-      if (result.redirected) return;
-
-      // Popup mode has already installed the new Supabase session.
-      window.location.assign(claimDestination);
+      if (oauthError) throw oauthError;
     } catch (err) {
       setError(err instanceof Error ? err.message : "לא ניתן לפתוח את בחירת חשבון Google.");
       setSwitchingAccount(false);
