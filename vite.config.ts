@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Cloud Run uses a regular Node.js server container rather than Lovable's
+  // default Cloudflare deployment target.
+  nitro: {
+    preset: "node-server",
+  },
 });
