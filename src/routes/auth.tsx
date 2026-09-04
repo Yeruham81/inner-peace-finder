@@ -239,7 +239,7 @@ function AuthPage() {
     setLoading(false);
   }
 
-  async function handleOAuth(provider: "google" | "apple") {
+  async function handleGoogleOAuth() {
     setLoading(true);
     setMsg(null);
 
@@ -251,63 +251,20 @@ function AuthPage() {
     });
     const redirectUrl = `${window.location.origin}/auth?${redirectSearch.toString()}`;
 
-    // OAuth is managed by Lovable Cloud. Keep the recruitment context on the
-    // callback URL so a valid invite can authorize account creation even while
-    // the global registration switch is closed.
-    const res = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: redirectUrl,
+    // Google OAuth is handled directly by Supabase Auth. Keep the recruitment
+    // context on the callback URL so a valid invite can authorize account
+    // creation even while general therapist registration is closed.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl,
+      },
     });
-    if (res.error) {
-      setMsg({
-        kind: "err",
-        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
-      });
-      setLoading(false);
-      return;
-    }
-    if (res.redirected) return;
-    if (!res.tokens) {
-      setMsg({
-        kind: "err",
-        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
-      });
-      setLoading(false);
-      return;
-    }
 
-    // Lovable's popup flow returns OAuth tokens but does not install them in
-    // this app's Supabase client. Establish the authenticated session first;
-    // only then may an invitation be claimed or a therapist account ensured.
-    const { data: sessionData, error: sessionError } = await supabase.auth.setSession(res.tokens);
-    if (sessionError || !sessionData.session?.user) {
-      setMsg({
-        kind: "err",
-        text: `כניסה דרך ${provider === "google" ? "Google" : "Apple"} נכשלה.`,
-      });
+    if (error) {
+      setMsg({ kind: "err", text: "כניסה דרך Google נכשלה." });
       setLoading(false);
-      return;
     }
-
-    try {
-      await ensureAccountForCurrentContext();
-    } catch (accountError) {
-      if (recruitmentInviteValid) {
-        await supabase.auth.signOut({ scope: "local" });
-        setTab("signin");
-        setMsg({ kind: "err", text: inviteErrorText(accountError) });
-        setLoading(false);
-        return;
-      }
-      if (isRegistrationClosedError(accountError)) {
-        await supabase.auth.signOut({ scope: "local" });
-        setTab("signin");
-        setMsg({ kind: "err", text: THERAPIST_REGISTRATION_CLOSED_MESSAGE });
-        setLoading(false);
-        return;
-      }
-      /* preserve existing non-fatal behavior for unrelated bootstrap errors */
-    }
-    navigate({ to: dest });
   }
 
   return (
@@ -353,11 +310,8 @@ function AuthPage() {
 
         {tab !== "forgot" && (
           <div className="mb-4 grid gap-2">
-            <Button type="button" variant="outline" onClick={() => handleOAuth("google")} disabled={loading}>
+            <Button type="button" variant="outline" onClick={handleGoogleOAuth} disabled={loading}>
               המשך עם Google
-            </Button>
-            <Button type="button" variant="outline" onClick={() => handleOAuth("apple")} disabled={loading}>
-              המשך עם Apple
             </Button>
             <div className="relative py-2 text-center text-xs text-muted-foreground">
               <span className="bg-surface-elevated px-2 relative z-10">או עם אימייל</span>
