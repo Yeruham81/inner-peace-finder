@@ -126,130 +126,160 @@ function ProblemPage() {
     .filter((related): related is ProblemSeoContent => related !== null);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <nav aria-label="פירורי לחם" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <Link to="/" className="transition-colors hover:text-foreground hover:underline">
-          דף הבית
-        </Link>
-        <span aria-hidden="true">/</span>
-        <Link to="/therapy-information" className="transition-colors hover:text-foreground hover:underline">
-          תחומי טיפול
-        </Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page" className="text-foreground">
-          {problem.name}
-        </span>
-      </nav>
-      <header className="mt-3 rounded-3xl bg-gradient-to-br from-brand-soft to-background p-8 sm:p-10">
-        <h1 className="text-3xl font-extrabold text-foreground sm:text-4xl">{problem.name}</h1>
-        {(seoContent?.summary || problem.description) && (
-          <p className="mt-3 max-w-3xl text-base leading-8 text-foreground/80 sm:text-lg">
-            {seoContent?.summary ?? problem.description}
-          </p>
-        )}
-      </header>
-
-      {seoContent && (
-        <article className="mt-8 space-y-8 rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm sm:p-8">
-          <section aria-labelledby="about-topic">
-            <h2 id="about-topic" className="text-2xl font-bold text-foreground">
-              על ההתמודדות
-            </h2>
-            <p className="mt-3 text-base leading-8 text-muted-foreground">{seoContent.intro}</p>
-          </section>
-
-          <section aria-labelledby="common-situations">
-            <h2 id="common-situations" className="text-xl font-bold text-foreground">
-              מצבים שבהם אנשים מחפשים עזרה בנושא
-            </h2>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {seoContent.commonSituations.map((situation) => (
-                <li
-                  key={situation}
-                  className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3 text-sm leading-7 text-foreground/85"
-                >
-                  {situation}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section aria-labelledby="finding-professional">
-            <h2 id="finding-professional" className="text-xl font-bold text-foreground">
-              איך מחפשים איש מקצוע מתאים?
-            </h2>
-            <p className="mt-3 text-base leading-8 text-muted-foreground">{seoContent.matchingGuidance}</p>
-          </section>
-
-          <p className="rounded-2xl bg-muted/40 p-4 text-sm leading-7 text-muted-foreground">
-            המידע בעמוד הוא מידע כללי בלבד ואינו אבחון, המלצה רפואית או תחליף לייעוץ מקצועי.
-          </p>
-        </article>
-      )}
-
-      {problem.children && problem.children.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">תתי-קטגוריות</h2>
-          <div className="flex flex-wrap gap-2">
-            {problem.children.map((c: { id: string | number; slug: string; name: string | null }) => (
-              <Link
-                key={c.id}
-                to="/problems/$slug"
-                params={{ slug: toPublicProblemSlug(c.slug) }}
-                className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:bg-brand-soft"
-              >
-                {c.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="mt-10" aria-labelledby="topic-professionals">
-        <h2 id="topic-professionals" className="text-xl font-bold text-foreground">
-          {seoContent?.resultsHeading ?? `מטפלים בתחום ${problem.name}`}{" "}
-          <span className="text-sm font-normal text-muted-foreground">
-            (<span className="ltr-num">{therapists.length}</span>)
-          </span>
-        </h2>
-        <p className="mt-2 text-sm leading-7 text-muted-foreground">
-          אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל.
-        </p>
-        {therapists.length === 0 ? (
-          <p className="mt-4 rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-muted-foreground">
-            עוד אין אנשי מקצוע רשומים בתחום זה.
-          </p>
-        ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {therapists.map((therapist, index) => (
-              <TherapistCard key={therapist.id} t={therapist} rankPosition={index + 1} pageSource="problem" />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {relatedPages.length > 0 && (
-        <section
-          aria-labelledby="related-topics"
-          className="mt-10 rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm sm:p-8"
+    <div className="min-h-screen bg-gradient-to-b from-brand-soft/20 via-background to-background">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+        <nav
+          aria-label="פירורי לחם"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
         >
-          <h2 id="related-topics" className="text-xl font-bold text-foreground">
-            תחומים קשורים
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {relatedPages.map((related) => (
-              <Link
-                key={related.slug}
-                to="/problems/$slug"
-                params={{ slug: toPublicProblemSlug(related.slug) }}
-                className="rounded-full border border-brand/20 bg-brand-soft/45 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-brand/45 hover:text-primary"
+          <Link
+            to="/"
+            className="rounded-md px-1 py-0.5 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45"
+          >
+            דף הבית
+          </Link>
+          <span aria-hidden="true" className="text-muted-foreground/60">
+            /
+          </span>
+          <Link
+            to="/therapy-information"
+            className="rounded-md px-1 py-0.5 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45"
+          >
+            תחומי טיפול
+          </Link>
+          <span aria-hidden="true" className="text-muted-foreground/60">
+            /
+          </span>
+          <span aria-current="page" className="min-w-0 truncate font-medium text-foreground">
+            {problem.name}
+          </span>
+        </nav>
+        <header className="mt-4 rounded-3xl border border-brand/15 bg-surface-elevated/95 p-6 shadow-card sm:mt-5 sm:p-9 lg:p-10">
+          <h1 className="max-w-[26ch] text-balance text-[1.75rem] font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
+            {problem.name}
+          </h1>
+          {(seoContent?.summary || problem.description) && (
+            <p className="mt-4 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground sm:text-lg sm:leading-9">
+              {seoContent?.summary ?? problem.description}
+            </p>
+          )}
+        </header>
+
+        {seoContent && (
+          <article className="mt-8 divide-y divide-border/70 rounded-3xl border border-border bg-surface-elevated p-6 shadow-card sm:mt-10 sm:p-8 lg:p-10">
+            <section aria-labelledby="about-topic" className="pb-7 sm:pb-8">
+              <h2 id="about-topic" className="text-pretty text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                על ההתמודדות
+              </h2>
+              <p className="mt-3 max-w-[70ch] text-pretty text-base leading-8 text-muted-foreground">
+                {seoContent.intro}
+              </p>
+            </section>
+
+            <section aria-labelledby="common-situations" className="py-7 sm:py-8">
+              <h2
+                id="common-situations"
+                className="text-pretty text-lg font-bold tracking-tight text-foreground sm:text-xl"
               >
-                {related.label}
-              </Link>
-            ))}
-          </div>
+                מצבים שבהם אנשים מחפשים עזרה בנושא
+              </h2>
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                {seoContent.commonSituations.map((situation) => (
+                  <li
+                    key={situation}
+                    className="rounded-2xl border border-border/70 bg-muted/25 px-4 py-3 text-pretty text-sm leading-7 text-foreground/85"
+                  >
+                    {situation}
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section aria-labelledby="finding-professional" className="py-7 sm:py-8">
+              <h2
+                id="finding-professional"
+                className="text-pretty text-lg font-bold tracking-tight text-foreground sm:text-xl"
+              >
+                איך מחפשים איש מקצוע מתאים?
+              </h2>
+              <p className="mt-3 max-w-[70ch] text-pretty text-base leading-8 text-muted-foreground">
+                {seoContent.matchingGuidance}
+              </p>
+            </section>
+
+            <div className="pt-7 sm:pt-8">
+              <p className="max-w-[78ch] rounded-2xl border border-border/70 border-r-4 border-r-brand/50 bg-muted/30 p-4 text-pretty text-sm leading-7 text-muted-foreground">
+                המידע בעמוד הוא מידע כללי בלבד ואינו אבחון, המלצה רפואית או תחליף לייעוץ מקצועי.
+              </p>
+            </div>
+          </article>
+        )}
+
+        {problem.children && problem.children.length > 0 && (
+          <section className="mt-8 sm:mt-10">
+            <h2 className="mb-3 text-base font-bold tracking-tight text-foreground sm:text-lg">תתי-קטגוריות</h2>
+            <div className="flex flex-wrap gap-2">
+              {problem.children.map((c: { id: string | number; slug: string; name: string | null }) => (
+                <Link
+                  key={c.id}
+                  to="/problems/$slug"
+                  params={{ slug: toPublicProblemSlug(c.slug) }}
+                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm text-foreground shadow-sm transition-colors hover:border-brand/40 hover:bg-brand-soft/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {c.name}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="mt-10 sm:mt-12" aria-labelledby="topic-professionals">
+          <h2 id="topic-professionals" className="text-pretty text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {seoContent?.resultsHeading ?? `מטפלים בתחום ${problem.name}`}{" "}
+            <span className="text-sm font-normal text-muted-foreground">
+              (<span className="ltr-num">{therapists.length}</span>)
+            </span>
+          </h2>
+          <p className="mt-2 max-w-[70ch] text-pretty text-sm leading-7 text-muted-foreground">
+            אנשי מקצוע שהנושא מופיע בין תחומי הטיפול שהציגו בפרופיל.
+          </p>
+          {therapists.length === 0 ? (
+            <p className="mt-5 rounded-3xl border border-dashed border-border bg-surface p-8 text-center text-pretty text-muted-foreground">
+              עוד אין אנשי מקצוע רשומים בתחום זה.
+            </p>
+          ) : (
+            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {therapists.map((therapist, index) => (
+                <TherapistCard key={therapist.id} t={therapist} rankPosition={index + 1} pageSource="problem" />
+              ))}
+            </div>
+          )}
         </section>
-      )}
+
+        {relatedPages.length > 0 && (
+          <section
+            aria-labelledby="related-topics"
+            className="mt-10 rounded-3xl border border-border bg-surface-elevated p-6 shadow-card sm:mt-12 sm:p-8"
+          >
+            <h2 id="related-topics" className="text-pretty text-lg font-bold tracking-tight text-foreground sm:text-xl">
+              תחומים קשורים
+            </h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {relatedPages.map((related) => (
+                <Link
+                  key={related.slug}
+                  to="/problems/$slug"
+                  params={{ slug: toPublicProblemSlug(related.slug) }}
+                  className="inline-flex min-h-11 items-center rounded-full border border-brand/20 bg-brand-soft/40 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-brand/45 hover:bg-brand-soft/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {related.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
+

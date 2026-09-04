@@ -119,48 +119,64 @@ function TherapyInformationPage() {
   })).filter((group) => group.pages.length > 0);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-brand-soft/35 via-background to-background">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-        <nav aria-label="פירורי לחם" className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link to="/" className="transition-colors hover:text-foreground hover:underline">
+    <main className="min-h-screen bg-gradient-to-b from-brand-soft/25 via-background to-background">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-14 lg:px-8">
+        <nav
+          aria-label="פירורי לחם"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
+        >
+          <Link
+            to="/"
+            className="rounded-md px-1 py-0.5 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45"
+          >
             דף הבית
           </Link>
-          <span aria-hidden="true">/</span>
-          <span aria-current="page" className="text-foreground">
+          <span aria-hidden="true" className="text-muted-foreground/60">
+            /
+          </span>
+          <span aria-current="page" className="font-medium text-foreground">
             תחומי טיפול
           </span>
         </nav>
 
-        <header className="mt-5 rounded-3xl border border-brand/15 bg-surface-elevated/90 p-7 shadow-card sm:p-10">
-          <p className="text-sm font-semibold text-primary">מידע וחיפוש לפי צורך</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+        <header className="mt-4 rounded-3xl border border-brand/15 bg-surface-elevated/95 p-6 shadow-card sm:mt-5 sm:p-9 lg:p-10">
+          <p className="text-sm font-semibold tracking-wide text-primary">מידע וחיפוש לפי צורך</p>
+          <h1 className="mt-2 max-w-[26ch] text-balance text-[1.75rem] font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
             תחומי טיפול והתמודדות
           </h1>
-          <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground sm:text-lg">
+          <p className="mt-4 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground sm:text-lg sm:leading-9">
             לא תמיד צריך לדעת מראש איזה מקצוע או שיטת טיפול לחפש. בחרו נושא שמתאר את הצורך שלכם, קראו מידע כללי והמשיכו
             לרשימת מטפלים ואנשי מקצוע רלוונטיים.
           </p>
         </header>
 
-        <div className="mt-10 space-y-12">
+        <div className="mt-9 space-y-10 sm:mt-12 sm:space-y-14">
           {groups.map((group) => (
             <section key={group.id} aria-labelledby={`group-${group.id}`}>
-              <h2 id={`group-${group.id}`} className="text-2xl font-bold text-foreground">
-                {group.label}
-              </h2>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center gap-3">
+                <span aria-hidden="true" className="h-6 w-1.5 shrink-0 rounded-full bg-brand/60" />
+                <h2
+                  id={`group-${group.id}`}
+                  className="min-w-0 text-pretty text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+                >
+                  {group.label}
+                </h2>
+              </div>
+              <div className="mt-4 grid gap-4 sm:mt-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {group.pages.map((page) => (
                   <Link
                     key={page.slug}
                     to="/problems/$slug"
                     params={{ slug: toPublicProblemSlug(page.slug) }}
-                    className="group flex min-h-52 flex-col rounded-3xl border border-border bg-surface-elevated p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                    className="group flex h-full min-h-48 flex-col rounded-3xl border border-border bg-surface-elevated p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:p-6"
                   >
-                    <h3 className="text-xl font-bold text-foreground transition-colors group-hover:text-primary">
+                    <h3 className="text-pretty text-lg font-bold leading-7 text-foreground transition-colors group-hover:text-primary sm:text-xl">
                       {page.name}
                     </h3>
-                    <p className="mt-3 flex-1 text-sm leading-7 text-muted-foreground">{page.summary}</p>
-                    <span className="mt-5 text-sm font-semibold text-primary">מידע ומטפלים בתחום ←</span>
+                    <p className="mt-3 flex-1 text-pretty text-sm leading-7 text-muted-foreground">{page.summary}</p>
+                    <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                      מידע ומטפלים בתחום ←
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -168,11 +184,14 @@ function TherapyInformationPage() {
           ))}
         </div>
 
-        <aside className="mt-12 rounded-2xl border border-border bg-muted/35 p-5 text-sm leading-7 text-muted-foreground">
-          המידע בעמודים הוא מידע כללי בלבד ואינו אבחון, המלצה רפואית או תחליף לייעוץ מקצועי. ההתאמה בפועל תלויה בצורך
-          האישי ובהכשרה של איש המקצוע.
+        <aside className="mt-12 rounded-3xl border border-border bg-muted/30 p-5 text-sm leading-7 text-muted-foreground sm:mt-14 sm:p-6">
+          <p className="max-w-[78ch] text-pretty">
+            המידע בעמודים הוא מידע כללי בלבד ואינו אבחון, המלצה רפואית או תחליף לייעוץ מקצועי. ההתאמה בפועל תלויה בצורך
+            האישי ובהכשרה של איש המקצוע.
+          </p>
         </aside>
       </div>
     </main>
   );
 }
+
