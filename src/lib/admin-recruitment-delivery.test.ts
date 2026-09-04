@@ -63,20 +63,23 @@ describe("therapist recruitment delivery", () => {
     expect(recruitmentTemplate).toContain('style="text-align:center;margin:30px 0;"');
   });
 
-  it("opens valid recruitment invites on signup and establishes Lovable OAuth session before claiming", () => {
+  it("opens valid recruitment invites on signup and uses direct Supabase Google OAuth", () => {
     expect(auth).toContain('invite ? "signup" : (mode ?? "signin")');
     expect(auth).toContain("if (!recruitmentInviteValid) return;");
-    expect(auth).toContain("lovable.auth.signInWithOAuth(provider");
-    expect(auth).not.toContain("supabase.auth.signInWithOAuth");
+    expect(auth).toContain("async function handleGoogleOAuth()");
+    expect(auth).toContain("supabase.auth.signInWithOAuth({");
+    expect(auth).toContain('provider: "google"');
+    expect(auth).toContain("redirectTo: redirectUrl");
     expect(auth).toContain("...(invite ? { invite } : {})");
     expect(auth).toContain("mode: oauthMode");
-    expect(auth).toContain("supabase.auth.setSession(res.tokens)");
+    expect(auth).not.toContain("lovable.auth");
+    expect(auth).not.toContain("supabase.auth.setSession");
+    expect(auth).not.toContain("המשך עם Apple");
 
-    const oauthBody = auth.slice(auth.indexOf("async function handleOAuth"));
-    expect(oauthBody.indexOf("supabase.auth.setSession(res.tokens)")).toBeGreaterThan(-1);
-    expect(oauthBody.indexOf("supabase.auth.setSession(res.tokens)")).toBeLessThan(
-      oauthBody.indexOf("await ensureAccountForCurrentContext()"),
-    );
+    const sessionIndex = auth.indexOf("supabase.auth.getSession()");
+    const ensureIndex = auth.indexOf("await ensureAccountForCurrentContext()", sessionIndex);
+    expect(sessionIndex).toBeGreaterThan(-1);
+    expect(ensureIndex).toBeGreaterThan(sessionIndex);
   });
   it("uses a Brevo marketing campaign template and personalized invitation URL attribute", () => {
     expect(RECRUITMENT_INVITE_ATTRIBUTE).toBe("TIPULINKS_INVITE_URL");
