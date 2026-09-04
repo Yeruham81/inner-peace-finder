@@ -117,7 +117,7 @@ describe("profile claim stage 3", () => {
   it("lets a mismatched Google user sign out and explicitly choose another account", () => {
     expect(claimRoute).toContain('supabase.auth.signOut({ scope: "local" })');
     expect(claimRoute).toContain("queryClient.clear()");
-    expect(claimRoute).toContain('extraParams: { prompt: "select_account" }');
+    expect(claimRoute).toContain('queryParams: { prompt: "select_account" }');
     expect(claimRoute).toContain("/claim?token=${encodeURIComponent(token)}");
     expect(claimRoute).toContain("התנתקות ובחירת חשבון Google אחר");
     expect(claimRoute).toContain("preview.emailMatchesSignedInUser && (");
