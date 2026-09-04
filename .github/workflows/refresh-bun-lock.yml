@@ -1,7 +1,14 @@
 name: Refresh Bun lockfile
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - cloud-run-migration
+    paths:
+      - "package.json"
+      - "bun.lock"
+      - "bunfig.toml"
+      - ".github/workflows/refresh-bun-lock.yml"
 
 permissions:
   contents: read
@@ -11,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout selected branch
+      - name: Checkout branch
         uses: actions/checkout@v4
 
       - name: Setup Bun 1.2.22
