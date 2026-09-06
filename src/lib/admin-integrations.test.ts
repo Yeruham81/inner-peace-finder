@@ -29,12 +29,14 @@ describe("admin integrations health", () => {
       'key: "brevo"',
       'key: "zoho"',
       'key: "data-gov"',
-      'key: "lovable"',
       '"google-analytics"',
       '"payment"',
     ]) {
       expect(server).toContain(service);
     }
+    expect(server).not.toContain('key: "lovable"');
+    expect(server).not.toContain("Lovable Cloud / Auth");
+    expect(server).not.toContain("probeLovable");
   });
 
   it("uses non-delivering provider checks and never sends probe messages or calls", () => {
@@ -48,17 +50,17 @@ describe("admin integrations health", () => {
     expect(server).not.toContain("/Messages.json");
   });
 
-  it("validates the live Voice key and WhatsApp Sender without weakening production credentials", () => {
+  it("validates the live Voice key and distinguishes authentication from permission failures", () => {
     expect(server).toContain("basicAuth(config.apiKeySid, config.apiKeySecret)");
-    expect(server).toContain("Calls — Create");
+    expect(server).toContain('label: "Voice API key"');
+    expect(server).toContain("יש לבדוק התאמה בין ה-SID ל-Secret");
+    expect(server).toContain("מפתח ה-Voice אומת אך Twilio דחה את הרשאת Calls — Create");
+    expect(server).not.toContain("Voice restricted API key");
     expect(server).toContain("https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=1000");
     expect(server).toContain('senderStatus === "ONLINE"');
   });
 
-  it("treats interactive OAuth checks as neutral rather than permanent warnings", () => {
-    expect(server).toContain('label: "Google OAuth"');
-    expect(server).toContain('label: "Apple OAuth"');
-    expect(server).toContain('state: "unchecked"');
+  it("keeps neutral UI support for checks that cannot be run automatically", () => {
     expect(route).toContain('unchecked: "לא נבדק"');
     expect(badge).toContain('"לא נבדק": "neutral"');
   });
