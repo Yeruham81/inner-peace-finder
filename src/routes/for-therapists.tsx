@@ -215,14 +215,13 @@ function VisionSection() {
           </div>
         </nav>
 
-
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium text-primary shadow-sm">
             <Sparkles className="h-4 w-4" />
             דרך פשוטה יותר למצוא טיפול
           </div>
 
-          <h1 className="mt-6 max-w-[22ch] text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.12]">
+          <h1 className="mt-6 max-w-[22ch] text-balance text-2xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.12]">
             איך לדעת מראש מה לחפש?
           </h1>
 
@@ -237,7 +236,6 @@ function VisionSection() {
           </p>
 
           <div className="mt-8 max-w-[62ch] rounded-2xl border border-border border-r-4 border-r-primary bg-surface-elevated p-5 shadow-card sm:p-6">
-
             <p className="text-base font-semibold leading-8 text-foreground">
               במקום לשאול את המשתמש "איזה מטפל אתה מחפש?" — טיפולינקס מתחילה בשאלה "במה אפשר לעזור?"
             </p>
@@ -263,7 +261,6 @@ function VisionSection() {
               </h2>
             </div>
           </div>
-
 
           <div className="mt-6 space-y-3">
             {commonSearchProblems.map((problem) => (
@@ -327,14 +324,15 @@ function HowItWorksSection() {
         <div className="mt-8 rounded-3xl border border-primary/15 bg-primary/5 p-5 shadow-sm sm:mt-10 sm:p-8">
           <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:gap-10">
             <div className="min-w-0">
-              <h3 className="text-pretty text-lg font-bold text-foreground sm:text-xl">ההתאמה אינה מבוססת על גורם אחד</h3>
+              <h3 className="text-pretty text-lg font-bold text-foreground sm:text-xl">
+                ההתאמה אינה מבוססת על גורם אחד
+              </h3>
 
               <p className="mt-3 max-w-[52ch] text-pretty text-sm leading-7 text-muted-foreground">
                 המערכת מזהה את תחומי הטיפול הרלוונטיים ומשלבת אותם עם העדפות וצרכים נוספים שהמשתמש הגדיר כדי לצמצם את
                 החיפוש.
               </p>
             </div>
-
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {matchingParameters.map((parameter) => {
@@ -345,11 +343,9 @@ function HowItWorksSection() {
                     key={parameter.label}
                     className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-primary/10 bg-surface-elevated p-4 text-center shadow-card"
                   >
-
                     <Icon className="h-5 w-5 shrink-0 text-primary" />
 
                     <span className="text-pretty text-sm font-medium leading-6 text-foreground">{parameter.label}</span>
-
                   </div>
                 );
               })}
@@ -361,7 +357,6 @@ function HowItWorksSection() {
           מנוע החיפוש של טיפולינקס לא מאבחן ולא מתיימר להחליף ייעוץ מקצועי. הוא מסייע למקד את החיפוש על בסיס המידע
           שהמשתמש מסר והפרטים המופיעים בפרופילי המטפלים.
         </p>
-
       </div>
     </section>
   );
@@ -379,7 +374,6 @@ function SearchUserCard() {
       <h3 className="mt-1 text-pretty text-lg font-bold leading-7 text-foreground sm:text-xl">כותב במילים שלו</h3>
 
       <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-elevated/90 p-4">
-
         <MessageCircleMore className="h-5 w-5 text-primary" />
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
@@ -408,7 +402,6 @@ function TipulinksEngineCard() {
         המערכת מזהה מתוך התיאור את הקשיים והמאפיינים הרלוונטיים ומחפשת אותם מול המידע המקצועי שהוגדר בפרופילי המטפלים.
       </p>
 
-
       <div className="mt-5 flex flex-wrap gap-2">
         {["טיפול רגשי לילדים", "חרדה", "קשיים חברתיים", "הדרכת הורים"].map((item) => (
           <span
@@ -419,7 +412,6 @@ function TipulinksEngineCard() {
           </span>
         ))}
       </div>
-
     </article>
   );
 }
@@ -442,7 +434,6 @@ function MatchedTherapistCard() {
       </p>
 
       <div className="mt-5 rounded-2xl border border-primary/20 bg-surface-elevated/90 p-4">
-
         <div className="flex items-start gap-3">
           <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
 
@@ -464,7 +455,6 @@ function DesktopArrow() {
     </div>
   );
 }
-
 
 function TherapistBenefitsSection() {
   return (
@@ -522,7 +512,6 @@ function TherapistBenefitsSection() {
             </p>
           </div>
         </div>
-
       </div>
     </section>
   );
@@ -578,7 +567,6 @@ function ProfileManagementSection() {
 
           <ShieldCheck className="hidden h-10 w-10 shrink-0 text-primary sm:block" />
         </div>
-
       </div>
     </section>
   );
@@ -633,4 +621,3 @@ function JoinSection({ registrationEnabled }: { registrationEnabled: boolean }) 
     </section>
   );
 }
-
