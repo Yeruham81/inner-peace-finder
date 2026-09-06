@@ -5,7 +5,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BrainCircuit,
-  Cloud,
   CreditCard,
   Database,
   Landmark,
@@ -47,7 +46,6 @@ const ICONS: Record<AdminIntegrationKey, LucideIcon> = {
   brevo: Mail,
   zoho: Landmark,
   "data-gov": MapPinned,
-  lovable: Cloud,
   "google-analytics": BarChart3,
   payment: CreditCard,
 };
