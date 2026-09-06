@@ -223,7 +223,7 @@ function VisionSection() {
           </div>
 
           <h1 className="mt-6 max-w-[22ch] text-balance text-3xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.12]">
-            המטופל לא צריך לדעת מראש איזה מטפל לחפש
+            איך לדעת מראש מה לחפש?
           </h1>
 
           <p className="mt-6 max-w-[58ch] text-pretty text-base leading-8 text-muted-foreground sm:text-lg sm:leading-9">
