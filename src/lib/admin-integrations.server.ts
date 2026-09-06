@@ -239,7 +239,7 @@ async function probeTwilio(
     checks.push({
       label: "Voice configuration",
       state: "healthy",
-      detail: "Account, restricted API key, Auth Token ומספר טלפון מוגדרים",
+      detail: "Account, API key, Auth Token ומספר טלפון מוגדרים",
     });
   } catch {
     const missing = missingEnv([
@@ -277,26 +277,32 @@ async function probeTwilio(
 
       if (voiceResponse.status === 400) {
         checks.push({
-          label: "Voice restricted API key",
+          label: "Voice API key",
           state: "healthy",
           detail: "המפתח וההרשאה Calls — Create אומתו ללא יצירת שיחה",
         });
-      } else if (voiceResponse.status === 401 || voiceResponse.status === 403) {
+      } else if (voiceResponse.status === 401) {
         checks.push({
-          label: "Voice restricted API key",
+          label: "Voice API key",
           state: "error",
-          detail: "Twilio דחה את מפתח ה-Voice או שאין לו הרשאת Calls — Create",
+          detail: "Twilio דחה את פרטי האימות של מפתח ה-Voice; יש לבדוק התאמה בין ה-SID ל-Secret",
+        });
+      } else if (voiceResponse.status === 403) {
+        checks.push({
+          label: "Voice API key",
+          state: "error",
+          detail: "מפתח ה-Voice אומת אך Twilio דחה את הרשאת Calls — Create",
         });
       } else {
         checks.push({
-          label: "Voice restricted API key",
+          label: "Voice API key",
           state: "error",
           detail: `בדיקת מפתח ה-Voice החזירה HTTP ${voiceResponse.status} במקום שגיאת אימות-קלט צפויה`,
         });
       }
     } catch {
       checks.push({
-        label: "Voice restricted API key",
+        label: "Voice API key",
         state: "error",
         detail: "לא ניתן להשלים את בדיקת מפתח ה-Voice",
       });
@@ -644,55 +650,6 @@ async function probeDataGov(checkedAt: string): Promise<AdminIntegrationStatus> 
   };
 }
 
-async function probeLovable(checkedAt: string): Promise<AdminIntegrationStatus> {
-  const origin = process.env.TIPULINKS_PUBLIC_ORIGIN?.trim();
-  let originHealthy = false;
-  if (origin) {
-    try {
-      const parsed = new URL(origin);
-      originHealthy =
-        parsed.protocol === "https:" && !parsed.username && !parsed.password && !parsed.search && !parsed.hash;
-    } catch {
-      originHealthy = false;
-    }
-  }
-
-  const checks: AdminIntegrationCheck[] = [
-    {
-      label: "Cloud runtime",
-      state: "healthy",
-      detail: "פונקציית בדיקת האינטגרציות רצה בצד השרת",
-    },
-    {
-      label: "Public origin",
-      state: originHealthy ? "healthy" : "warning",
-      detail: originHealthy ? "TIPULINKS_PUBLIC_ORIGIN מוגדר כ-HTTPS" : "לא ניתן לאמת TIPULINKS_PUBLIC_ORIGIN",
-    },
-    {
-      label: "Google OAuth",
-      state: "unchecked",
-      detail: "לא נבדק אוטומטית: בדיקת OAuth מלאה דורשת תהליך התחברות אינטראקטיבי",
-    },
-    {
-      label: "Apple OAuth",
-      state: "unchecked",
-      detail: "לא נבדק אוטומטית: בדיקת OAuth מלאה דורשת תהליך התחברות אינטראקטיבי",
-    },
-  ];
-
-  const state = overallState(checks);
-  return {
-    key: "lovable",
-    provider: "Lovable Cloud / Auth",
-    description: "Runtime האפליקציה ושכבת OAuth שמחברת את ספקי ההתחברות.",
-    uses: ["Hosting / Runtime", "Google OAuth", "Apple OAuth"],
-    state,
-    summary: "ה-runtime פעיל; ספקי OAuth אינם נבדקים באמצעות התחברות אוטומטית.",
-    checkedAt,
-    checks,
-  };
-}
-
 function plannedIntegration(
   key: "google-analytics" | "payment",
   provider: string,
@@ -728,7 +685,6 @@ export async function getAdminIntegrationStatusesServer(
     probeBrevo(checkedAt, operational),
     probeZoho(checkedAt),
     probeDataGov(checkedAt),
-    probeLovable(checkedAt),
   ]);
 
   const fallbackMetadata: Array<Pick<AdminIntegrationStatus, "key" | "provider" | "description" | "uses">> = [
@@ -749,12 +705,6 @@ export async function getAdminIntegrationStatusesServer(
     { key: "brevo", provider: "Brevo", description: "אימיילים מערכתיים.", uses: ["Transactional Email"] },
     { key: "zoho", provider: "Zoho Mail", description: "תיבת פניות הצוות.", uses: ["Mail API"] },
     { key: "data-gov", provider: "data.gov.il", description: "מקור היישובים.", uses: ["Localities"] },
-    {
-      key: "lovable",
-      provider: "Lovable Cloud / Auth",
-      description: "Runtime ו-OAuth.",
-      uses: ["Cloud runtime", "OAuth"],
-    },
   ];
 
   const items = settled.map((result, index): AdminIntegrationStatus => {
