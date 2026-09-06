@@ -8,7 +8,6 @@ export type AdminIntegrationKey =
   | "brevo"
   | "zoho"
   | "data-gov"
-  | "lovable"
   | "google-analytics"
   | "payment";
 
