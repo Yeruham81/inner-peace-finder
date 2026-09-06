@@ -222,12 +222,12 @@ function VisionSection() {
           </div>
 
           <h1 className="mt-6 max-w-[22ch] text-balance text-2xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.12]">
-            איך לדעת מראש מה לחפש?
+            הקושי העיקרי במציאת המטפל הנכון
           </h1>
 
           <p className="mt-6 max-w-[58ch] text-pretty text-base leading-8 text-muted-foreground sm:text-lg sm:leading-9">
-            אדם שמתמודד עם חרדה, קשיי שינה, משבר בזוגיות או קושי אצל הילד יודע בדרך כלל מה מפריע לו — אבל לא בהכרח יודע
-            אם הוא צריך פסיכולוג, פסיכותרפיסט או איש מקצוע אחר.
+            אדם שמתמודד עם חרדה, קשיי שינה, משבר בזוגיות או קושי עם הילד יכול לתאר בדרך כלל את הבעיה, אבל לא בהכרח יודע
+            אם הוא צריך לפנות לפסיכולוג, פסיכותרפיסט או איש מקצוע אחר.
           </p>
 
           <p className="mt-4 max-w-[62ch] text-pretty text-base leading-8 text-muted-foreground">
